@@ -16,10 +16,10 @@ export function Home() {
       {/* En-tête */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tableau de bord</h1>
-          <p className="text-gray-600">Bienvenue sur votre espace de travail</p>
+          <h1 className="text-2xl font-bold text-foreground">Tableau de bord</h1>
+          <p className="text-muted-foreground">Bienvenue sur votre espace de travail</p>
         </div>
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-muted-foreground">
           {new Date().toLocaleDateString('fr-FR', { 
             weekday: 'long', 
             year: 'numeric', 
@@ -40,14 +40,14 @@ export function Home() {
         <CardContent>
           <div className="space-y-4">
             <div className="border-l-4 border-[#ff3b30] pl-4">
-              <h3 className="font-semibold text-gray-900">Nouvelle mise à jour disponible</h3>
-              <p className="text-gray-600 text-sm">Des améliorations de performance ont été déployées.</p>
-              <span className="text-xs text-gray-400">Il y a 2 heures</span>
+              <h3 className="font-semibold text-foreground">Nouvelle mise à jour disponible</h3>
+              <p className="text-muted-foreground text-sm">Des améliorations de performance ont été déployées.</p>
+              <span className="text-xs text-muted-foreground">Il y a 2 heures</span>
             </div>
             <div className="border-l-4 border-blue-500 pl-4">
-              <h3 className="font-semibold text-gray-900">Réunion équipe prévue</h3>
-              <p className="text-gray-600 text-sm">Réunion hebdomadaire programmée pour demain à 14h.</p>
-              <span className="text-xs text-gray-400">Il y a 5 heures</span>
+              <h3 className="font-semibold text-foreground">Réunion équipe prévue</h3>
+              <p className="text-muted-foreground text-sm">Réunion hebdomadaire programmée pour demain à 14h.</p>
+              <span className="text-xs text-muted-foreground">Il y a 5 heures</span>
             </div>
           </div>
         </CardContent>
@@ -86,18 +86,18 @@ export function Home() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded">
-                <Clock className="h-4 w-4 text-gray-500" />
+              <div className="flex items-center space-x-3 p-2 bg-muted rounded">
+                <Clock className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <div className="font-medium text-sm">Réunion équipe</div>
-                  <div className="text-xs text-gray-500">14:00 - 15:00</div>
+                  <div className="text-xs text-muted-foreground">14:00 - 15:00</div>
                 </div>
               </div>
-              <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded">
-                <Clock className="h-4 w-4 text-gray-500" />
+              <div className="flex items-center space-x-3 p-2 bg-muted rounded">
+                <Clock className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <div className="font-medium text-sm">Formation</div>
-                  <div className="text-xs text-gray-500">16:00 - 17:30</div>
+                  <div className="text-xs text-muted-foreground">16:00 - 17:30</div>
                 </div>
               </div>
             </div>
@@ -115,11 +115,11 @@ export function Home() {
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Congés restants</span>
+                <span className="text-sm text-muted-foreground">Congés restants</span>
                 <span className="font-semibold text-[#ff3b30]">12 jours</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">RTT restants</span>
+                <span className="text-sm text-muted-foreground">RTT restants</span>
                 <span className="font-semibold text-blue-600">5 jours</span>
               </div>
               <Button variant="outline" size="sm" className="w-full">
@@ -140,10 +140,10 @@ export function Home() {
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Jours utilisés</span>
+                <span className="text-sm text-muted-foreground">Jours utilisés</span>
                 <span className="font-semibold">8/20</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-muted rounded-full h-2">
                 <div className="bg-[#ff3b30] h-2 rounded-full" style={{ width: '40%' }}></div>
               </div>
               <Button variant="outline" size="sm" className="w-full">
@@ -166,16 +166,16 @@ export function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="border rounded-lg p-4">
               <h3 className="font-semibold">Client ABC</h3>
-              <p className="text-sm text-gray-600">Présentation produit</p>
-              <div className="flex items-center space-x-2 mt-2 text-xs text-gray-500">
+              <p className="text-sm text-muted-foreground">Présentation produit</p>
+              <div className="flex items-center space-x-2 mt-2 text-xs text-muted-foreground">
                 <Calendar className="h-3 w-3" />
                 <span>Demain 10:00</span>
               </div>
             </div>
             <div className="border rounded-lg p-4">
               <h3 className="font-semibold">Partenaire XYZ</h3>
-              <p className="text-sm text-gray-600">Réunion stratégique</p>
-              <div className="flex items-center space-x-2 mt-2 text-xs text-gray-500">
+              <p className="text-sm text-muted-foreground">Réunion stratégique</p>
+              <div className="flex items-center space-x-2 mt-2 text-xs text-muted-foreground">
                 <Calendar className="h-3 w-3" />
                 <span>Vendredi 14:00</span>
               </div>
@@ -196,10 +196,10 @@ export function Home() {
                 <a
                   key={link}
                   href="#"
-                  className="flex items-center justify-between p-2 hover:bg-gray-50 rounded transition-colors"
+                  className="flex items-center justify-between p-2 hover:bg-muted rounded transition-colors"
                 >
-                  <span className="text-sm text-gray-700">{link}</span>
-                  <ExternalLink className="h-3 w-3 text-gray-400" />
+                  <span className="text-sm text-foreground">{link}</span>
+                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
                 </a>
               ))}
             </div>
@@ -216,10 +216,10 @@ export function Home() {
                 <a
                   key={link}
                   href="#"
-                  className="flex items-center justify-between p-2 hover:bg-gray-50 rounded transition-colors"
+                  className="flex items-center justify-between p-2 hover:bg-muted rounded transition-colors"
                 >
-                  <span className="text-sm text-gray-700">{link}</span>
-                  <ExternalLink className="h-3 w-3 text-gray-400" />
+                  <span className="text-sm text-foreground">{link}</span>
+                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
                 </a>
               ))}
             </div>
@@ -236,10 +236,10 @@ export function Home() {
                 <a
                   key={link}
                   href="#"
-                  className="flex items-center justify-between p-2 hover:bg-gray-50 rounded transition-colors"
+                  className="flex items-center justify-between p-2 hover:bg-muted rounded transition-colors"
                 >
-                  <span className="text-sm text-gray-700">{link}</span>
-                  <ExternalLink className="h-3 w-3 text-gray-400" />
+                  <span className="text-sm text-foreground">{link}</span>
+                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
                 </a>
               ))}
             </div>

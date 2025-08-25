@@ -92,6 +92,14 @@
   font-style: italic;
 }
 
+@font-face {
+  font-family: 'MDNichrome';
+  src: url('../assets/fonts/MDNichrome/MDNichrome-Ultra.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+  font-style: normal;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -281,4 +289,15 @@ body {
 
 .menu-item:hover .menu-tooltip {
   opacity: 1;
+}
+
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading;
+  }
 }
