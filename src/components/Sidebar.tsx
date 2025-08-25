@@ -1,11 +1,10 @@
 import { 
-  Home, 
-  Calendar, 
-  Users, 
-  FileText, 
-  Settings, 
+  Home,
+  Calendar,
+  Users,
+  FileText,
+  Settings,
   BarChart3,
-  Building2,
   Pin,
   PinOff
 } from 'lucide-react';
@@ -36,14 +35,7 @@ export function Sidebar() {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="p-4 border-b border-red-400/20 flex items-center justify-between min-h-[64px]">
-        <div className="flex items-center space-x-3">
-          <Building2 className="h-8 w-8 flex-shrink-0" />
-          <h1 className={`text-xl font-bold transition-all duration-300 ${
-            isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
-          }`}>
-            Dashboard
-          </h1>
-        </div>
+        <img src={Logo} alt="Logo Glénat" className="h-8 w-auto flex-shrink-0" />
         
         {/* Bouton de verrouillage */}
         <button
