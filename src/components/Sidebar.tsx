@@ -10,6 +10,7 @@ import {
   PinOff
 } from 'lucide-react';
 import { useState } from 'react';
+import Logo from '../assets/logos/glenat/glenat_white.svg';
 
 const menuItems = [
   { icon: Home, label: 'Accueil', active: true },
@@ -34,7 +35,6 @@ export function Sidebar() {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Logo */}
       <div className="p-4 border-b border-red-400/20 flex items-center justify-between min-h-[64px]">
         <div className="flex items-center space-x-3">
           <Building2 className="h-8 w-8 flex-shrink-0" />
