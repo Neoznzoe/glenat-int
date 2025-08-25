@@ -35,7 +35,11 @@ export function Sidebar() {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="p-4 border-b border-red-400/20 flex items-center justify-between min-h-[64px]">
-        <img src={Logo} alt="Logo Glénat" className="h-8 w-auto flex-shrink-0" />
+        {isExpanded ? (
+          <img src={Logo} alt="Logo Glénat" className="h-8 w-auto flex-shrink-0" />
+        ) : (
+          <span className="text-2xl font-bold">G</span>
+        )}
         
         {/* Bouton de verrouillage */}
         <button

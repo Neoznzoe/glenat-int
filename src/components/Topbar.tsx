@@ -1,6 +1,7 @@
 import { Search, Bell, User, ChevronDown } from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
+import { ThemeToggle } from './ThemeToggle';
 
 export function Topbar() {
   return (
@@ -19,6 +20,7 @@ export function Topbar() {
 
       {/* Actions utilisateur */}
       <div className="flex items-center space-x-4">
+        <ThemeToggle />
         {/* Notifications */}
         <Button variant="ghost" size="sm" className="relative">
           <Bell className="h-5 w-5 text-gray-600" />

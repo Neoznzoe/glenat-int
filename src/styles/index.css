@@ -19,7 +19,8 @@
  * Satoshi Variable (Variable font)
  * Satoshi VariableItalic (Variable font)
  *
- */
+*/
+@import './style.css';
 @font-face {
   font-family: 'Satoshi';
   src: url('../assets/fonts/satoshi/Satoshi-Light.otf');
