@@ -1,23 +1,23 @@
-import { 
-  Home, 
-  Calendar, 
-  Users, 
-  FileText, 
-  Settings, 
-  BarChart3,
-  Building2,
-  Pin,
-  PinOff
-} from 'lucide-react';
+import {
+  House,
+  Calendar,
+  People,
+  FileText,
+  Gear,
+  BarChart,
+  Building,
+  PinFill,
+  Pin
+} from 'react-bootstrap-icons';
 import { useState } from 'react';
 
 const menuItems = [
-  { icon: Home, label: 'Accueil', active: true },
+  { icon: House, label: 'Accueil', active: true },
   { icon: Calendar, label: 'Calendrier', active: false },
-  { icon: Users, label: 'Équipe', active: false },
+  { icon: People, label: 'Équipe', active: false },
   { icon: FileText, label: 'Documents', active: false },
-  { icon: BarChart3, label: 'Statistiques', active: false },
-  { icon: Settings, label: 'Paramètres', active: false },
+  { icon: BarChart, label: 'Statistiques', active: false },
+  { icon: Gear, label: 'Paramètres', active: false },
 ];
 
 export function Sidebar() {
@@ -37,7 +37,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-4 border-b border-red-400/20 flex items-center justify-between min-h-[64px]">
         <div className="flex items-center space-x-3">
-          <Building2 className="h-8 w-8 flex-shrink-0" />
+          <Building className="h-8 w-8 flex-shrink-0" />
           <h1 className={`text-xl font-bold transition-all duration-300 ${
             isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
           }`}>
@@ -54,9 +54,9 @@ export function Sidebar() {
           title={isPinned ? 'Déverrouiller la sidebar' : 'Verrouiller la sidebar'}
         >
           {isPinned ? (
-            <Pin className="h-4 w-4" />
+            <PinFill className="h-4 w-4" />
           ) : (
-            <PinOff className="h-4 w-4" />
+            <Pin className="h-4 w-4" />
           )}
         </button>
       </div>

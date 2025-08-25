@@ -1,15 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
+import {
   Calendar,
-  Users,
-  Home as HomeIcon,
-  ExternalLink,
+  House,
+  BoxArrowUpRight,
   ChevronRight,
   Clock,
-  MapPin,
-  UserCheck
-} from 'lucide-react';
+  GeoAlt,
+  PersonCheck
+} from 'react-bootstrap-icons';
 
 export function Home() {
   return (
@@ -34,7 +33,7 @@ export function Home() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <HomeIcon className="h-5 w-5 text-[#ff3b30]" />
+            <House className="h-5 w-5 text-[#ff3b30]" />
             <span>Actualités</span>
           </CardTitle>
         </CardHeader>
@@ -109,7 +108,7 @@ export function Home() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <UserCheck className="h-5 w-5 text-[#ff3b30]" />
+              <PersonCheck className="h-5 w-5 text-[#ff3b30]" />
               <span>Absences</span>
             </CardTitle>
           </CardHeader>
@@ -134,7 +133,7 @@ export function Home() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <HomeIcon className="h-5 w-5 text-[#ff3b30]" />
+              <House className="h-5 w-5 text-[#ff3b30]" />
               <span>Télétravail</span>
             </CardTitle>
           </CardHeader>
@@ -159,7 +158,7 @@ export function Home() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <MapPin className="h-5 w-5 text-[#ff3b30]" />
+            <GeoAlt className="h-5 w-5 text-[#ff3b30]" />
             <span>Visites programmées</span>
           </CardTitle>
         </CardHeader>
@@ -200,7 +199,7 @@ export function Home() {
                   className="flex items-center justify-between p-2 hover:bg-gray-50 rounded transition-colors"
                 >
                   <span className="text-sm text-gray-700">{link}</span>
-                  <ExternalLink className="h-3 w-3 text-gray-400" />
+                  <BoxArrowUpRight className="h-3 w-3 text-gray-400" />
                 </a>
               ))}
             </div>
@@ -220,7 +219,7 @@ export function Home() {
                   className="flex items-center justify-between p-2 hover:bg-gray-50 rounded transition-colors"
                 >
                   <span className="text-sm text-gray-700">{link}</span>
-                  <ExternalLink className="h-3 w-3 text-gray-400" />
+                  <BoxArrowUpRight className="h-3 w-3 text-gray-400" />
                 </a>
               ))}
             </div>
@@ -240,7 +239,7 @@ export function Home() {
                   className="flex items-center justify-between p-2 hover:bg-gray-50 rounded transition-colors"
                 >
                   <span className="text-sm text-gray-700">{link}</span>
-                  <ExternalLink className="h-3 w-3 text-gray-400" />
+                  <BoxArrowUpRight className="h-3 w-3 text-gray-400" />
                 </a>
               ))}
             </div>

@@ -1,4 +1,4 @@
-import { Search, Bell, User, ChevronDown } from 'lucide-react';
+import { Search, Bell, Person, ChevronDown } from 'react-bootstrap-icons';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 
@@ -29,7 +29,7 @@ export function Topbar() {
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
             <div className="h-8 w-8 bg-gray-200 rounded-full flex items-center justify-center">
-              <User className="h-4 w-4 text-gray-600" />
+              <Person className="h-4 w-4 text-gray-600" />
             </div>
             <div className="hidden md:block">
               <div className="text-sm font-medium text-gray-900">John Doe</div>
