@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
+import LogoG from '../assets/logos/glenat/glenat_G.svg';
 
 const menuItems = [
   { icon: Home, label: 'Accueil', active: true },
@@ -38,7 +39,7 @@ export function Sidebar() {
         {isExpanded ? (
           <img src={Logo} alt="Logo Glénat" className="h-8 w-auto flex-shrink-0" />
         ) : (
-          <span className="text-2xl font-bold">G</span>
+          <img src={LogoG} alt="Logo Glénat" className="h-8 w-auto flex-shrink-0" />
         )}
         
         {/* Bouton de verrouillage */}
@@ -91,13 +92,6 @@ export function Sidebar() {
           Version 1.0.0
         </div>
       </div>
-
-      {/* Indicateur de survol quand collapsed */}
-      {!isPinned && !isHovered && (
-        <div className="absolute right-0 top-1/2 transform translate-x-1 -translate-y-1/2">
-          <div className="w-1 h-8 bg-white/30 rounded-r"></div>
-        </div>
-      )}
     </div>
   );
 }
