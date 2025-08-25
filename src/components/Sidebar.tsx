@@ -92,13 +92,6 @@ export function Sidebar() {
           Version 1.0.0
         </div>
       </div>
-
-      {/* Indicateur de survol quand collapsed */}
-      {!isPinned && !isHovered && (
-        <div className="absolute right-0 top-1/2 transform translate-x-1 -translate-y-1/2">
-          <div className="w-1 h-8 bg-white/30 rounded-r"></div>
-        </div>
-      )}
     </div>
   );
 }
