@@ -1,4 +1,4 @@
-import { Search, Bell, User, ChevronDown } from 'lucide-react';
+import { Search, Bell, User, ChevronDown, ShoppingBag } from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { ThemeToggle } from './ThemeToggle';
@@ -25,6 +25,9 @@ export function Topbar() {
         <Button variant="ghost" size="sm" className="relative">
           <Bell className="h-5 w-5 text-gray-600" />
           <span className="absolute -top-1 -right-1 h-3 w-3 bg-[#ff3b30] rounded-full"></span>
+        </Button>
+        <Button variant="ghost" size="sm" className="relative">
+          <ShoppingBag className="h-5 w-5 text-gray-600" />
         </Button>
 
         {/* Profil utilisateur */}
