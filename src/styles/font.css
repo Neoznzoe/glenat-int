@@ -22,70 +22,70 @@
 *
 */
 @font-face {
-  font-family: 'Satoshi-Light';
-  src: url('../assets/fonts/satoshi/Satoshi-Light.otf');       
+  font-family: 'Satoshi';
+  src: url('../assets/fonts/satoshi/Satoshi-Light.otf');
   font-weight: 300;
   font-display: swap;
   font-style: normal;
 }
 @font-face {
-  font-family: 'Satoshi-LightItalic';
+  font-family: 'Satoshi';
   src: url('../assets/fonts/satoshi/Satoshi-LightItalic.otf');
   font-weight: 300;
   font-display: swap;
   font-style: italic;
 }
 @font-face {
-  font-family: 'Satoshi-Regular';
+  font-family: 'Satoshi';
   src: url('../assets/fonts/satoshi/Satoshi-Regular.otf');
   font-weight: 400;
   font-display: swap;
   font-style: normal;
 }
 @font-face {
-  font-family: 'Satoshi-Italic';
+  font-family: 'Satoshi';
   src: url('../assets/fonts/satoshi/Satoshi-Italic.otf');
   font-weight: 400;
   font-display: swap;
   font-style: italic;
 }
 @font-face {
-  font-family: 'Satoshi-Medium';
+  font-family: 'Satoshi';
   src: url('../assets/fonts/satoshi/Satoshi-Medium.otf');
   font-weight: 500;
   font-display: swap;
   font-style: normal;
 }
 @font-face {
-  font-family: 'Satoshi-MediumItalic';
+  font-family: 'Satoshi';
   src: url('../assets/fonts/satoshi/Satoshi-MediumItalic.otf');
   font-weight: 500;
   font-display: swap;
   font-style: italic;
 }
 @font-face {
-  font-family: 'Satoshi-Bold';
+  font-family: 'Satoshi';
   src: url('../assets/fonts/satoshi/Satoshi-Bold.otf');
   font-weight: 700;
   font-display: swap;
   font-style: normal;
 }
 @font-face {
-  font-family: 'Satoshi-BoldItalic';
+  font-family: 'Satoshi';
   src: url('../assets/fonts/satoshi/Satoshi-BoldItalic.otf');
   font-weight: 700;
   font-display: swap;
   font-style: italic;
 }
 @font-face {
-  font-family: 'Satoshi-Black';
+  font-family: 'Satoshi';
   src: url('../assets/fonts/satoshi/Satoshi-Black.otf');
   font-weight: 900;
   font-display: swap;
   font-style: normal;
 }
 @font-face {
-  font-family: 'Satoshi-BlackItalic';
+  font-family: 'Satoshi';
   src: url('../assets/fonts/satoshi/Satoshi-BlackItalic.otf');
   font-weight: 900;
   font-display: swap;
