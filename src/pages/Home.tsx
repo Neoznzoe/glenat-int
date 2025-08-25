@@ -1,8 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
+import {
   Calendar,
-  Users,
   Home as HomeIcon,
   ExternalLink,
   ChevronRight,
