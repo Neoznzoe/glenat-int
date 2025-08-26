@@ -76,7 +76,7 @@ export function Sidebar() {
       </div>
 
       {/* Contenu principal = menu du haut + administration séparée */}
-      <div className="flex-1 flex flex-col justify-between">
+      <div className="flex-1 flex flex-col">
         {/* Menu principal */}
         <nav className="p-2">
           <ul className="space-y-1">
@@ -86,17 +86,21 @@ export function Sidebar() {
                 <li key={index}>
                   <a
                     href="#"
-                    className={`flex items-center space-x-3 px-2 py-2 rounded-lg transition-all duration-300 group ${
+                    className={`flex items-center px-2 py-2 rounded-lg transition-all duration-300 group ${
                       item.active
                         ? 'bg-white/20 text-white'
                         : 'text-red-100 hover:bg-white/10 hover:text-white'
-                    }`}
+                    } ${isExpanded ? '' : 'justify-center'}`}
                     title={!isExpanded ? item.label : ''}
                   >
                     <item.icon className="h-5 w-5 flex-shrink-0" />
-                    <span className={`font-medium transition-all duration-300 whitespace-nowrap ${
-                      isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
-                    }`}>
+                    <span
+                      className={`font-medium transition-all duration-300 whitespace-nowrap ${
+                        isExpanded
+                          ? 'opacity-100 ml-3'
+                          : 'opacity-0 w-0 overflow-hidden'
+                      }`}
+                    >
                       {item.label}
                     </span>
                   </a>
@@ -106,7 +110,7 @@ export function Sidebar() {
         </nav>
 
         {/* Bloc Administration */}
-        <nav className="p-2">
+        <nav className="p-2 mt-auto">
           <ul>
             {menuItems
               .filter(item => item.label === 'Administration') // uniquement Administration
@@ -114,17 +118,21 @@ export function Sidebar() {
                 <li key={index}>
                   <a
                     href="#"
-                    className={`flex items-center space-x-3 px-2 py-2 rounded-lg transition-all duration-300 group ${
+                    className={`flex items-center px-2 py-2 rounded-lg transition-all duration-300 group ${
                       item.active
                         ? 'bg-white/20 text-white'
                         : 'text-red-100 hover:bg-white/10 hover:text-white'
-                    }`}
+                    } ${isExpanded ? '' : 'justify-center'}`}
                     title={!isExpanded ? item.label : ''}
                   >
                     <item.icon className="h-5 w-5 flex-shrink-0" />
-                    <span className={`font-medium transition-all duration-300 whitespace-nowrap ${
-                      isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
-                    }`}>
+                    <span
+                      className={`font-medium transition-all duration-300 whitespace-nowrap ${
+                        isExpanded
+                          ? 'opacity-100 ml-3'
+                          : 'opacity-0 w-0 overflow-hidden'
+                      }`}
+                    >
                       {item.label}
                     </span>
                   </a>
