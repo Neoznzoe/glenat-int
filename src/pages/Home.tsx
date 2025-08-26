@@ -68,8 +68,8 @@ export function Home() {
       </div>
 
       {/* Section Actualités et calendrier */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <HomeIcon className="h-5 w-5 text-[#ff3b30]" />
@@ -91,8 +91,8 @@ export function Home() {
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent>
+        <Card className="lg:col-span-1">
+          <CardContent className="pt-4">
             <EventsCalendar />
           </CardContent>
         </Card>
