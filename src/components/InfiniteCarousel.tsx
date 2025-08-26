@@ -39,7 +39,7 @@ export function InfiniteCarousel({
             >
               <img
                 src={c.src}
-                className="h-40 w-auto rounded-md object-cover shadow"
+                className="h-40 w-28 rounded-md object-cover shadow"
                 draggable={false}
               />
             </a>
