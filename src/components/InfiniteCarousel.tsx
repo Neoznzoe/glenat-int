@@ -7,29 +7,27 @@ type Cover = {
 
 type InfiniteCarouselProps = {
   covers: Cover[];
-  baseSpeedSeconds?: number;
-  hoverSpeedSeconds?: number;
+  /** Durée d'un cycle complet en secondes */
+  speedSeconds?: number;
 };
 
 export function InfiniteCarousel({
   covers,
-  baseSpeedSeconds = 60,
-  hoverSpeedSeconds = 20,
+  speedSeconds = 60,
 }: InfiniteCarouselProps) {
   // Duplique la liste pour l’effet boucle
   const track = useMemo(() => [...covers, ...covers], [covers]);
 
   return (
     <div
-      className="group relative overflow-hidden rounded-xl border border-white/10 bg-white/5 p-3"
+      className="group rounded-xl border border-border bg-card p-3"
       style={
         {
-          '--baseSpeed': `${baseSpeedSeconds}s`,
-          '--hoverSpeed': `${hoverSpeedSeconds}s`,
+          '--baseSpeed': `${speedSeconds}s`,
         } as React.CSSProperties
       }
     >
-      <div className="relative">
+      <div className="relative overflow-hidden">
         <div className="marquee-track flex items-center gap-4 will-change-transform">
           {track.map((c, i) => (
             <a
@@ -41,7 +39,7 @@ export function InfiniteCarousel({
             >
               <img
                 src={c.src}
-                className="h-40 w-auto rounded-md object-cover shadow"
+                className="h-40 w-28 rounded-md object-cover shadow"
                 draggable={false}
               />
             </a>
@@ -60,9 +58,7 @@ export function InfiniteCarousel({
           animation-timing-function: linear;
           animation-iteration-count: infinite;
         }
-        .group:hover .marquee-track {
-          animation-duration: var(--hoverSpeed, 20s);
-        }
+        /* Suppression du changement de vitesse au survol pour éviter les sauts */
       `}</style>
     </div>
   );
