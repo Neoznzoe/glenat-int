@@ -9,23 +9,57 @@ import {
   MapPin,
   UserCheck
 } from 'lucide-react';
+import { InfiniteCarousel } from '@/components/InfiniteCarousel';
+
+const asset = (p: string) => new URL(p, import.meta.url).href;
+
+const covers = [
+  { src: asset('../assets/images/aladin.webp'), href: '' },
+  { src: asset('../assets/images/eclipse_humaine.webp') , href: '' },
+  { src: asset('../assets/images/jaime_la_mode.webp') , href: '' },
+  { src: asset('../assets/images/le_combat_dune_vie.webp') , href: '' },
+  { src: asset('../assets/images/les_licorniers.webp') , href: '' },
+  { src: asset('../assets/images/montagne_europe.webp') , href: '' },
+  { src: asset('../assets/images/naya_pika.webp') , href: '' },
+  { src: asset('../assets/images/odyssee.webp') , href: '' },
+  { src: asset('../assets/images/jules_matrat.webp') , href: '' },
+  { src: asset('../assets/images/onepiece_110.webp'), href: '' },
+];
 
 export function Home() {
   return (
     <div className="p-6 space-y-6">
       {/* En-tête */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Tableau de bord</h1>
-          <p className="text-muted-foreground">Bienvenue sur votre espace de travail</p>
-        </div>
-        <div className="text-sm text-muted-foreground">
-          {new Date().toLocaleDateString('fr-FR', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          })}
+      <div className="rounded-2xl border border-white/20 bg-[#0A0A0A] text-white px-6 py-6 lg:px-10 lg:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+          {/* Colonne gauche : Jour / Date / Message */}
+          <div className="lg:col-span-4 flex flex-col justify-between min-h-[220px]">
+            <div>
+              <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tight text-white/90">
+                {new Date().toLocaleDateString('fr-FR', { weekday: 'long' }).toUpperCase()}
+              </h1>
+              <h2 className="mt-2 text-lg lg:text-xl text-white/70 capitalize">
+                {new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: '2-digit' })}
+              </h2>
+            </div>
+            <p className="mt-6 text-base lg:text-lg font-semibold text-[#ff3b30]">
+              Bonne journée !
+            </p>
+          </div>
+
+          {/* Colonne droite : Prochaine office + Carrousel */}
+          <div className="lg:col-span-8">
+            <div className="flex items-baseline justify-between mb-3">
+              <span className="text-sm lg:text-base text-white/60">
+                Prochaine office 255001 : 08/01/2025
+              </span>
+            </div>
+            <InfiniteCarousel
+              covers={covers}
+              baseSpeedSeconds={30}
+              hoverSpeedSeconds={18}
+            />
+          </div>
         </div>
       </div>
 
