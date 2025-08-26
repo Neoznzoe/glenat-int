@@ -38,18 +38,27 @@ export function EventsCalendar() {
 
   const singleDay = months.map(({ month, year }) => new Date(year, month, 5));
 
-  const twoDay = months.map(({ month, year }, idx) => {
+  const institutionEvents = months.flatMap(({ month, year }, idx) => {
+    const events = [] as { from: Date; to: Date }[];
     if (idx === 0) {
       const start = findFirstFriday(year, month);
-      return { from: start, to: addDays(start, 1) };
+      events.push({ from: start, to: addDays(start, 1) });
+    } else {
+      const start = new Date(year, month, 12);
+      events.push({ from: start, to: addDays(start, 1) });
     }
-    const start = new Date(year, month, 12);
-    return { from: start, to: addDays(start, 1) };
+    const extraStart = new Date(year, month, 22);
+    events.push({ from: extraStart, to: addDays(extraStart, 1) });
+    return events;
   });
 
-  const threeDay = months.map(({ month, year }) => {
-    const start = new Date(year, month, 18);
-    return { from: start, to: addDays(start, 2) };
+  const otherEvents = months.flatMap(({ month, year }) => {
+    const startOne = new Date(year, month, 8);
+    const startTwo = new Date(year, month, 18);
+    return [
+      { from: startOne, to: addDays(startOne, 2) },
+      { from: startTwo, to: addDays(startTwo, 2) },
+    ];
   });
 
   const weekend = months.flatMap(({ month, year }) => {
@@ -61,8 +70,12 @@ export function EventsCalendar() {
         const current = new Date(date);
         const isEventDay =
           singleDay.some((d) => isSameDay(d, current)) ||
-          twoDay.some((r) => isWithinInterval(current, { start: r.from, end: r.to })) ||
-          threeDay.some((r) => isWithinInterval(current, { start: r.from, end: r.to }));
+          institutionEvents.some((r) =>
+            isWithinInterval(current, { start: r.from, end: r.to })
+          ) ||
+          otherEvents.some((r) =>
+            isWithinInterval(current, { start: r.from, end: r.to })
+          );
         if (!isEventDay) {
           dates.push(current);
         }
@@ -90,8 +103,8 @@ export function EventsCalendar() {
             weekend,
             holiday: holidays,
             single: singleDay,
-            institution: twoDay,
-            other: threeDay,
+            institution: institutionEvents,
+            other: otherEvents,
           }}
           modifiersClassNames={{
             weekend: 'bg-gray-200 text-gray-400 dark:bg-[#161716] dark:text-gray-500',
