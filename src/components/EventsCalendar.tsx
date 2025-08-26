@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { addDays, format } from 'date-fns';
+import { addDays, format, isSameDay, isWithinInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 import { Calendar } from '@/components/ui/calendar';
@@ -52,6 +52,26 @@ export function EventsCalendar() {
     return { from: start, to: addDays(start, 2) };
   });
 
+  const weekend = months.flatMap(({ month, year }) => {
+    const dates: Date[] = [];
+    const date = new Date(year, month, 1);
+    while (date.getMonth() === month) {
+      const day = date.getDay();
+      if (day === 0 || day === 6) {
+        const current = new Date(date);
+        const isEventDay =
+          singleDay.some((d) => isSameDay(d, current)) ||
+          twoDay.some((r) => isWithinInterval(current, { start: r.from, end: r.to })) ||
+          threeDay.some((r) => isWithinInterval(current, { start: r.from, end: r.to }));
+        if (!isEventDay) {
+          dates.push(current);
+        }
+      }
+      date.setDate(date.getDate() + 1);
+    }
+    return dates;
+  });
+
   return (
     <div className="flex flex-col md:flex-row md:space-x-6 pt-2">
       <div className="flex flex-col">
@@ -67,14 +87,16 @@ export function EventsCalendar() {
           mode="range"
           classNames={{ row: 'flex w-full mt-2 gap-1' }}
           modifiers={{
-            weekend: { dayOfWeek: [0, 6] },
+            weekend,
             holiday: holidays,
             single: singleDay,
             institution: twoDay,
             other: threeDay,
           }}
+          modifiersClassNames={{
+            weekend: 'bg-gray-200 text-gray-400 dark:bg-[#161716] dark:text-gray-500',
+          }}
           modifiersStyles={{
-            weekend: { backgroundColor: '#e5e7eb', color: '#9ca3af' },
             holiday: { backgroundColor: '#0369a1', color: 'white' },
             single: { backgroundColor: '#0ea5e9', color: 'white' },
             institution_start: {
