@@ -28,36 +28,44 @@ export function EventsCalendar() {
     return { month: m, year: y };
   });
 
-  const findFirstFriday = (y: number, m: number) => {
+  const getNthWeekday = (
+    y: number,
+    m: number,
+    n: number,
+    weekday: number
+  ) => {
     const date = new Date(y, m, 1);
-    while (date.getDay() !== 5) {
+    while (date.getDay() !== weekday) {
       date.setDate(date.getDate() + 1);
     }
+    date.setDate(date.getDate() + (n - 1) * 7);
     return date;
   };
 
-  const singleDay = months.map(({ month, year }) => new Date(year, month, 5));
+  const singleDay = months.map(({ month, year }) =>
+    getNthWeekday(year, month, 1, 2)
+  ); // first Tuesday
 
   const institutionEvents = months.flatMap(({ month, year }, idx) => {
     const events = [] as { from: Date; to: Date }[];
     if (idx === 0) {
-      const start = findFirstFriday(year, month);
-      events.push({ from: start, to: addDays(start, 1) });
+      const start = getNthWeekday(year, month, 1, 5); // first Friday
+      events.push({ from: start, to: addDays(start, 1) }); // Fri-Sat
     } else {
-      const start = new Date(year, month, 12);
-      events.push({ from: start, to: addDays(start, 1) });
+      const start = getNthWeekday(year, month, 2, 1); // second Monday
+      events.push({ from: start, to: addDays(start, 1) }); // Mon-Tue
     }
-    const extraStart = new Date(year, month, 22);
-    events.push({ from: extraStart, to: addDays(extraStart, 1) });
+    const extraStart = getNthWeekday(year, month, 4, 4); // fourth Thursday
+    events.push({ from: extraStart, to: addDays(extraStart, 1) }); // Thu-Fri
     return events;
   });
 
   const otherEvents = months.flatMap(({ month, year }) => {
-    const startOne = new Date(year, month, 8);
-    const startTwo = new Date(year, month, 18);
+    const startOne = getNthWeekday(year, month, 2, 2); // second Tuesday
+    const startTwo = getNthWeekday(year, month, 3, 3); // third Wednesday
     return [
-      { from: startOne, to: addDays(startOne, 2) },
-      { from: startTwo, to: addDays(startTwo, 2) },
+      { from: startOne, to: addDays(startOne, 2) }, // Tue-Thu
+      { from: startTwo, to: addDays(startTwo, 2) }, // Wed-Fri
     ];
   });
 
@@ -112,6 +120,10 @@ export function EventsCalendar() {
           modifiersStyles={{
             holiday: { backgroundColor: '#0369a1', color: 'white' },
             single: { backgroundColor: '#0ea5e9', color: 'white' },
+            institution: {
+              backgroundColor: '#d9f99d',
+              color: '#365314',
+            },
             institution_start: {
               backgroundColor: '#d9f99d',
               color: '#365314',
@@ -132,6 +144,7 @@ export function EventsCalendar() {
               borderBottomRightRadius: '4px',
               marginLeft: '-4px',
             },
+            other: { backgroundColor: '#fde047', color: '#78350f' },
             other_start: {
               backgroundColor: '#fde047',
               color: '#78350f',
