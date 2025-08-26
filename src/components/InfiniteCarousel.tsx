@@ -20,14 +20,14 @@ export function InfiniteCarousel({
 
   return (
     <div
-      className="group relative overflow-hidden rounded-xl border border-border bg-card p-3"
+      className="group rounded-xl border border-border bg-card p-3"
       style={
         {
           '--baseSpeed': `${speedSeconds}s`,
         } as React.CSSProperties
       }
     >
-      <div className="relative">
+      <div className="relative overflow-hidden">
         <div className="marquee-track flex items-center gap-4 will-change-transform">
           {track.map((c, i) => (
             <a
