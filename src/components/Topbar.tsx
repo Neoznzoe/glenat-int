@@ -36,8 +36,8 @@ export function Topbar() {
             <User className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="hidden md:block">
-            <div className="text-sm font-medium text-foreground">John Doe</div>
-            <div className="text-xs text-muted-foreground">Administrateur</div>
+            <div className="text-sm font-medium text-foreground">Victor Besson</div>
+            <div className="text-xs text-muted-foreground">Glénat Grenoble</div>
           </div>
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </div>

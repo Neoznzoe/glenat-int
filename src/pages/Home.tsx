@@ -27,7 +27,7 @@ const covers = [
 ];
 
 export function Home() {
-  const userName = 'Utilisateur';
+  const userName = 'Victor';
 
   return (
     <div className="p-6 space-y-6">
