@@ -20,7 +20,7 @@ export function InfiniteCarousel({
 
   return (
     <div
-      className="group relative overflow-hidden rounded-xl border border-white/10 bg-[#0A0A0A] p-3"
+      className="group relative overflow-hidden rounded-xl border border-border bg-card p-3"
       style={
         {
           '--baseSpeed': `${speedSeconds}s`,

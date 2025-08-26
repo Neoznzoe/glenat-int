@@ -32,15 +32,15 @@ export function Home() {
   return (
     <div className="p-6 space-y-6">
       {/* En-tête */}
-      <div className="rounded-2xl border border-white/20 bg-[#0A0A0A] text-white px-6 py-6 lg:px-10 lg:py-8">
+      <div className="rounded-2xl border border-border bg-card text-card-foreground px-6 py-6 lg:px-10 lg:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
           {/* Colonne gauche : Jour / Date / Message */}
           <div className="lg:col-span-4 flex flex-col justify-between min-h-[220px]">
             <div>
-              <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tight text-white/90">
+              <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground">
                 {new Date().toLocaleDateString('fr-FR', { weekday: 'long' }).toUpperCase()}
               </h1>
-              <h2 className="mt-2 text-lg lg:text-xl text-white/70 capitalize">
+              <h2 className="mt-2 text-lg lg:text-xl text-muted-foreground capitalize">
                 {new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: '2-digit' })}
               </h2>
             </div>
@@ -57,7 +57,7 @@ export function Home() {
           {/* Colonne droite : Prochaine office + Carrousel */}
           <div className="lg:col-span-8">
             <div className="flex items-baseline justify-between mb-3">
-              <span className="text-sm lg:text-base text-white/60">
+              <span className="text-sm lg:text-base text-muted-foreground">
                 Prochaine office 255001 : 08/01/2025
               </span>
             </div>
