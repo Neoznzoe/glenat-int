@@ -50,14 +50,14 @@ export function Sidebar() {
 
   return (
     <div 
-      className={`bg-[#ff3b30] text-white flex flex-col transition-all duration-300 ease-in-out relative ${
+      className={`bg-[#ff3b30] text-white flex flex-col h-screen transition-all duration-300 ease-in-out relative ${
         isExpanded ? 'w-64' : 'w-16'
       }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Header */}
-      <div className="p-4 border-b border-red-400/50 flex items-center justify-between min-h-[64px]">
+      <div className="h-16 p-4 border-b border-red-400/50 flex items-center justify-between min-h-[64px]">
         {isExpanded ? (
           <img src={Logo} alt="Logo Glénat" className="h-8 w-auto flex-shrink-0" />
         ) : (
@@ -76,7 +76,7 @@ export function Sidebar() {
       </div>
 
       {/* Contenu principal = menu du haut + administration séparée */}
-      <div className="flex-1 flex flex-col justify-between">
+      <div className="flex-1 min-h-0 flex flex-col justify-between">
         {/* Menu principal */}
         <nav className="p-2">
           <ul className="space-y-1">
@@ -135,7 +135,7 @@ export function Sidebar() {
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-red-400/50">
+      <div className="h-12 flex-none border-t border-red-400/50 flex items-center px-4">
         <div className={`text-xs text-red-100 transition-all duration-300 ${
           isExpanded ? 'opacity-100' : 'opacity-0'
         }`}>
