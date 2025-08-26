@@ -69,6 +69,25 @@ export function EventsCalendar() {
     ];
   });
 
+  const getMiddleDates = (from: Date, to: Date) => {
+    const dates: Date[] = [];
+    let current = addDays(from, 1);
+    while (current < to) {
+      dates.push(new Date(current));
+      current = addDays(current, 1);
+    }
+    return dates;
+  };
+
+  const institutionStart = institutionEvents.map((e) => e.from);
+  const institutionEnd = institutionEvents.map((e) => e.to);
+  const institutionMiddle = institutionEvents.flatMap((e) =>
+    getMiddleDates(e.from, e.to)
+  );
+  const otherStart = otherEvents.map((e) => e.from);
+  const otherEnd = otherEvents.map((e) => e.to);
+  const otherMiddle = otherEvents.flatMap((e) => getMiddleDates(e.from, e.to));
+
   const weekend = months.flatMap(({ month, year }) => {
     const dates: Date[] = [];
     const date = new Date(year, month, 1);
@@ -108,7 +127,7 @@ export function EventsCalendar() {
           locale={fr}
           mode="range"
           classNames={{
-            row: 'flex w-full mt-2 gap-0',
+            row: 'flex w-full mt-2 gap-0.5',
             head_row: 'flex w-full gap-0.5',
           }}
           modifiers={{
@@ -116,7 +135,13 @@ export function EventsCalendar() {
             holiday: holidays,
             single: singleDay,
             institution: institutionEvents,
+            institution_start: institutionStart,
+            institution_middle: institutionMiddle,
+            institution_end: institutionEnd,
             other: otherEvents,
+            other_start: otherStart,
+            other_middle: otherMiddle,
+            other_end: otherEnd,
           }}
           modifiersClassNames={{
             weekend: 'bg-gray-200 text-gray-400 dark:bg-[#161716] dark:text-gray-500',
@@ -133,16 +158,19 @@ export function EventsCalendar() {
               color: '#365314',
               borderTopLeftRadius: '4px',
               borderBottomLeftRadius: '4px',
+              boxShadow: '2px 0 0 #d9f99d',
             },
             institution_middle: {
               backgroundColor: '#d9f99d',
               color: '#365314',
+              boxShadow: '2px 0 0 #d9f99d, -2px 0 0 #d9f99d',
             },
             institution_end: {
               backgroundColor: '#d9f99d',
               color: '#365314',
               borderTopRightRadius: '4px',
               borderBottomRightRadius: '4px',
+              boxShadow: '-2px 0 0 #d9f99d',
             },
             other: { backgroundColor: '#fde047', color: '#78350f' },
             other_start: {
@@ -150,16 +178,19 @@ export function EventsCalendar() {
               color: '#78350f',
               borderTopLeftRadius: '4px',
               borderBottomLeftRadius: '4px',
+              boxShadow: '2px 0 0 #fde047',
             },
             other_middle: {
               backgroundColor: '#fde047',
               color: '#78350f',
+              boxShadow: '2px 0 0 #fde047, -2px 0 0 #fde047',
             },
             other_end: {
               backgroundColor: '#fde047',
               color: '#78350f',
               borderTopRightRadius: '4px',
               borderBottomRightRadius: '4px',
+              boxShadow: '-2px 0 0 #fde047',
             },
           }}
         />
