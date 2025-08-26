@@ -106,7 +106,10 @@ export function EventsCalendar() {
           onMonthChange={setMonth}
           locale={fr}
           mode="range"
-          classNames={{ row: 'flex w-full mt-2 gap-1' }}
+          classNames={{
+            row: 'flex w-full mt-2 gap-0.5',
+            head_row: 'flex w-full gap-0.5',
+          }}
           modifiers={{
             weekend,
             holiday: holidays,
@@ -129,20 +132,20 @@ export function EventsCalendar() {
               color: '#365314',
               borderTopLeftRadius: '4px',
               borderBottomLeftRadius: '4px',
-              marginRight: '-4px',
+              marginRight: '-2px',
             },
             institution_middle: {
               backgroundColor: '#d9f99d',
               color: '#365314',
-              marginLeft: '-4px',
-              marginRight: '-4px',
+              marginLeft: '-2px',
+              marginRight: '-2px',
             },
             institution_end: {
               backgroundColor: '#d9f99d',
               color: '#365314',
               borderTopRightRadius: '4px',
               borderBottomRightRadius: '4px',
-              marginLeft: '-4px',
+              marginLeft: '-2px',
             },
             other: { backgroundColor: '#fde047', color: '#78350f' },
             other_start: {
@@ -150,20 +153,20 @@ export function EventsCalendar() {
               color: '#78350f',
               borderTopLeftRadius: '4px',
               borderBottomLeftRadius: '4px',
-              marginRight: '-4px',
+              marginRight: '-2px',
             },
             other_middle: {
               backgroundColor: '#fde047',
               color: '#78350f',
-              marginLeft: '-4px',
-              marginRight: '-4px',
+              marginLeft: '-2px',
+              marginRight: '-2px',
             },
             other_end: {
               backgroundColor: '#fde047',
               color: '#78350f',
               borderTopRightRadius: '4px',
               borderBottomRightRadius: '4px',
-              marginLeft: '-4px',
+              marginLeft: '-2px',
             },
           }}
         />
