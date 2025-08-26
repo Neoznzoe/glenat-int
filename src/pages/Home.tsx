@@ -27,6 +27,8 @@ const covers = [
 ];
 
 export function Home() {
+  const userName = 'Utilisateur';
+
   return (
     <div className="p-6 space-y-6">
       {/* En-tête */}
@@ -42,9 +44,14 @@ export function Home() {
                 {new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: '2-digit' })}
               </h2>
             </div>
-            <p className="mt-6 text-base lg:text-lg font-semibold text-[#ff3b30]">
-              Bonne journée !
-            </p>
+            <div className="mt-6 space-y-1">
+              <p className="text-base lg:text-lg font-semibold">
+                Bonjour {userName}
+              </p>
+              <p className="text-base lg:text-lg font-semibold text-[#ff3b30]">
+                Bonne journée !
+              </p>
+            </div>
           </div>
 
           {/* Colonne droite : Prochaine office + Carrousel */}
@@ -54,11 +61,7 @@ export function Home() {
                 Prochaine office 255001 : 08/01/2025
               </span>
             </div>
-            <InfiniteCarousel
-              covers={covers}
-              baseSpeedSeconds={30}
-              hoverSpeedSeconds={18}
-            />
+            <InfiniteCarousel covers={covers} speedSeconds={30} />
           </div>
         </div>
       </div>
