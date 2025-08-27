@@ -231,8 +231,8 @@ export function EventsCalendar() {
                 };
               } else if (type === 'weekend') {
                 applyRangeStyle(
-                  theme === 'dark' ? '#171717' : '#e5e7eb',
-                  theme === 'dark' ? '#a3a3a3' : '#9ca3af',
+                  theme === 'dark' ? '#171717' : '#F4F5F6',
+                  theme === 'dark' ? '#a3a3a3' : '#C6CBD2',
                   prevType === 'weekend',
                   nextType === 'weekend'
                 );
@@ -240,7 +240,7 @@ export function EventsCalendar() {
                   customStyle = {
                   ...customStyle,
                   backgroundColor: 'transparent',
-                  color: theme === 'dark' ? '#545964' : '#DDE0E3', // muted-foreground
+                  color: theme === 'dark' ? '#545964' : '#E9EBED',
                   borderRadius: 0,
                   marginLeft: 0,
                   marginRight: 0,
