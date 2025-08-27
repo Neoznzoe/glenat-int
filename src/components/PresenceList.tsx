@@ -58,17 +58,18 @@ export function PresenceList<T extends Record<string, ReactNode>>({
       </CardHeader>
       <CardContent>
         {(searchable || sortable) && (
-          <div className="flex flex-col sm:flex-row gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-4">
             {searchable && (
               <Input
+                className="flex-1"
                 placeholder="Rechercher..."
                 onChange={(e) => onSearch?.(e.target.value)}
               />
             )}
             {sortable && (
               <Select onValueChange={(value) => onSort?.(value as keyof T)}>
-                <SelectTrigger className="sm:w-[180px]">
-                  <SelectValue placeholder="Trier" />
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Trier par" />
                 </SelectTrigger>
                 <SelectContent>
                   {columns.map((col) => (
@@ -82,24 +83,28 @@ export function PresenceList<T extends Record<string, ReactNode>>({
           </div>
         )}
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columns.map((col) => (
-                <TableHead key={String(col.key)}>{col.label}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row, idx) => (
-              <TableRow key={idx}>
-                {columns.map((col) => (
-                  <TableCell key={String(col.key)}>{row[col.key]}</TableCell>
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {columns.map((col) => (
+                    <TableHead key={String(col.key)}>{col.label}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row, idx) => (
+                  <TableRow key={idx}>
+                    {columns.map((col) => (
+                      <TableCell key={String(col.key)}>{row[col.key]}</TableCell>
+                    ))}
+                  </TableRow>
                 ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
         {showMore && (
           <div className="flex justify-end mt-4">

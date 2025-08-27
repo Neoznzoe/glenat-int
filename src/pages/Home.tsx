@@ -1,14 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from '@/components/ui/table';
-import {
   Calendar,
   Home as HomeIcon,
   ExternalLink,
@@ -251,6 +243,12 @@ export function Home() {
           ]}
           rows={absentsToday}
           count={absentsToday.length}
+          searchable
+          sortable
+          showMore
+          onSearch={(value) => console.log('search absent', value)}
+          onSort={(value) => console.log('sort absent', value)}
+          onShowMore={() => console.log('show more absent')}
         />
         <PresenceList
           title="Télétravail aujourd'hui"
@@ -260,73 +258,65 @@ export function Home() {
           ]}
           rows={teleworkToday}
           count={teleworkToday.length}
+          searchable
+          sortable
+          showMore
+          onSearch={(value) => console.log('search telework', value)}
+          onSort={(value) => console.log('sort telework', value)}
+          onShowMore={() => console.log('show more telework')}
         />
         <Card>
           <CardHeader>
             <CardTitle>Déplacements</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div>
-              <h4 className="font-semibold mb-2">En visite chez nous</h4>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {visitingToday.map((row, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell>{row.name}</TableCell>
-                      <TableCell>{row.email}</TableCell>
-                      <TableCell>{row.date}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-2">En déplacement aujourd'hui</h4>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>Email</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {travelingToday.map((row, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell>{row.name}</TableCell>
-                      <TableCell>{row.email}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-2">Déplacement prévu</h4>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {plannedTravel.map((row, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell>{row.name}</TableCell>
-                      <TableCell>{row.email}</TableCell>
-                      <TableCell>{row.date}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <PresenceList
+              title="En visite chez nous"
+              columns={[
+                { key: 'name', label: 'Nom' },
+                { key: 'email', label: 'Email' },
+                { key: 'date', label: 'Date' },
+              ]}
+              rows={visitingToday}
+              count={visitingToday.length}
+              searchable
+              sortable
+              showMore
+              onSearch={(value) => console.log('search visiting', value)}
+              onSort={(value) => console.log('sort visiting', value)}
+              onShowMore={() => console.log('show more visiting')}
+            />
+            <PresenceList
+              title="En déplacement aujourd'hui"
+              columns={[
+                { key: 'name', label: 'Nom' },
+                { key: 'email', label: 'Email' },
+              ]}
+              rows={travelingToday}
+              count={travelingToday.length}
+              searchable
+              sortable
+              showMore
+              onSearch={(value) => console.log('search traveling', value)}
+              onSort={(value) => console.log('sort traveling', value)}
+              onShowMore={() => console.log('show more traveling')}
+            />
+            <PresenceList
+              title="Déplacement prévu"
+              columns={[
+                { key: 'name', label: 'Nom' },
+                { key: 'email', label: 'Email' },
+                { key: 'date', label: 'Date' },
+              ]}
+              rows={plannedTravel}
+              count={plannedTravel.length}
+              searchable
+              sortable
+              showMore
+              onSearch={(value) => console.log('search planned', value)}
+              onSort={(value) => console.log('sort planned', value)}
+              onShowMore={() => console.log('show more planned')}
+            />
           </CardContent>
         </Card>
       </div>
