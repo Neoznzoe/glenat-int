@@ -4,6 +4,7 @@ import { fr } from 'date-fns/locale';
 
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
+import { useTheme } from 'next-themes';
 
 export function EventsCalendar() {
   const today = new Date();
@@ -74,29 +75,6 @@ export function EventsCalendar() {
     ];
   });
 
-  const weekend = months.flatMap(({ month, year }) => {
-    const dates: Date[] = [];
-    const date = new Date(year, month, 1);
-    while (date.getMonth() === month) {
-      const day = date.getDay();
-      if (day === 0 || day === 6) {
-        const current = new Date(date);
-        const isEventDay =
-          singleDay.some((d) => isSameDay(d, current)) ||
-          institutionEvents.some((r) =>
-            isWithinInterval(current, { start: r.from, end: r.to })
-          ) ||
-          otherEvents.some((r) =>
-            isWithinInterval(current, { start: r.from, end: r.to })
-          );
-        if (!isEventDay) {
-          dates.push(current);
-        }
-      }
-      date.setDate(date.getDate() + 1);
-    }
-    return dates;
-  });
 
   return (
     <div className="flex flex-col lg:flex-row lg:space-x-6 pt-2">
@@ -168,17 +146,32 @@ export function EventsCalendar() {
           components={{
             Day: (
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              { date, ...props }: any
+              { date, displayMonth, ...props }: any
             ) => {
-              // Vérifier si ce jour fait partie d'une plage d'événements
-              const isInstitutionEvent = institutionEvents.some(range =>
-                isWithinInterval(date, { start: range.from, end: range.to })
-              );
-              const isOtherEvent = otherEvents.some(range =>
-                isWithinInterval(date, { start: range.from, end: range.to })
-              );
-              const isHoliday = holidays.some(d => isSameDay(d, date));
-              const isWeekend = weekend.some(d => isSameDay(d, date));
+              const { theme } = useTheme();
+
+              const getDayType = (d: Date) => {
+                if (
+                  institutionEvents.some(range =>
+                    isWithinInterval(d, { start: range.from, end: range.to })
+                  )
+                )
+                  return 'institution';
+                if (
+                  otherEvents.some(range =>
+                    isWithinInterval(d, { start: range.from, end: range.to })
+                  )
+                )
+                  return 'other';
+                if (holidays.some(h => isSameDay(h, d))) return 'holiday';
+                if (d.getDay() === 0 || d.getDay() === 6) return 'weekend';
+                return 'none';
+              };
+
+              const type = getDayType(date);
+              const prevType = getDayType(addDays(date, -1));
+              const nextType = getDayType(addDays(date, 1));
+              const isOutside = date.getMonth() !== displayMonth.getMonth();
 
               let customStyle: React.CSSProperties = {
                 width: '100%',
@@ -190,95 +183,67 @@ export function EventsCalendar() {
                 fontWeight: '500',
               };
 
-              if (isInstitutionEvent) {
-                const range = institutionEvents.find(r =>
-                  isWithinInterval(date, { start: r.from, end: r.to })
-                );
-                if (range) {
-                  const isStart = isSameDay(date, range.from);
-                  const isEnd = isSameDay(date, range.to);
-
-                  const extraWidth =
-                    (isStart ? 0 : daySpacing) + (isEnd ? 0 : daySpacing);
-
-                  customStyle = {
-                    ...customStyle,
-                    backgroundColor: '#d9f99d',
-                    color: '#365314',
-                    width:
-                      extraWidth === 0
-                        ? '100%'
-                        : `calc(100% + ${extraWidth}px)`,
-                    marginLeft: isStart ? '0' : `-${daySpacing}px`,
-                    marginRight: isEnd ? '0' : `-${daySpacing}px`,
-                    borderTopLeftRadius: isStart ? '6px' : '0',
-                    borderBottomLeftRadius: isStart ? '6px' : '0',
-                    borderTopRightRadius: isEnd ? '6px' : '0',
-                    borderBottomRightRadius: isEnd ? '6px' : '0',
-                  };
-                }
-              } else if (isOtherEvent) {
-                const range = otherEvents.find(r =>
-                  isWithinInterval(date, { start: r.from, end: r.to })
-                );
-                if (range) {
-                  const isStart = isSameDay(date, range.from);
-                  const isEnd = isSameDay(date, range.to);
-
-                  const extraWidth =
-                    (isStart ? 0 : daySpacing) + (isEnd ? 0 : daySpacing);
-
-                  customStyle = {
-                    ...customStyle,
-                    backgroundColor: '#fde047',
-                    color: '#78350f',
-                    width:
-                      extraWidth === 0
-                        ? '100%'
-                        : `calc(100% + ${extraWidth}px)`,
-                    marginLeft: isStart ? '0' : `-${daySpacing}px`,
-                    marginRight: isEnd ? '0' : `-${daySpacing}px`,
-                    borderTopLeftRadius: isStart ? '6px' : '0',
-                    borderBottomLeftRadius: isStart ? '6px' : '0',
-                    borderTopRightRadius: isEnd ? '6px' : '0',
-                    borderBottomRightRadius: isEnd ? '6px' : '0',
-                  };
-                }
-              } else if (isHoliday) {
-                customStyle = {
-                  ...customStyle,
-                  backgroundColor: '#0369a1',
-                  color: 'white',
-                };
-              } else if (isWeekend) {
-                const prevIsWeekend = weekend.some(d =>
-                  isSameDay(addDays(date, -1), d)
-                );
-                const nextIsWeekend = weekend.some(d =>
-                  isSameDay(addDays(date, 1), d)
-                );
-                const isStart = !prevIsWeekend;
-                const isEnd = !nextIsWeekend;
+              const applyRangeStyle = (
+                bg: string,
+                fg: string,
+                prevSame: boolean,
+                nextSame: boolean
+              ) => {
                 const extraWidth =
-                  (isStart ? 0 : daySpacing) + (isEnd ? 0 : daySpacing);
-
+                  (prevSame ? daySpacing : 0) + (nextSame ? daySpacing : 0);
                 customStyle = {
                   ...customStyle,
-                  backgroundColor: '#e5e7eb',
-                  color: '#9ca3af',
+                  backgroundColor: bg,
+                  color: fg,
                   width:
                     extraWidth === 0
                       ? '100%'
                       : `calc(100% + ${extraWidth}px)`,
-                  marginLeft: isStart ? '0' : `-${daySpacing}px`,
-                  marginRight: isEnd ? '0' : `-${daySpacing}px`,
-                  borderTopLeftRadius: isStart ? '6px' : '0',
-                  borderBottomLeftRadius: isStart ? '6px' : '0',
-                  borderTopRightRadius: isEnd ? '6px' : '0',
-                  borderBottomRightRadius: isEnd ? '6px' : '0',
+                  marginLeft: prevSame ? `-${daySpacing}px` : '0',
+                  marginRight: nextSame ? `-${daySpacing}px` : '0',
+                  borderTopLeftRadius: prevSame ? '0' : '6px',
+                  borderBottomLeftRadius: prevSame ? '0' : '6px',
+                  borderTopRightRadius: nextSame ? '0' : '6px',
+                  borderBottomRightRadius: nextSame ? '0' : '6px',
+                };
+              };
+
+              if (type === 'institution') {
+                applyRangeStyle(
+                  '#d9f99d',
+                  '#365314',
+                  prevType === 'institution',
+                  nextType === 'institution'
+                );
+              } else if (type === 'other') {
+                applyRangeStyle(
+                  '#fde047',
+                  '#78350f',
+                  prevType === 'other',
+                  nextType === 'other'
+                );
+              } else if (type === 'holiday') {
+                customStyle = {
+                  ...customStyle,
+                  backgroundColor: '#0369a1',
+                  color: 'white',
+                  borderRadius: '6px',
+                };
+              } else if (type === 'weekend') {
+                applyRangeStyle(
+                  theme === 'dark' ? '#171717' : '#e5e7eb',
+                  theme === 'dark' ? '#a3a3a3' : '#9ca3af',
+                  prevType === 'weekend',
+                  nextType === 'weekend'
+                );
+              } else if (isOutside) {
+                customStyle = {
+                  ...customStyle,
+                  backgroundColor: theme === 'dark' ? '#262626' : '#f3f4f6',
+                  color: '#9ca3af',
                 };
               }
-              
+
               return (
                 <div
                   {...props}
