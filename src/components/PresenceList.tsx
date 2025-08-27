@@ -55,6 +55,7 @@ export function PresenceList<T extends Record<string, ReactNode>>({
   onShowMore,
 }: PresenceListProps<T>) {
   const displayCount = count ?? rows.length;
+  const isTwoColumn = columns.length === 2;
   const controls =
     (searchable || sortable) && (
       <div className="flex items-center gap-2 mb-4">
@@ -84,11 +85,16 @@ export function PresenceList<T extends Record<string, ReactNode>>({
 
   const table = (
     <div className="rounded-md border">
-      <Table>
+      <Table className={isTwoColumn ? 'table-fixed' : undefined}>
         <TableHeader>
           <TableRow>
             {columns.map((col) => (
-              <TableHead key={String(col.key)}>{col.label}</TableHead>
+              <TableHead
+                key={String(col.key)}
+                className={isTwoColumn ? 'w-1/2' : undefined}
+              >
+                {col.label}
+              </TableHead>
             ))}
           </TableRow>
         </TableHeader>
@@ -96,7 +102,12 @@ export function PresenceList<T extends Record<string, ReactNode>>({
           {rows.map((row, idx) => (
             <TableRow key={idx}>
               {columns.map((col) => (
-                <TableCell key={String(col.key)}>{row[col.key]}</TableCell>
+                <TableCell
+                  key={String(col.key)}
+                  className={isTwoColumn ? 'w-1/2' : undefined}
+                >
+                  {row[col.key]}
+                </TableCell>
               ))}
             </TableRow>
           ))}
@@ -118,7 +129,9 @@ export function PresenceList<T extends Record<string, ReactNode>>({
     return (
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">{title}</h2>
+          <h2 className="text-2xl font-semibold leading-none tracking-tight">
+            {title}
+          </h2>
           <span className="text-sm text-muted-foreground">{displayCount}</span>
         </div>
         {controls}
