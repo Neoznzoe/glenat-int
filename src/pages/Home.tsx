@@ -1,13 +1,21 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table';
+import {
   Calendar,
   Home as HomeIcon,
   ExternalLink,
   ChevronRight,
   Clock,
   MapPin,
-  UserCheck
+  UserCheck,
 } from 'lucide-react';
 import { InfiniteCarousel } from '@/components/InfiniteCarousel';
 import { EventsCalendar } from '@/components/EventsCalendar';
@@ -31,15 +39,27 @@ const covers = [
 
 export function Home() {
   const userName = 'Victor';
-  const presentRows = [
-    { name: 'Alice Martin', status: 'Présent' },
-    { name: 'Bob Dupont', status: 'Présent' },
-    { name: 'Charlie Durand', status: 'Présent' },
+
+  const absentsToday = [
+    { name: 'David Bernard', email: 'david@example.com', retour: '12/09/2024' },
+    { name: 'Emma Boucher', email: 'emma@example.com', retour: '15/09/2024' },
   ];
 
-  const absentRows = [
-    { name: 'David Bernard', status: 'Congé' },
-    { name: 'Emma Boucher', status: 'RTT' },
+  const teleworkToday = [
+    { name: 'Alice Martin', email: 'alice@example.com' },
+    { name: 'Bob Dupont', email: 'bob@example.com' },
+  ];
+
+  const visitingToday = [
+    { name: 'Client ABC', email: 'client@abc.com', date: '20/09/2024' },
+  ];
+
+  const travelingToday = [
+    { name: 'Marc Petit', email: 'marc@example.com' },
+  ];
+
+  const plannedTravel = [
+    { name: 'Anne Grand', email: 'anne@example.com', date: '25/09/2024' },
   ];
 
   return (
@@ -221,25 +241,94 @@ export function Home() {
       </Card>
 
       {/* Présence */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <PresenceList
-          title="Présents"
-          count={presentRows.length}
-          rows={presentRows}
-          searchable
-          sortable
-          showMore
-          onSearch={(value) => console.log('search', value)}
-          onSort={(value) => console.log('sort', value)}
-          onShowMore={() => console.log('show more')}
+          title="Absent aujourd'hui"
+          columns={[
+            { key: 'name', label: 'Nom' },
+            { key: 'email', label: 'Email' },
+            { key: 'retour', label: 'Retour prévu' },
+          ]}
+          rows={absentsToday}
+          count={absentsToday.length}
         />
         <PresenceList
-          title="Absents"
-          count={absentRows.length}
-          rows={absentRows}
-          showMore
-          onShowMore={() => console.log('show more')}
+          title="Télétravail aujourd'hui"
+          columns={[
+            { key: 'name', label: 'Nom' },
+            { key: 'email', label: 'Email' },
+          ]}
+          rows={teleworkToday}
+          count={teleworkToday.length}
         />
+        <Card>
+          <CardHeader>
+            <CardTitle>Déplacements</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <h4 className="font-semibold mb-2">En visite chez nous</h4>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visitingToday.map((row, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell>{row.name}</TableCell>
+                      <TableCell>{row.email}</TableCell>
+                      <TableCell>{row.date}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2">En déplacement aujourd'hui</h4>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Email</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {travelingToday.map((row, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell>{row.name}</TableCell>
+                      <TableCell>{row.email}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2">Déplacement prévu</h4>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {plannedTravel.map((row, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell>{row.name}</TableCell>
+                      <TableCell>{row.email}</TableCell>
+                      <TableCell>{row.date}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* 3 colonnes de liens */}
