@@ -10,6 +10,7 @@ export function EventsCalendar() {
   const [month, setMonth] = React.useState<Date>(today);
   const year = today.getFullYear();
   const currentMonth = today.getMonth();
+  const daySpacing = 6; // spacing between days in pixels
 
   const holidays = [
     new Date(year, 0, 1),
@@ -57,15 +58,19 @@ export function EventsCalendar() {
     }
     const extraStart = getNthWeekday(year, month, 4, 4); // fourth Thursday
     events.push({ from: extraStart, to: addDays(extraStart, 1) }); // Thu-Fri
+    const singleInst = getNthWeekday(year, month, 3, 2); // third Tuesday
+    events.push({ from: singleInst, to: singleInst }); // single-day event
     return events;
   });
 
   const otherEvents = months.flatMap(({ month, year }) => {
     const startOne = getNthWeekday(year, month, 2, 2); // second Tuesday
     const startTwo = getNthWeekday(year, month, 3, 3); // third Wednesday
+    const singleOther = getNthWeekday(year, month, 1, 4); // first Thursday
     return [
       { from: startOne, to: addDays(startOne, 2) }, // Tue-Thu
       { from: startTwo, to: addDays(startTwo, 2) }, // Wed-Fri
+      { from: singleOther, to: singleOther }, // single-day event
     ];
   });
 
@@ -120,7 +125,7 @@ export function EventsCalendar() {
             head_row: 'flex w-full',
             head_cell: 'text-muted-foreground rounded-md w-full font-normal text-[0.8rem] flex-1 text-center py-2',
             // Ajout d'un espacement horizontal entre les jours
-            row: 'flex w-full mt-1 space-x-1',
+            row: 'flex w-full mt-1 space-x-1.5',
             cell: 'relative p-0 text-center text-sm focus-within:relative focus-within:z-20 flex-1',
             day: 'h-9 w-full p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground rounded-md flex items-center justify-center',
             day_selected: 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
@@ -187,7 +192,7 @@ export function EventsCalendar() {
                   const isEnd = isSameDay(date, range.to);
 
                   const extraWidth =
-                    (isStart ? 0 : 4) + (isEnd ? 0 : 4);
+                    (isStart ? 0 : daySpacing) + (isEnd ? 0 : daySpacing);
 
                   customStyle = {
                     backgroundColor: '#d9f99d',
@@ -202,8 +207,8 @@ export function EventsCalendar() {
                     justifyContent: 'center',
                     fontSize: '14px',
                     fontWeight: '500',
-                    marginLeft: isStart ? '0' : '-4px',
-                    marginRight: isEnd ? '0' : '-4px',
+                    marginLeft: isStart ? '0' : `-${daySpacing}px`,
+                    marginRight: isEnd ? '0' : `-${daySpacing}px`,
                     borderTopLeftRadius: isStart ? '6px' : '0',
                     borderBottomLeftRadius: isStart ? '6px' : '0',
                     borderTopRightRadius: isEnd ? '6px' : '0',
@@ -219,7 +224,7 @@ export function EventsCalendar() {
                   const isEnd = isSameDay(date, range.to);
 
                   const extraWidth =
-                    (isStart ? 0 : 4) + (isEnd ? 0 : 4);
+                    (isStart ? 0 : daySpacing) + (isEnd ? 0 : daySpacing);
 
                   customStyle = {
                     backgroundColor: '#fde047',
@@ -234,8 +239,8 @@ export function EventsCalendar() {
                     justifyContent: 'center',
                     fontSize: '14px',
                     fontWeight: '500',
-                    marginLeft: isStart ? '0' : '-4px',
-                    marginRight: isEnd ? '0' : '-4px',
+                    marginLeft: isStart ? '0' : `-${daySpacing}px`,
+                    marginRight: isEnd ? '0' : `-${daySpacing}px`,
                     borderTopLeftRadius: isStart ? '6px' : '0',
                     borderBottomLeftRadius: isStart ? '6px' : '0',
                     borderTopRightRadius: isEnd ? '6px' : '0',
