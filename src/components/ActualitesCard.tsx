@@ -8,7 +8,7 @@ import { Home as HomeIcon, Search } from 'lucide-react';
 function SearchModule({ title, placeholder }: { title: string; placeholder?: string }) {
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium">{title}</Label>
+      <Label className="text-xl font-semibold">{title}</Label>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
