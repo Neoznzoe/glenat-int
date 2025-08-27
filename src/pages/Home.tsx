@@ -1,14 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import {
-  Calendar,
-  Home as HomeIcon,
-  ExternalLink,
-  ChevronRight,
-  Clock,
-  MapPin,
-  UserCheck,
-} from 'lucide-react';
+import { useState } from 'react';
+import { ExternalLink } from 'lucide-react';
 import { InfiniteCarousel } from '@/components/InfiniteCarousel';
 import { EventsCalendar } from '@/components/EventsCalendar';
 import { ActualitesCard } from '@/components/ActualitesCard';
@@ -31,6 +23,9 @@ const covers = [
 
 export function Home() {
   const userName = 'Victor';
+  const [showAllVisiting, setShowAllVisiting] = useState(false);
+  const [showAllTraveling, setShowAllTraveling] = useState(false);
+  const [showAllPlanned, setShowAllPlanned] = useState(false);
 
   const absentsToday = [
     { name: 'David Bernard', email: 'david@example.com', retour: '12/09/2024' },
@@ -90,6 +85,16 @@ export function Home() {
     { name: 'Louis Renard', email: 'louis@example.com', date: '26/09/2024' },
     { name: 'Mélanie Vincent', email: 'melanie@example.com', date: '27/09/2024' },
   ];
+
+  const visitingDisplayed = showAllVisiting
+    ? visitingToday
+    : visitingToday.slice(0, 2);
+  const travelingDisplayed = showAllTraveling
+    ? travelingToday
+    : travelingToday.slice(0, 2);
+  const plannedTravelDisplayed = showAllPlanned
+    ? plannedTravel
+    : plannedTravel.slice(0, 2);
 
   return (
     <div className="p-6 space-y-6">
@@ -155,6 +160,7 @@ export function Home() {
           onSearch={(value) => console.log('search absent', value)}
           onSort={(value) => console.log('sort absent', value)}
           onShowMore={() => console.log('show more absent')}
+          emptyMessage="aucun absent aujourd'hui"
         />
         <PresenceList
           title="Télétravail aujourd'hui"
@@ -170,6 +176,7 @@ export function Home() {
           onSearch={(value) => console.log('search telework', value)}
           onSort={(value) => console.log('sort telework', value)}
           onShowMore={() => console.log('show more telework')}
+          emptyMessage="aucun télétravail aujourd'hui"
         />
         <Card>
           <CardContent className="pt-6 space-y-6">
@@ -181,14 +188,15 @@ export function Home() {
                 { key: 'email', label: 'Email' },
                 { key: 'date', label: 'Date' },
               ]}
-              rows={visitingToday}
+              rows={visitingDisplayed}
               count={visitingToday.length}
               searchable
               sortable
-              showMore
+              showMore={!showAllVisiting && visitingToday.length > 2}
               onSearch={(value) => console.log('search visiting', value)}
               onSort={(value) => console.log('sort visiting', value)}
-              onShowMore={() => console.log('show more visiting')}
+              onShowMore={() => setShowAllVisiting(true)}
+              emptyMessage="aucune visite chez nous"
             />
             <PresenceList
               variant="embedded"
@@ -197,14 +205,15 @@ export function Home() {
                 { key: 'name', label: 'Nom' },
                 { key: 'email', label: 'Email' },
               ]}
-              rows={travelingToday}
+              rows={travelingDisplayed}
               count={travelingToday.length}
               searchable
               sortable
-              showMore
+              showMore={!showAllTraveling && travelingToday.length > 2}
               onSearch={(value) => console.log('search traveling', value)}
               onSort={(value) => console.log('sort traveling', value)}
-              onShowMore={() => console.log('show more traveling')}
+              onShowMore={() => setShowAllTraveling(true)}
+              emptyMessage="aucun déplacement aujourd'hui"
             />
             <PresenceList
               variant="embedded"
@@ -214,14 +223,15 @@ export function Home() {
                 { key: 'email', label: 'Email' },
                 { key: 'date', label: 'Date' },
               ]}
-              rows={plannedTravel}
+              rows={plannedTravelDisplayed}
               count={plannedTravel.length}
               searchable
               sortable
-              showMore
+              showMore={!showAllPlanned && plannedTravel.length > 2}
               onSearch={(value) => console.log('search planned', value)}
               onSort={(value) => console.log('sort planned', value)}
-              onShowMore={() => console.log('show more planned')}
+              onShowMore={() => setShowAllPlanned(true)}
+              emptyMessage="aucun déplacement prévu"
             />
           </CardContent>
         </Card>
