@@ -2,14 +2,21 @@ import { useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Home as HomeIcon } from 'lucide-react';
+import { Home as HomeIcon, Search } from 'lucide-react';
 
 // A small helper component to render a labeled search input
 function SearchModule({ title, placeholder }: { title: string; placeholder?: string }) {
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium">{title}</Label>
-      <Input type="search" placeholder={placeholder} />
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder={placeholder}
+          className="pl-10 bg-muted border-input focus:bg-background"
+        />
+      </div>
     </div>
   );
 }
@@ -47,9 +54,9 @@ export function ActualitesCard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-0">
           {/* Left column: search modules */}
           <div className="space-y-4 lg:pr-6 lg:border-r lg:border-border">
-            <SearchModule title="Rechercher un salarié" placeholder="Nom..." />
-            <SearchModule title="Rechercher un projet" placeholder="Projet..." />
-            <SearchModule title="Rechercher un document" placeholder="Document..." />
+            <SearchModule title="Glénat'Fée" placeholder="Rechercher..." />
+            <SearchModule title="Commande" placeholder="Rechercher..." />
+            <SearchModule title="Contrats" placeholder="Rechercher..." />
           </div>
 
           {/* Right column: new arrivals and name day */}
