@@ -78,7 +78,7 @@ export function EventsCalendar() {
 
   return (
     <div className="flex flex-col lg:flex-row lg:space-x-6 pt-2">
-      <div className="flex flex-col flex-1 flex-shrink-0">
+      <div className="flex flex-col w-full lg:w-auto flex-shrink-0 lg:basis-72">
         <div className="flex items-center justify-center mb-2">
           <Button variant="outline" size="sm" onClick={() => setMonth(new Date())}>
             Aujourd'hui
