@@ -136,7 +136,6 @@ export function EventsCalendar() {
             day_hidden: 'invisible',
           }}
           modifiers={{
-            weekend,
             holiday: holidays,
             single: singleDay,
             institution: institutionEvents.flatMap(range => {
@@ -159,7 +158,6 @@ export function EventsCalendar() {
             }),
           }}
           modifiersClassNames={{
-            weekend: 'bg-gray-200 text-gray-400 dark:bg-[#161716] dark:text-gray-500',
             institution: 'bg-lime-200 text-lime-800',
             other: 'bg-yellow-200 text-yellow-800',
           }}
@@ -179,10 +177,19 @@ export function EventsCalendar() {
               const isOtherEvent = otherEvents.some(range =>
                 isWithinInterval(date, { start: range.from, end: range.to })
               );
-              
-              let customStyle = {};
-              const customClass = '';
-              
+              const isHoliday = holidays.some(d => isSameDay(d, date));
+              const isWeekend = weekend.some(d => isSameDay(d, date));
+
+              let customStyle: React.CSSProperties = {
+                width: '100%',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '14px',
+                fontWeight: '500',
+              };
+
               if (isInstitutionEvent) {
                 const range = institutionEvents.find(r =>
                   isWithinInterval(date, { start: r.from, end: r.to })
@@ -195,18 +202,13 @@ export function EventsCalendar() {
                     (isStart ? 0 : daySpacing) + (isEnd ? 0 : daySpacing);
 
                   customStyle = {
+                    ...customStyle,
                     backgroundColor: '#d9f99d',
                     color: '#365314',
                     width:
                       extraWidth === 0
                         ? '100%'
                         : `calc(100% + ${extraWidth}px)`,
-                    height: '36px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '14px',
-                    fontWeight: '500',
                     marginLeft: isStart ? '0' : `-${daySpacing}px`,
                     marginRight: isEnd ? '0' : `-${daySpacing}px`,
                     borderTopLeftRadius: isStart ? '6px' : '0',
@@ -227,18 +229,13 @@ export function EventsCalendar() {
                     (isStart ? 0 : daySpacing) + (isEnd ? 0 : daySpacing);
 
                   customStyle = {
+                    ...customStyle,
                     backgroundColor: '#fde047',
                     color: '#78350f',
                     width:
                       extraWidth === 0
                         ? '100%'
                         : `calc(100% + ${extraWidth}px)`,
-                    height: '36px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '14px',
-                    fontWeight: '500',
                     marginLeft: isStart ? '0' : `-${daySpacing}px`,
                     marginRight: isEnd ? '0' : `-${daySpacing}px`,
                     borderTopLeftRadius: isStart ? '6px' : '0',
@@ -247,16 +244,38 @@ export function EventsCalendar() {
                     borderBottomRightRadius: isEnd ? '6px' : '0',
                   };
                 }
-              } else {
-                // Style par défaut pour les jours normaux
+              } else if (isHoliday) {
                 customStyle = {
-                  width: '100%',
-                  height: '36px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '14px',
-                  fontWeight: '500',
+                  ...customStyle,
+                  backgroundColor: '#0369a1',
+                  color: 'white',
+                };
+              } else if (isWeekend) {
+                const prevIsWeekend = weekend.some(d =>
+                  isSameDay(addDays(date, -1), d)
+                );
+                const nextIsWeekend = weekend.some(d =>
+                  isSameDay(addDays(date, 1), d)
+                );
+                const isStart = !prevIsWeekend;
+                const isEnd = !nextIsWeekend;
+                const extraWidth =
+                  (isStart ? 0 : daySpacing) + (isEnd ? 0 : daySpacing);
+
+                customStyle = {
+                  ...customStyle,
+                  backgroundColor: '#e5e7eb',
+                  color: '#9ca3af',
+                  width:
+                    extraWidth === 0
+                      ? '100%'
+                      : `calc(100% + ${extraWidth}px)`,
+                  marginLeft: isStart ? '0' : `-${daySpacing}px`,
+                  marginRight: isEnd ? '0' : `-${daySpacing}px`,
+                  borderTopLeftRadius: isStart ? '6px' : '0',
+                  borderBottomLeftRadius: isStart ? '6px' : '0',
+                  borderTopRightRadius: isEnd ? '6px' : '0',
+                  borderBottomRightRadius: isEnd ? '6px' : '0',
                 };
               }
               
@@ -264,7 +283,7 @@ export function EventsCalendar() {
                 <div
                   {...props}
                   style={{ ...props.style, ...customStyle }}
-                  className={`${props.className} ${customClass} cursor-pointer`}
+                  className={`${props.className} cursor-pointer`}
                 >
                   {date.getDate()}
                 </div>
