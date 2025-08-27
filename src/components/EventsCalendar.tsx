@@ -94,8 +94,8 @@ export function EventsCalendar() {
   });
 
   return (
-    <div className="flex flex-col md:flex-row md:space-x-6 pt-2">
-      <div className="flex flex-col">
+    <div className="flex flex-col lg:flex-row lg:space-x-6 pt-2">
+      <div className="flex flex-col flex-1">
         <div className="flex items-center justify-center mb-2">
           <Button variant="outline" size="sm" onClick={() => setMonth(new Date())}>
             Aujourd'hui
@@ -106,9 +106,28 @@ export function EventsCalendar() {
           onMonthChange={setMonth}
           locale={fr}
           mode="range"
+          className="w-full"
           classNames={{
-            row: 'flex w-full mt-2 gap-0.5',
-            head_row: 'flex w-full gap-0.5',
+            months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
+            month: 'space-y-4 w-full',
+            caption: 'flex justify-center pt-1 relative items-center',
+            caption_label: 'text-sm font-medium',
+            nav: 'space-x-1 flex items-center',
+            nav_button: 'h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100',
+            nav_button_previous: 'absolute left-1',
+            nav_button_next: 'absolute right-1',
+            table: 'w-full border-collapse space-y-1',
+            head_row: 'flex w-full',
+            head_cell: 'text-muted-foreground rounded-md w-full font-normal text-[0.8rem] flex-1 text-center py-2',
+            row: 'flex w-full mt-1',
+            cell: 'relative p-0 text-center text-sm focus-within:relative focus-within:z-20 flex-1',
+            day: 'h-9 w-full p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground rounded-md flex items-center justify-center',
+            day_selected: 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
+            day_today: 'bg-accent text-accent-foreground',
+            day_outside: 'text-muted-foreground opacity-50',
+            day_disabled: 'text-muted-foreground opacity-50',
+            day_range_middle: 'aria-selected:bg-accent aria-selected:text-accent-foreground',
+            day_hidden: 'invisible',
           }}
           modifiers={{
             weekend,
@@ -167,6 +186,13 @@ export function EventsCalendar() {
                   customStyle = {
                     backgroundColor: '#d9f99d',
                     color: '#365314',
+                    width: '100%',
+                    height: '36px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '14px',
+                    fontWeight: '500',
                     marginLeft: isStart ? '0' : '-2px',
                     marginRight: isEnd ? '0' : '-2px',
                     borderTopLeftRadius: isStart ? '6px' : '0',
@@ -186,6 +212,13 @@ export function EventsCalendar() {
                   customStyle = {
                     backgroundColor: '#fde047',
                     color: '#78350f',
+                    width: '100%',
+                    height: '36px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '14px',
+                    fontWeight: '500',
                     marginLeft: isStart ? '0' : '-2px',
                     marginRight: isEnd ? '0' : '-2px',
                     borderTopLeftRadius: isStart ? '6px' : '0',
@@ -194,13 +227,24 @@ export function EventsCalendar() {
                     borderBottomRightRadius: isEnd ? '6px' : '0',
                   };
                 }
+              } else {
+                // Style par défaut pour les jours normaux
+                customStyle = {
+                  width: '100%',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                };
               }
               
               return (
                 <div
                   {...props}
                   style={{ ...props.style, ...customStyle }}
-                  className={`${props.className} ${customClass}`}
+                  className={`${props.className} ${customClass} cursor-pointer`}
                 >
                   {date.getDate()}
                 </div>
@@ -209,7 +253,7 @@ export function EventsCalendar() {
           }}
         />
       </div>
-      <div className="mt-4 md:mt-0 md:pl-4 md:border-l flex items-start justify-start">
+      <div className="mt-4 lg:mt-0 lg:pl-4 lg:border-l flex items-start justify-start lg:w-64 flex-shrink-0">
         <div className="text-left">
           <p className="font-semibold">
             {format(month, 'LLLL yyyy', { locale: fr })}
