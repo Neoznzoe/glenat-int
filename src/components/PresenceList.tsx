@@ -31,6 +31,11 @@ export interface PresenceListProps<T extends Record<string, ReactNode>> {
   searchable?: boolean;
   sortable?: boolean;
   showMore?: boolean;
+  /**
+   * When set to 'embedded', the list renders without its own Card wrapper so it
+   * can be placed inside an existing Card.
+   */
+  variant?: 'card' | 'embedded';
   onSearch?: (value: string) => void;
   onSort?: (value: keyof T) => void;
   onShowMore?: () => void;
@@ -44,11 +49,84 @@ export function PresenceList<T extends Record<string, ReactNode>>({
   searchable,
   sortable,
   showMore,
+  variant = 'card',
   onSearch,
   onSort,
   onShowMore,
 }: PresenceListProps<T>) {
   const displayCount = count ?? rows.length;
+  const controls =
+    (searchable || sortable) && (
+      <div className="flex items-center gap-2 mb-4">
+        {searchable && (
+          <Input
+            className="flex-1"
+            placeholder="Rechercher..."
+            onChange={(e) => onSearch?.(e.target.value)}
+          />
+        )}
+        {sortable && (
+          <Select onValueChange={(value) => onSort?.(value as keyof T)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Trier par" />
+            </SelectTrigger>
+            <SelectContent>
+              {columns.map((col) => (
+                <SelectItem key={String(col.key)} value={String(col.key)}>
+                  {col.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+    );
+
+  const table = (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            {columns.map((col) => (
+              <TableHead key={String(col.key)}>{col.label}</TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row, idx) => (
+            <TableRow key={idx}>
+              {columns.map((col) => (
+                <TableCell key={String(col.key)}>{row[col.key]}</TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+
+  const footer =
+    showMore && (
+      <div className="flex justify-end mt-4">
+        <Button variant="outline" size="sm" onClick={() => onShowMore?.()}>
+          Voir plus
+        </Button>
+      </div>
+    );
+
+  if (variant === 'embedded') {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-base">{title}</h3>
+          <span className="text-sm text-muted-foreground">{displayCount}</span>
+        </div>
+        {controls}
+        {table}
+        {footer}
+      </div>
+    );
+  }
 
   return (
     <Card>
@@ -57,62 +135,9 @@ export function PresenceList<T extends Record<string, ReactNode>>({
         <span className="text-sm text-muted-foreground">{displayCount}</span>
       </CardHeader>
       <CardContent>
-        {(searchable || sortable) && (
-          <div className="flex items-center gap-2 mb-4">
-            {searchable && (
-              <Input
-                className="flex-1"
-                placeholder="Rechercher..."
-                onChange={(e) => onSearch?.(e.target.value)}
-              />
-            )}
-            {sortable && (
-              <Select onValueChange={(value) => onSort?.(value as keyof T)}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Trier par" />
-                </SelectTrigger>
-                <SelectContent>
-                  {columns.map((col) => (
-                    <SelectItem key={String(col.key)} value={String(col.key)}>
-                      {col.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-        )}
-
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {columns.map((col) => (
-                    <TableHead key={String(col.key)}>{col.label}</TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row, idx) => (
-                  <TableRow key={idx}>
-                    {columns.map((col) => (
-                      <TableCell key={String(col.key)}>{row[col.key]}</TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        {showMore && (
-          <div className="flex justify-end mt-4">
-            <Button variant="outline" size="sm" onClick={() => onShowMore?.()}>
-              Voir plus
-            </Button>
-          </div>
-        )}
+        {controls}
+        {table}
+        {footer}
       </CardContent>
     </Card>
   );

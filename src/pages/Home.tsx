@@ -265,55 +265,60 @@ export function Home() {
           onSort={(value) => console.log('sort telework', value)}
           onShowMore={() => console.log('show more telework')}
         />
-        <div className="space-y-6">
-          <PresenceList
-            title="En visite chez nous"
-            columns={[
-              { key: 'name', label: 'Nom' },
-              { key: 'email', label: 'Email' },
-              { key: 'date', label: 'Date' },
-            ]}
-            rows={visitingToday}
-            count={visitingToday.length}
-            searchable
-            sortable
-            showMore
-            onSearch={(value) => console.log('search visiting', value)}
-            onSort={(value) => console.log('sort visiting', value)}
-            onShowMore={() => console.log('show more visiting')}
-          />
-          <PresenceList
-            title="En déplacement aujourd'hui"
-            columns={[
-              { key: 'name', label: 'Nom' },
-              { key: 'email', label: 'Email' },
-            ]}
-            rows={travelingToday}
-            count={travelingToday.length}
-            searchable
-            sortable
-            showMore
-            onSearch={(value) => console.log('search traveling', value)}
-            onSort={(value) => console.log('sort traveling', value)}
-            onShowMore={() => console.log('show more traveling')}
-          />
-          <PresenceList
-            title="Déplacement prévu"
-            columns={[
-              { key: 'name', label: 'Nom' },
-              { key: 'email', label: 'Email' },
-              { key: 'date', label: 'Date' },
-            ]}
-            rows={plannedTravel}
-            count={plannedTravel.length}
-            searchable
-            sortable
-            showMore
-            onSearch={(value) => console.log('search planned', value)}
-            onSort={(value) => console.log('sort planned', value)}
-            onShowMore={() => console.log('show more planned')}
-          />
-        </div>
+        <Card>
+          <CardContent className="space-y-6">
+            <PresenceList
+              variant="embedded"
+              title="En visite chez nous"
+              columns={[
+                { key: 'name', label: 'Nom' },
+                { key: 'email', label: 'Email' },
+                { key: 'date', label: 'Date' },
+              ]}
+              rows={visitingToday}
+              count={visitingToday.length}
+              searchable
+              sortable
+              showMore
+              onSearch={(value) => console.log('search visiting', value)}
+              onSort={(value) => console.log('sort visiting', value)}
+              onShowMore={() => console.log('show more visiting')}
+            />
+            <PresenceList
+              variant="embedded"
+              title="En déplacement aujourd'hui"
+              columns={[
+                { key: 'name', label: 'Nom' },
+                { key: 'email', label: 'Email' },
+              ]}
+              rows={travelingToday}
+              count={travelingToday.length}
+              searchable
+              sortable
+              showMore
+              onSearch={(value) => console.log('search traveling', value)}
+              onSort={(value) => console.log('sort traveling', value)}
+              onShowMore={() => console.log('show more traveling')}
+            />
+            <PresenceList
+              variant="embedded"
+              title="Déplacement prévu"
+              columns={[
+                { key: 'name', label: 'Nom' },
+                { key: 'email', label: 'Email' },
+                { key: 'date', label: 'Date' },
+              ]}
+              rows={plannedTravel}
+              count={plannedTravel.length}
+              searchable
+              sortable
+              showMore
+              onSearch={(value) => console.log('search planned', value)}
+              onSort={(value) => console.log('sort planned', value)}
+              onShowMore={() => console.log('show more planned')}
+            />
+          </CardContent>
+        </Card>
       </div>
 
       {/* 3 colonnes de liens */}
