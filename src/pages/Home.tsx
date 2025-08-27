@@ -265,7 +265,7 @@ export function Home() {
           onSort={(value) => console.log('sort telework', value)}
           onShowMore={() => console.log('show more telework')}
         />
-        <Card>
+        <Card className="mt-6">
           <CardContent className="space-y-6">
             <PresenceList
               variant="embedded"

@@ -118,7 +118,7 @@ export function PresenceList<T extends Record<string, ReactNode>>({
     return (
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-base">{title}</h3>
+          <h2 className="text-lg font-semibold">{title}</h2>
           <span className="text-sm text-muted-foreground">{displayCount}</span>
         </div>
         {controls}
@@ -130,7 +130,7 @@ export function PresenceList<T extends Record<string, ReactNode>>({
 
   return (
     <Card>
-      <CardHeader className="flex items-center justify-between">
+      <CardHeader className="flex-row items-center justify-between space-y-0">
         <CardTitle>{title}</CardTitle>
         <span className="text-sm text-muted-foreground">{displayCount}</span>
       </CardHeader>
