@@ -119,7 +119,8 @@ export function EventsCalendar() {
             table: 'w-full border-collapse space-y-1',
             head_row: 'flex w-full',
             head_cell: 'text-muted-foreground rounded-md w-full font-normal text-[0.8rem] flex-1 text-center py-2',
-            row: 'flex w-full mt-1',
+            // Ajout d'un espacement horizontal entre les jours
+            row: 'flex w-full mt-1 space-x-1',
             cell: 'relative p-0 text-center text-sm focus-within:relative focus-within:z-20 flex-1',
             day: 'h-9 w-full p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground rounded-md flex items-center justify-center',
             day_selected: 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
@@ -162,7 +163,10 @@ export function EventsCalendar() {
             single: { backgroundColor: '#0ea5e9', color: 'white' },
           }}
           components={{
-            Day: ({ date, ...props }) => {
+            Day: (
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              { date, ...props }: any
+            ) => {
               // Vérifier si ce jour fait partie d'une plage d'événements
               const isInstitutionEvent = institutionEvents.some(range =>
                 isWithinInterval(date, { start: range.from, end: range.to })
@@ -172,7 +176,7 @@ export function EventsCalendar() {
               );
               
               let customStyle = {};
-              let customClass = '';
+              const customClass = '';
               
               if (isInstitutionEvent) {
                 const range = institutionEvents.find(r =>
@@ -181,20 +185,25 @@ export function EventsCalendar() {
                 if (range) {
                   const isStart = isSameDay(date, range.from);
                   const isEnd = isSameDay(date, range.to);
-                  const isMiddle = !isStart && !isEnd;
-                  
+
+                  const extraWidth =
+                    (isStart ? 0 : 4) + (isEnd ? 0 : 4);
+
                   customStyle = {
                     backgroundColor: '#d9f99d',
                     color: '#365314',
-                    width: '100%',
+                    width:
+                      extraWidth === 0
+                        ? '100%'
+                        : `calc(100% + ${extraWidth}px)`,
                     height: '36px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '14px',
                     fontWeight: '500',
-                    marginLeft: isStart ? '0' : '-2px',
-                    marginRight: isEnd ? '0' : '-2px',
+                    marginLeft: isStart ? '0' : '-4px',
+                    marginRight: isEnd ? '0' : '-4px',
                     borderTopLeftRadius: isStart ? '6px' : '0',
                     borderBottomLeftRadius: isStart ? '6px' : '0',
                     borderTopRightRadius: isEnd ? '6px' : '0',
@@ -208,19 +217,25 @@ export function EventsCalendar() {
                 if (range) {
                   const isStart = isSameDay(date, range.from);
                   const isEnd = isSameDay(date, range.to);
-                  
+
+                  const extraWidth =
+                    (isStart ? 0 : 4) + (isEnd ? 0 : 4);
+
                   customStyle = {
                     backgroundColor: '#fde047',
                     color: '#78350f',
-                    width: '100%',
+                    width:
+                      extraWidth === 0
+                        ? '100%'
+                        : `calc(100% + ${extraWidth}px)`,
                     height: '36px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '14px',
                     fontWeight: '500',
-                    marginLeft: isStart ? '0' : '-2px',
-                    marginRight: isEnd ? '0' : '-2px',
+                    marginLeft: isStart ? '0' : '-4px',
+                    marginRight: isEnd ? '0' : '-4px',
                     borderTopLeftRadius: isStart ? '6px' : '0',
                     borderBottomLeftRadius: isStart ? '6px' : '0',
                     borderTopRightRadius: isEnd ? '6px' : '0',
