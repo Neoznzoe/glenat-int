@@ -12,6 +12,7 @@ import {
 import { InfiniteCarousel } from '@/components/InfiniteCarousel';
 import { EventsCalendar } from '@/components/EventsCalendar';
 import { ActualitesCard } from '@/components/ActualitesCard';
+import { PresenceList } from '@/components/PresenceList';
 
 const asset = (p: string) => new URL(p, import.meta.url).href;
 
@@ -30,6 +31,16 @@ const covers = [
 
 export function Home() {
   const userName = 'Victor';
+  const presentRows = [
+    { name: 'Alice Martin', status: 'Présent' },
+    { name: 'Bob Dupont', status: 'Présent' },
+    { name: 'Charlie Durand', status: 'Présent' },
+  ];
+
+  const absentRows = [
+    { name: 'David Bernard', status: 'Congé' },
+    { name: 'Emma Boucher', status: 'RTT' },
+  ];
 
   return (
     <div className="p-6 space-y-6">
@@ -208,6 +219,28 @@ export function Home() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Présence */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <PresenceList
+          title="Présents"
+          count={presentRows.length}
+          rows={presentRows}
+          searchable
+          sortable
+          showMore
+          onSearch={(value) => console.log('search', value)}
+          onSort={(value) => console.log('sort', value)}
+          onShowMore={() => console.log('show more')}
+        />
+        <PresenceList
+          title="Absents"
+          count={absentRows.length}
+          rows={absentRows}
+          showMore
+          onShowMore={() => console.log('show more')}
+        />
+      </div>
 
       {/* 3 colonnes de liens */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
