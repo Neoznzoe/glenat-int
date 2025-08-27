@@ -37,23 +37,23 @@ export function ActualitesCard() {
 
   return (
     <Card className="lg:col-span-2 overflow-hidden">
-      <CardHeader className="bg-[#ff3b30] text-white">
+      <CardHeader className="bg-[#ff3b30] text-white p-4">
         <CardTitle className="flex items-center space-x-2">
           <HomeIcon className="h-5 w-5" />
           <span>Actualités</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-0">
           {/* Left column: search modules */}
-          <div className="space-y-4">
+          <div className="space-y-4 lg:pr-6 lg:border-r lg:border-border">
             <SearchModule title="Rechercher un salarié" placeholder="Nom..." />
             <SearchModule title="Rechercher un projet" placeholder="Projet..." />
             <SearchModule title="Rechercher un document" placeholder="Document..." />
           </div>
 
           {/* Right column: new arrivals and name day */}
-          <div className="space-y-6">
+          <div className="space-y-6 lg:pl-6">
             <div>
               <h3 className="font-semibold text-foreground mb-2">Nouveaux arrivants</h3>
               <ul className="space-y-1 text-sm text-muted-foreground">
