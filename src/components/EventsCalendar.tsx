@@ -114,59 +114,97 @@ export function EventsCalendar() {
             weekend,
             holiday: holidays,
             single: singleDay,
-            institution: institutionEvents,
-            other: otherEvents,
+            institution: institutionEvents.flatMap(range => {
+              const dates = [];
+              const current = new Date(range.from);
+              while (current <= range.to) {
+                dates.push(new Date(current));
+                current.setDate(current.getDate() + 1);
+              }
+              return dates;
+            }),
+            other: otherEvents.flatMap(range => {
+              const dates = [];
+              const current = new Date(range.from);
+              while (current <= range.to) {
+                dates.push(new Date(current));
+                current.setDate(current.getDate() + 1);
+              }
+              return dates;
+            }),
           }}
           modifiersClassNames={{
             weekend: 'bg-gray-200 text-gray-400 dark:bg-[#161716] dark:text-gray-500',
+            institution: 'bg-lime-200 text-lime-800',
+            other: 'bg-yellow-200 text-yellow-800',
           }}
           modifiersStyles={{
             holiday: { backgroundColor: '#0369a1', color: 'white' },
             single: { backgroundColor: '#0ea5e9', color: 'white' },
-            institution: {
-              backgroundColor: '#d9f99d',
-              color: '#365314',
-            },
-            institution_start: {
-              backgroundColor: '#d9f99d',
-              color: '#365314',
-              borderTopLeftRadius: '4px',
-              borderBottomLeftRadius: '4px',
-              marginRight: '-2px',
-            },
-            institution_middle: {
-              backgroundColor: '#d9f99d',
-              color: '#365314',
-              marginLeft: '-2px',
-              marginRight: '-2px',
-            },
-            institution_end: {
-              backgroundColor: '#d9f99d',
-              color: '#365314',
-              borderTopRightRadius: '4px',
-              borderBottomRightRadius: '4px',
-              marginLeft: '-2px',
-            },
-            other: { backgroundColor: '#fde047', color: '#78350f' },
-            other_start: {
-              backgroundColor: '#fde047',
-              color: '#78350f',
-              borderTopLeftRadius: '4px',
-              borderBottomLeftRadius: '4px',
-              marginRight: '-2px',
-            },
-            other_middle: {
-              backgroundColor: '#fde047',
-              color: '#78350f',
-              marginLeft: '-2px',
-              marginRight: '-2px',
-            },
-            other_end: {
-              backgroundColor: '#fde047',
-              color: '#78350f',
-              borderTopRightRadius: '4px',
-              borderBottomRightRadius: '4px',
-              marginLeft: '-2px',
+          }}
+          components={{
+            Day: ({ date, ...props }) => {
+              // Vérifier si ce jour fait partie d'une plage d'événements
+              const isInstitutionEvent = institutionEvents.some(range =>
+                isWithinInterval(date, { start: range.from, end: range.to })
+              );
+              const isOtherEvent = otherEvents.some(range =>
+                isWithinInterval(date, { start: range.from, end: range.to })
+              );
+              
+              let customStyle = {};
+              let customClass = '';
+              
+              if (isInstitutionEvent) {
+                const range = institutionEvents.find(r =>
+                  isWithinInterval(date, { start: r.from, end: r.to })
+                );
+                if (range) {
+                  const isStart = isSameDay(date, range.from);
+                  const isEnd = isSameDay(date, range.to);
+                  const isMiddle = !isStart && !isEnd;
+                  
+                  customStyle = {
+                    backgroundColor: '#d9f99d',
+                    color: '#365314',
+                    marginLeft: isStart ? '0' : '-2px',
+                    marginRight: isEnd ? '0' : '-2px',
+                    borderTopLeftRadius: isStart ? '6px' : '0',
+                    borderBottomLeftRadius: isStart ? '6px' : '0',
+                    borderTopRightRadius: isEnd ? '6px' : '0',
+                    borderBottomRightRadius: isEnd ? '6px' : '0',
+                  };
+                }
+              } else if (isOtherEvent) {
+                const range = otherEvents.find(r =>
+                  isWithinInterval(date, { start: r.from, end: r.to })
+                );
+                if (range) {
+                  const isStart = isSameDay(date, range.from);
+                  const isEnd = isSameDay(date, range.to);
+                  
+                  customStyle = {
+                    backgroundColor: '#fde047',
+                    color: '#78350f',
+                    marginLeft: isStart ? '0' : '-2px',
+                    marginRight: isEnd ? '0' : '-2px',
+                    borderTopLeftRadius: isStart ? '6px' : '0',
+                    borderBottomLeftRadius: isStart ? '6px' : '0',
+                    borderTopRightRadius: isEnd ? '6px' : '0',
+                    borderBottomRightRadius: isEnd ? '6px' : '0',
+                  };
+                }
+              }
+              
+              return (
+                <div
+                  {...props}
+                  style={{ ...props.style, ...customStyle }}
+                  className={`${props.className} ${customClass}`}
+                >
+                  {date.getDate()}
+                </div>
+              );
             },
           }}
         />
