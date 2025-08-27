@@ -118,7 +118,7 @@ export function PresenceList<T extends Record<string, ReactNode>>({
 
   const footer =
     showMore && (
-      <div className="flex justify-end mt-4">
+      <div className="flex justify-end mt-auto pt-4">
         <Button variant="default" size="sm" onClick={() => onShowMore?.()}>
           Voir plus
         </Button>
@@ -127,27 +127,29 @@ export function PresenceList<T extends Record<string, ReactNode>>({
 
   if (variant === 'embedded') {
     return (
-      <div>
+      <div className="flex flex-col h-full">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-semibold leading-none tracking-tight">
             {title}
           </h2>
           <span className="text-2xl font-semibold">{displayCount}</span>
         </div>
-        {controls}
-        {table}
-        {footer}
+        <div className="flex flex-col flex-1">
+          {controls}
+          {table}
+          {footer}
+        </div>
       </div>
     );
   }
 
   return (
-    <Card>
+    <Card className="flex flex-col h-full">
       <CardHeader className="flex-row items-center justify-between space-y-0">
         <CardTitle>{title}</CardTitle>
         <span className="text-2xl font-semibold">{displayCount}</span>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-col flex-1">
         {controls}
         {table}
         {footer}
