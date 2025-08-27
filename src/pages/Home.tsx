@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { InfiniteCarousel } from '@/components/InfiniteCarousel';
 import { EventsCalendar } from '@/components/EventsCalendar';
+import { ActualitesCard } from '@/components/ActualitesCard';
 
 const asset = (p: string) => new URL(p, import.meta.url).href;
 
@@ -69,28 +70,7 @@ export function Home() {
 
       {/* Section Actualités et calendrier */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <HomeIcon className="h-5 w-5 text-[#ff3b30]" />
-              <span>Actualités</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="border-l-4 border-[#ff3b30] pl-4">
-                <h3 className="font-semibold text-foreground">Nouvelle mise à jour disponible</h3>
-                <p className="text-muted-foreground text-sm">Des améliorations de performance ont été déployées.</p>
-                <span className="text-xs text-muted-foreground">Il y a 2 heures</span>
-              </div>
-              <div className="border-l-4 border-blue-500 pl-4">
-                <h3 className="font-semibold text-foreground">Réunion équipe prévue</h3>
-                <p className="text-muted-foreground text-sm">Réunion hebdomadaire programmée pour demain à 14h.</p>
-                <span className="text-xs text-muted-foreground">Il y a 5 heures</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <ActualitesCard />
         <Card className="lg:col-span-1">
           <CardContent className="pt-4">
             <EventsCalendar />

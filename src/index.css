@@ -88,7 +88,7 @@
   --destructive-foreground: #ffffff;
   --border: #404040;
   --input: #404040;
-  --ring: #f59e0b;
+  --ring: #3C0919;
   --chart-1: #f9251f;
   --chart-2: #d6cfcb;
   --chart-3: #ccb7ae;
@@ -101,7 +101,7 @@
   --sidebar-accent: #92400e;
   --sidebar-accent-foreground: #fde68a;
   --sidebar-border: #404040;
-  --sidebar-ring: #f59e0b;
+  --sidebar-ring: #3C0919;
   --font-sans: Inter, ui-sans-serif, sans-serif, system-ui;
   --font-serif: Source Serif 4, serif;
   --font-mono: JetBrains Mono, monospace;
