@@ -237,10 +237,13 @@ export function EventsCalendar() {
                   nextType === 'weekend'
                 );
               } else if (isOutside) {
-                customStyle = {
+                  customStyle = {
                   ...customStyle,
-                  backgroundColor: theme === 'dark' ? '#262626' : '#f3f4f6',
-                  color: '#9ca3af',
+                  backgroundColor: 'transparent',
+                  color: theme === 'dark' ? '#545964' : '#DDE0E3', // muted-foreground
+                  borderRadius: 0,
+                  marginLeft: 0,
+                  marginRight: 0,
                 };
               }
 
