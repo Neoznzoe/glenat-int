@@ -7,11 +7,12 @@ import {
   ChevronRight,
   Clock,
   MapPin,
-  UserCheck
+  UserCheck,
 } from 'lucide-react';
 import { InfiniteCarousel } from '@/components/InfiniteCarousel';
 import { EventsCalendar } from '@/components/EventsCalendar';
 import { ActualitesCard } from '@/components/ActualitesCard';
+import { PresenceList } from '@/components/PresenceList';
 
 const asset = (p: string) => new URL(p, import.meta.url).href;
 
@@ -30,6 +31,65 @@ const covers = [
 
 export function Home() {
   const userName = 'Victor';
+
+  const absentsToday = [
+    { name: 'David Bernard', email: 'david@example.com', retour: '12/09/2024' },
+    { name: 'Emma Boucher', email: 'emma@example.com', retour: '15/09/2024' },
+    { name: 'Julien Moreau', email: 'julien@example.com', retour: '16/09/2024' },
+    { name: 'Sophie Lambert', email: 'sophie@example.com', retour: '18/09/2024' },
+    { name: 'Thomas Leroy', email: 'thomas@example.com', retour: '19/09/2024' },
+    { name: 'Camille Dupuis', email: 'camille@example.com', retour: '20/09/2024' },
+    { name: 'Hugo Richard', email: 'hugo@example.com', retour: '21/09/2024' },
+    { name: 'Laura Lefevre', email: 'laura@example.com', retour: '22/09/2024' },
+    { name: 'Nicolas Caron', email: 'nicolas@example.com', retour: '23/09/2024' },
+    { name: 'Manon Roux', email: 'manon@example.com', retour: '24/09/2024' },
+    { name: 'Alexandre Garnier', email: 'alexandre@example.com', retour: '25/09/2024' },
+    { name: 'Chloé Marchand', email: 'chloe@example.com', retour: '26/09/2024' },
+    { name: 'Pierre Fontaine', email: 'pierre@example.com', retour: '27/09/2024' },
+    { name: 'Claire Perrot', email: 'claire@example.com', retour: '28/09/2024' },
+    { name: 'Lucas Pelletier', email: 'lucas@example.com', retour: '29/09/2024' },
+  ];
+
+  const teleworkToday = [
+    { name: 'Alice Martin', email: 'alice@example.com' },
+    { name: 'Bob Dupont', email: 'bob@example.com' },
+    { name: 'Paul Girard', email: 'paul@example.com' },
+    { name: 'Julie Robin', email: 'julie@example.com' },
+    { name: 'Hélène Faure', email: 'helene@example.com' },
+    { name: 'Antoine Picard', email: 'antoine@example.com' },
+    { name: 'Marion Noël', email: 'marion@example.com' },
+    { name: 'François Tessier', email: 'francois@example.com' },
+    { name: 'Isabelle Moulin', email: 'isabelle@example.com' },
+    { name: 'Romain Barre', email: 'romain@example.com' },
+    { name: 'Céline Robert', email: 'celine@example.com' },
+    { name: 'Vincent Colin', email: 'vincent@example.com' },
+    { name: 'Aurélie Lucas', email: 'aurelie@example.com' },
+    { name: 'Mathieu Roger', email: 'mathieu@example.com' },
+    { name: 'Elodie Masson', email: 'elodie@example.com' },
+    { name: 'Damien Millet', email: 'damien@example.com' },
+    { name: 'Charlotte Paris', email: 'charlotte@example.com' },
+  ];
+
+  const visitingToday = [
+    { name: 'Client ABC', email: 'client@abc.com', date: '20/09/2024' },
+    { name: 'Partenaire DEF', email: 'contact@def.com', date: '21/09/2024' },
+    { name: 'Fournisseur GHI', email: 'info@ghi.com', date: '22/09/2024' },
+    { name: 'Collaborateur JKL', email: 'jkl@partner.com', date: '23/09/2024' },
+  ];
+
+  const travelingToday = [
+    { name: 'Marc Petit', email: 'marc@example.com' },
+    { name: 'Sébastien Robert', email: 'sebastien@example.com' },
+    { name: 'Caroline André', email: 'caroline@example.com' },
+    { name: 'Philippe Blanc', email: 'philippe@example.com' },
+    { name: 'Sandrine Roche', email: 'sandrine@example.com' },
+  ];
+
+  const plannedTravel = [
+    { name: 'Anne Grand', email: 'anne@example.com', date: '25/09/2024' },
+    { name: 'Louis Renard', email: 'louis@example.com', date: '26/09/2024' },
+    { name: 'Mélanie Vincent', email: 'melanie@example.com', date: '27/09/2024' },
+  ];
 
   return (
     <div className="p-6 space-y-6">
@@ -78,136 +138,94 @@ export function Home() {
         </Card>
       </div>
 
-      {/* Carrousel de couvertures */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Projets en cours</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[1, 2, 3].map((item) => (
-              <div key={item} className="relative group cursor-pointer">
-                <div className="h-32 bg-gradient-to-br from-[#ff3b30] to-red-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-semibold">Projet {item}</span>
-                </div>
-                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                  <ChevronRight className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Grille principale */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Calendrier */}
+      {/* Présence */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <PresenceList
+          title="Absent aujourd'hui"
+          columns={[
+            { key: 'name', label: 'Nom' },
+            { key: 'email', label: 'Email' },
+            { key: 'retour', label: 'Retour prévu' },
+          ]}
+          rows={absentsToday}
+          count={absentsToday.length}
+          searchable
+          sortable
+          showMore
+          onSearch={(value) => console.log('search absent', value)}
+          onSort={(value) => console.log('sort absent', value)}
+          onShowMore={() => console.log('show more absent')}
+        />
+        <PresenceList
+          title="Télétravail aujourd'hui"
+          columns={[
+            { key: 'name', label: 'Nom' },
+            { key: 'email', label: 'Email' },
+          ]}
+          rows={teleworkToday}
+          count={teleworkToday.length}
+          searchable
+          sortable
+          showMore
+          onSearch={(value) => console.log('search telework', value)}
+          onSort={(value) => console.log('sort telework', value)}
+          onShowMore={() => console.log('show more telework')}
+        />
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Calendar className="h-5 w-5 text-[#ff3b30]" />
-              <span>Calendrier</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3 p-2 bg-muted rounded">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <div className="font-medium text-sm">Réunion équipe</div>
-                  <div className="text-xs text-muted-foreground">14:00 - 15:00</div>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3 p-2 bg-muted rounded">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <div className="font-medium text-sm">Formation</div>
-                  <div className="text-xs text-muted-foreground">16:00 - 17:30</div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Absences */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <UserCheck className="h-5 w-5 text-[#ff3b30]" />
-              <span>Absences</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Congés restants</span>
-                <span className="font-semibold text-[#ff3b30]">12 jours</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">RTT restants</span>
-                <span className="font-semibold text-blue-600">5 jours</span>
-              </div>
-              <Button variant="outline" size="sm" className="w-full">
-                Demander un congé
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Télétravail */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <HomeIcon className="h-5 w-5 text-[#ff3b30]" />
-              <span>Télétravail</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Jours utilisés</span>
-                <span className="font-semibold">8/20</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div className="bg-[#ff3b30] h-2 rounded-full" style={{ width: '40%' }}></div>
-              </div>
-              <Button variant="outline" size="sm" className="w-full">
-                Planifier télétravail
-              </Button>
-            </div>
+          <CardContent className="pt-6 space-y-6">
+            <PresenceList
+              variant="embedded"
+              title="En visite chez nous"
+              columns={[
+                { key: 'name', label: 'Nom' },
+                { key: 'email', label: 'Email' },
+                { key: 'date', label: 'Date' },
+              ]}
+              rows={visitingToday}
+              count={visitingToday.length}
+              searchable
+              sortable
+              showMore
+              onSearch={(value) => console.log('search visiting', value)}
+              onSort={(value) => console.log('sort visiting', value)}
+              onShowMore={() => console.log('show more visiting')}
+            />
+            <PresenceList
+              variant="embedded"
+              title="En déplacement aujourd'hui"
+              columns={[
+                { key: 'name', label: 'Nom' },
+                { key: 'email', label: 'Email' },
+              ]}
+              rows={travelingToday}
+              count={travelingToday.length}
+              searchable
+              sortable
+              showMore
+              onSearch={(value) => console.log('search traveling', value)}
+              onSort={(value) => console.log('sort traveling', value)}
+              onShowMore={() => console.log('show more traveling')}
+            />
+            <PresenceList
+              variant="embedded"
+              title="Déplacement prévu"
+              columns={[
+                { key: 'name', label: 'Nom' },
+                { key: 'email', label: 'Email' },
+                { key: 'date', label: 'Date' },
+              ]}
+              rows={plannedTravel}
+              count={plannedTravel.length}
+              searchable
+              sortable
+              showMore
+              onSearch={(value) => console.log('search planned', value)}
+              onSort={(value) => console.log('sort planned', value)}
+              onShowMore={() => console.log('show more planned')}
+            />
           </CardContent>
         </Card>
       </div>
-
-      {/* Visites */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <MapPin className="h-5 w-5 text-[#ff3b30]" />
-            <span>Visites programmées</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="border rounded-lg p-4">
-              <h3 className="font-semibold">Client ABC</h3>
-              <p className="text-sm text-muted-foreground">Présentation produit</p>
-              <div className="flex items-center space-x-2 mt-2 text-xs text-muted-foreground">
-                <Calendar className="h-3 w-3" />
-                <span>Demain 10:00</span>
-              </div>
-            </div>
-            <div className="border rounded-lg p-4">
-              <h3 className="font-semibold">Partenaire XYZ</h3>
-              <p className="text-sm text-muted-foreground">Réunion stratégique</p>
-              <div className="flex items-center space-x-2 mt-2 text-xs text-muted-foreground">
-                <Calendar className="h-3 w-3" />
-                <span>Vendredi 14:00</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* 3 colonnes de liens */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
