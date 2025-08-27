@@ -8,7 +8,7 @@ import { Home as HomeIcon, Search } from 'lucide-react';
 function SearchModule({ title, placeholder }: { title: string; placeholder?: string }) {
   return (
     <div className="space-y-2">
-      <Label className="text-xl font-semibold">{title}</Label>
+      <Label className="text-lg font-semibold">{title}</Label>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -62,7 +62,7 @@ export function ActualitesCard() {
           {/* Right column: new arrivals and name day */}
           <div className="space-y-6 lg:pl-6">
             <div>
-              <h3 className="font-semibold text-foreground mb-2">Nouveaux arrivants</h3>
+              <h3 className="font-semibold text-foreground mb-2 text-lg">Nouveaux arrivants</h3>
               <ul className="space-y-1 text-sm text-muted-foreground">
                 {newArrivals.map((person) => (
                   <li key={person}>{person}</li>
@@ -70,7 +70,7 @@ export function ActualitesCard() {
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold text-foreground mb-2">Bonnes fêtes aux :</h3>
+              <h3 className="font-semibold text-foreground mb-2 text-lg">Bonnes fêtes aux :</h3>
               <p className="text-sm text-muted-foreground">
                 {saintNames.length > 0 ? saintNames.join(', ') : 'Aucun nom'}
               </p>
