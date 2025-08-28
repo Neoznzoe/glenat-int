@@ -85,11 +85,77 @@ export function Home() {
     { name: 'Mélanie Vincent', email: 'melanie@example.com', date: '27/09/2024' },
   ];
 
+  const sharePointSites = [
+    { label: 'Accueil office 365', href: '#' },
+    { label: 'ACHAT Equipe', href: '#' },
+    { label: 'ADV Equipe', href: '#' },
+    { label: 'CESSIONS-DE-DROITS Equipe', href: '#' },
+    { label: 'COMITE-DIRECTION', href: '#' },
+    { label: 'COMMERCIALE Equipe', href: '#' },
+    { label: 'COMPTABILITE Equipe', href: '#' },
+    { label: 'CONTROLE-GESTION Equipe', href: '#' },
+    { label: 'DIRECTION-GENERALE', href: '#' },
+    { label: 'DROITS-AUTEUR Equipe', href: '#' },
+    { label: 'EDITO Equipe', href: '#' },
+    { label: 'EDITO-JEUNESSE Equipe', href: '#' },
+    { label: 'EDITO-LIBRAIRIE Equipe', href: '#' },
+    { label: 'EDITO-BD Equipe', href: '#' },
+    { label: 'EDITO-LIVRES-SOUS-LICENCES Equipe', href: '#' },
+    { label: 'EDITO-MANGA Equipe', href: '#' },
+    { label: 'EDITO-MANGA Interne', href: '#' },
+    { label: 'EDITO-MANGA Prestataires', href: '#' },
+    { label: 'FABRICANTS Equipe', href: '#' },
+    { label: 'GALERIE Equipe', href: '#' },
+    { label: 'INFORMATIQUE Equipe', href: '#' },
+    { label: 'JURIDIQUE Equipe', href: '#' },
+    { label: 'MARKETING Equipe', href: '#' },
+    { label: 'MCDE Equipe', href: '#' },
+    { label: 'PARTENARIATS Equipe', href: '#' },
+    { label: 'PROJET Navision-D3', href: '#' },
+    { label: 'PROJET Navision-D4', href: '#' },
+    { label: 'PROJET ROJ-2020', href: '#' },
+    { label: 'PROJET Synapse Mail', href: '#' },
+    { label: 'REMBRANDT Cabinet', href: '#' },
+    { label: 'RESSOURCES-HUMAINES Equipe', href: '#' },
+    { label: 'STUDIO Equipe', href: '#' },
+    { label: 'SOUTIENENDANCE Equipe', href: '#' },
+    { label: 'VENTES-DEVELOPPEMENT Equipe', href: '#' },
+  ];
+
+  const usefulSites = [
+    { label: 'CSE Glénat', href: '#' },
+    { label: 'Assistance informatique', href: '#' },
+    { label: 'Support informatique Android', href: '#' },
+    { label: 'Notilus - Notes de frais', href: '#', isNew: true },
+    { label: 'Plateforme de formation', href: '#' },
+    { label: 'Pages jaunes', href: '#' },
+    { label: 'SNCF', href: '#' },
+    { label: 'Horaires TGV', href: '#' },
+    { label: 'Base marques - Site INPI', href: '#' },
+    { label: 'Site Electre', href: '#' },
+    { label: 'Glénat', href: '#' },
+    { label: 'Le couvent Sainte-Cécile', href: '#' },
+  ];
+
+  const companyLife = [
+    { label: '74 interventions informatiques en cours', href: '#' },
+    { label: "Glénat'Matin", href: '#' },
+    { label: 'Film institutionnel', href: '#' },
+    { label: 'Sainte-Cécile', href: '#' },
+    { label: 'La boite à idée', href: '#' },
+    { label: 'Audience internet par mois', href: '#' },
+    { label: 'Audience internet par jour', href: '#' },
+    { label: 'Audience internet par historique', href: '#' },
+    { label: 'Abonnement aux newsletter', href: '#' },
+  ];
+
   const [showAllVisiting, setShowAllVisiting] = useState(false);
   const [showAllTraveling, setShowAllTraveling] = useState(false);
   const [showAllPlanned, setShowAllPlanned] = useState(false);
   const [showAllAbsents, setShowAllAbsents] = useState(false);
   const [showAllTelework, setShowAllTelework] = useState(false);
+  const [showAllSharePoint, setShowAllSharePoint] = useState(false);
+  const [showAllUseful, setShowAllUseful] = useState(false);
 
   const rightCardRef = useRef<HTMLDivElement>(null);
   const absentRef = useRef<HTMLDivElement>(null);
@@ -109,6 +175,12 @@ export function Home() {
   const plannedTravelDisplayed = showAllPlanned
     ? plannedTravel
     : plannedTravel.slice(0, 2);
+  const sharePointDisplayed = showAllSharePoint
+    ? sharePointSites
+    : sharePointSites.slice(0, companyLife.length);
+  const usefulDisplayed = showAllUseful
+    ? usefulSites
+    : usefulSites.slice(0, companyLife.length);
 
   useLayoutEffect(() => {
     const rightHeight = rightCardRef.current?.scrollHeight ?? 0;
@@ -319,56 +391,23 @@ export function Home() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <LinksCard
           title="Sites Share Point"
-          moreHref="#"
-          links={[
-            { label: 'Accueil office 365', href: '#' },
-            { label: 'Achat Equipe', href: '#' },
-            { label: 'ADV Equipe', href: '#' },
-            { label: 'CESSIONS-DE-DROITS Equipe', href: '#' },
-            { label: 'COMMERCIAL Titref', href: '#' },
-            { label: 'COMMERCIALE Equipe', href: '#' },
-            { label: 'COMPTABILITE Equipe', href: '#' },
-            { label: 'CONTROLE-GESTION Equipe', href: '#' },
-            { label: 'DIRECTION-GENERALE', href: '#' },
-            { label: 'COMITE-DIRECTION', href: '#' },
-            { label: 'DROITS-AUTEUR Equipe', href: '#' },
-            { label: 'EDITO-BD Equipe', href: '#' },
-          ]}
+          links={sharePointDisplayed}
+          showMore={!showAllSharePoint && sharePointSites.length > companyLife.length}
+          showLess={showAllSharePoint && sharePointSites.length > companyLife.length}
+          onShowMore={() => setShowAllSharePoint(true)}
+          onShowLess={() => setShowAllSharePoint(false)}
         />
 
         <LinksCard
           title="Sites utiles"
-          links={[
-            { label: 'CSE Glénat', href: '#' },
-            { label: 'Assistance informatique', href: '#' },
-            { label: 'Support informatique Android', href: '#' },
-            { label: 'Notilus - Notes de frais', href: '#', isNew: true },
-            { label: 'Plateforme de formation', href: '#' },
-            { label: 'Pages jaunes', href: '#' },
-            { label: 'SNCF', href: '#' },
-            { label: 'Horaires TGV', href: '#' },
-            { label: 'Base marques - Site INPI', href: '#' },
-            { label: 'Site Electre', href: '#' },
-            { label: 'Glénat', href: '#' },
-            { label: 'Le couvent Sainte-Cécile', href: '#' },
-          ]}
+          links={usefulDisplayed}
+          showMore={!showAllUseful && usefulSites.length > companyLife.length}
+          showLess={showAllUseful && usefulSites.length > companyLife.length}
+          onShowMore={() => setShowAllUseful(true)}
+          onShowLess={() => setShowAllUseful(false)}
         />
 
-        <LinksCard
-          title="Vie de l'entreprise"
-          moreHref="#"
-          links={[
-            { label: '74 interventions informatiques en cours', href: '#' },
-            { label: "Glénat'Matin", href: '#' },
-            { label: 'Film institutionnel', href: '#' },
-            { label: 'Sainte-Cécile', href: '#' },
-            { label: 'La boite à idée', href: '#' },
-            { label: 'Audience internet par mois', href: '#' },
-            { label: 'Audience internet par jour', href: '#' },
-            { label: 'Audience internet par historique', href: '#' },
-            { label: 'Abonnement aux newsletter', href: '#' },
-          ]}
-        />
+        <LinksCard title="Vie de l'entreprise" links={companyLife} />
       </div>
     </div>
   );

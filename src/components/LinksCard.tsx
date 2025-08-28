@@ -1,6 +1,7 @@
 import { ExternalLink } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface LinkItem {
   label: string;
@@ -11,16 +12,26 @@ interface LinkItem {
 interface LinksCardProps {
   title: string;
   links: LinkItem[];
-  moreHref?: string;
+  showMore?: boolean;
+  showLess?: boolean;
+  onShowMore?: () => void;
+  onShowLess?: () => void;
 }
 
-export function LinksCard({ title, links, moreHref }: LinksCardProps) {
+export function LinksCard({
+  title,
+  links,
+  showMore,
+  showLess,
+  onShowMore,
+  onShowLess,
+}: LinksCardProps) {
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden h-full">
       <CardHeader className="bg-[#ff3b30] px-6 py-4 text-white">
         <CardTitle className="text-2xl text-left">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent className="p-0 flex flex-col h-full">
         <ul className="divide-y">
           {links.map((link) => (
             <li key={link.label}>
@@ -39,11 +50,15 @@ export function LinksCard({ title, links, moreHref }: LinksCardProps) {
             </li>
           ))}
         </ul>
-        {moreHref && (
-          <div className="flex justify-end px-6 py-3">
-            <a href={moreHref} className="text-sm text-[#ff3b30] hover:underline">
-              Voir plus
-            </a>
+        {(showMore || showLess) && (
+          <div className="flex justify-end mt-auto pt-4 px-6 pb-4">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => (showMore ? onShowMore?.() : onShowLess?.())}
+            >
+              {showMore ? 'Voir plus' : 'Voir moins'}
+            </Button>
           </div>
         )}
       </CardContent>
