@@ -91,17 +91,14 @@ export function Sidebar({ activePage, onNavigate, jobCount }: SidebarProps) {
                 const isActive = item.id === activePage;
                 return (
                   <li key={item.id}>
-                    <a
-                      href="#"
-                      onClick={e => {
-                        e.preventDefault();
-                        onNavigate(item.id);
-                      }}
-                      className={`relative flex items-center space-x-3 px-2 py-2 rounded-lg transition-all duration-300 group ${
+                    <button
+                      type="button"
+                      onClick={() => onNavigate(item.id)}
+                      className={`relative flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
                         isActive
                           ? 'bg-white/20 text-white'
                           : 'text-red-100 hover:bg-white/10 hover:text-white'
-                      }`}
+                      } ${isExpanded ? 'space-x-3' : 'justify-center'}`}
                       title={!isExpanded ? item.label : ''}
                     >
                       <item.icon className="h-5 w-5 flex-shrink-0" />
@@ -123,7 +120,7 @@ export function Sidebar({ activePage, onNavigate, jobCount }: SidebarProps) {
                           </span>
                         )
                       ) : null}
-                    </a>
+                    </button>
                   </li>
                 );
               })}
@@ -139,17 +136,14 @@ export function Sidebar({ activePage, onNavigate, jobCount }: SidebarProps) {
                 const isActive = item.id === activePage;
                 return (
                   <li key={item.id}>
-                    <a
-                      href="#"
-                      onClick={e => {
-                        e.preventDefault();
-                        onNavigate(item.id);
-                      }}
-                      className={`flex items-center space-x-3 px-2 py-2 rounded-lg transition-all duration-300 group ${
+                    <button
+                      type="button"
+                      onClick={() => onNavigate(item.id)}
+                      className={`flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
                         isActive
                           ? 'bg-white/20 text-white'
                           : 'text-red-100 hover:bg-white/10 hover:text-white'
-                      }`}
+                      } ${isExpanded ? 'space-x-3' : 'justify-center'}`}
                       title={!isExpanded ? item.label : ''}
                     >
                       <item.icon className="h-5 w-5 flex-shrink-0" />
@@ -160,7 +154,7 @@ export function Sidebar({ activePage, onNavigate, jobCount }: SidebarProps) {
                       >
                         {item.label}
                       </span>
-                    </a>
+                    </button>
                   </li>
                 );
               })}
