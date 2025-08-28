@@ -17,13 +17,8 @@ interface LinksCardProps {
 export function LinksCard({ title, links, moreHref }: LinksCardProps) {
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="flex items-center justify-between bg-[#ff3b30] px-6 py-4 text-white">
-        <CardTitle className="text-lg">{title}</CardTitle>
-        {moreHref && (
-          <a href={moreHref} className="text-sm hover:underline">
-            Voir plus
-          </a>
-        )}
+      <CardHeader className="bg-[#ff3b30] px-6 py-4 text-white">
+        <CardTitle className="text-2xl text-left">{title}</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <ul className="divide-y">
@@ -44,6 +39,13 @@ export function LinksCard({ title, links, moreHref }: LinksCardProps) {
             </li>
           ))}
         </ul>
+        {moreHref && (
+          <div className="flex justify-end px-6 py-3">
+            <a href={moreHref} className="text-sm text-[#ff3b30] hover:underline">
+              Voir plus
+            </a>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
