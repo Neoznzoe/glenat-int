@@ -152,6 +152,8 @@ export function Home() {
     { label: 'Abonnement aux newsletter', href: '#' },
   ];
 
+  const linkLimit = companyLifeLinks.length;
+
   useLayoutEffect(() => {
     const rightHeight = rightCardRef.current?.scrollHeight ?? 0;
 
@@ -359,9 +361,9 @@ export function Home() {
 
       {/* 3 colonnes de liens */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <LinksCard title="Sites Share Point" links={sharePointLinks} seeMoreHref="#" />
-        <LinksCard title="Sites utiles" links={usefulLinks} seeMoreHref="#" />
-        <LinksCard title="Vie de l'entreprise" links={companyLifeLinks} seeMoreHref="#" />
+        <LinksCard title="Sites Share Point" links={sharePointLinks} limit={linkLimit} />
+        <LinksCard title="Sites utiles" links={usefulLinks} limit={linkLimit} />
+        <LinksCard title="Vie de l'entreprise" links={companyLifeLinks} limit={linkLimit} />
       </div>
     </div>
   );

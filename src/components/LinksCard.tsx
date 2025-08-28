@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,10 +12,14 @@ export interface LinkItem {
 export interface LinksCardProps {
   title: string;
   links: LinkItem[];
-  seeMoreHref?: string;
+  limit?: number;
 }
 
-export function LinksCard({ title, links, seeMoreHref }: LinksCardProps) {
+export function LinksCard({ title, links, limit = links.length }: LinksCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const displayed = expanded ? links : links.slice(0, limit);
+  const canToggle = links.length > limit;
+
   return (
     <Card className="flex flex-col h-full overflow-hidden">
       <CardHeader className="bg-[#ff3b30] text-white px-6 py-4">
@@ -22,7 +27,7 @@ export function LinksCard({ title, links, seeMoreHref }: LinksCardProps) {
       </CardHeader>
       <CardContent className="p-0 flex flex-col flex-1">
         <ul className="flex-1 divide-y">
-          {links.map((link) => (
+          {displayed.map((link) => (
             <li key={link.label}>
               <a
                 href={link.href}
@@ -41,10 +46,10 @@ export function LinksCard({ title, links, seeMoreHref }: LinksCardProps) {
             </li>
           ))}
         </ul>
-        {seeMoreHref && (
+        {canToggle && (
           <div className="flex justify-end p-4 mt-auto">
-            <Button variant="default" size="sm" asChild>
-              <a href={seeMoreHref}>Voir plus</a>
+            <Button variant="default" size="sm" onClick={() => setExpanded(!expanded)}>
+              {expanded ? 'Voir moins' : 'Voir plus'}
             </Button>
           </div>
         )}
