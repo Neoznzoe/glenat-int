@@ -118,7 +118,7 @@ export function Sidebar({ activePage, onNavigate, jobCount }: SidebarProps) {
                             {item.badge}
                           </span>
                         ) : (
-                          <span className="absolute left-8 top-1/2 -translate-y-1/2 bg-white text-[#ff3b30] text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                          <span className="absolute top-0 right-0 bg-white text-[#ff3b30] text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                             {item.badge}
                           </span>
                         )
