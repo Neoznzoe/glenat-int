@@ -110,25 +110,46 @@ export function Home() {
     ? plannedTravel
     : plannedTravel.slice(0, 2);
 
-  const ressourcesLinks = [
-    { label: 'Fiches de paie', href: '#' },
-    { label: 'Demandes de congés', href: '#' },
-    { label: 'Formation', href: '#' },
-    { label: 'Évaluations', href: '#' },
+  const sharePointLinks = [
+    { label: 'Accueil office 365', href: '#' },
+    { label: 'Achat Equipe', href: '#' },
+    { label: 'ADV Equipe', href: '#' },
+    { label: 'CESSIONS-DE-DROITS Equipe', href: '#' },
+    { label: 'COMMERCIAL Titeuf', href: '#' },
+    { label: 'COMMERCIALE Equipe', href: '#' },
+    { label: 'COMPTABILITE Equipe', href: '#' },
+    { label: 'CONTRÔLE-GESTION Equipe', href: '#' },
+    { label: 'DIRECTION-GENERALE', href: '#' },
+    { label: 'COMITE-DIRECTION', href: '#' },
+    { label: 'DROITS-AUTEUR Equipe', href: '#' },
+    { label: 'EDITO-BD Equipe', href: '#' },
   ];
 
-  const outilsLinks = [
-    { label: 'Messagerie', href: '#' },
-    { label: 'Drive partagé', href: '#' },
-    { label: 'Planning', href: '#' },
-    { label: 'Support IT', href: '#' },
+  const usefulLinks = [
+    { label: 'CSE Glénat', href: '#' },
+    { label: 'Assistance informatique', href: '#' },
+    { label: 'Support informatique Android', href: '#' },
+    { label: 'Notilus - Notes de frais', href: '#', badge: 'New' },
+    { label: 'Plateforme de formation', href: '#' },
+    { label: 'Pages jaunes', href: '#' },
+    { label: 'SNCF', href: '#' },
+    { label: 'Horaires TGV', href: '#' },
+    { label: 'Base marques - Site INPI', href: '#' },
+    { label: 'Site Electre', href: '#' },
+    { label: 'Glénat', href: '#' },
+    { label: 'Le couvent Sainte-Cécile', href: '#' },
   ];
 
-  const utilesLinks = [
-    { label: 'Intranet', href: '#' },
-    { label: 'Documentation', href: '#' },
-    { label: 'Contacts', href: '#' },
-    { label: 'Aide', href: '#' },
+  const companyLifeLinks = [
+    { label: '74 interventions informatiques en cours', href: '#' },
+    { label: "Glénat'Matin", href: '#' },
+    { label: 'Film institutionnel', href: '#' },
+    { label: 'Sainte-Cécile', href: '#' },
+    { label: 'La boite à idée', href: '#' },
+    { label: 'Audience internet par mois', href: '#' },
+    { label: 'Audience internet par jour', href: '#' },
+    { label: 'Audience internet par historique', href: '#' },
+    { label: 'Abonnement aux newsletter', href: '#' },
   ];
 
   useLayoutEffect(() => {
@@ -338,9 +359,9 @@ export function Home() {
 
       {/* 3 colonnes de liens */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <LinksCard title="Ressources RH" links={ressourcesLinks} seeMoreHref="#" />
-        <LinksCard title="Outils" links={outilsLinks} seeMoreHref="#" />
-        <LinksCard title="Liens utiles" links={utilesLinks} seeMoreHref="#" />
+        <LinksCard title="Sites Share Point" links={sharePointLinks} seeMoreHref="#" />
+        <LinksCard title="Sites utiles" links={usefulLinks} seeMoreHref="#" />
+        <LinksCard title="Vie de l'entreprise" links={companyLifeLinks} seeMoreHref="#" />
       </div>
     </div>
   );
