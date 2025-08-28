@@ -1,10 +1,11 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useState, useRef, useLayoutEffect } from 'react';
-import { ExternalLink } from 'lucide-react';
 import { InfiniteCarousel } from '@/components/InfiniteCarousel';
 import { EventsCalendar } from '@/components/EventsCalendar';
 import { ActualitesCard } from '@/components/ActualitesCard';
 import { PresenceList } from '@/components/PresenceList';
+import { LinksCard } from '@/components/LinksCard';
+import type { LinkItem } from '@/components/LinksCard';
 
 const asset = (p: string) => new URL(p, import.meta.url).href;
 
@@ -109,6 +110,94 @@ export function Home() {
   const plannedTravelDisplayed = showAllPlanned
     ? plannedTravel
     : plannedTravel.slice(0, 2);
+
+  const sharePointLinks: LinkItem[] = [
+    { label: 'Accueil office 365', href: '#' },
+    { label: 'ACHAT Equipe', href: '#' },
+    { label: 'ADV Equipe', href: '#' },
+    { label: 'CESSIONS-DE-DROITS Equipe', href: '#' },
+    { label: 'COMITE-DIRECTION', href: '#' },
+    { label: 'COMMERCIAL Titeuf', href: '#' },
+    { label: 'COMMERCIALE Equipe', href: '#' },
+    { label: 'COMPTABILITE Equipe', href: '#' },
+    { label: 'CONTRÔLE-GESTION Equipe', href: '#' },
+    { label: 'DIRECTION-GENERALE', href: '#' },
+    { label: 'DROITS-AUTEUR Equipe', href: '#' },
+    { label: 'EDITO-BD Equipe', href: '#' },
+    { label: 'EDITO-JEUNESSE Equipe', href: '#' },
+    { label: 'EDITO-LIVRES Equipe', href: '#' },
+    { label: 'EDITO-LIVRES-SOUS-LICENCES Equipe', href: '#' },
+    { label: 'EDITO-MANGA Equipe', href: '#' },
+    { label: 'EDITO-MANGA Interne', href: '#' },
+    { label: 'EDITO-MANGAS Partenaires', href: '#' },
+    { label: 'EVENEMENTIEL Equipe', href: '#' },
+    { label: 'FABRICANTS Equipe', href: '#' },
+    { label: 'GALERIE Equipe', href: '#' },
+    { label: 'INFORMATIQUE Equipe', href: '#' },
+    { label: 'JEUX Equipe', href: '#' },
+    { label: 'LECTURES Equipe', href: '#' },
+    { label: 'LICENCES Equipe', href: '#' },
+    { label: 'MARKETING Equipe', href: '#' },
+    { label: 'MARKETING-DIGITAL Equipe', href: '#' },
+    { label: 'MCDE Equipe', href: '#' },
+    { label: 'PARTENARIATS Equipe', href: '#' },
+    { label: 'PEDAGOGIE Equipe', href: '#' },
+    { label: 'PROJET Chemin-Fer', href: '#' },
+    { label: 'PROJET Compta', href: '#' },
+    { label: 'PROJET Navision-DA', href: '#' },
+    { label: 'PROJET Navision-ED', href: '#' },
+    { label: 'PROJET Navision-EDI', href: '#' },
+    { label: 'PROJET Navision-Fournisseurs', href: '#' },
+    { label: 'PROJET Signature Mail', href: '#' },
+    { label: 'PROJET TRAVAIL Colle', href: '#' },
+    { label: 'RESSOURCES-HUMAINES Equipe', href: '#' },
+    { label: 'RSE Equipe', href: '#' },
+    { label: 'SUPPORT Bureautique', href: '#' },
+    { label: 'Support IT', href: '#' },
+    { label: 'Support RH', href: '#' },
+    { label: 'SUPPORT TECHNIQUE', href: '#' },
+    { label: 'SUPPORT Template', href: '#' },
+    { label: 'Support Signalétique', href: '#' },
+    { label: 'TECHNIQUE Equipe', href: '#' },
+    { label: 'VENTES Equipe', href: '#' },
+    { label: 'VENTES-DEVELOPPEMENT Equipe', href: '#' },
+  ];
+
+  const usefulLinks: LinkItem[] = [
+    { label: 'CSE Glénat', href: '#' },
+    { label: 'Assistance informatique', href: '#' },
+    { label: 'Support informatique Android', href: '#' },
+    { label: 'Notilus - Notes de frais', href: '#', badge: 'New' },
+    { label: 'Plateforme de formation', href: '#' },
+    { label: 'Pages jaunes', href: '#' },
+    { label: 'SNCF', href: '#' },
+    { label: 'Horaires TGV', href: '#' },
+    { label: 'Base marques - Site INPI', href: '#' },
+    { label: 'Site Electre', href: '#' },
+    { label: 'Glénat', href: '#' },
+    { label: 'Le couvent Sainte-Cécile', href: '#' },
+  ];
+
+  const companyLifeLinks: LinkItem[] = [
+    {
+      label: 'opérations informatiques en cours',
+      href: '#',
+      badge: '74',
+      badgeColor: 'bg-[#ff3b30]',
+      highlight: true,
+      badgePosition: 'left',
+    },
+    { label: "Glénat'Matin", href: '#' },
+    { label: 'Film institutionnel', href: '#' },
+    { label: 'Sainte-Cécile', href: '#' },
+    { label: 'La boite à idée', href: '#' },
+    { label: 'Audience internet par mois', href: '#' },
+    { label: 'Audience internet par jour', href: '#' },
+    { label: 'Audience internet par historique', href: '#' },
+    { label: 'Abonnement aux newsletter', href: '#' },
+  ];
+
+  const linkLimit = companyLifeLinks.length;
 
   useLayoutEffect(() => {
     const rightHeight = rightCardRef.current?.scrollHeight ?? 0;
@@ -317,65 +406,9 @@ export function Home() {
 
       {/* 3 colonnes de liens */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Ressources RH</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {['Fiches de paie', 'Demandes de congés', 'Formation', 'Évaluations'].map((link) => (
-                <a
-                  key={link}
-                  href="#"
-                  className="flex items-center justify-between p-2 hover:bg-muted rounded transition-colors"
-                >
-                  <span className="text-sm text-foreground">{link}</span>
-                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                </a>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Outils</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {['Messagerie', 'Drive partagé', 'Planning', 'Support IT'].map((link) => (
-                <a
-                  key={link}
-                  href="#"
-                  className="flex items-center justify-between p-2 hover:bg-muted rounded transition-colors"
-                >
-                  <span className="text-sm text-foreground">{link}</span>
-                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                </a>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Liens utiles</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {['Intranet', 'Documentation', 'Contacts', 'Aide'].map((link) => (
-                <a
-                  key={link}
-                  href="#"
-                  className="flex items-center justify-between p-2 hover:bg-muted rounded transition-colors"
-                >
-                  <span className="text-sm text-foreground">{link}</span>
-                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                </a>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <LinksCard title="Sites Share Point" links={sharePointLinks} limit={linkLimit} />
+        <LinksCard title="Sites utiles" links={usefulLinks} limit={linkLimit} />
+        <LinksCard title="Vie de l'entreprise" links={companyLifeLinks} limit={linkLimit} />
       </div>
     </div>
   );
