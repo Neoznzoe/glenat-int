@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,16 +20,19 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
   const displayed = expanded ? links : links.slice(0, limit);
   const canToggle = links.length > limit;
 
+  useEffect(() => {
+    if (expanded) {
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: document.documentElement.scrollHeight,
+          behavior: 'smooth',
+        });
+      });
+    }
+  }, [expanded]);
+
   const handleToggle = () => {
-    setExpanded((prev) => {
-      const next = !prev;
-      if (!prev) {
-        setTimeout(() => {
-          window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
-        }, 0);
-      }
-      return next;
-    });
+    setExpanded((prev) => !prev);
   };
 
   return (
