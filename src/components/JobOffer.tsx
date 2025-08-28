@@ -28,6 +28,9 @@ export function JobOffer({
   profil,
   avantages,
 }: JobOfferProps) {
+  const missionItems = mission.filter((item) => item.trim());
+  const profilItems = profil.filter((item) => item.trim());
+  const avantagesItems = avantages.filter((item) => item.trim());
   return (
     <Card className="overflow-hidden">
       <CardHeader className="space-y-2">
@@ -84,28 +87,52 @@ export function JobOffer({
             </TabsTrigger>
           </TabsList>
           <TabsContent value="resume" className="mt-4">
-            <p className="text-base">{resume}</p>
+          {resume?.trim() ? (
+              <p className="text-base">{resume}</p>
+            ) : (
+              <p className="text-base text-muted-foreground">
+                Pas d'informations pour le moment
+              </p>
+            )}
           </TabsContent>
           <TabsContent value="mission" className="mt-4">
-            <ul className="list-disc pl-6 space-y-2 text-base">
-              {mission.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
+            {missionItems.length ? (
+              <ul className="list-disc pl-6 space-y-2 text-base">
+                {missionItems.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-base text-muted-foreground">
+                Pas d'informations pour le moment
+              </p>
+            )}
           </TabsContent>
           <TabsContent value="profil" className="mt-4">
-            <ul className="list-disc pl-6 space-y-2 text-base">
-              {profil.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
+            {profilItems.length ? (
+              <ul className="list-disc pl-6 space-y-2 text-base">
+                {profilItems.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-base text-muted-foreground">
+                Pas d'informations pour le moment
+              </p>
+            )}
           </TabsContent>
           <TabsContent value="avantages" className="mt-4">
-            <ul className="list-disc pl-6 space-y-2 text-base">
-              {avantages.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
+            {avantagesItems.length ? (
+              <ul className="list-disc pl-6 space-y-2 text-base">
+                {avantagesItems.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-base text-muted-foreground">
+                Pas d'informations pour le moment
+              </p>
+            )}
           </TabsContent>
         </Tabs>
       </CardContent>

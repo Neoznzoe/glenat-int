@@ -22,7 +22,7 @@ export const jobOffers: JobOfferProps[] = [
         { icon: Wallet, text: 'Rémunération', sub: 'A définir selon le profil.', color: 'text-[#27BCFD]' },
       ],
       resume:
-        'Depuis 2009, le couvent Saint Cécile, édifice du XVIIe siècle installé au cœur du quartier historique de Grenoble est le siège social du groupe Glénat. Il abrite également les activités d’intérêt général du Fonds Glénat pour le patrimoine et la création de la Fondation d’entreprise.',
+        '',
       mission: [
         "Assurer la régie publicitaire de L’Alpe, Ski Français, des ouvrages pratiques et de tout nouveau titre ou guide ;",
         "Animer et développer le portefeuille d’abonnés de la revue L’Alpe ;",
