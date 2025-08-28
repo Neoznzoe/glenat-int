@@ -66,6 +66,12 @@ export function JobOffer() {
             >
               PROFIL
             </TabsTrigger>
+            <TabsTrigger
+              value="avantages"
+              className="w-32 rounded-none border-b-2 border-transparent px-4 py-2 flex items-center justify-center text-center data-[state=active]:border-[#ff3b30] data-[state=active]:bg-transparent data-[state=active]:text-[#ff3b30] data-[state=active]:shadow-none"
+            >
+              AVANTAGES
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="resume" className="mt-4">
             <p className="text-base">
@@ -88,7 +94,7 @@ export function JobOffer() {
               - Reconnu·e pour votre aisance relationnelle et votre excellente présentation, vous savez faire preuve de rigueur et d’autonomie. 
             </p>
           </TabsContent>
-          <TabsContent value="Avantages" className='mt-4'>
+          <TabsContent value="avantages" className='mt-4'>
             <p className="text-base">
               13ème mois, participation et intéressement, mutuelle, titre-restaurant, télétravail partiel possible à partir de 6 mois d'ancienneté.
             </p>
