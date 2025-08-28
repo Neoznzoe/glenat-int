@@ -9,8 +9,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { MapPin, Briefcase, Wallet, User, CalendarDays } from 'lucide-react';
 
-export function Emploi() {
-  const jobOffers: JobOfferProps[] = [
+export const jobOffers: JobOfferProps[] = [
     {
       title:
         'Le Groupe Glénat recherche pour son service éditorial livres, un·e chargé·e de développement commercial (F/H).',
@@ -100,6 +99,7 @@ export function Emploi() {
     },
   ];
 
+export function Emploi() {
   return (
     <div className="p-6 space-y-6">
       <Breadcrumb>
