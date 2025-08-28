@@ -121,7 +121,7 @@ export function Home() {
       if (!element) return;
 
       const apply = ({ rowHeight, baseHeight }: { rowHeight: number; baseHeight: number }) => {
-        const maxRows = Math.floor((rightHeight - baseHeight) / rowHeight);
+        const maxRows = Math.floor((rightHeight - baseHeight) / rowHeight) - 1;
         setLimit(Math.min(totalRows, Math.max(0, maxRows)));
       };
 
