@@ -4,12 +4,17 @@ import { MapPin, Briefcase, Wallet, User, CalendarDays } from 'lucide-react';
 
 export function JobOffer() {
   const jobInfo = [
-    { icon: MapPin, text: 'Grenoble' },
-    { icon: MapPin, text: 'Boulogne' },
-    { icon: Briefcase, text: 'CDD', sub: '1er trimestre 2025' },
-    { icon: User, text: 'Contact', sub: 'Anais Grillet' },
-    { icon: CalendarDays, text: 'Annonce du', sub: '29/11/2024' },
-    { icon: Wallet, text: 'Rémunération', sub: 'A définir selon le profil.' },
+    { icon: MapPin, text: 'Grenoble', color: 'text-[#004072]' },
+    { icon: MapPin, text: 'Boulogne', color: 'text-[#004072]' },
+    { icon: Briefcase, text: 'CDD', sub: '1er trimestre 2025', color: 'text-[#00D27A]' },
+    { icon: User, text: 'Contact', sub: 'Anais Grillet', color: 'text-primary' },
+    { icon: CalendarDays, text: 'Annonce du', sub: '29/11/2024', color: 'text-[#F5803E]' },
+    {
+      icon: Wallet,
+      text: 'Rémunération',
+      sub: 'A définir selon le profil.',
+      color: 'text-[#27BCFD]',
+    },
   ];
 
   return (
@@ -24,13 +29,16 @@ export function JobOffer() {
       </CardHeader>
       <CardContent>
         <ul className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-6">
-          {jobInfo.map(({ icon: Icon, text, sub }) => (
-            <li
-              key={text}
-              className={`flex gap-2 ${sub ? 'items-start' : 'items-center'}`}
-            >
-              <Icon className="h-6 w-6 text-[#ff3b30]" />
-              <div className={sub ? 'leading-tight' : 'flex items-center h-6'}>
+          {jobInfo.map(({ icon: Icon, text, sub, color }) => (
+            <li key={text} className="flex items-center gap-2">
+              <Icon className={`h-6 w-6 ${color}`} />
+              <div
+                className={
+                  sub
+                    ? 'flex flex-col justify-center leading-tight'
+                    : 'flex items-center h-6'
+                }
+              >
                 <span>{text}</span>
                 {sub && (
                   <span className="block text-xs text-muted-foreground">
