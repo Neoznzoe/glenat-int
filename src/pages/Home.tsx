@@ -1,14 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import {
-  Calendar,
-  Home as HomeIcon,
-  ExternalLink,
-  ChevronRight,
-  Clock,
-  MapPin,
-  UserCheck,
-} from 'lucide-react';
+import { useState, useRef, useLayoutEffect } from 'react';
+import { ExternalLink } from 'lucide-react';
 import { InfiniteCarousel } from '@/components/InfiniteCarousel';
 import { EventsCalendar } from '@/components/EventsCalendar';
 import { ActualitesCard } from '@/components/ActualitesCard';
@@ -91,6 +83,81 @@ export function Home() {
     { name: 'Mélanie Vincent', email: 'melanie@example.com', date: '27/09/2024' },
   ];
 
+  const [showAllVisiting, setShowAllVisiting] = useState(false);
+  const [showAllTraveling, setShowAllTraveling] = useState(false);
+  const [showAllPlanned, setShowAllPlanned] = useState(false);
+  const [showAllAbsents, setShowAllAbsents] = useState(false);
+  const [showAllTelework, setShowAllTelework] = useState(false);
+
+  const rightCardRef = useRef<HTMLDivElement>(null);
+  const absentRef = useRef<HTMLDivElement>(null);
+  const teleworkRef = useRef<HTMLDivElement>(null);
+
+  const [absentMetrics, setAbsentMetrics] = useState<{ rowHeight: number; baseHeight: number }>();
+  const [teleworkMetrics, setTeleworkMetrics] = useState<{ rowHeight: number; baseHeight: number }>();
+  const [absentLimit, setAbsentLimit] = useState(absentsToday.length);
+  const [teleworkLimit, setTeleworkLimit] = useState(teleworkToday.length);
+
+  const visitingDisplayed = showAllVisiting
+    ? visitingToday
+    : visitingToday.slice(0, 2);
+  const travelingDisplayed = showAllTraveling
+    ? travelingToday
+    : travelingToday.slice(0, 2);
+  const plannedTravelDisplayed = showAllPlanned
+    ? plannedTravel
+    : plannedTravel.slice(0, 2);
+
+  useLayoutEffect(() => {
+    const rightHeight = rightCardRef.current?.scrollHeight ?? 0;
+
+    const computeLimit = (
+      element: HTMLDivElement | null,
+      metrics: { rowHeight: number; baseHeight: number } | undefined,
+      totalRows: number,
+      offset: number,
+      setMetrics: (m: { rowHeight: number; baseHeight: number }) => void,
+      setLimit: (rows: number) => void,
+    ) => {
+      if (!element) return;
+
+      const apply = ({ rowHeight, baseHeight }: { rowHeight: number; baseHeight: number }) => {
+        const maxRows = Math.floor((rightHeight - baseHeight) / rowHeight) + offset;
+        setLimit(Math.min(totalRows, Math.max(0, maxRows)));
+      };
+
+      if (!metrics) {
+        const row = element.querySelector('tbody tr') as HTMLTableRowElement | null;
+        const rowHeight = row?.offsetHeight ?? 0;
+        const cardHeight = element.scrollHeight;
+        const baseHeight = cardHeight - rowHeight * totalRows;
+        const data = { rowHeight, baseHeight };
+        setMetrics(data);
+        apply(data);
+      } else {
+        apply(metrics);
+      }
+    };
+
+    computeLimit(absentRef.current, absentMetrics, absentsToday.length, 0, setAbsentMetrics, setAbsentLimit);
+    computeLimit(teleworkRef.current, teleworkMetrics, teleworkToday.length, -1, setTeleworkMetrics, setTeleworkLimit);
+  }, [
+    showAllVisiting,
+    showAllTraveling,
+    showAllPlanned,
+    absentMetrics,
+    teleworkMetrics,
+    absentsToday.length,
+    teleworkToday.length,
+  ]);
+
+  const absentsDisplayed = showAllAbsents
+    ? absentsToday
+    : absentsToday.slice(0, absentLimit);
+  const teleworkDisplayed = showAllTelework
+    ? teleworkToday
+    : teleworkToday.slice(0, teleworkLimit);
+
   return (
     <div className="p-6 space-y-6">
       {/* En-tête */}
@@ -140,38 +207,48 @@ export function Home() {
 
       {/* Présence */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <PresenceList
-          title="Absent aujourd'hui"
-          columns={[
-            { key: 'name', label: 'Nom' },
-            { key: 'email', label: 'Email' },
-            { key: 'retour', label: 'Retour prévu' },
-          ]}
-          rows={absentsToday}
-          count={absentsToday.length}
-          searchable
-          sortable
-          showMore
-          onSearch={(value) => console.log('search absent', value)}
-          onSort={(value) => console.log('sort absent', value)}
-          onShowMore={() => console.log('show more absent')}
-        />
-        <PresenceList
-          title="Télétravail aujourd'hui"
-          columns={[
-            { key: 'name', label: 'Nom' },
-            { key: 'email', label: 'Email' },
-          ]}
-          rows={teleworkToday}
-          count={teleworkToday.length}
-          searchable
-          sortable
-          showMore
-          onSearch={(value) => console.log('search telework', value)}
-          onSort={(value) => console.log('sort telework', value)}
-          onShowMore={() => console.log('show more telework')}
-        />
-        <Card>
+        <div ref={absentRef}>
+          <PresenceList
+            title="Absent aujourd'hui"
+            columns={[
+              { key: 'name', label: 'Nom' },
+              { key: 'email', label: 'Email' },
+              { key: 'retour', label: 'Retour prévu' },
+            ]}
+            rows={absentsDisplayed}
+            count={absentsToday.length}
+            searchable
+            sortable
+            showMore={!showAllAbsents && absentsToday.length > absentLimit}
+            showLess={showAllAbsents && absentsToday.length > absentLimit}
+            onSearch={(value) => console.log('search absent', value)}
+            onSort={(value) => console.log('sort absent', value)}
+            onShowMore={() => setShowAllAbsents(true)}
+            onShowLess={() => setShowAllAbsents(false)}
+            emptyMessage="aucun absent aujourd'hui"
+          />
+        </div>
+        <div ref={teleworkRef}>
+          <PresenceList
+            title="Télétravail aujourd'hui"
+            columns={[
+              { key: 'name', label: 'Nom' },
+              { key: 'email', label: 'Email' },
+            ]}
+            rows={teleworkDisplayed}
+            count={teleworkToday.length}
+            searchable
+            sortable
+            showMore={!showAllTelework && teleworkToday.length > teleworkLimit}
+            showLess={showAllTelework && teleworkToday.length > teleworkLimit}
+            onSearch={(value) => console.log('search telework', value)}
+            onSort={(value) => console.log('sort telework', value)}
+            onShowMore={() => setShowAllTelework(true)}
+            onShowLess={() => setShowAllTelework(false)}
+            emptyMessage="aucun télétravail aujourd'hui"
+          />
+        </div>
+        <Card ref={rightCardRef} className="self-start">
           <CardContent className="pt-6 space-y-6">
             <PresenceList
               variant="embedded"
@@ -181,14 +258,17 @@ export function Home() {
                 { key: 'email', label: 'Email' },
                 { key: 'date', label: 'Date' },
               ]}
-              rows={visitingToday}
+              rows={visitingDisplayed}
               count={visitingToday.length}
               searchable
               sortable
-              showMore
+              showMore={!showAllVisiting && visitingToday.length > 2}
+              showLess={showAllVisiting && visitingToday.length > 2}
               onSearch={(value) => console.log('search visiting', value)}
               onSort={(value) => console.log('sort visiting', value)}
-              onShowMore={() => console.log('show more visiting')}
+              onShowMore={() => setShowAllVisiting(true)}
+              onShowLess={() => setShowAllVisiting(false)}
+              emptyMessage="aucune visite chez nous"
             />
             <PresenceList
               variant="embedded"
@@ -197,14 +277,17 @@ export function Home() {
                 { key: 'name', label: 'Nom' },
                 { key: 'email', label: 'Email' },
               ]}
-              rows={travelingToday}
+              rows={travelingDisplayed}
               count={travelingToday.length}
               searchable
               sortable
-              showMore
+              showMore={!showAllTraveling && travelingToday.length > 2}
+              showLess={showAllTraveling && travelingToday.length > 2}
               onSearch={(value) => console.log('search traveling', value)}
               onSort={(value) => console.log('sort traveling', value)}
-              onShowMore={() => console.log('show more traveling')}
+              onShowMore={() => setShowAllTraveling(true)}
+              onShowLess={() => setShowAllTraveling(false)}
+              emptyMessage="aucun déplacement aujourd'hui"
             />
             <PresenceList
               variant="embedded"
@@ -214,14 +297,17 @@ export function Home() {
                 { key: 'email', label: 'Email' },
                 { key: 'date', label: 'Date' },
               ]}
-              rows={plannedTravel}
+              rows={plannedTravelDisplayed}
               count={plannedTravel.length}
               searchable
               sortable
-              showMore
+              showMore={!showAllPlanned && plannedTravel.length > 2}
+              showLess={showAllPlanned && plannedTravel.length > 2}
               onSearch={(value) => console.log('search planned', value)}
               onSort={(value) => console.log('sort planned', value)}
-              onShowMore={() => console.log('show more planned')}
+              onShowMore={() => setShowAllPlanned(true)}
+              onShowLess={() => setShowAllPlanned(false)}
+              emptyMessage="aucun déplacement prévu"
             />
           </CardContent>
         </Card>

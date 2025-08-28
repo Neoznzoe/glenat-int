@@ -31,6 +31,8 @@ export interface PresenceListProps<T extends Record<string, ReactNode>> {
   searchable?: boolean;
   sortable?: boolean;
   showMore?: boolean;
+  showLess?: boolean;
+  emptyMessage?: string;
   /**
    * When set to 'embedded', the list renders without its own Card wrapper so it
    * can be placed inside an existing Card.
@@ -39,6 +41,7 @@ export interface PresenceListProps<T extends Record<string, ReactNode>> {
   onSearch?: (value: string) => void;
   onSort?: (value: keyof T) => void;
   onShowMore?: () => void;
+  onShowLess?: () => void;
 }
 
 export function PresenceList<T extends Record<string, ReactNode>>({
@@ -49,15 +52,19 @@ export function PresenceList<T extends Record<string, ReactNode>>({
   searchable,
   sortable,
   showMore,
+  showLess,
+  emptyMessage,
   variant = 'card',
   onSearch,
   onSort,
   onShowMore,
+  onShowLess,
 }: PresenceListProps<T>) {
   const displayCount = count ?? rows.length;
   const isTwoColumn = columns.length === 2;
+  const hasRows = rows.length > 0;
   const controls =
-    (searchable || sortable) && (
+    hasRows && (searchable || sortable) && (
       <div className="flex items-center gap-2 mb-4">
         {searchable && (
           <Input
@@ -83,44 +90,54 @@ export function PresenceList<T extends Record<string, ReactNode>>({
       </div>
     );
 
-  const table = (
-    <div className="rounded-md border">
-      <Table className={isTwoColumn ? 'table-fixed' : undefined}>
-        <TableHeader>
-          <TableRow>
-            {columns.map((col) => (
-              <TableHead
-                key={String(col.key)}
-                className={isTwoColumn ? 'w-1/2' : undefined}
-              >
-                {col.label}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row, idx) => (
-            <TableRow key={idx}>
+  const table =
+    hasRows && (
+      <div className="rounded-md border">
+        <Table className={isTwoColumn ? 'table-fixed' : undefined}>
+          <TableHeader>
+            <TableRow>
               {columns.map((col) => (
-                <TableCell
+                <TableHead
                   key={String(col.key)}
                   className={isTwoColumn ? 'w-1/2' : undefined}
                 >
-                  {row[col.key]}
-                </TableCell>
+                  {col.label}
+                </TableHead>
               ))}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
+          </TableHeader>
+          <TableBody>
+            {rows.map((row, idx) => (
+              <TableRow key={idx}>
+                {columns.map((col) => (
+                  <TableCell
+                    key={String(col.key)}
+                    className={isTwoColumn ? 'w-1/2' : undefined}
+                  >
+                    {row[col.key]}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+
+  const emptyState =
+    !hasRows && emptyMessage ? (
+      <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+    ) : null;
 
   const footer =
-    showMore && (
+    hasRows && (showMore || showLess) && (
       <div className="flex justify-end mt-auto pt-4">
-        <Button variant="default" size="sm" onClick={() => onShowMore?.()}>
-          Voir plus
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => (showMore ? onShowMore?.() : onShowLess?.())}
+        >
+          {showMore ? 'Voir plus' : 'Voir moins'}
         </Button>
       </div>
     );
@@ -137,6 +154,7 @@ export function PresenceList<T extends Record<string, ReactNode>>({
         <div className="flex flex-col flex-1">
           {controls}
           {table}
+          {emptyState}
           {footer}
         </div>
       </div>
@@ -152,6 +170,7 @@ export function PresenceList<T extends Record<string, ReactNode>>({
       <CardContent className="flex flex-col flex-1">
         {controls}
         {table}
+        {emptyState}
         {footer}
       </CardContent>
     </Card>
