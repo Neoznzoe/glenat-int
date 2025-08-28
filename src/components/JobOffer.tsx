@@ -30,22 +30,22 @@ export function JobOffer() {
           ))}
         </ul>
         <Tabs defaultValue="resume" className="w-full">
-          <TabsList className="flex w-full border-b text-sm text-muted-foreground">
+          <TabsList className="flex border-b bg-transparent p-0 text-sm text-muted-foreground">
             <TabsTrigger
               value="resume"
-              className="flex-1 rounded-none border-b-2 border-transparent px-4 py-2 data-[state=active]:border-[#ff3b30] data-[state=active]:text-[#ff3b30] data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+              className="w-32 rounded-none border-b-2 border-transparent px-4 py-2 text-center data-[state=active]:border-[#ff3b30] data-[state=active]:bg-transparent data-[state=active]:text-[#ff3b30] data-[state=active]:shadow-none"
             >
               RÉSUMÉ
             </TabsTrigger>
             <TabsTrigger
               value="mission"
-              className="flex-1 rounded-none border-b-2 border-transparent px-4 py-2 data-[state=active]:border-[#ff3b30] data-[state=active]:text-[#ff3b30] data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+              className="w-32 rounded-none border-b-2 border-transparent px-4 py-2 text-center data-[state=active]:border-[#ff3b30] data-[state=active]:bg-transparent data-[state=active]:text-[#ff3b30] data-[state=active]:shadow-none"
             >
               MISSION
             </TabsTrigger>
             <TabsTrigger
               value="profil"
-              className="flex-1 rounded-none border-b-2 border-transparent px-4 py-2 data-[state=active]:border-[#ff3b30] data-[state=active]:text-[#ff3b30] data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+              className="w-32 rounded-none border-b-2 border-transparent px-4 py-2 text-center data-[state=active]:border-[#ff3b30] data-[state=active]:bg-transparent data-[state=active]:text-[#ff3b30] data-[state=active]:shadow-none"
             >
               PROFIL
             </TabsTrigger>
