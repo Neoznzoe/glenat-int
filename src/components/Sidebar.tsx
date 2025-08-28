@@ -110,15 +110,9 @@ export function Sidebar({ activePage, onNavigate, jobCount }: SidebarProps) {
                         {item.label}
                       </span>
                       {item.badge ? (
-                        isExpanded ? (
-                          <span className="ml-auto bg-white text-[#ff3b30] text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                            {item.badge}
-                          </span>
-                        ) : (
-                          <span className="absolute top-0 right-0 bg-white text-[#ff3b30] text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                            {item.badge}
-                          </span>
-                        )
+                        <span className="absolute -top-[5px] -right-[5px] bg-white text-[#ff3b30] text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                          {item.badge}
+                        </span>
                       ) : null}
                     </button>
                   </li>
