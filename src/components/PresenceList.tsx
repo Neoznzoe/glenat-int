@@ -146,7 +146,7 @@ export function PresenceList<T extends Record<string, ReactNode>>({
     return (
       <div className="flex flex-col h-full">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-semibold leading-none tracking-tight">
+          <h2 className="text-2xl font-semibold leading-none">
             {title}
           </h2>
           <span className="text-2xl font-semibold">{displayCount}</span>

@@ -257,7 +257,7 @@ export function Home() {
           {/* Colonne gauche : Jour / Date / Message */}
           <div className="lg:col-span-4 flex flex-col justify-between min-h-[220px]">
             <div>
-              <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground">
+              <h1 className="text-5xl lg:text-6xl font-extrabold text-foreground">
                 {new Date().toLocaleDateString('fr-FR', { weekday: 'long' }).toUpperCase()}
               </h1>
               <h2 className="mt-2 text-lg lg:text-xl text-muted-foreground capitalize">

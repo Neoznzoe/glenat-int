@@ -41,7 +41,7 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
   return (
     <Card className="flex flex-col h-full overflow-hidden">
       <CardHeader className="bg-[#ff3b30] text-white px-6 py-4">
-        <CardTitle className="text-lg">{title}</CardTitle>
+        <CardTitle className="text-2xl">{title}</CardTitle>
       </CardHeader>
       <CardContent className="p-0 flex flex-col flex-1">
         <ul className="flex-1 divide-y">
