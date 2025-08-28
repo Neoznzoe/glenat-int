@@ -1,4 +1,4 @@
-import { 
+import {
   Home,
   Calendar,
   Users,
@@ -22,34 +22,39 @@ import { useState } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoG from '../assets/logos/glenat/glenat_G.svg';
 
-const menuItems = [
-  { icon: Home, label: 'Accueil', active: true },
-  { icon: UserRoundSearch, label: 'Qui fait quoi', active: false },
-  { icon: LibraryBig, label: "Catalogue", active: false },
-  { icon: Files, label: "Glénat'Doc", active: false },
-  { icon: Users, label: "Glénat'Fée", active: false },
-  { icon: Calendar, label: 'Agenda', active: false },
-  { icon: CalendarDays, label: 'Planning', active: false },
-  { icon: Signature, label: 'Contrats', active: false },
-  { icon: PersonStanding, label: 'Ressources humaines', active: false },
-  { icon: CalendarClock, label: 'Saisie des temps', active: false },
-  { icon: Hammer, label: 'Travaux atelier', active: false },
-  { icon: SquareUserRound, label: 'Mon espace', active: false },
-  { icon: BriefcaseBusiness, label: 'Emploi', active: false },
-  { icon: Newspaper, label: 'Petites annonces', active: false },
-  { icon: Info, label: 'Services', active: false },
+interface SidebarProps {
+  activePage: string;
+  onNavigate: (page: string) => void;
+  jobCount: number;
+}
 
-  { icon: Settings, label: 'Administration', active: false },
-];
-
-export function Sidebar() {
+export function Sidebar({ activePage, onNavigate, jobCount }: SidebarProps) {
   const [isPinned, setIsPinned] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
   const isExpanded = isPinned || isHovered;
 
+  const menuItems = [
+    { id: 'home', icon: Home, label: 'Accueil' },
+    { id: 'qui', icon: UserRoundSearch, label: 'Qui fait quoi' },
+    { id: 'catalogue', icon: LibraryBig, label: "Catalogue" },
+    { id: 'doc', icon: Files, label: "Glénat'Doc" },
+    { id: 'fee', icon: Users, label: "Glénat'Fée" },
+    { id: 'agenda', icon: Calendar, label: 'Agenda' },
+    { id: 'planning', icon: CalendarDays, label: 'Planning' },
+    { id: 'contrats', icon: Signature, label: 'Contrats' },
+    { id: 'rh', icon: PersonStanding, label: 'Ressources humaines' },
+    { id: 'temps', icon: CalendarClock, label: 'Saisie des temps' },
+    { id: 'atelier', icon: Hammer, label: 'Travaux atelier' },
+    { id: 'espace', icon: SquareUserRound, label: 'Mon espace' },
+    { id: 'emploi', icon: BriefcaseBusiness, label: 'Emploi', badge: jobCount },
+    { id: 'annonces', icon: Newspaper, label: 'Petites annonces' },
+    { id: 'services', icon: Info, label: 'Services' },
+    { id: 'administration', icon: Settings, label: 'Administration' },
+  ];
+
   return (
-    <div 
+    <div
       className={`bg-[#ff3b30] text-white flex flex-col h-screen transition-all duration-300 ease-in-out relative ${
         isExpanded ? 'w-64' : 'w-16'
       }`}
@@ -81,27 +86,47 @@ export function Sidebar() {
         <nav className="p-2">
           <ul className="space-y-1">
             {menuItems
-              .filter(item => item.label !== 'Administration') // tout sauf Administration
-              .map((item, index) => (
-                <li key={index}>
-                  <a
-                    href="#"
-                    className={`flex items-center space-x-3 px-2 py-2 rounded-lg transition-all duration-300 group ${
-                      item.active
-                        ? 'bg-white/20 text-white'
-                        : 'text-red-100 hover:bg-white/10 hover:text-white'
-                    }`}
-                    title={!isExpanded ? item.label : ''}
-                  >
-                    <item.icon className="h-5 w-5 flex-shrink-0" />
-                    <span className={`font-medium transition-all duration-300 whitespace-nowrap ${
-                      isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
-                    }`}>
-                      {item.label}
-                    </span>
-                  </a>
-                </li>
-              ))}
+              .filter(item => item.id !== 'administration')
+              .map(item => {
+                const isActive = item.id === activePage;
+                return (
+                  <li key={item.id}>
+                    <a
+                      href="#"
+                      onClick={e => {
+                        e.preventDefault();
+                        onNavigate(item.id);
+                      }}
+                      className={`relative flex items-center space-x-3 px-2 py-2 rounded-lg transition-all duration-300 group ${
+                        isActive
+                          ? 'bg-white/20 text-white'
+                          : 'text-red-100 hover:bg-white/10 hover:text-white'
+                      }`}
+                      title={!isExpanded ? item.label : ''}
+                    >
+                      <item.icon className="h-5 w-5 flex-shrink-0" />
+                      <span
+                        className={`font-medium transition-all duration-300 whitespace-nowrap ${
+                          isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
+                        }`}
+                      >
+                        {item.label}
+                      </span>
+                      {item.badge ? (
+                        isExpanded ? (
+                          <span className="ml-auto bg-white text-[#ff3b30] text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                            {item.badge}
+                          </span>
+                        ) : (
+                          <span className="absolute left-8 top-1/2 -translate-y-1/2 bg-white text-[#ff3b30] text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                            {item.badge}
+                          </span>
+                        )
+                      ) : null}
+                    </a>
+                  </li>
+                );
+              })}
           </ul>
         </nav>
 
@@ -109,27 +134,36 @@ export function Sidebar() {
         <nav className="p-2">
           <ul>
             {menuItems
-              .filter(item => item.label === 'Administration') // uniquement Administration
-              .map((item, index) => (
-                <li key={index}>
-                  <a
-                    href="#"
-                    className={`flex items-center space-x-3 px-2 py-2 rounded-lg transition-all duration-300 group ${
-                      item.active
-                        ? 'bg-white/20 text-white'
-                        : 'text-red-100 hover:bg-white/10 hover:text-white'
-                    }`}
-                    title={!isExpanded ? item.label : ''}
-                  >
-                    <item.icon className="h-5 w-5 flex-shrink-0" />
-                    <span className={`font-medium transition-all duration-300 whitespace-nowrap ${
-                      isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
-                    }`}>
-                      {item.label}
-                    </span>
-                  </a>
-                </li>
-              ))}
+              .filter(item => item.id === 'administration')
+              .map(item => {
+                const isActive = item.id === activePage;
+                return (
+                  <li key={item.id}>
+                    <a
+                      href="#"
+                      onClick={e => {
+                        e.preventDefault();
+                        onNavigate(item.id);
+                      }}
+                      className={`flex items-center space-x-3 px-2 py-2 rounded-lg transition-all duration-300 group ${
+                        isActive
+                          ? 'bg-white/20 text-white'
+                          : 'text-red-100 hover:bg-white/10 hover:text-white'
+                      }`}
+                      title={!isExpanded ? item.label : ''}
+                    >
+                      <item.icon className="h-5 w-5 flex-shrink-0" />
+                      <span
+                        className={`font-medium transition-all duration-300 whitespace-nowrap ${
+                          isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
+                        }`}
+                      >
+                        {item.label}
+                      </span>
+                    </a>
+                  </li>
+                );
+              })}
           </ul>
         </nav>
       </div>
