@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { Home } from './pages/Home';
-import { Emploi } from './pages/Emploi';
+import Emploi, { jobOffers } from './pages/Emploi';
 
 function App() {
   const [activePage, setActivePage] = useState('home');
-  const jobCount = 1;
+  const jobCount = jobOffers.length;
 
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">
