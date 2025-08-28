@@ -13,7 +13,7 @@ export const jobOffers: JobOfferProps[] = [
     {
       title:
         'Le Groupe Glénat recherche pour son service éditorial livres, un·e chargé·e de développement commercial (F/H).',
-      subtitle: 'Chargé·e de développement du couvent Sainte Cécile (F/H)',
+      subtitle: 'Chargé·e de développement commercial (F/H)',
       jobInfo: [
         { icon: MapPin, text: 'Grenoble', color: 'text-[#004072]' },
         { icon: Briefcase, text: 'CDI', sub: 'dès que possible', color: 'text-[#00D27A]' },

@@ -35,7 +35,7 @@ export function JobOffer({
         <p className="text-base text-muted-foreground">{subtitle}</p>
       </CardHeader>
       <CardContent>
-        <ul className="flex flex-wrap gap-6 text-base font-medium mb-6">
+        <ul className="flex flex-wrap gap-10 text-base font-medium mb-6">
           {jobInfo.map(({ icon: Icon, text, sub, color }) => (
             <li key={text} className="flex items-center gap-2">
               <Icon className={`h-6 w-6 ${color}`} />
