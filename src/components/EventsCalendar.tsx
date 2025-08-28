@@ -262,7 +262,7 @@ export function EventsCalendar() {
       </div>
       <div className="mt-4 lg:mt-0 lg:pl-4 lg:border-l flex items-start justify-start lg:w-64">
         <div className="text-left">
-          <p className="font-semibold">
+          <p className="font-semibold text-xl capitalize">
             {format(month, 'LLLL yyyy', { locale: fr })}
           </p>
           <p className="mt-2 text-sm font-medium">Légende</p>

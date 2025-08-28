@@ -63,10 +63,12 @@ export function Home() {
   ];
 
   const visitingToday = [
-    { name: 'Client ABC', email: 'client@abc.com', date: '20/09/2024' },
-    { name: 'Partenaire DEF', email: 'contact@def.com', date: '21/09/2024' },
-    { name: 'Fournisseur GHI', email: 'info@ghi.com', date: '22/09/2024' },
-    { name: 'Collaborateur JKL', email: 'jkl@partner.com', date: '23/09/2024' },
+    { name: 'Manon Roux', email: 'manon@example.com', date: '24/09/2024' },
+    { name: 'Alexandre Garnier', email: 'alexandre@example.com', date: '25/09/2024' },
+    { name: 'Chloé Marchand', email: 'chloe@example.com', date: '26/09/2024' },
+    { name: 'Pierre Fontaine', email: 'pierre@example.com', date: '27/09/2024' },
+    { name: 'Claire Perrot', email: 'claire@example.com', date: '28/09/2024' },
+    { name: 'Lucas Pelletier', email: 'lucas@example.com', date: '29/09/2024' },
   ];
 
   const travelingToday = [
@@ -161,7 +163,7 @@ export function Home() {
   return (
     <div className="p-6 space-y-6">
       {/* En-tête */}
-      <div className="rounded-2xl border border-border bg-card text-card-foreground px-6 py-6 lg:px-10 lg:py-8">
+      <div className="rounded-2xl border border-border bg-card text-card-foreground px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
           {/* Colonne gauche : Jour / Date / Message */}
           <div className="lg:col-span-4 flex flex-col justify-between min-h-[220px]">
