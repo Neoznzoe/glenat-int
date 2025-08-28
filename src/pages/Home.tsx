@@ -1,10 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useState, useRef, useLayoutEffect } from 'react';
-import { ExternalLink } from 'lucide-react';
 import { InfiniteCarousel } from '@/components/InfiniteCarousel';
 import { EventsCalendar } from '@/components/EventsCalendar';
 import { ActualitesCard } from '@/components/ActualitesCard';
 import { PresenceList } from '@/components/PresenceList';
+import { LinksCard } from '@/components/LinksCard';
 
 const asset = (p: string) => new URL(p, import.meta.url).href;
 
@@ -109,6 +109,27 @@ export function Home() {
   const plannedTravelDisplayed = showAllPlanned
     ? plannedTravel
     : plannedTravel.slice(0, 2);
+
+  const ressourcesLinks = [
+    { label: 'Fiches de paie', href: '#' },
+    { label: 'Demandes de congés', href: '#' },
+    { label: 'Formation', href: '#' },
+    { label: 'Évaluations', href: '#' },
+  ];
+
+  const outilsLinks = [
+    { label: 'Messagerie', href: '#' },
+    { label: 'Drive partagé', href: '#' },
+    { label: 'Planning', href: '#' },
+    { label: 'Support IT', href: '#' },
+  ];
+
+  const utilesLinks = [
+    { label: 'Intranet', href: '#' },
+    { label: 'Documentation', href: '#' },
+    { label: 'Contacts', href: '#' },
+    { label: 'Aide', href: '#' },
+  ];
 
   useLayoutEffect(() => {
     const rightHeight = rightCardRef.current?.scrollHeight ?? 0;
@@ -317,65 +338,9 @@ export function Home() {
 
       {/* 3 colonnes de liens */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Ressources RH</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {['Fiches de paie', 'Demandes de congés', 'Formation', 'Évaluations'].map((link) => (
-                <a
-                  key={link}
-                  href="#"
-                  className="flex items-center justify-between p-2 hover:bg-muted rounded transition-colors"
-                >
-                  <span className="text-sm text-foreground">{link}</span>
-                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                </a>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Outils</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {['Messagerie', 'Drive partagé', 'Planning', 'Support IT'].map((link) => (
-                <a
-                  key={link}
-                  href="#"
-                  className="flex items-center justify-between p-2 hover:bg-muted rounded transition-colors"
-                >
-                  <span className="text-sm text-foreground">{link}</span>
-                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                </a>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Liens utiles</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {['Intranet', 'Documentation', 'Contacts', 'Aide'].map((link) => (
-                <a
-                  key={link}
-                  href="#"
-                  className="flex items-center justify-between p-2 hover:bg-muted rounded transition-colors"
-                >
-                  <span className="text-sm text-foreground">{link}</span>
-                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                </a>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <LinksCard title="Ressources RH" links={ressourcesLinks} seeMoreHref="#" />
+        <LinksCard title="Outils" links={outilsLinks} seeMoreHref="#" />
+        <LinksCard title="Liens utiles" links={utilesLinks} seeMoreHref="#" />
       </div>
     </div>
   );
