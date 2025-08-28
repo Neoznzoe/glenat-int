@@ -218,10 +218,12 @@ export function Home() {
             count={absentsToday.length}
             searchable
             sortable
-            showMore={!showAllAbsents && absentsToday.length > absentsDisplayed.length}
+            showMore={!showAllAbsents && absentsToday.length > absentLimit}
+            showLess={showAllAbsents && absentsToday.length > absentLimit}
             onSearch={(value) => console.log('search absent', value)}
             onSort={(value) => console.log('sort absent', value)}
             onShowMore={() => setShowAllAbsents(true)}
+            onShowLess={() => setShowAllAbsents(false)}
             emptyMessage="aucun absent aujourd'hui"
           />
         </div>
@@ -236,14 +238,16 @@ export function Home() {
             count={teleworkToday.length}
             searchable
             sortable
-            showMore={!showAllTelework && teleworkToday.length > teleworkDisplayed.length}
+            showMore={!showAllTelework && teleworkToday.length > teleworkLimit}
+            showLess={showAllTelework && teleworkToday.length > teleworkLimit}
             onSearch={(value) => console.log('search telework', value)}
             onSort={(value) => console.log('sort telework', value)}
             onShowMore={() => setShowAllTelework(true)}
+            onShowLess={() => setShowAllTelework(false)}
             emptyMessage="aucun télétravail aujourd'hui"
           />
         </div>
-        <Card ref={rightCardRef}>
+        <Card ref={rightCardRef} className="self-start">
           <CardContent className="pt-6 space-y-6">
             <PresenceList
               variant="embedded"
@@ -258,9 +262,11 @@ export function Home() {
               searchable
               sortable
               showMore={!showAllVisiting && visitingToday.length > 2}
+              showLess={showAllVisiting && visitingToday.length > 2}
               onSearch={(value) => console.log('search visiting', value)}
               onSort={(value) => console.log('sort visiting', value)}
               onShowMore={() => setShowAllVisiting(true)}
+              onShowLess={() => setShowAllVisiting(false)}
               emptyMessage="aucune visite chez nous"
             />
             <PresenceList
@@ -275,9 +281,11 @@ export function Home() {
               searchable
               sortable
               showMore={!showAllTraveling && travelingToday.length > 2}
+              showLess={showAllTraveling && travelingToday.length > 2}
               onSearch={(value) => console.log('search traveling', value)}
               onSort={(value) => console.log('sort traveling', value)}
               onShowMore={() => setShowAllTraveling(true)}
+              onShowLess={() => setShowAllTraveling(false)}
               emptyMessage="aucun déplacement aujourd'hui"
             />
             <PresenceList
@@ -293,9 +301,11 @@ export function Home() {
               searchable
               sortable
               showMore={!showAllPlanned && plannedTravel.length > 2}
+              showLess={showAllPlanned && plannedTravel.length > 2}
               onSearch={(value) => console.log('search planned', value)}
               onSort={(value) => console.log('sort planned', value)}
               onShowMore={() => setShowAllPlanned(true)}
+              onShowLess={() => setShowAllPlanned(false)}
               emptyMessage="aucun déplacement prévu"
             />
           </CardContent>

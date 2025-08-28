@@ -31,6 +31,7 @@ export interface PresenceListProps<T extends Record<string, ReactNode>> {
   searchable?: boolean;
   sortable?: boolean;
   showMore?: boolean;
+  showLess?: boolean;
   emptyMessage?: string;
   /**
    * When set to 'embedded', the list renders without its own Card wrapper so it
@@ -40,6 +41,7 @@ export interface PresenceListProps<T extends Record<string, ReactNode>> {
   onSearch?: (value: string) => void;
   onSort?: (value: keyof T) => void;
   onShowMore?: () => void;
+  onShowLess?: () => void;
 }
 
 export function PresenceList<T extends Record<string, ReactNode>>({
@@ -50,11 +52,13 @@ export function PresenceList<T extends Record<string, ReactNode>>({
   searchable,
   sortable,
   showMore,
+  showLess,
   emptyMessage,
   variant = 'card',
   onSearch,
   onSort,
   onShowMore,
+  onShowLess,
 }: PresenceListProps<T>) {
   const displayCount = count ?? rows.length;
   const isTwoColumn = columns.length === 2;
@@ -126,10 +130,14 @@ export function PresenceList<T extends Record<string, ReactNode>>({
     ) : null;
 
   const footer =
-    hasRows && showMore && (
+    hasRows && (showMore || showLess) && (
       <div className="flex justify-end mt-auto pt-4">
-        <Button variant="default" size="sm" onClick={() => onShowMore?.()}>
-          Voir plus
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => (showMore ? onShowMore?.() : onShowLess?.())}
+        >
+          {showMore ? 'Voir plus' : 'Voir moins'}
         </Button>
       </div>
     );
