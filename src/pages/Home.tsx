@@ -178,7 +178,13 @@ export function Home() {
   ];
 
   const companyLifeLinks = [
-    { label: '74 interventions informatiques en cours', href: '#' },
+    {
+      label: 'opérations informatiques en cours',
+      href: '#',
+      badge: '74',
+      badgeColor: 'bg-[#ff3b30]',
+      highlight: true,
+    },
     { label: "Glénat'Matin", href: '#' },
     { label: 'Film institutionnel', href: '#' },
     { label: 'Sainte-Cécile', href: '#' },

@@ -7,6 +7,8 @@ export interface LinkItem {
   label: string;
   href: string;
   badge?: string;
+  badgeColor?: string;
+  highlight?: boolean;
 }
 
 export interface LinksCardProps {
@@ -46,15 +48,23 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
             <li key={link.label}>
               <a
                 href={link.href}
-                className="flex items-center justify-between px-6 py-2 hover:bg-muted transition-colors"
+                className={`flex items-center justify-between px-6 py-2 transition-colors ${
+                  link.highlight
+                    ? 'bg-[#ff3b30]/10 text-[#ff3b30] font-semibold'
+                    : 'hover:bg-muted text-foreground'
+                }`}
               >
-                <span className="text-sm text-foreground flex items-center">
-                  {link.label}
+                <span className="text-sm flex items-center">
                   {link.badge && (
-                    <span className="ml-2 text-xs font-medium bg-green-500 text-white px-1.5 py-0.5 rounded">
+                    <span
+                      className={`mr-2 text-sm font-semibold text-white px-2 py-0.5 rounded ${
+                        link.badgeColor ?? 'bg-green-500'
+                      }`}
+                    >
                       {link.badge}
                     </span>
                   )}
+                  {link.label}
                 </span>
                 <ExternalLink className="h-3 w-3 text-muted-foreground" />
               </a>
