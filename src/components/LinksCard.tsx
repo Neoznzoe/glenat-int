@@ -20,6 +20,18 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
   const displayed = expanded ? links : links.slice(0, limit);
   const canToggle = links.length > limit;
 
+  const handleToggle = () => {
+    setExpanded((prev) => {
+      const next = !prev;
+      if (!prev) {
+        setTimeout(() => {
+          window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+        }, 0);
+      }
+      return next;
+    });
+  };
+
   return (
     <Card className="flex flex-col h-full overflow-hidden">
       <CardHeader className="bg-[#ff3b30] text-white px-6 py-4">
@@ -48,7 +60,7 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
         </ul>
         {canToggle && (
           <div className="flex justify-end p-4 mt-auto">
-            <Button variant="default" size="sm" onClick={() => setExpanded(!expanded)}>
+            <Button variant="default" size="sm" onClick={handleToggle}>
               {expanded ? 'Voir moins' : 'Voir plus'}
             </Button>
           </div>
