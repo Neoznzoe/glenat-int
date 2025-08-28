@@ -30,22 +30,22 @@ export function JobOffer() {
           ))}
         </ul>
         <Tabs defaultValue="resume" className="w-full">
-          <TabsList className="flex border-b bg-transparent p-0 text-sm text-muted-foreground">
+          <TabsList className="flex justify-start border-b bg-transparent p-0 text-sm text-muted-foreground rounded-none">
             <TabsTrigger
               value="resume"
-              className="w-32 rounded-none border-b-2 border-transparent px-4 py-2 text-center data-[state=active]:border-[#ff3b30] data-[state=active]:bg-transparent data-[state=active]:text-[#ff3b30] data-[state=active]:shadow-none"
+              className="w-32 rounded-none border-b-2 border-transparent px-4 py-2 flex items-center justify-center text-center data-[state=active]:border-[#ff3b30] data-[state=active]:bg-transparent data-[state=active]:text-[#ff3b30] data-[state=active]:shadow-none"
             >
               RÉSUMÉ
             </TabsTrigger>
             <TabsTrigger
               value="mission"
-              className="w-32 rounded-none border-b-2 border-transparent px-4 py-2 text-center data-[state=active]:border-[#ff3b30] data-[state=active]:bg-transparent data-[state=active]:text-[#ff3b30] data-[state=active]:shadow-none"
+              className="w-32 rounded-none border-b-2 border-transparent px-4 py-2 flex items-center justify-center text-center data-[state=active]:border-[#ff3b30] data-[state=active]:bg-transparent data-[state=active]:text-[#ff3b30] data-[state=active]:shadow-none"
             >
               MISSION
             </TabsTrigger>
             <TabsTrigger
               value="profil"
-              className="w-32 rounded-none border-b-2 border-transparent px-4 py-2 text-center data-[state=active]:border-[#ff3b30] data-[state=active]:bg-transparent data-[state=active]:text-[#ff3b30] data-[state=active]:shadow-none"
+              className="w-32 rounded-none border-b-2 border-transparent px-4 py-2 flex items-center justify-center text-center data-[state=active]:border-[#ff3b30] data-[state=active]:bg-transparent data-[state=active]:text-[#ff3b30] data-[state=active]:shadow-none"
             >
               PROFIL
             </TabsTrigger>
