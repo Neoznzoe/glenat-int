@@ -5,6 +5,7 @@ import { EventsCalendar } from '@/components/EventsCalendar';
 import { ActualitesCard } from '@/components/ActualitesCard';
 import { PresenceList } from '@/components/PresenceList';
 import { LinksCard } from '@/components/LinksCard';
+import type { LinkItem } from '@/components/LinksCard';
 
 const asset = (p: string) => new URL(p, import.meta.url).href;
 
@@ -110,7 +111,7 @@ export function Home() {
     ? plannedTravel
     : plannedTravel.slice(0, 2);
 
-  const sharePointLinks = [
+  const sharePointLinks: LinkItem[] = [
     { label: 'Accueil office 365', href: '#' },
     { label: 'ACHAT Equipe', href: '#' },
     { label: 'ADV Equipe', href: '#' },
@@ -162,7 +163,7 @@ export function Home() {
     { label: 'VENTES-DEVELOPPEMENT Equipe', href: '#' },
   ];
 
-  const usefulLinks = [
+  const usefulLinks: LinkItem[] = [
     { label: 'CSE Glénat', href: '#' },
     { label: 'Assistance informatique', href: '#' },
     { label: 'Support informatique Android', href: '#' },
@@ -177,13 +178,14 @@ export function Home() {
     { label: 'Le couvent Sainte-Cécile', href: '#' },
   ];
 
-  const companyLifeLinks = [
+  const companyLifeLinks: LinkItem[] = [
     {
       label: 'opérations informatiques en cours',
       href: '#',
       badge: '74',
       badgeColor: 'bg-[#ff3b30]',
       highlight: true,
+      badgePosition: 'left',
     },
     { label: "Glénat'Matin", href: '#' },
     { label: 'Film institutionnel', href: '#' },

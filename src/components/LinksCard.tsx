@@ -9,6 +9,7 @@ export interface LinkItem {
   badge?: string;
   badgeColor?: string;
   highlight?: boolean;
+  badgePosition?: 'left' | 'right';
 }
 
 export interface LinksCardProps {
@@ -55,7 +56,7 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
                 }`}
               >
                 <span className="text-sm flex items-center">
-                  {link.badge && (
+                  {link.badge && link.badgePosition === 'left' && (
                     <span
                       className={`mr-2 text-sm font-semibold text-white px-2 py-0.5 rounded ${
                         link.badgeColor ?? 'bg-green-500'
@@ -66,7 +67,18 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
                   )}
                   {link.label}
                 </span>
-                <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                <span className="flex items-center gap-2">
+                  {link.badge && link.badgePosition !== 'left' && (
+                    <span
+                      className={`text-sm font-semibold text-white px-2 py-0.5 rounded ${
+                        link.badgeColor ?? 'bg-green-500'
+                      }`}
+                    >
+                      {link.badge}
+                    </span>
+                  )}
+                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                </span>
               </a>
             </li>
           ))}
