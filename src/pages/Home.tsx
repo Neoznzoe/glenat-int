@@ -1,10 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useState, useRef, useLayoutEffect } from 'react';
-import { ExternalLink } from 'lucide-react';
 import { InfiniteCarousel } from '@/components/InfiniteCarousel';
 import { EventsCalendar } from '@/components/EventsCalendar';
 import { ActualitesCard } from '@/components/ActualitesCard';
 import { PresenceList } from '@/components/PresenceList';
+import { LinksCard } from '@/components/LinksCard';
 
 const asset = (p: string) => new URL(p, import.meta.url).href;
 
@@ -317,65 +317,58 @@ export function Home() {
 
       {/* 3 colonnes de liens */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Ressources RH</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {['Fiches de paie', 'Demandes de congés', 'Formation', 'Évaluations'].map((link) => (
-                <a
-                  key={link}
-                  href="#"
-                  className="flex items-center justify-between p-2 hover:bg-muted rounded transition-colors"
-                >
-                  <span className="text-sm text-foreground">{link}</span>
-                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                </a>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <LinksCard
+          title="Sites Share Point"
+          moreHref="#"
+          links={[
+            { label: 'Accueil office 365', href: '#' },
+            { label: 'Achat Equipe', href: '#' },
+            { label: 'ADV Equipe', href: '#' },
+            { label: 'CESSIONS-DE-DROITS Equipe', href: '#' },
+            { label: 'COMMERCIAL Titref', href: '#' },
+            { label: 'COMMERCIALE Equipe', href: '#' },
+            { label: 'COMPTABILITE Equipe', href: '#' },
+            { label: 'CONTROLE-GESTION Equipe', href: '#' },
+            { label: 'DIRECTION-GENERALE', href: '#' },
+            { label: 'COMITE-DIRECTION', href: '#' },
+            { label: 'DROITS-AUTEUR Equipe', href: '#' },
+            { label: 'EDITO-BD Equipe', href: '#' },
+          ]}
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Outils</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {['Messagerie', 'Drive partagé', 'Planning', 'Support IT'].map((link) => (
-                <a
-                  key={link}
-                  href="#"
-                  className="flex items-center justify-between p-2 hover:bg-muted rounded transition-colors"
-                >
-                  <span className="text-sm text-foreground">{link}</span>
-                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                </a>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <LinksCard
+          title="Sites utiles"
+          links={[
+            { label: 'CSE Glénat', href: '#' },
+            { label: 'Assistance informatique', href: '#' },
+            { label: 'Support informatique Android', href: '#' },
+            { label: 'Notilus - Notes de frais', href: '#', isNew: true },
+            { label: 'Plateforme de formation', href: '#' },
+            { label: 'Pages jaunes', href: '#' },
+            { label: 'SNCF', href: '#' },
+            { label: 'Horaires TGV', href: '#' },
+            { label: 'Base marques - Site INPI', href: '#' },
+            { label: 'Site Electre', href: '#' },
+            { label: 'Glénat', href: '#' },
+            { label: 'Le couvent Sainte-Cécile', href: '#' },
+          ]}
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Liens utiles</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {['Intranet', 'Documentation', 'Contacts', 'Aide'].map((link) => (
-                <a
-                  key={link}
-                  href="#"
-                  className="flex items-center justify-between p-2 hover:bg-muted rounded transition-colors"
-                >
-                  <span className="text-sm text-foreground">{link}</span>
-                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                </a>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <LinksCard
+          title="Vie de l'entreprise"
+          moreHref="#"
+          links={[
+            { label: '74 interventions informatiques en cours', href: '#' },
+            { label: "Glénat'Matin", href: '#' },
+            { label: 'Film institutionnel', href: '#' },
+            { label: 'Sainte-Cécile', href: '#' },
+            { label: 'La boite à idée', href: '#' },
+            { label: 'Audience internet par mois', href: '#' },
+            { label: 'Audience internet par jour', href: '#' },
+            { label: 'Audience internet par historique', href: '#' },
+            { label: 'Abonnement aux newsletter', href: '#' },
+          ]}
+        />
       </div>
     </div>
   );
