@@ -115,13 +115,14 @@ export function Home() {
       element: HTMLDivElement | null,
       metrics: { rowHeight: number; baseHeight: number } | undefined,
       totalRows: number,
+      offset: number,
       setMetrics: (m: { rowHeight: number; baseHeight: number }) => void,
       setLimit: (rows: number) => void,
     ) => {
       if (!element) return;
 
       const apply = ({ rowHeight, baseHeight }: { rowHeight: number; baseHeight: number }) => {
-        const maxRows = Math.floor((rightHeight - baseHeight) / rowHeight) - 1;
+        const maxRows = Math.floor((rightHeight - baseHeight) / rowHeight) + offset;
         setLimit(Math.min(totalRows, Math.max(0, maxRows)));
       };
 
@@ -138,8 +139,8 @@ export function Home() {
       }
     };
 
-    computeLimit(absentRef.current, absentMetrics, absentsToday.length, setAbsentMetrics, setAbsentLimit);
-    computeLimit(teleworkRef.current, teleworkMetrics, teleworkToday.length, setTeleworkMetrics, setTeleworkLimit);
+    computeLimit(absentRef.current, absentMetrics, absentsToday.length, 0, setAbsentMetrics, setAbsentLimit);
+    computeLimit(teleworkRef.current, teleworkMetrics, teleworkToday.length, -1, setTeleworkMetrics, setTeleworkLimit);
   }, [
     showAllVisiting,
     showAllTraveling,
