@@ -149,6 +149,8 @@ export function Home() {
     { label: 'Abonnement aux newsletter', href: '#' },
   ];
 
+  const referenceLinks = companyLife.length;
+
   const [showAllVisiting, setShowAllVisiting] = useState(false);
   const [showAllTraveling, setShowAllTraveling] = useState(false);
   const [showAllPlanned, setShowAllPlanned] = useState(false);
@@ -177,10 +179,10 @@ export function Home() {
     : plannedTravel.slice(0, 2);
   const sharePointDisplayed = showAllSharePoint
     ? sharePointSites
-    : sharePointSites.slice(0, companyLife.length);
+    : sharePointSites.slice(0, referenceLinks - 1);
   const usefulDisplayed = showAllUseful
     ? usefulSites
-    : usefulSites.slice(0, companyLife.length);
+    : usefulSites.slice(0, referenceLinks - 1);
 
   useLayoutEffect(() => {
     const rightHeight = rightCardRef.current?.scrollHeight ?? 0;
@@ -392,8 +394,8 @@ export function Home() {
         <LinksCard
           title="Sites Share Point"
           links={sharePointDisplayed}
-          showMore={!showAllSharePoint && sharePointSites.length > companyLife.length}
-          showLess={showAllSharePoint && sharePointSites.length > companyLife.length}
+          showMore={!showAllSharePoint && sharePointSites.length > referenceLinks - 1}
+          showLess={showAllSharePoint && sharePointSites.length > referenceLinks - 1}
           onShowMore={() => setShowAllSharePoint(true)}
           onShowLess={() => setShowAllSharePoint(false)}
         />
@@ -401,8 +403,8 @@ export function Home() {
         <LinksCard
           title="Sites utiles"
           links={usefulDisplayed}
-          showMore={!showAllUseful && usefulSites.length > companyLife.length}
-          showLess={showAllUseful && usefulSites.length > companyLife.length}
+          showMore={!showAllUseful && usefulSites.length > referenceLinks - 1}
+          showLess={showAllUseful && usefulSites.length > referenceLinks - 1}
           onShowMore={() => setShowAllUseful(true)}
           onShowLess={() => setShowAllUseful(false)}
         />
