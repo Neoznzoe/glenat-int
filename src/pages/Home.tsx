@@ -150,6 +150,7 @@ export function Home() {
   ];
 
   const referenceLinks = companyLife.length;
+  const displayLimit = referenceLinks - 1;
 
   const [showAllVisiting, setShowAllVisiting] = useState(false);
   const [showAllTraveling, setShowAllTraveling] = useState(false);
@@ -158,6 +159,7 @@ export function Home() {
   const [showAllTelework, setShowAllTelework] = useState(false);
   const [showAllSharePoint, setShowAllSharePoint] = useState(false);
   const [showAllUseful, setShowAllUseful] = useState(false);
+  const [showAllCompany, setShowAllCompany] = useState(false);
 
   const rightCardRef = useRef<HTMLDivElement>(null);
   const absentRef = useRef<HTMLDivElement>(null);
@@ -179,10 +181,13 @@ export function Home() {
     : plannedTravel.slice(0, 2);
   const sharePointDisplayed = showAllSharePoint
     ? sharePointSites
-    : sharePointSites.slice(0, referenceLinks - 1);
+    : sharePointSites.slice(0, displayLimit);
   const usefulDisplayed = showAllUseful
     ? usefulSites
-    : usefulSites.slice(0, referenceLinks - 1);
+    : usefulSites.slice(0, displayLimit);
+  const companyDisplayed = showAllCompany
+    ? companyLife
+    : companyLife.slice(0, displayLimit);
 
   useLayoutEffect(() => {
     const rightHeight = rightCardRef.current?.scrollHeight ?? 0;
@@ -394,8 +399,8 @@ export function Home() {
         <LinksCard
           title="Sites Share Point"
           links={sharePointDisplayed}
-          showMore={!showAllSharePoint && sharePointSites.length > referenceLinks - 1}
-          showLess={showAllSharePoint && sharePointSites.length > referenceLinks - 1}
+          showMore={!showAllSharePoint && sharePointSites.length > displayLimit}
+          showLess={showAllSharePoint && sharePointSites.length > displayLimit}
           onShowMore={() => setShowAllSharePoint(true)}
           onShowLess={() => setShowAllSharePoint(false)}
         />
@@ -403,13 +408,20 @@ export function Home() {
         <LinksCard
           title="Sites utiles"
           links={usefulDisplayed}
-          showMore={!showAllUseful && usefulSites.length > referenceLinks - 1}
-          showLess={showAllUseful && usefulSites.length > referenceLinks - 1}
+          showMore={!showAllUseful && usefulSites.length > displayLimit}
+          showLess={showAllUseful && usefulSites.length > displayLimit}
           onShowMore={() => setShowAllUseful(true)}
           onShowLess={() => setShowAllUseful(false)}
         />
 
-        <LinksCard title="Vie de l'entreprise" links={companyLife} />
+        <LinksCard
+          title="Vie de l'entreprise"
+          links={companyDisplayed}
+          showMore={!showAllCompany && companyLife.length > displayLimit}
+          showLess={showAllCompany && companyLife.length > displayLimit}
+          onShowMore={() => setShowAllCompany(true)}
+          onShowLess={() => setShowAllCompany(false)}
+        />
       </div>
     </div>
   );
