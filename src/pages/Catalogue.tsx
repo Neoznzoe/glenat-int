@@ -6,7 +6,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import QuickAccess, { QuickAccessItem } from '@/components/QuickAccess';
 import EditionCard from '@/components/EditionCard';
@@ -65,22 +65,24 @@ export function Catalogue() {
       </Breadcrumb>
 
       <Card>
-        <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6">
-          <h1 className="text-3xl font-bold">Catalogue</h1>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <CardTitle className="text-3xl">Catalogue</CardTitle>
           <Input type="search" placeholder="Rechercher..." className="sm:w-64" />
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+            <QuickAccess items={quickLinks} />
+            <div className="md:col-span-4">
+              <h2 className="mb-4 text-lg font-semibold">Editions</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                {editions.map((ed) => (
+                  <EditionCard key={ed.title} title={ed.title} color={ed.color} />
+                ))}
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div>
-          <QuickAccess items={quickLinks} />
-        </div>
-        <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {editions.map((ed) => (
-            <EditionCard key={ed.title} title={ed.title} color={ed.color} />
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

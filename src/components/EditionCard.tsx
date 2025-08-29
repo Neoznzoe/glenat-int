@@ -20,7 +20,7 @@ export function EditionCard({ title, color }: EditionCardProps) {
         <ul className="text-sm space-y-1">
           <li>
             <a href="#" className="hover:underline">
-              Imprimer le bon de commande
+              Voir l'univers
             </a>
           </li>
           <li>
