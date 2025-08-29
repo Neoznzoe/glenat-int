@@ -4,6 +4,7 @@ import { Topbar } from './components/Topbar';
 import { Home } from './pages/Home';
 import Emploi, { jobOffers } from './pages/Emploi';
 import Catalogue from './pages/Catalogue';
+import CatalogueAll from './pages/CatalogueAll';
 
 function App() {
   const [activePage, setActivePage] = useState('home');
@@ -21,7 +22,12 @@ function App() {
         <main className="flex-1 overflow-auto">
           {activePage === 'home' && <Home />}
           {activePage === 'emploi' && <Emploi />}
-          {activePage === 'catalogue' && <Catalogue />}
+          {activePage === 'catalogue' && (
+            <Catalogue onViewAll={() => setActivePage('catalogueAll')} />
+          )}
+          {activePage === 'catalogueAll' && (
+            <CatalogueAll onBackToCatalogue={() => setActivePage('catalogue')} />
+          )}
         </main>
       </div>
     </div>
