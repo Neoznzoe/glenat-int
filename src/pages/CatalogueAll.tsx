@@ -11,6 +11,8 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import QuickAccess, { QuickAccessItem } from '@/components/QuickAccess';
+import BookFilters from '@/components/BookFilters';
+import { useState } from 'react';
 
 import {
   BookOpen,
@@ -56,6 +58,8 @@ export function CatalogueAll({ onBackToCatalogue }: CatalogueAllProps) {
     'Montagne',
   ];
 
+  const [activeFilter, setActiveFilter] = useState('Toutes');
+
   return (
     <div className="p-6 space-y-6">
       <Breadcrumb>
@@ -82,12 +86,18 @@ export function CatalogueAll({ onBackToCatalogue }: CatalogueAllProps) {
           <Input type="search" placeholder="Rechercher..." className="sm:w-64" />
         </CardHeader>
         <div className="px-6 space-y-4">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             {filters.map(filter => (
-              <Button key={filter} variant="outline" size="sm">
+              <Button
+                key={filter}
+                variant={activeFilter === filter ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setActiveFilter(filter)}
+              >
                 {filter}
               </Button>
             ))}
+            <BookFilters />
           </div>
           <Separator />
         </div>
