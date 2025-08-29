@@ -5,6 +5,7 @@ export interface QuickAccessItem {
   label: string;
   icon: LucideIcon;
   href?: string;
+  onClick?: () => void;
 }
 
 export interface QuickAccessProps {
@@ -18,7 +19,11 @@ export function QuickAccess({ items }: QuickAccessProps) {
       <ul className="space-y-2">
         {items.map((item) => (
           <li key={item.label}>
-            <a href={item.href ?? '#'} className="block">
+            <a
+              href={item.href ?? '#'}
+              onClick={item.onClick}
+              className="block"
+            >
               <Card className="flex items-center gap-2 p-3 hover:bg-muted bg-background">
                 <item.icon className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">{item.label}</span>

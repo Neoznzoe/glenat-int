@@ -30,7 +30,11 @@ import {
   UserPen,
 } from 'lucide-react';
 
-export function Catalogue() {
+interface CatalogueProps {
+  onViewAll: () => void;
+}
+
+export function Catalogue({ onViewAll }: CatalogueProps) {
   const quickLinks: QuickAccessItem[] = [
     { label: 'Kiosque', icon: Store },
     { label: 'Les auteurs', icon: UserPen },
@@ -42,7 +46,7 @@ export function Catalogue() {
     { label: 'Télécharger le catalogue', icon: Download },
     { label: 'Information à renseigner', icon: Info },
     { label: 'Plus de stock', icon: PackageX },
-    { label: 'Voir tout le catalogue', icon: BookOpen },
+    { label: 'Voir tout le catalogue', icon: BookOpen, onClick: onViewAll },
   ];
 
   const editions = [
