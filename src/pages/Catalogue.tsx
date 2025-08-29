@@ -11,7 +11,11 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import QuickAccess, { QuickAccessItem } from '@/components/QuickAccess';
 import EditionCard from '@/components/EditionCard';
-import GlenatLogo from '@/assets/logos/glenat/glenat_G.svg';
+import UniversBD from '@/assets/logos/univers/univers-bd.svg';
+import UniversJeune from '@/assets/logos/univers/univers-jeunesse.svg';
+import UniversLivre from '@/assets/logos/univers/univers-livres.svg';
+import UniversManga from '@/assets/logos/univers/univers-manga.svg';
+
 import {
   BookOpen,
   CalendarDays,
@@ -42,20 +46,20 @@ export function Catalogue() {
   ];
 
   const editions = [
-    { title: 'Adonis', color: '--glenat-livre', logo: GlenatLogo },
-    { title: 'Blanche', color: '--glenat-livre', logo: GlenatLogo },
-    { title: 'Comix Buro', color: '--glenat-bd', logo: GlenatLogo },
-    { title: 'Disney', color: '--glenat-jeunesse', logo: GlenatLogo },
-    { title: 'Éditions licences', color: '--glenat-livre', logo: GlenatLogo },
-    { title: 'Cheval Magazine', color: '--glenat-livre', logo: GlenatLogo },
-    { title: 'Glénat BD', color: '--glenat-bd', logo: GlenatLogo },
-    { title: 'Glénat Jeunesse', color: '--glenat-jeunesse', logo: GlenatLogo },
-    { title: 'Glénat Manga', color: '--glenat-manga', logo: GlenatLogo },
-    { title: 'Hugo', color: '--glenat-livre', logo: GlenatLogo },
-    { title: 'Livres diffusés', color: '--glenat-livre', logo: GlenatLogo },
-    { title: 'Rando éditions', color: '--glenat-livre', logo: GlenatLogo },
-    { title: 'Glénat Livres', color: '--glenat-livre', logo: GlenatLogo },
-    { title: "Vent d'Ouest", color: '--glenat-bd', logo: GlenatLogo },
+    { title: 'Adonis', color: '--glenat-bd', logo: UniversBD },
+    { title: 'Blanche', color: '--glenat-livre', logo: UniversLivre },
+    { title: 'Comix Buro', color: '--glenat-jeunesse', logo: UniversJeune },
+    { title: 'Disney', color: '--glenat-bd', logo: UniversLivre },
+    { title: 'Éditions licences', color: '--glenat-livre', logo: UniversLivre },
+    { title: 'Cheval Magazine', color: '--glenat-livre', logo: UniversLivre },
+    { title: 'Glénat BD', color: '--glenat-bd', logo: UniversBD },
+    { title: 'Glénat Jeunesse', color: '--glenat-jeunesse', logo: UniversJeune },
+    { title: 'Glénat Manga', color: '--glenat-manga', logo: UniversManga },
+    { title: 'Hugo', color: '--glenat-livre', logo: UniversLivre },
+    { title: 'Livres diffusés', color: '--glenat-jeunesse', logo: UniversJeune },
+    { title: 'Rando éditions', color: '--glenat-livre', logo: UniversLivre },
+    { title: 'Glénat Livres', color: '--glenat-livre', logo: UniversLivre },
+    { title: "Vent d'Ouest", color: '--glenat-bd', logo: UniversBD },
   ];
 
   return (
