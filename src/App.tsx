@@ -3,6 +3,7 @@ import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { Home } from './pages/Home';
 import Emploi, { jobOffers } from './pages/Emploi';
+import Catalogue from './pages/Catalogue';
 
 function App() {
   const [activePage, setActivePage] = useState('home');
@@ -20,6 +21,7 @@ function App() {
         <main className="flex-1 overflow-auto">
           {activePage === 'home' && <Home />}
           {activePage === 'emploi' && <Emploi />}
+          {activePage === 'catalogue' && <Catalogue />}
         </main>
       </div>
     </div>
