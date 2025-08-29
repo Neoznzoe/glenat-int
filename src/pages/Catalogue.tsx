@@ -12,26 +12,32 @@ import { Input } from '@/components/ui/input';
 import QuickAccess, { QuickAccessItem } from '@/components/QuickAccess';
 import EditionCard from '@/components/EditionCard';
 import {
-  Newspaper,
-  Store,
   BookOpen,
   CalendarDays,
-  TrendingUp,
   Download,
-  DownloadCloud,
-  Compass,
+  Image,
+  Info,
+  Mail,
+  PackageX,
+  Sparkles,
+  Store,
+  TrendingUp,
+  UserPen,
 } from 'lucide-react';
 
 export function Catalogue() {
   const quickLinks: QuickAccessItem[] = [
-    { label: 'Kiosque', icon: Newspaper },
-    { label: 'Comptoir', icon: Store },
-    { label: 'Catalogue distribution', icon: BookOpen },
+    { label: 'Kiosque', icon: Store },
+    { label: 'Les auteurs', icon: UserPen },
     { label: 'Prochaines sorties', icon: CalendarDays },
-    { label: 'Top des ventes', icon: TrendingUp },
+    { label: 'Dernières nouveautés', icon: Sparkles },
+    { label: 'Top des commandes', icon: TrendingUp },
+    { label: 'Newsletter journaliste', icon: Mail },
+    { label: 'Couverture à paraître', icon: Image },
     { label: 'Télécharger le catalogue', icon: Download },
-    { label: 'Téléchargement BD/Manga', icon: DownloadCloud },
-    { label: 'Votre tour du catalogue', icon: Compass },
+    { label: 'Information à renseigner', icon: Info },
+    { label: 'Plus de stock', icon: PackageX },
+    { label: 'Voir tout le catalogue', icon: BookOpen },
   ];
 
   const editions = [
