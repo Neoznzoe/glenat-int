@@ -70,8 +70,10 @@ export function Catalogue() {
           <CardTitle className="text-3xl">Catalogue</CardTitle>
           <Input type="search" placeholder="Rechercher..." className="sm:w-64" />
         </CardHeader>
-        <Separator />
-        <CardContent>
+        <div className="px-6">
+          <Separator />
+        </div>
+        <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             <QuickAccess items={quickLinks} />
             <div className="md:col-span-4">

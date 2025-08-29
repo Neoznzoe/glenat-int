@@ -10,7 +10,7 @@ export function EditionCard({ title, color }: EditionCardProps) {
   return (
     <Card className="overflow-hidden">
       <div
-        className="flex items-center gap-2 px-4 py-2 text-foreground"
+        className="flex items-center gap-2 p-3 text-foreground"
         style={{ backgroundColor: `var(${color})` }}
       >
         <BookOpen className="h-4 w-4" />

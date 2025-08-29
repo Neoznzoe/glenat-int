@@ -19,7 +19,7 @@ export function QuickAccess({ items }: QuickAccessProps) {
         {items.map((item) => (
           <li key={item.label}>
             <a href={item.href ?? '#'} className="block">
-              <Card className="flex items-center gap-2 p-2 hover:bg-muted">
+              <Card className="flex items-center gap-2 p-3 hover:bg-muted">
                 <item.icon className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">{item.label}</span>
               </Card>
