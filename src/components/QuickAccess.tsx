@@ -14,7 +14,7 @@ export interface QuickAccessProps {
 export function QuickAccess({ items }: QuickAccessProps) {
   return (
     <div>
-      <h3 className="mb-4 font-semibold">Accès rapide</h3>
+      <h3 className="mb-4 font-semibold text-xl">Accès rapide</h3>
       <ul className="space-y-2">
         {items.map((item) => (
           <li key={item.label}>

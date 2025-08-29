@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import QuickAccess, { QuickAccessItem } from '@/components/QuickAccess';
 import EditionCard from '@/components/EditionCard';
+import GlenatLogo from '@/assets/logos/glenat/glenat_G.svg';
 import {
   BookOpen,
   CalendarDays,
@@ -41,20 +42,20 @@ export function Catalogue() {
   ];
 
   const editions = [
-    { title: 'Adonis', color: '--glenat-livre' },
-    { title: 'Blanche', color: '--glenat-livre' },
-    { title: 'Comix Buro', color: '--glenat-bd' },
-    { title: 'Disney', color: '--glenat-jeunesse' },
-    { title: 'Éditions licences', color: '--glenat-livre' },
-    { title: 'Cheval Magazine', color: '--glenat-livre' },
-    { title: 'Glénat BD', color: '--glenat-bd' },
-    { title: 'Glénat Jeunesse', color: '--glenat-jeunesse' },
-    { title: 'Glénat Manga', color: '--glenat-manga' },
-    { title: 'Hugo', color: '--glenat-livre' },
-    { title: 'Livres diffusés', color: '--glenat-livre' },
-    { title: 'Rando éditions', color: '--glenat-livre' },
-    { title: 'Glénat Livres', color: '--glenat-livre' },
-    { title: "Vent d'Ouest", color: '--glenat-bd' },
+    { title: 'Adonis', color: '--glenat-livre', logo: GlenatLogo },
+    { title: 'Blanche', color: '--glenat-livre', logo: GlenatLogo },
+    { title: 'Comix Buro', color: '--glenat-bd', logo: GlenatLogo },
+    { title: 'Disney', color: '--glenat-jeunesse', logo: GlenatLogo },
+    { title: 'Éditions licences', color: '--glenat-livre', logo: GlenatLogo },
+    { title: 'Cheval Magazine', color: '--glenat-livre', logo: GlenatLogo },
+    { title: 'Glénat BD', color: '--glenat-bd', logo: GlenatLogo },
+    { title: 'Glénat Jeunesse', color: '--glenat-jeunesse', logo: GlenatLogo },
+    { title: 'Glénat Manga', color: '--glenat-manga', logo: GlenatLogo },
+    { title: 'Hugo', color: '--glenat-livre', logo: GlenatLogo },
+    { title: 'Livres diffusés', color: '--glenat-livre', logo: GlenatLogo },
+    { title: 'Rando éditions', color: '--glenat-livre', logo: GlenatLogo },
+    { title: 'Glénat Livres', color: '--glenat-livre', logo: GlenatLogo },
+    { title: "Vent d'Ouest", color: '--glenat-bd', logo: GlenatLogo },
   ];
 
   return (
@@ -73,7 +74,7 @@ export function Catalogue() {
 
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <CardTitle className="text-3xl">Catalogue</CardTitle>
+          <CardTitle className="text-[2.5rem]">Catalogue</CardTitle>
           <Input type="search" placeholder="Rechercher..." className="sm:w-64" />
         </CardHeader>
         <div className="px-6">
@@ -83,10 +84,15 @@ export function Catalogue() {
           <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             <QuickAccess items={quickLinks} />
             <div className="md:col-span-4">
-              <h3 className="mb-4 font-semibold">Éditions</h3>
+              <h3 className="mb-4 font-semibold text-xl">Éditions</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 {editions.map((ed) => (
-                  <EditionCard key={ed.title} title={ed.title} color={ed.color} />
+                  <EditionCard
+                    key={ed.title}
+                    title={ed.title}
+                    color={ed.color}
+                    logo={ed.logo}
+                  />
                 ))}
               </div>
             </div>

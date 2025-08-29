@@ -4,16 +4,21 @@ import { BookOpen } from 'lucide-react';
 export interface EditionCardProps {
   title: string;
   color: string; // CSS variable name, e.g., '--glenat-bd'
+  logo?: string;
 }
 
-export function EditionCard({ title, color }: EditionCardProps) {
+export function EditionCard({ title, color, logo }: EditionCardProps) {
   return (
     <Card className="overflow-hidden">
       <div
         className="flex items-center gap-2 p-3 text-foreground"
         style={{ backgroundColor: `var(${color})` }}
       >
-        <BookOpen className="h-4 w-4" />
+        {logo ? (
+          <img src={logo} alt={title} className="h-4 w-4 object-contain" />
+        ) : (
+          <BookOpen className="h-4 w-4" />
+        )}
         <span className="font-semibold">{title}</span>
       </div>
       <CardContent className="p-4">
