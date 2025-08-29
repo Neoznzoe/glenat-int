@@ -8,7 +8,7 @@ interface ListFilterProps {
 
 export function ListFilter({ options, selected, onToggle }: ListFilterProps) {
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-4 gap-2">
       {options.map(option => (
         <label key={option} className="flex items-center space-x-2 text-sm">
           <Checkbox

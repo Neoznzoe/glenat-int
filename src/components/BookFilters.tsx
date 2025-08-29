@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Filter } from 'lucide-react';
+import { ListFilter as ListFilterIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -10,9 +10,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import ListFilter from '@/components/ui/list-filter';
 
-const genres = ['BD', 'Manga', 'Jeunesse', 'Documentaire', 'Voyage'];
 const formats = ['Album', 'Poche', 'Intégrale'];
-const langues = ['Français', 'Anglais', 'Japonais'];
 const editions = [
   'Adonis',
   'Blanche',
@@ -34,9 +32,7 @@ const availability = ['En stock', 'À réimprimer', 'Épuisé'];
 const years = Array.from({ length: 10 }, (_, i) => (new Date().getFullYear() - i).toString());
 
 export function BookFilters() {
-  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
-  const [selectedLangues, setSelectedLangues] = useState<string[]>([]);
   const [selectedEditions, setSelectedEditions] = useState<string[]>([]);
   const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
   const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
@@ -55,9 +51,7 @@ export function BookFilters() {
   };
 
   const count =
-    selectedGenres.length +
     selectedFormats.length +
-    selectedLangues.length +
     selectedEditions.length +
     selectedCollections.length +
     selectedAvailability.length +
@@ -69,33 +63,17 @@ export function BookFilters() {
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm">
-          <Filter className="mr-2 h-4 w-4" />
+          <ListFilterIcon className="mr-2 h-4 w-4" />
           Filtres {count > 0 && `(${count})`}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-96 space-y-4">
-        <div>
-          <h4 className="mb-2 font-medium">Genre</h4>
-          <ListFilter
-            options={genres}
-            selected={selectedGenres}
-            onToggle={val => toggle(selectedGenres, setSelectedGenres, val)}
-          />
-        </div>
         <div>
           <h4 className="mb-2 font-medium">Format</h4>
           <ListFilter
             options={formats}
             selected={selectedFormats}
             onToggle={val => toggle(selectedFormats, setSelectedFormats, val)}
-          />
-        </div>
-        <div>
-          <h4 className="mb-2 font-medium">Langue</h4>
-          <ListFilter
-            options={langues}
-            selected={selectedLangues}
-            onToggle={val => toggle(selectedLangues, setSelectedLangues, val)}
           />
         </div>
         <div>
