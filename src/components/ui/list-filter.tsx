@@ -8,9 +8,12 @@ interface ListFilterProps {
 
 export function ListFilter({ options, selected, onToggle }: ListFilterProps) {
   return (
-    <div className="grid grid-cols-4 gap-2">
+    <div className="flex flex-nowrap gap-4 overflow-x-auto">
       {options.map(option => (
-        <label key={option} className="flex items-center space-x-2 text-sm">
+        <label
+          key={option}
+          className="flex items-center space-x-2 whitespace-nowrap text-sm"
+        >
           <Checkbox
             checked={selected.includes(option)}
             onCheckedChange={() => onToggle(option)}

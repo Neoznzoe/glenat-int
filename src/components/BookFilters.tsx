@@ -6,7 +6,6 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from '@/components/ui/popover';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import ListFilter from '@/components/ui/list-filter';
 
@@ -29,14 +28,29 @@ const editions = [
 ];
 const collections = ['Coffrets', 'Éditions limitées', 'Collector'];
 const availability = ['En stock', 'À réimprimer', 'Épuisé'];
-const years = Array.from({ length: 10 }, (_, i) => (new Date().getFullYear() - i).toString());
+const themes = [
+  'Aventure',
+  'Psychologie',
+  'Écologie',
+  'Histoire',
+  'Fantastique',
+  'Science-fiction',
+  'Romance',
+  'Mystère',
+  'Humour',
+  'Cuisine',
+  'Sport',
+  'Art',
+  'Politique',
+  'Technologie',
+];
 
 export function BookFilters() {
   const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
   const [selectedEditions, setSelectedEditions] = useState<string[]>([]);
   const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
+  const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
   const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
-  const [selectedYear, setSelectedYear] = useState<string | undefined>();
   const [isNew, setIsNew] = useState(false);
   const [comingSoon, setComingSoon] = useState(false);
 
@@ -54,8 +68,8 @@ export function BookFilters() {
     selectedFormats.length +
     selectedEditions.length +
     selectedCollections.length +
+    selectedThemes.length +
     selectedAvailability.length +
-    (selectedYear ? 1 : 0) +
     (isNew ? 1 : 0) +
     (comingSoon ? 1 : 0);
 
@@ -93,28 +107,24 @@ export function BookFilters() {
           />
         </div>
         <div>
-          <h4 className="mb-2 font-medium">Filtres temporels</h4>
-          <div className="grid grid-cols-3 gap-2">
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger>
-                <SelectValue placeholder="Année" />
-              </SelectTrigger>
-              <SelectContent>
-                {years.map(year => (
-                  <SelectItem key={year} value={year}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <label className="flex items-center space-x-2">
+          <h4 className="mb-2 font-medium">Thèmes</h4>
+          <ListFilter
+            options={themes}
+            selected={selectedThemes}
+            onToggle={val => toggle(selectedThemes, setSelectedThemes, val)}
+          />
+        </div>
+        <div>
+          <h4 className="mb-2 font-medium">Parution</h4>
+          <div className="flex gap-4 overflow-x-auto">
+            <label className="flex items-center space-x-2 whitespace-nowrap">
               <Checkbox
                 checked={isNew}
                 onCheckedChange={checked => setIsNew(checked === true)}
               />
               <span>Nouveauté</span>
             </label>
-            <label className="flex items-center space-x-2">
+            <label className="flex items-center space-x-2 whitespace-nowrap">
               <Checkbox
                 checked={comingSoon}
                 onCheckedChange={checked => setComingSoon(checked === true)}

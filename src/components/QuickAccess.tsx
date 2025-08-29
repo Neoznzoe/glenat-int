@@ -26,7 +26,7 @@ export function QuickAccess({ items }: QuickAccessProps) {
             >
               <Card className="flex items-center gap-2 p-3 hover:bg-muted bg-background">
                 <item.icon className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{item.label}</span>
+                <span className="whitespace-nowrap text-sm">{item.label}</span>
               </Card>
             </a>
           </li>

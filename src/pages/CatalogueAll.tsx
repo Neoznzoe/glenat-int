@@ -86,13 +86,14 @@ export function CatalogueAll({ onBackToCatalogue }: CatalogueAllProps) {
           <Input type="search" placeholder="Rechercher..." className="sm:w-64" />
         </CardHeader>
         <div className="px-6 space-y-4">
-          <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
             {filters.map(filter => (
               <Button
                 key={filter}
                 variant={activeFilter === filter ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setActiveFilter(filter)}
+                className="whitespace-nowrap"
               >
                 {filter}
               </Button>
