@@ -7,6 +7,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import QuickAccess, { QuickAccessItem } from '@/components/QuickAccess';
 import EditionCard from '@/components/EditionCard';
@@ -69,11 +70,12 @@ export function Catalogue() {
           <CardTitle className="text-3xl">Catalogue</CardTitle>
           <Input type="search" placeholder="Rechercher..." className="sm:w-64" />
         </CardHeader>
+        <Separator />
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             <QuickAccess items={quickLinks} />
             <div className="md:col-span-4">
-              <h2 className="mb-4 text-lg font-semibold">Editions</h2>
+              <h3 className="mb-4 font-semibold">Éditions</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 {editions.map((ed) => (
                   <EditionCard key={ed.title} title={ed.title} color={ed.color} />
