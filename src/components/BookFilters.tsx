@@ -87,7 +87,7 @@ export function BookFilters() {
           Filtres {count > 0 && `(${count})`}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[600px] space-y-4">
+      <PopoverContent className="w-[600px] max-h-[70vh] overflow-y-auto space-y-4">
         <div>
           <h4 className="mb-2 font-medium">Auteur</h4>
           <TagInput
