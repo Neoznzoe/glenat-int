@@ -12,6 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import QuickAccess, { QuickAccessItem } from '@/components/QuickAccess';
 import BookFilters from '@/components/BookFilters';
+import BookCard from '@/components/BookCard';
+import OnePiece110 from '@/assets/images/onepiece_110.webp';
 import { useState } from 'react';
 
 import {
@@ -107,6 +109,19 @@ export function CatalogueAll({ onBackToCatalogue }: CatalogueAllProps) {
             <QuickAccess items={quickLinks} />
             <div className="md:col-span-4">
               <h3 className="mb-4 font-semibold text-xl">Tout le catalogue</h3>
+              <BookCard
+                cover={OnePiece110}
+                title="One Piece - Tome 110"
+                ean="9782380711102"
+                authors="E. Oda"
+                publisher="Glénat Manga"
+                publicationDate="01/02/2025"
+                priceHT="7.99"
+                stock={86}
+                views={140}
+                color="--glenat-manga"
+                ribbonText="NOUVEAUTÉ"
+              />
             </div>
           </div>
         </CardContent>
