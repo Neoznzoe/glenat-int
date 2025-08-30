@@ -32,26 +32,23 @@ export function BookCard({
   return (
     <Card className="flex flex-col overflow-hidden min-w-[230px]">
       <div
-        className="relative flex items-end justify-center p-2"
+        className="relative flex items-center justify-center p-2"
         style={{ backgroundColor: `var(${color})` }}
       >
         {ribbonText && (
-          <span
-            className="absolute inset-y-0 right-0 flex items-center justify-center bg-red-500 text-white text-xs px-2 shadow font-semibold"
-            style={{ writingMode: 'vertical-rl' }}
-          >
-            {ribbonText}
-          </span>
+          <div className="pointer-events-none absolute top-4 -right-8 rotate-45 z-20">
+            <span className="block w-[120px] text-center bg-[#ff3b30] text-white uppercase text-[10px] leading-4 font-semibold tracking-wide py-1 shadow-md">
+              {ribbonText}
+            </span>
+          </div>
         )}
-        <img
-          src={cover}
-          alt={title}
-          className="h-48 w-auto shadow-md"
-        />
+        <img src={cover} alt={title} className="h-48 w-auto shadow-md" />
       </div>
-      <div className="flex flex-col justify-between p-4 text-sm flex-1">
+      <div className="flex flex-col p-4 text-sm flex-1">
         <div className="space-y-1">
-          <h4 className="font-semibold text-base">{title}</h4>
+          <h4 className="font-semibold text-base truncate" title={title}>
+            {title}
+          </h4>
           <p>{ean}</p>
           <p>{authors}</p>
           <p>
@@ -62,11 +59,11 @@ export function BookCard({
           </p>
         </div>
         <Separator className="my-2" />
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col mt-auto">
           <Button variant="link" className="justify-start px-0 h-auto">
             Lire dans le kiosque{views !== undefined ? ` (${views} vues)` : ''}
           </Button>
-          <Button size="sm" className="w-fit">
+          <Button size="sm" className="w-fit leading-none">
             Ajouter à mon panier
           </Button>
         </div>
@@ -76,4 +73,3 @@ export function BookCard({
 }
 
 export default BookCard;
-

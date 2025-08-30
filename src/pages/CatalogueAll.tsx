@@ -101,6 +101,7 @@ export function CatalogueAll({ onBackToCatalogue }: CatalogueAllProps) {
       priceHT: '17.90',
       stock: 58,
       color: '--glenat-bd',
+      ribbonText: 'À paraître',
     },
     {
       cover: CombatVie,
@@ -124,6 +125,7 @@ export function CatalogueAll({ onBackToCatalogue }: CatalogueAllProps) {
       priceHT: '19.95',
       stock: 18,
       color: '--glenat-livre',
+      ribbonText: 'PROVISOIRE',
     },
   ];
 
