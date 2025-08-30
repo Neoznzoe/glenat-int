@@ -12,8 +12,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import QuickAccess, { QuickAccessItem } from '@/components/QuickAccess';
 import BookFilters from '@/components/BookFilters';
-import BookCard from '@/components/BookCard';
+import BookCard, { BookCardProps } from '@/components/BookCard';
 import OnePiece110 from '@/assets/images/onepiece_110.webp';
+import NayaPika from '@/assets/images/naya_pika.webp';
+import JulesMatrat from '@/assets/images/jules_matrat.webp';
+import CombatVie from '@/assets/images/le_combat_dune_vie.webp';
+import Odysee from '@/assets/images/odyssee.webp';
 import { useState } from 'react';
 
 import {
@@ -61,6 +65,67 @@ export function CatalogueAll({ onBackToCatalogue }: CatalogueAllProps) {
   ];
 
   const [activeFilter, setActiveFilter] = useState('Toutes');
+
+  const books: BookCardProps[] = [
+    {
+      cover: OnePiece110,
+      title: 'One Piece - Tome 110',
+      ean: '9782380711102',
+      authors: 'E. Oda',
+      publisher: 'Glénat Manga',
+      publicationDate: '01/02/2025',
+      priceHT: '7.99',
+      stock: 86,
+      views: 140,
+      color: '--glenat-manga',
+      ribbonText: 'NOUVEAUTÉ',
+    },
+    {
+      cover: NayaPika,
+      title: 'Naya Pika - Tome 03',
+      ean: '9782344059707',
+      authors: 'Rabat · Rodi · Aneko',
+      publisher: 'Glénat Jeunesse',
+      publicationDate: '03/04/2024',
+      priceHT: '10.95',
+      stock: 42,
+      color: '--glenat-jeunesse',
+    },
+    {
+      cover: JulesMatrat,
+      title: 'Jules Matrat - Tome 03',
+      ean: '9782344059905',
+      authors: 'Corbeyran · Horne',
+      publisher: 'Glénat BD',
+      publicationDate: '17/01/2024',
+      priceHT: '17.90',
+      stock: 58,
+      color: '--glenat-bd',
+    },
+    {
+      cover: CombatVie,
+      title: "Paul Watson - Le combat d'une vie",
+      ean: '9782344059974',
+      authors: 'Paul Watson',
+      publisher: 'Glénat Livres',
+      publicationDate: '05/06/2024',
+      priceHT: '22.00',
+      stock: 12,
+      color: '--glenat-livre',
+      ribbonText: 'NOUVEAUTÉ',
+    },
+    {
+      cover: Odysee,
+      title: 'Alva Odyssée',
+      ean: '9782344059936',
+      authors: 'Alva',
+      publisher: 'Glénat Livres',
+      publicationDate: '19/06/2024',
+      priceHT: '19.95',
+      stock: 18,
+      color: '--glenat-livre',
+    },
+  ];
 
   return (
     <div className="p-6 space-y-6">
@@ -110,19 +175,9 @@ export function CatalogueAll({ onBackToCatalogue }: CatalogueAllProps) {
             <div className="md:col-span-4">
               <h3 className="mb-4 font-semibold text-xl">Tout le catalogue</h3>
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
-                <BookCard
-                  cover={OnePiece110}
-                  title="One Piece - Tome 110"
-                  ean="9782380711102"
-                  authors="E. Oda"
-                  publisher="Glénat Manga"
-                  publicationDate="01/02/2025"
-                  priceHT="7.99"
-                  stock={86}
-                  views={140}
-                  color="--glenat-manga"
-                  ribbonText="NOUVEAUTÉ"
-                />
+                {books.map(book => (
+                  <BookCard key={book.ean} {...book} />
+                ))}
               </div>
             </div>
           </div>
