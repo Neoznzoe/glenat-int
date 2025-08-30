@@ -30,9 +30,9 @@ export function BookCard({
   ribbonText,
 }: BookCardProps) {
   return (
-    <Card className="flex overflow-hidden">
+    <Card className="flex flex-col overflow-hidden">
       <div
-        className="relative w-32 flex items-end justify-center p-2" 
+        className="relative flex items-end justify-center p-2"
         style={{ backgroundColor: `var(${color})` }}
       >
         {ribbonText && (

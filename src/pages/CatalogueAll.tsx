@@ -109,19 +109,21 @@ export function CatalogueAll({ onBackToCatalogue }: CatalogueAllProps) {
             <QuickAccess items={quickLinks} />
             <div className="md:col-span-4">
               <h3 className="mb-4 font-semibold text-xl">Tout le catalogue</h3>
-              <BookCard
-                cover={OnePiece110}
-                title="One Piece - Tome 110"
-                ean="9782380711102"
-                authors="E. Oda"
-                publisher="Glénat Manga"
-                publicationDate="01/02/2025"
-                priceHT="7.99"
-                stock={86}
-                views={140}
-                color="--glenat-manga"
-                ribbonText="NOUVEAUTÉ"
-              />
+              <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                <BookCard
+                  cover={OnePiece110}
+                  title="One Piece - Tome 110"
+                  ean="9782380711102"
+                  authors="E. Oda"
+                  publisher="Glénat Manga"
+                  publicationDate="01/02/2025"
+                  priceHT="7.99"
+                  stock={86}
+                  views={140}
+                  color="--glenat-manga"
+                  ribbonText="NOUVEAUTÉ"
+                />
+              </div>
             </div>
           </div>
         </CardContent>
