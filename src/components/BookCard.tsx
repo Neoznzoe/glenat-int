@@ -37,7 +37,8 @@ export function BookCard({
       >
         {ribbonText && (
           <span
-            className="absolute top-2 left-2 origin-top-left -rotate-45 bg-red-500 text-white text-sm px-4 py-1 shadow font-semibold"
+            className="absolute inset-y-0 right-0 flex items-center justify-center bg-red-500 text-white text-xs px-2 shadow font-semibold"
+            style={{ writingMode: 'vertical-rl' }}
           >
             {ribbonText}
           </span>
