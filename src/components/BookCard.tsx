@@ -30,14 +30,14 @@ export function BookCard({
   ribbonText,
 }: BookCardProps) {
   return (
-    <Card className="flex flex-col overflow-hidden">
+    <Card className="flex flex-col overflow-hidden min-w-[230px]">
       <div
         className="relative flex items-end justify-center p-2"
         style={{ backgroundColor: `var(${color})` }}
       >
         {ribbonText && (
           <span
-            className="absolute top-2 right-[-40px] rotate-45 bg-red-500 text-white text-[0.625rem] px-8 py-1 shadow"
+            className="absolute top-2 right-[-56px] rotate-45 bg-red-500 text-white text-sm px-12 py-2 shadow font-semibold"
           >
             {ribbonText}
           </span>
@@ -45,7 +45,7 @@ export function BookCard({
         <img
           src={cover}
           alt={title}
-          className="h-40 w-auto shadow-md"
+          className="h-48 w-auto shadow-md"
         />
       </div>
       <div className="flex flex-col justify-between p-4 text-sm flex-1">
