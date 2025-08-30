@@ -37,7 +37,7 @@ export function BookCard({
       >
         {ribbonText && (
           <span
-            className="absolute top-2 right-[-56px] rotate-45 bg-red-500 text-white text-sm px-12 py-2 shadow font-semibold"
+            className="absolute top-2 left-2 bg-red-500 text-white text-sm px-2 py-1 rounded shadow font-semibold"
           >
             {ribbonText}
           </span>
