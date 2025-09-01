@@ -28,6 +28,7 @@ import {
   Store,
   TrendingUp,
   UserPen,
+  Building
 } from 'lucide-react';
 
 interface CatalogueProps {
@@ -36,6 +37,7 @@ interface CatalogueProps {
 
 export function Catalogue({ onViewAll }: CatalogueProps) {
   const quickLinks: QuickAccessItem[] = [
+    { label: 'Éditions', icon: Building},
     { label: 'Kiosque', icon: Store },
     { label: 'Les auteurs', icon: UserPen },
     { label: 'Prochaines sorties', icon: CalendarDays },
