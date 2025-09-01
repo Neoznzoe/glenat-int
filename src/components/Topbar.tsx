@@ -51,7 +51,7 @@ export function Topbar() {
             <Button
               variant="ghost"
               size="sm"
-              className="flex items-center space-x-2 focus-visible:ring-0"
+              className="flex items-center space-x-2 focus-visible:ring-0 pr-4"
             >
               <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center">
                 <User className="h-4 w-4 text-muted-foreground" />
@@ -60,7 +60,7 @@ export function Topbar() {
                 <div className="text-sm font-medium text-foreground">Victor Besson</div>
                 <div className="text-xs text-muted-foreground">Glénat Grenoble</div>
               </div>
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              <ChevronDown className="h-4 w-4 text-muted-foreground ml-1" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
