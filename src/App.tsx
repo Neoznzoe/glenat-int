@@ -6,6 +6,8 @@ import Emploi, { jobOffers } from './pages/Emploi';
 import Catalogue from './pages/catalogue/Editions';
 import CatalogueAll from './pages/catalogue/CatalogueAll';
 import Kiosque from './pages/catalogue/Kiosque';
+import Offices from './pages/catalogue/Offices';
+import Nouveautes from './pages/catalogue/Nouveautes';
 
 function App() {
   const [activePage, setActivePage] = useState('home');
@@ -27,18 +29,40 @@ function App() {
             <Catalogue
               onViewAll={() => setActivePage('catalogueAll')}
               onViewKiosque={() => setActivePage('kiosque')}
+              onViewOffices={() => setActivePage('offices')}
+              onViewNouveautes={() => setActivePage('nouveautes')}
             />
           )}
           {activePage === 'catalogueAll' && (
             <CatalogueAll
               onBackToCatalogue={() => setActivePage('catalogue')}
               onViewKiosque={() => setActivePage('kiosque')}
+              onViewOffices={() => setActivePage('offices')}
+              onViewNouveautes={() => setActivePage('nouveautes')}
             />
           )}
           {activePage === 'kiosque' && (
             <Kiosque
               onBackToCatalogue={() => setActivePage('catalogue')}
               onViewAll={() => setActivePage('catalogueAll')}
+              onViewOffices={() => setActivePage('offices')}
+              onViewNouveautes={() => setActivePage('nouveautes')}
+            />
+          )}
+          {activePage === 'offices' && (
+            <Offices
+              onBackToCatalogue={() => setActivePage('catalogue')}
+              onViewAll={() => setActivePage('catalogueAll')}
+              onViewKiosque={() => setActivePage('kiosque')}
+              onViewNouveautes={() => setActivePage('nouveautes')}
+            />
+          )}
+          {activePage === 'nouveautes' && (
+            <Nouveautes
+              onBackToCatalogue={() => setActivePage('catalogue')}
+              onViewAll={() => setActivePage('catalogueAll')}
+              onViewKiosque={() => setActivePage('kiosque')}
+              onViewOffices={() => setActivePage('offices')}
             />
           )}
         </main>

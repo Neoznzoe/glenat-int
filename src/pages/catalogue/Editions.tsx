@@ -19,9 +19,11 @@ import UniversManga from '@/assets/logos/univers/univers-manga.svg';
 interface CatalogueProps {
   onViewAll: () => void;
   onViewKiosque: () => void;
+  onViewOffices: () => void;
+  onViewNouveautes: () => void;
 }
 
-export function Catalogue({ onViewAll, onViewKiosque }: CatalogueProps) {
+export function Catalogue({ onViewAll, onViewKiosque, onViewOffices, onViewNouveautes }: CatalogueProps) {
   const editions = [
     { title: 'Adonis', color: '--glenat-bd', logo: UniversBD },
     { title: 'Blanche', color: '--glenat-livre', logo: UniversLivre },
@@ -70,6 +72,8 @@ export function Catalogue({ onViewAll, onViewKiosque }: CatalogueProps) {
             active="Éditions"
             onViewAll={onViewAll}
             onViewKiosque={onViewKiosque}
+            onViewOffices={onViewOffices}
+            onViewNouveautes={onViewNouveautes}
           >
             <h3 className="mb-4 font-semibold text-xl">Éditions</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
