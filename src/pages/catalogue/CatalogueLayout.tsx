@@ -17,6 +17,7 @@ import { ReactNode } from 'react';
 
 const getQuickLinks = (onViewAll?: () => void): QuickAccessItem[] => [
   { label: 'Éditions', icon: Building },
+  { label: 'Tout le catalogue', icon: BookOpen, onClick: onViewAll },
   { label: 'Kiosque', icon: Store },
   { label: 'Les auteurs', icon: UserPen },
   { label: 'Prochaines sorties', icon: CalendarDays },
@@ -27,7 +28,6 @@ const getQuickLinks = (onViewAll?: () => void): QuickAccessItem[] => [
   { label: 'Télécharger le catalogue', icon: Download },
   { label: 'Information à renseigner', icon: Info },
   { label: 'Plus de stock', icon: PackageX },
-  { label: 'Voir tout le catalogue', icon: BookOpen, onClick: onViewAll },
 ];
 
 interface CatalogueLayoutProps {

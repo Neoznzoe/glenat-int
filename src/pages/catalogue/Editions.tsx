@@ -47,7 +47,11 @@ export function Catalogue({ onViewAll }: CatalogueProps) {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Catalogue</BreadcrumbPage>
+            <BreadcrumbLink href="#">Catalogue</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Éditions</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>

@@ -28,12 +28,28 @@ export function QuickAccess({ items, active }: QuickAccessProps) {
             >
               <Card
                 className={cn(
-                  'flex items-center gap-2 p-3 hover:bg-muted',
-                  active === item.label ? 'bg-muted' : 'bg-background',
+                  'flex items-center gap-2 p-3 hover:bg-muted border transition-colors',
+                  active === item.label
+                    ? 'bg-muted border-primary text-primary'
+                    : 'bg-background border-transparent',
                 )}
               >
-                <item.icon className="h-4 w-4 text-muted-foreground" />
-                <span className="whitespace-nowrap text-sm">{item.label}</span>
+                <item.icon
+                  className={cn(
+                    'h-4 w-4',
+                    active === item.label
+                      ? 'text-primary'
+                      : 'text-muted-foreground',
+                  )}
+                />
+                <span
+                  className={cn(
+                    'whitespace-nowrap text-sm',
+                    active === item.label && 'font-semibold text-primary',
+                  )}
+                >
+                  {item.label}
+                </span>
               </Card>
             </a>
           </li>
