@@ -18,9 +18,10 @@ import UniversManga from '@/assets/logos/univers/univers-manga.svg';
 
 interface CatalogueProps {
   onViewAll: () => void;
+  onViewKiosque: () => void;
 }
 
-export function Catalogue({ onViewAll }: CatalogueProps) {
+export function Catalogue({ onViewAll, onViewKiosque }: CatalogueProps) {
   const editions = [
     { title: 'Adonis', color: '--glenat-bd', logo: UniversBD },
     { title: 'Blanche', color: '--glenat-livre', logo: UniversLivre },
@@ -65,7 +66,11 @@ export function Catalogue({ onViewAll }: CatalogueProps) {
           <Separator />
         </div>
         <CardContent className="p-6">
-          <CatalogueLayout active="Éditions" onViewAll={onViewAll}>
+          <CatalogueLayout
+            active="Éditions"
+            onViewAll={onViewAll}
+            onViewKiosque={onViewKiosque}
+          >
             <h3 className="mb-4 font-semibold text-xl">Éditions</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {editions.map((ed) => (

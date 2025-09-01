@@ -9,10 +9,16 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import CatalogueLayout from './CatalogueLayout';
-import BookFilters from '@/components/BookFilters';
 import BookCard, { BookCardProps } from '@/components/BookCard';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useState } from 'react';
 import OnePiece110 from '@/assets/images/onepiece_110.webp';
 import NayaPika from '@/assets/images/naya_pika.webp';
 import JulesMatrat from '@/assets/images/jules_matrat.webp';
@@ -23,28 +29,48 @@ import Brume01 from '@/assets/images/brume-01.webp';
 import Shangri17 from '@/assets/images/shangri-17.webp';
 import Momie from '@/assets/images/momie-bandelette.webp';
 import Cemotions from '@/assets/images/couleurs-emotions.webp';
-import { useState } from 'react';
 
-interface CatalogueAllProps {
+interface KiosqueProps {
   onBackToCatalogue?: () => void;
-  onViewKiosque?: () => void;
+  onViewAll?: () => void;
 }
 
-export function CatalogueAll({ onBackToCatalogue, onViewKiosque }: CatalogueAllProps) {
-  const filters = [
-    'Toutes',
-    'BD',
-    'Manga',
-    'Jeunesse',
-    'Découverte',
-    'Livres',
-    'Voyage',
-    'Montagne',
-  ];
+interface KiosqueBook extends BookCardProps {
+  creationDate: string;
+}
 
-  const [activeFilter, setActiveFilter] = useState('Toutes');
+export function Kiosque({ onBackToCatalogue, onViewAll }: KiosqueProps) {
+  const [creationSort, setCreationSort] = useState<string>();
+  const [saleSort, setSaleSort] = useState<string>();
+  const [viewsSort, setViewsSort] = useState<string>();
+  const [sortField, setSortField] = useState<'creationDate' | 'publicationDate' | 'views'>('creationDate');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  const books: BookCardProps[] = [
+  const handleCreationChange = (value: string) => {
+    setSortField('creationDate');
+    setSortDirection(value as 'asc' | 'desc');
+    setCreationSort(value);
+    setSaleSort(undefined);
+    setViewsSort(undefined);
+  };
+
+  const handleSaleChange = (value: string) => {
+    setSortField('publicationDate');
+    setSortDirection(value as 'asc' | 'desc');
+    setSaleSort(value);
+    setCreationSort(undefined);
+    setViewsSort(undefined);
+  };
+
+  const handleViewsChange = (value: string) => {
+    setSortField('views');
+    setSortDirection(value as 'asc' | 'desc');
+    setViewsSort(value);
+    setCreationSort(undefined);
+    setSaleSort(undefined);
+  };
+
+  const books: KiosqueBook[] = [
     {
       cover: OnePiece110,
       title: 'One Piece - Tome 110',
@@ -55,6 +81,7 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque }: CatalogueAllP
       priceHT: '7.99',
       stock: 86,
       views: 140,
+      creationDate: '22/02/2024',
       color: '--glenat-manga',
       ribbonText: 'NOUVEAUTÉ',
     },
@@ -67,6 +94,8 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque }: CatalogueAllP
       publicationDate: '03/04/2024',
       priceHT: '10.95',
       stock: 42,
+      creationDate: '15/03/2024',
+      views: 95,
       color: '--glenat-jeunesse',
     },
     {
@@ -78,6 +107,8 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque }: CatalogueAllP
       publicationDate: '17/01/2024',
       priceHT: '17.90',
       stock: 58,
+      creationDate: '10/01/2024',
+      views: 45,
       color: '--glenat-bd',
       ribbonText: 'À paraître',
     },
@@ -90,6 +121,8 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque }: CatalogueAllP
       publicationDate: '05/06/2024',
       priceHT: '22.00',
       stock: 12,
+      creationDate: '18/04/2024',
+      views: 60,
       color: '--glenat-livre',
       ribbonText: 'NOUVEAUTÉ',
     },
@@ -102,6 +135,8 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque }: CatalogueAllP
       publicationDate: '19/06/2024',
       priceHT: '19.95',
       stock: 18,
+      creationDate: '02/05/2024',
+      views: 30,
       color: '--glenat-livre',
       ribbonText: 'PROVISOIRE',
     },
@@ -111,9 +146,11 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque }: CatalogueAllP
       ean: '9791026400134',
       authors: 'Anna Llenas',
       publisher: 'Glénat Jeunesse',
-      publicationDate: "10/10/2014",
+      publicationDate: '10/10/2014',
       priceHT: '20.76',
       stock: 14574,
+      creationDate: '01/01/2014',
+      views: 250,
       color: '--glenat-jeunesse',
     },
     {
@@ -125,8 +162,10 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque }: CatalogueAllP
       publicationDate: '27/08/2025',
       priceHT: '18.96',
       stock: 3373,
+      creationDate: '11/06/2025',
+      views: 12,
       color: '--glenat-bd',
-      ribbonText: "nouveauté"
+      ribbonText: 'nouveauté',
     },
     {
       cover: Shangri17,
@@ -137,18 +176,22 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque }: CatalogueAllP
       publicationDate: '27/08/2025',
       priceHT: '6.82',
       stock: 6292,
+      creationDate: '20/07/2025',
+      views: 5,
       color: '--glenat-manga',
-      ribbonText: "nouveauté"
+      ribbonText: 'nouveauté',
     },
     {
       cover: Brume01,
-      title:'Brume - Tome 01',
+      title: 'Brume - Tome 01',
       ean: '9782344051733',
       authors: 'J.Pélissier · C.Hinder',
       publisher: 'Glénat BD',
-      publicationDate: "26/04/2023",
+      publicationDate: '26/04/2023',
       priceHT: '11.85',
       stock: 24479,
+      creationDate: '13/03/2023',
+      views: 410,
       color: '--glenat-bd',
     },
     {
@@ -157,12 +200,28 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque }: CatalogueAllP
       ean: '9782344057049',
       authors: 'Loïc Clément · Julien Arnal',
       publisher: 'Glénat Jeunesse',
-      publicationDate: "09/10/2024",
+      publicationDate: '09/10/2024',
       priceHT: '11.85',
       stock: 1952,
+      creationDate: '25/09/2024',
+      views: 80,
       color: '--glenat-jeunesse',
-    }
+    },
   ];
+
+  const sortedBooks = [...books].sort((a, b) => {
+    const fieldA = sortField === 'views' ? a.views ?? 0 : new Date(a[sortField]).getTime();
+    const fieldB = sortField === 'views' ? b.views ?? 0 : new Date(b[sortField]).getTime();
+    const comparison = fieldA < fieldB ? -1 : fieldA > fieldB ? 1 : 0;
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
+
+  const infoLabel =
+    sortField === 'creationDate'
+      ? 'Date de création'
+      : sortField === 'publicationDate'
+      ? 'Date de mise en vente'
+      : 'Vues';
 
   return (
     <div className="p-6 space-y-6">
@@ -179,7 +238,7 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque }: CatalogueAllP
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Tout le catalogue</BreadcrumbPage>
+            <BreadcrumbPage>Kiosque</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -190,32 +249,58 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque }: CatalogueAllP
           <Input type="search" placeholder="Rechercher..." className="sm:w-64" />
         </CardHeader>
         <div className="px-6 space-y-4">
-          <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
-            {filters.map(filter => (
-              <Button
-                key={filter}
-                variant={activeFilter === filter ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveFilter(filter)}
-                className="whitespace-nowrap"
-              >
-                {filter}
-              </Button>
-            ))}
-            <BookFilters />
+          <div className="flex flex-wrap gap-4">
+            <Select value={creationSort} onValueChange={handleCreationChange}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Date de création" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Du plus récent au plus ancien</SelectItem>
+                <SelectItem value="asc">Du plus ancien au plus récent</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={saleSort} onValueChange={handleSaleChange}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Date de mise en vente" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Du plus récent au plus ancien</SelectItem>
+                <SelectItem value="asc">Du plus ancien au plus récent</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={viewsSort} onValueChange={handleViewsChange}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Vues" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Du plus vues au moins vues</SelectItem>
+                <SelectItem value="asc">Du moins vues au plus vues</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Separator />
         </div>
         <CardContent className="p-6">
           <CatalogueLayout
-            active="Tout le catalogue"
+            active="Kiosque"
             onViewEditions={onBackToCatalogue}
-            onViewKiosque={onViewKiosque}
+            onViewAll={onViewAll}
           >
-            <h3 className="mb-4 font-semibold text-xl">Tout le catalogue</h3>
+            <h3 className="mb-4 font-semibold text-xl">Kiosque</h3>
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
-              {books.map(book => (
-                <BookCard key={book.ean} {...book} />
+              {sortedBooks.map(book => (
+                <BookCard
+                  key={book.ean}
+                  {...book}
+                  infoLabel={infoLabel}
+                  infoValue={
+                    sortField === 'views'
+                      ? book.views
+                      : sortField === 'publicationDate'
+                      ? book.publicationDate
+                      : book.creationDate
+                  }
+                />
               ))}
             </div>
           </CatalogueLayout>
@@ -225,5 +310,5 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque }: CatalogueAllP
   );
 }
 
-export default CatalogueAll;
+export default Kiosque;
 

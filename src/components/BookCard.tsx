@@ -14,6 +14,8 @@ export interface BookCardProps {
   views?: number;
   color: string;
   ribbonText?: string;
+  infoLabel?: string;
+  infoValue?: string | number;
 }
 
 export function BookCard({
@@ -28,6 +30,8 @@ export function BookCard({
   views,
   color,
   ribbonText,
+  infoLabel,
+  infoValue,
 }: BookCardProps) {
   return (
     <Card className="flex flex-col overflow-hidden min-w-[230px]">
@@ -42,7 +46,11 @@ export function BookCard({
             </span>
           </div>
         )}
-        <img src={cover} alt={title} className="h-48 w-auto shadow-md" />
+        <img
+          src={cover}
+          alt={title}
+          className="h-48 w-auto shadow-md rounded object-cover"
+        />
       </div>
       <div className="flex flex-col p-4 text-sm flex-1 bg-background">
         <div className="space-y-1">
@@ -54,6 +62,11 @@ export function BookCard({
           <p>
             {publisher} | {publicationDate}
           </p>
+          {infoLabel && infoValue !== undefined && (
+            <p>
+              {infoLabel} : {infoValue}
+            </p>
+          )}
           <p>
             Tarif HT : {priceHT} € | Stock : {stock} ex
           </p>
