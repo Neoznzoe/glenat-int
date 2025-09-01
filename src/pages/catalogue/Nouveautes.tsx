@@ -14,7 +14,11 @@ import BookCard, { BookCardProps } from '@/components/BookCard';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { ListFilter as ListFilterIcon } from 'lucide-react';
+import {
+  ListFilter as ListFilterIcon,
+  ArrowDownWideNarrow,
+  ArrowUpWideNarrow,
+} from 'lucide-react';
 import { Fragment, useState } from 'react';
 import OnePiece110 from '@/assets/images/onepiece_110.webp';
 import NayaPika from '@/assets/images/naya_pika.webp';
@@ -193,7 +197,12 @@ export function Nouveautes({ onBackToCatalogue, onViewAll, onViewKiosque, onView
               className="whitespace-nowrap"
               onClick={toggleSortOrder}
             >
-              Trier par date {sortOrder === 'desc' ? '↓' : '↑'}
+              Trier par date
+              {sortOrder === 'desc' ? (
+                <ArrowDownWideNarrow className="ml-2 h-4 w-4" />
+              ) : (
+                <ArrowUpWideNarrow className="ml-2 h-4 w-4" />
+              )}
             </Button>
             <Popover>
               <PopoverTrigger asChild>
