@@ -14,7 +14,21 @@ import BookCard, { BookCardProps } from '@/components/BookCard';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { ListFilter as ListFilterIcon } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import {
+  ListFilter as ListFilterIcon,
+  CalendarDays,
+  CalendarClock,
+  BarChart3,
+  ArrowDownWideNarrow,
+  ArrowUpWideNarrow,
+} from 'lucide-react';
 import { Fragment, useState } from 'react';
 import OnePiece110 from '@/assets/images/onepiece_110.webp';
 import NayaPika from '@/assets/images/naya_pika.webp';
@@ -61,6 +75,10 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
   ];
 
   const [selectedPublishers, setSelectedPublishers] = useState<string[]>([]);
+  const [sortField, setSortField] = useState<'officeDate' | 'publicationDate' | 'views'>(
+    'officeDate'
+  );
+  const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
 
   const togglePublisher = (publisher: string) => {
     setSelectedPublishers(prev =>
@@ -69,6 +87,17 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
         : [...prev, publisher]
     );
   };
+
+  const parseDate = (dateStr: string) => {
+    const [day, month, year] = dateStr.split('/').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  const sortOptions = {
+    officeDate: { label: "Date de l'office", icon: CalendarDays },
+    publicationDate: { label: 'Date de mise en vente', icon: CalendarClock },
+    views: { label: 'Vues', icon: BarChart3 },
+  } as const;
 
   const kiosques: KiosqueGroup[] = [
     {
@@ -230,7 +259,36 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
     },
   ];
 
-  const sortedKiosques = kiosques;
+  const currentSort = sortOptions[sortField];
+
+  const sortedKiosques =
+    sortField === 'officeDate'
+      ? [...kiosques].sort((a, b) => {
+          const dateA = parseDate(a.date).getTime();
+          const dateB = parseDate(b.date).getTime();
+          return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+        })
+      : kiosques.map(k => ({
+          ...k,
+          books: [...k.books].sort((a, b) => {
+            const valA =
+              sortField === 'views'
+                ? a.views ?? 0
+                : parseDate(a.publicationDate).getTime();
+            const valB =
+              sortField === 'views'
+                ? b.views ?? 0
+                : parseDate(b.publicationDate).getTime();
+            return sortDirection === 'asc' ? valA - valB : valB - valA;
+          }),
+        }));
+
+  const infoLabel =
+    sortField === 'publicationDate'
+      ? 'Date de mise en vente'
+      : sortField === 'views'
+      ? 'Vues'
+      : undefined;
 
   return (
     <div className="p-6 space-y-6">
@@ -262,6 +320,41 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
             <Button variant="default" size="sm" className="whitespace-nowrap">
               Toutes
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="whitespace-nowrap flex items-center"
+                >
+                  <currentSort.icon className="mr-2 h-4 w-4" />
+                  Trier par {currentSort.label.toLowerCase()}
+                  {sortDirection === 'desc' ? (
+                    <ArrowDownWideNarrow className="ml-2 h-4 w-4" />
+                  ) : (
+                    <ArrowUpWideNarrow className="ml-2 h-4 w-4" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {(Object.keys(sortOptions) as (keyof typeof sortOptions)[]).map(key => {
+                  const OptionIcon = sortOptions[key].icon;
+                  return (
+                    <DropdownMenuItem key={key} onClick={() => setSortField(key)}>
+                      <OptionIcon className="mr-2 h-4 w-4" />
+                      {sortOptions[key].label}
+                    </DropdownMenuItem>
+                  );
+                })}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setSortDirection('desc')}>
+                  Du plus récent au plus ancien
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortDirection('asc')}>
+                  Du plus ancien au plus récent
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="whitespace-nowrap">
@@ -306,7 +399,18 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
                     </CardHeader>
                   </Card>
                   {kiosque.books.map(book => (
-                    <BookCard key={book.ean} {...book} />
+                    <BookCard
+                      key={book.ean}
+                      {...book}
+                      infoLabel={infoLabel}
+                      infoValue={
+                        infoLabel === 'Vues'
+                          ? book.views
+                          : infoLabel === 'Date de mise en vente'
+                          ? book.publicationDate
+                          : undefined
+                      }
+                    />
                   ))}
                 </Fragment>
               ))}

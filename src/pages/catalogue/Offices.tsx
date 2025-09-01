@@ -14,7 +14,21 @@ import BookCard, { BookCardProps } from '@/components/BookCard';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { ListFilter as ListFilterIcon } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import {
+  ListFilter as ListFilterIcon,
+  CalendarDays,
+  CalendarClock,
+  BarChart3,
+  ArrowDownWideNarrow,
+  ArrowUpWideNarrow,
+} from 'lucide-react';
 import { Fragment, useState } from 'react';
 import OnePiece110 from '@/assets/images/onepiece_110.webp';
 import NayaPika from '@/assets/images/naya_pika.webp';
@@ -53,6 +67,10 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
   ];
 
   const [selectedPublishers, setSelectedPublishers] = useState<string[]>([]);
+  const [sortField, setSortField] = useState<'officeDate' | 'publicationDate' | 'views'>(
+    'officeDate'
+  );
+  const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
 
   const togglePublisher = (publisher: string) => {
     setSelectedPublishers(prev =>
@@ -61,6 +79,17 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
         : [...prev, publisher]
     );
   };
+
+  const parseDate = (dateStr: string) => {
+    const [day, month, year] = dateStr.split('/').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  const sortOptions = {
+    officeDate: { label: "Date de l'office", icon: CalendarDays },
+    publicationDate: { label: 'Date de mise en vente', icon: CalendarClock },
+    views: { label: 'Vues', icon: BarChart3 },
+  } as const;
 
   const books1: BookCardProps[] = [
     {
@@ -72,6 +101,7 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
       publicationDate: '01/02/2025',
       priceHT: '7.99',
       stock: 86,
+      views: 140,
       color: '--glenat-manga',
       ribbonText: 'NOUVEAUTÉ',
     },
@@ -84,6 +114,7 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
       publicationDate: '03/04/2024',
       priceHT: '10.95',
       stock: 42,
+      views: 95,
       color: '--glenat-jeunesse',
     },
     {
@@ -95,6 +126,7 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
       publicationDate: '17/01/2024',
       priceHT: '17.90',
       stock: 58,
+      views: 45,
       color: '--glenat-bd',
       ribbonText: 'À paraître',
     },
@@ -110,6 +142,7 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
       publicationDate: '05/06/2024',
       priceHT: '22.00',
       stock: 12,
+      views: 60,
       color: '--glenat-livre',
       ribbonText: 'NOUVEAUTÉ',
     },
@@ -122,6 +155,7 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
       publicationDate: '19/06/2024',
       priceHT: '19.95',
       stock: 18,
+      views: 30,
       color: '--glenat-livre',
       ribbonText: 'PROVISOIRE',
     },
@@ -134,6 +168,7 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
       publicationDate: '10/10/2014',
       priceHT: '20.76',
       stock: 14574,
+      views: 250,
       color: '--glenat-jeunesse',
     },
   ];
@@ -152,6 +187,37 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
       books: books2,
     },
   ];
+
+  const currentSort = sortOptions[sortField];
+
+  const sortedOffices =
+    sortField === 'officeDate'
+      ? [...offices].sort((a, b) => {
+          const dateA = parseDate(a.date).getTime();
+          const dateB = parseDate(b.date).getTime();
+          return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+        })
+      : offices.map(o => ({
+          ...o,
+          books: [...o.books].sort((a, b) => {
+            const valA =
+              sortField === 'views'
+                ? a.views ?? 0
+                : parseDate(a.publicationDate).getTime();
+            const valB =
+              sortField === 'views'
+                ? b.views ?? 0
+                : parseDate(b.publicationDate).getTime();
+            return sortDirection === 'asc' ? valA - valB : valB - valA;
+          }),
+        }));
+
+  const infoLabel =
+    sortField === 'publicationDate'
+      ? 'Date de mise en vente'
+      : sortField === 'views'
+      ? 'Vues'
+      : undefined;
 
   return (
     <div className="p-6 space-y-6">
@@ -183,6 +249,41 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
             <Button variant="default" size="sm" className="whitespace-nowrap">
               Toutes
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="whitespace-nowrap flex items-center"
+                >
+                  <currentSort.icon className="mr-2 h-4 w-4" />
+                  Trier par {currentSort.label.toLowerCase()}
+                  {sortDirection === 'desc' ? (
+                    <ArrowDownWideNarrow className="ml-2 h-4 w-4" />
+                  ) : (
+                    <ArrowUpWideNarrow className="ml-2 h-4 w-4" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {(Object.keys(sortOptions) as (keyof typeof sortOptions)[]).map(key => {
+                  const OptionIcon = sortOptions[key].icon;
+                  return (
+                    <DropdownMenuItem key={key} onClick={() => setSortField(key)}>
+                      <OptionIcon className="mr-2 h-4 w-4" />
+                      {sortOptions[key].label}
+                    </DropdownMenuItem>
+                  );
+                })}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setSortDirection('desc')}>
+                  Du plus récent au plus ancien
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortDirection('asc')}>
+                  Du plus ancien au plus récent
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="whitespace-nowrap">
@@ -216,7 +317,7 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
           >
             <h3 className="mb-4 font-semibold text-xl">Prochaines offices</h3>
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
-              {offices.map(group => (
+              {sortedOffices.map(group => (
                 <Fragment key={group.office}>
                   <Card className="col-span-full w-fit min-w-[280px]">
                     <CardHeader className="py-2">
@@ -227,7 +328,18 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
                     </CardHeader>
                   </Card>
                   {group.books.map(book => (
-                    <BookCard key={book.ean} {...book} />
+                    <BookCard
+                      key={book.ean}
+                      {...book}
+                      infoLabel={infoLabel}
+                      infoValue={
+                        infoLabel === 'Vues'
+                          ? book.views
+                          : infoLabel === 'Date de mise en vente'
+                          ? book.publicationDate
+                          : undefined
+                      }
+                    />
                   ))}
                 </Fragment>
               ))}
