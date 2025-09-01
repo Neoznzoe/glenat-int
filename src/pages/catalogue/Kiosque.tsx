@@ -11,13 +11,10 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import CatalogueLayout from './CatalogueLayout';
 import BookCard, { BookCardProps } from '@/components/BookCard';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { ListFilter as ListFilterIcon } from 'lucide-react';
 import { Fragment, useState } from 'react';
 import OnePiece110 from '@/assets/images/onepiece_110.webp';
 import NayaPika from '@/assets/images/naya_pika.webp';
@@ -49,34 +46,28 @@ interface KiosqueGroup {
 }
 
 export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNouveautes }: KiosqueProps) {
-  const [creationSort, setCreationSort] = useState<string | undefined>('desc');
-  const [saleSort, setSaleSort] = useState<string>();
-  const [viewsSort, setViewsSort] = useState<string>();
-  const [sortField, setSortField] = useState<'creationDate' | 'publicationDate' | 'views'>('creationDate');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const publishers = [
+    'Hugo',
+    'Comix Buro',
+    'Disney',
+    'Éditions Licences',
+    'Glénat bd',
+    'Glénat Jeunesse',
+    'Glénat Livres',
+    'Glénat Manga',
+    'Rando Editions',
+    "Vents d'Ouest",
+    'Livres diffusés',
+  ];
 
-  const handleCreationChange = (value: string) => {
-    setSortField('creationDate');
-    setSortDirection(value as 'asc' | 'desc');
-    setCreationSort(value);
-    setSaleSort(undefined);
-    setViewsSort(undefined);
-  };
+  const [selectedPublishers, setSelectedPublishers] = useState<string[]>([]);
 
-  const handleSaleChange = (value: string) => {
-    setSortField('publicationDate');
-    setSortDirection(value as 'asc' | 'desc');
-    setSaleSort(value);
-    setCreationSort(undefined);
-    setViewsSort(undefined);
-  };
-
-  const handleViewsChange = (value: string) => {
-    setSortField('views');
-    setSortDirection(value as 'asc' | 'desc');
-    setViewsSort(value);
-    setCreationSort(undefined);
-    setSaleSort(undefined);
+  const togglePublisher = (publisher: string) => {
+    setSelectedPublishers(prev =>
+      prev.includes(publisher)
+        ? prev.filter(p => p !== publisher)
+        : [...prev, publisher]
+    );
   };
 
   const kiosques: KiosqueGroup[] = [
@@ -239,24 +230,7 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
     },
   ];
 
-  const sortedKiosques = kiosques.map(k => ({
-    ...k,
-    books: [...k.books].sort((a, b) => {
-      const fieldA =
-        sortField === 'views' ? a.views ?? 0 : new Date(a[sortField]).getTime();
-      const fieldB =
-        sortField === 'views' ? b.views ?? 0 : new Date(b[sortField]).getTime();
-      const comparison = fieldA < fieldB ? -1 : fieldA > fieldB ? 1 : 0;
-      return sortDirection === 'asc' ? comparison : -comparison;
-    }),
-  }));
-
-  const infoLabel =
-    sortField === 'creationDate'
-      ? 'Date de création'
-      : sortField === 'publicationDate'
-      ? 'Date de mise en vente'
-      : 'Vues';
+  const sortedKiosques = kiosques;
 
   return (
     <div className="p-6 space-y-6">
@@ -284,34 +258,30 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
           <Input type="search" placeholder="Rechercher..." className="sm:w-64" />
         </CardHeader>
         <div className="px-6 space-y-4">
-          <div className="flex flex-wrap gap-4">
-            <Select value={creationSort} onValueChange={handleCreationChange}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Date de création" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="desc">Du plus récent au plus ancien</SelectItem>
-                <SelectItem value="asc">Du plus ancien au plus récent</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={saleSort} onValueChange={handleSaleChange}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Date de mise en vente" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="desc">Du plus récent au plus ancien</SelectItem>
-                <SelectItem value="asc">Du plus ancien au plus récent</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={viewsSort} onValueChange={handleViewsChange}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Vues" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="desc">Du plus vues au moins vues</SelectItem>
-                <SelectItem value="asc">Du moins vues au plus vues</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
+            <Button variant="default" size="sm" className="whitespace-nowrap">
+              Toutes
+            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="whitespace-nowrap">
+                  <ListFilterIcon className="mr-2 h-4 w-4" />
+                  Filtres
+                  {selectedPublishers.length > 0 && ` (${selectedPublishers.length})`}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-4 space-y-2">
+                {publishers.map(pub => (
+                  <label key={pub} className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={selectedPublishers.includes(pub)}
+                      onCheckedChange={() => togglePublisher(pub)}
+                    />
+                    <span>{pub}</span>
+                  </label>
+                ))}
+              </PopoverContent>
+            </Popover>
           </div>
           <Separator />
         </div>
@@ -325,50 +295,21 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
           >
             <h3 className="mb-4 font-semibold text-xl">Kiosque</h3>
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
-              {sortedKiosques.map(kiosque => {
-                const headerValue =
-                  sortField === 'views'
-                    ? kiosque.books[0].views
-                    : sortField === 'publicationDate'
-                    ? kiosque.books[0].publicationDate
-                    : kiosque.books[0].creationDate;
-
-                const directionText =
-                  sortField === 'views'
-                    ? sortDirection === 'desc'
-                      ? 'Tri du plus de vues au moins de vues'
-                      : 'Tri du moins de vues au plus de vues'
-                    : sortDirection === 'desc'
-                    ? 'Tri du plus récent au plus ancien'
-                    : 'Tri du plus ancien au plus récent';
-
-                return (
-                  <Fragment key={kiosque.office}>
-                    <Card className="col-span-full w-fit min-w-[280px]">
-                      <CardHeader className="py-2">
-                        <CardTitle className="text-lg">
-                          {infoLabel} : {headerValue}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground">{directionText}</p>
-                      </CardHeader>
-                    </Card>
-                    {kiosque.books.map(book => (
-                      <BookCard
-                        key={book.ean}
-                        {...book}
-                        infoLabel={infoLabel}
-                        infoValue={
-                          sortField === 'views'
-                            ? book.views
-                            : sortField === 'publicationDate'
-                            ? book.publicationDate
-                            : book.creationDate
-                        }
-                      />
-                    ))}
-                  </Fragment>
-                );
-              })}
+              {sortedKiosques.map(kiosque => (
+                <Fragment key={kiosque.office}>
+                  <Card className="col-span-full w-fit min-w-[280px]">
+                    <CardHeader className="py-2">
+                      <CardTitle className="text-lg">
+                        Office {kiosque.office} : {kiosque.date}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">{kiosque.shipping}</p>
+                    </CardHeader>
+                  </Card>
+                  {kiosque.books.map(book => (
+                    <BookCard key={book.ean} {...book} />
+                  ))}
+                </Fragment>
+              ))}
             </div>
           </CatalogueLayout>
         </CardContent>
