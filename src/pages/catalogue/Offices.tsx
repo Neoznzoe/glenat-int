@@ -27,6 +27,7 @@ interface OfficesProps {
   onBackToCatalogue?: () => void;
   onViewAll?: () => void;
   onViewKiosque?: () => void;
+  onViewNouveautes?: () => void;
 }
 
 interface OfficeGroup {
@@ -36,7 +37,7 @@ interface OfficeGroup {
   books: BookCardProps[];
 }
 
-export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque }: OfficesProps) {
+export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNouveautes }: OfficesProps) {
   const publishers = [
     'Hugo',
     'Comix Buro',
@@ -211,6 +212,7 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque }: Offices
             onViewEditions={onBackToCatalogue}
             onViewAll={onViewAll}
             onViewKiosque={onViewKiosque}
+            onViewNouveautes={onViewNouveautes}
           >
             <h3 className="mb-4 font-semibold text-xl">Prochaines offices</h3>
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">

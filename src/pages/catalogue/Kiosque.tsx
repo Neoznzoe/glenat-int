@@ -34,6 +34,7 @@ interface KiosqueProps {
   onBackToCatalogue?: () => void;
   onViewAll?: () => void;
   onViewOffices?: () => void;
+  onViewNouveautes?: () => void;
 }
 
 interface KiosqueBook extends BookCardProps {
@@ -47,7 +48,7 @@ interface KiosqueGroup {
   books: KiosqueBook[];
 }
 
-export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices }: KiosqueProps) {
+export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNouveautes }: KiosqueProps) {
   const [creationSort, setCreationSort] = useState<string | undefined>('desc');
   const [saleSort, setSaleSort] = useState<string>();
   const [viewsSort, setViewsSort] = useState<string>();
@@ -315,11 +316,12 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices }: Kiosque
           <Separator />
         </div>
         <CardContent className="p-6">
-        <CatalogueLayout
+          <CatalogueLayout
             active="Kiosque"
             onViewEditions={onBackToCatalogue}
             onViewAll={onViewAll}
             onViewOffices={onViewOffices}
+            onViewNouveautes={onViewNouveautes}
           >
             <h3 className="mb-4 font-semibold text-xl">Kiosque</h3>
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">

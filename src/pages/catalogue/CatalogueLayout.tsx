@@ -20,13 +20,14 @@ const getQuickLinks = (
   onViewAll?: () => void,
   onViewKiosque?: () => void,
   onViewOffices?: () => void,
+  onViewNouveautes?: () => void,
 ): QuickAccessItem[] => [
   { label: 'Éditions', icon: Building, onClick: onViewEditions },
   { label: 'Tout le catalogue', icon: BookOpen, onClick: onViewAll },
   { label: 'Kiosque', icon: Store, onClick: onViewKiosque },
   { label: 'Les auteurs', icon: UserPen },
   { label: 'Prochaines offices', icon: CalendarDays, onClick: onViewOffices },
-  { label: 'Dernières nouveautés', icon: Sparkles },
+  { label: 'Dernières nouveautés', icon: Sparkles, onClick: onViewNouveautes },
   { label: 'Top des commandes', icon: TrendingUp },
   { label: 'Newsletter journaliste', icon: Mail },
   { label: 'Couverture à paraître', icon: Image },
@@ -42,6 +43,7 @@ interface CatalogueLayoutProps {
   onViewAll?: () => void;
   onViewKiosque?: () => void;
   onViewOffices?: () => void;
+  onViewNouveautes?: () => void;
 }
 
 export function CatalogueLayout({
@@ -51,12 +53,14 @@ export function CatalogueLayout({
   onViewAll,
   onViewKiosque,
   onViewOffices,
+  onViewNouveautes,
 }: CatalogueLayoutProps) {
   const quickLinks = getQuickLinks(
     onViewEditions,
     onViewAll,
     onViewKiosque,
     onViewOffices,
+    onViewNouveautes,
   );
   return (
     <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
