@@ -50,7 +50,8 @@ export function Topbar() {
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="flex items-center space-x-2 p-0 h-auto focus-visible:ring-0"
+              size="sm"
+              className="flex items-center space-x-2 focus-visible:ring-0"
             >
               <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center">
                 <User className="h-4 w-4 text-muted-foreground" />
