@@ -18,6 +18,11 @@ import NayaPika from '@/assets/images/naya_pika.webp';
 import JulesMatrat from '@/assets/images/jules_matrat.webp';
 import CombatVie from '@/assets/images/le_combat_dune_vie.webp';
 import Odysee from '@/assets/images/odyssee.webp';
+import ControNatura from '@/assets/images/contro-natura.webp';
+import Brume01 from '@/assets/images/brume-01.webp';
+import Shangri17 from '@/assets/images/shangri-17.webp';
+import Momie from '@/assets/images/momie-bandelette.webp';
+import Cemotions from '@/assets/images/couleurs-emotions.webp';
 import { useState } from 'react';
 
 import {
@@ -127,6 +132,63 @@ export function CatalogueAll({ onBackToCatalogue }: CatalogueAllProps) {
       color: '--glenat-livre',
       ribbonText: 'PROVISOIRE',
     },
+    {
+      cover: Cemotions,
+      title: 'La couleur des émotions - Un livre tout animé',
+      ean: '9791026400134',
+      authors: 'Anna Llenas',
+      publisher: 'Glénat Jeunesse',
+      publicationDate: "10/10/2014",
+      priceHT: '20.76',
+      stock: 14574,
+      color: '--glenat-jeunesse',
+    },
+    {
+      cover: ControNatura,
+      title: 'Contro Natura - Sang bleu',
+      ean: '9782344069080',
+      authors: 'M.Andolfo · I.Bigarella',
+      publisher: 'Glénat BD',
+      publicationDate: '27/08/2025',
+      priceHT: '18.96',
+      stock: 3373,
+      color: '--glenat-bd',
+      ribbonText: "nouveauté"
+    },
+    {
+      cover: Shangri17,
+      title: 'Shangri-la Frontier - Tome 17',
+      ean: '9782344066379',
+      authors: 'Katarina · R.Fuji',
+      publisher: 'Glénat Manga',
+      publicationDate: '27/08/2025',
+      priceHT: '6.82',
+      stock: 6292,
+      color: '--glenat-manga',
+      ribbonText: "nouveauté"
+    },
+    {
+      cover: Brume01,
+      title:'Brume - Tome 01',
+      ean: '9782344051733',
+      authors: 'J.Pélissier · C.Hinder',
+      publisher: 'Glénat BD',
+      publicationDate: "26/04/2023",
+      priceHT: '11.85',
+      stock: 24479,
+      color: '--glenat-bd',
+    },
+    {
+      cover: Momie,
+      title: 'Les bandelettes de Momie Molette',
+      ean: '9782344057049',
+      authors: 'Loïc Clément · Julien Arnal',
+      publisher: 'Glénat Jeunesse',
+      publicationDate: "09/10/2024",
+      priceHT: '11.85',
+      stock: 1952,
+      color: '--glenat-jeunesse',
+    }
   ];
 
   return (
