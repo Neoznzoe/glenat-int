@@ -15,16 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
-import {
   ListFilter as ListFilterIcon,
-  CalendarDays,
-  CalendarClock,
-  BarChart3,
   ArrowDownWideNarrow,
   ArrowUpWideNarrow,
 } from 'lucide-react';
@@ -66,9 +57,6 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
   ];
 
   const [selectedPublishers, setSelectedPublishers] = useState<string[]>([]);
-  const [sortField, setSortField] = useState<'officeDate' | 'publicationDate' | 'views'>(
-    'officeDate'
-  );
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
 
   const toggleSortDirection = () =>
@@ -86,12 +74,6 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
     const [day, month, year] = dateStr.split('/').map(Number);
     return new Date(year, month - 1, day);
   };
-
-  const sortOptions = {
-    officeDate: { label: "Date de l'office", icon: CalendarDays },
-    publicationDate: { label: 'Date de mise en vente', icon: CalendarClock },
-    views: { label: 'Vues', icon: BarChart3 },
-  } as const;
 
   const books1: BookCardProps[] = [
     {
@@ -190,36 +172,11 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
     },
   ];
 
-  const currentSort = sortOptions[sortField];
-
-  const sortedOffices =
-    sortField === 'officeDate'
-      ? [...offices].sort((a, b) => {
-          const dateA = parseDate(a.date).getTime();
-          const dateB = parseDate(b.date).getTime();
-          return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
-        })
-      : offices.map(o => ({
-          ...o,
-          books: [...o.books].sort((a, b) => {
-            const valA =
-              sortField === 'views'
-                ? a.views ?? 0
-                : parseDate(a.publicationDate).getTime();
-            const valB =
-              sortField === 'views'
-                ? b.views ?? 0
-                : parseDate(b.publicationDate).getTime();
-            return sortDirection === 'asc' ? valA - valB : valB - valA;
-          }),
-        }));
-
-  const infoLabel =
-    sortField === 'publicationDate'
-      ? 'Date de mise en vente'
-      : sortField === 'views'
-      ? 'Vues'
-      : undefined;
+  const sortedOffices = [...offices].sort((a, b) => {
+    const dateA = parseDate(a.date).getTime();
+    const dateB = parseDate(b.date).getTime();
+    return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+  });
 
   return (
     <div className="p-6 space-y-6">
@@ -251,45 +208,17 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
             <Button variant="default" size="sm" className="whitespace-nowrap">
               Toutes
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="whitespace-nowrap flex items-center"
-                >
-                  <currentSort.icon className="mr-2 h-4 w-4" />
-                  Trier par {currentSort.label.toLowerCase()}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {(Object.keys(sortOptions) as (keyof typeof sortOptions)[]).map(key => {
-                  const OptionIcon = sortOptions[key].icon;
-                  return (
-                    <DropdownMenuItem key={key} onClick={() => setSortField(key)}>
-                      <OptionIcon className="mr-2 h-4 w-4" />
-                      {sortOptions[key].label}
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
             <Button
               variant="outline"
               size="sm"
+              className="whitespace-nowrap"
               onClick={toggleSortDirection}
-              className="whitespace-nowrap flex items-center"
             >
+              Trier par date
               {sortDirection === 'desc' ? (
-                <>
-                  <ArrowDownWideNarrow className="mr-2 h-4 w-4" />
-                  Décroissant
-                </>
+                <ArrowDownWideNarrow className="ml-2 h-4 w-4" />
               ) : (
-                <>
-                  <ArrowUpWideNarrow className="mr-2 h-4 w-4" />
-                  Croissant
-                </>
+                <ArrowUpWideNarrow className="ml-2 h-4 w-4" />
               )}
             </Button>
             <Popover>
@@ -325,65 +254,23 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
           >
             <h3 className="mb-4 font-semibold text-xl">Prochaines offices</h3>
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
-              {sortedOffices.map(group => {
-                const headerValue =
-                  sortField === 'officeDate'
-                    ? group.date
-                    : sortField === 'publicationDate'
-                    ? group.books[0].publicationDate
-                    : group.books[0].views;
-
-                const directionText =
-                  sortField === 'views'
-                    ? sortDirection === 'desc'
-                      ? 'Tri du plus de vues au moins de vues'
-                      : 'Tri du moins de vues au plus de vues'
-                    : sortDirection === 'desc'
-                    ? 'Tri du plus récent au plus ancien'
-                    : 'Tri du plus ancien au plus récent';
-
-                return (
-                  <Fragment key={group.office}>
-                    <Card className="col-span-full w-fit min-w-[280px]">
-                      <CardHeader className="py-2">
-                        {sortField === 'officeDate' ? (
-                          <>
-                            <CardTitle className="text-lg">
-                              Office {group.office} : {group.date}
-                            </CardTitle>
-                            <p className="text-sm text-muted-foreground">
-                              {group.shipping}
-                            </p>
-                          </>
-                        ) : (
-                          <>
-                            <CardTitle className="text-lg">
-                              {infoLabel} : {headerValue}
-                            </CardTitle>
-                            <p className="text-sm text-muted-foreground">
-                              {directionText}
-                            </p>
-                          </>
-                        )}
-                      </CardHeader>
-                    </Card>
-                    {group.books.map(book => (
-                      <BookCard
-                        key={book.ean}
-                        {...book}
-                        infoLabel={infoLabel}
-                        infoValue={
-                          infoLabel === 'Vues'
-                            ? book.views
-                            : infoLabel === 'Date de mise en vente'
-                            ? book.publicationDate
-                            : undefined
-                        }
-                      />
-                    ))}
-                  </Fragment>
-                );
-              })}
+              {sortedOffices.map(group => (
+                <Fragment key={group.office}>
+                  <Card className="col-span-full w-fit min-w-[280px]">
+                    <CardHeader className="py-2">
+                      <CardTitle className="text-lg">
+                        Office {group.office} : {group.date}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {group.shipping}
+                      </p>
+                    </CardHeader>
+                  </Card>
+                  {group.books.map(book => (
+                    <BookCard key={book.ean} {...book} />
+                  ))}
+                </Fragment>
+              ))}
             </div>
           </CatalogueLayout>
         </CardContent>
