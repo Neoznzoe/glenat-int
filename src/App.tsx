@@ -5,6 +5,7 @@ import { Home } from './pages/Home';
 import Emploi, { jobOffers } from './pages/Emploi';
 import Catalogue from './pages/catalogue/Editions';
 import CatalogueAll from './pages/catalogue/CatalogueAll';
+import Kiosque from './pages/catalogue/Kiosque';
 
 function App() {
   const [activePage, setActivePage] = useState('home');
@@ -23,10 +24,22 @@ function App() {
           {activePage === 'home' && <Home />}
           {activePage === 'emploi' && <Emploi />}
           {activePage === 'catalogue' && (
-            <Catalogue onViewAll={() => setActivePage('catalogueAll')} />
+            <Catalogue
+              onViewAll={() => setActivePage('catalogueAll')}
+              onViewKiosque={() => setActivePage('kiosque')}
+            />
           )}
           {activePage === 'catalogueAll' && (
-            <CatalogueAll onBackToCatalogue={() => setActivePage('catalogue')} />
+            <CatalogueAll
+              onBackToCatalogue={() => setActivePage('catalogue')}
+              onViewKiosque={() => setActivePage('kiosque')}
+            />
+          )}
+          {activePage === 'kiosque' && (
+            <Kiosque
+              onBackToCatalogue={() => setActivePage('catalogue')}
+              onViewAll={() => setActivePage('catalogueAll')}
+            />
           )}
         </main>
       </div>

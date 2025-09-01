@@ -27,9 +27,10 @@ import { useState } from 'react';
 
 interface CatalogueAllProps {
   onBackToCatalogue?: () => void;
+  onViewKiosque?: () => void;
 }
 
-export function CatalogueAll({ onBackToCatalogue }: CatalogueAllProps) {
+export function CatalogueAll({ onBackToCatalogue, onViewKiosque }: CatalogueAllProps) {
   const filters = [
     'Toutes',
     'BD',
@@ -206,7 +207,11 @@ export function CatalogueAll({ onBackToCatalogue }: CatalogueAllProps) {
           <Separator />
         </div>
         <CardContent className="p-6">
-          <CatalogueLayout active="Tout le catalogue" onViewEditions={onBackToCatalogue}>
+          <CatalogueLayout
+            active="Tout le catalogue"
+            onViewEditions={onBackToCatalogue}
+            onViewKiosque={onViewKiosque}
+          >
             <h3 className="mb-4 font-semibold text-xl">Tout le catalogue</h3>
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
               {books.map(book => (

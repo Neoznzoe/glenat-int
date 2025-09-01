@@ -18,10 +18,11 @@ import { ReactNode } from 'react';
 const getQuickLinks = (
   onViewEditions?: () => void,
   onViewAll?: () => void,
+  onViewKiosque?: () => void,
 ): QuickAccessItem[] => [
   { label: 'Éditions', icon: Building, onClick: onViewEditions },
   { label: 'Tout le catalogue', icon: BookOpen, onClick: onViewAll },
-  { label: 'Kiosque', icon: Store },
+  { label: 'Kiosque', icon: Store, onClick: onViewKiosque },
   { label: 'Les auteurs', icon: UserPen },
   { label: 'Prochaines sorties', icon: CalendarDays },
   { label: 'Dernières nouveautés', icon: Sparkles },
@@ -38,6 +39,7 @@ interface CatalogueLayoutProps {
   active: string;
   onViewEditions?: () => void;
   onViewAll?: () => void;
+  onViewKiosque?: () => void;
 }
 
 export function CatalogueLayout({
@@ -45,8 +47,9 @@ export function CatalogueLayout({
   active,
   onViewEditions,
   onViewAll,
+  onViewKiosque,
 }: CatalogueLayoutProps) {
-  const quickLinks = getQuickLinks(onViewEditions, onViewAll);
+  const quickLinks = getQuickLinks(onViewEditions, onViewAll, onViewKiosque);
   return (
     <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
       <QuickAccess items={quickLinks} active={active} />
