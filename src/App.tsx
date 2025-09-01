@@ -3,8 +3,8 @@ import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { Home } from './pages/Home';
 import Emploi, { jobOffers } from './pages/Emploi';
-import Catalogue from './pages/Catalogue';
-import CatalogueAll from './pages/CatalogueAll';
+import Catalogue from './pages/catalogue/Editions';
+import CatalogueAll from './pages/catalogue/CatalogueAll';
 
 function App() {
   const [activePage, setActivePage] = useState('home');

@@ -59,7 +59,6 @@ export function BookFilters() {
   const [comingSoon, setComingSoon] = useState(false);
 
   const toggle = (
-    list: string[],
     setList: React.Dispatch<React.SetStateAction<string[]>>,
     value: string
   ) => {
@@ -101,7 +100,7 @@ export function BookFilters() {
           <ListFilter
             options={formats}
             selected={selectedFormats}
-            onToggle={val => toggle(selectedFormats, setSelectedFormats, val)}
+            onToggle={val => toggle(setSelectedFormats, val)}
           />
         </div>
         <div>
@@ -109,7 +108,7 @@ export function BookFilters() {
           <ListFilter
             options={editions}
             selected={selectedEditions}
-            onToggle={val => toggle(selectedEditions, setSelectedEditions, val)}
+            onToggle={val => toggle(setSelectedEditions, val)}
           />
         </div>
         <div>
@@ -117,7 +116,7 @@ export function BookFilters() {
           <ListFilter
             options={collections}
             selected={selectedCollections}
-            onToggle={val => toggle(selectedCollections, setSelectedCollections, val)}
+            onToggle={val => toggle(setSelectedCollections, val)}
           />
         </div>
         <div>
@@ -125,7 +124,7 @@ export function BookFilters() {
           <ListFilter
             options={ageTargets}
             selected={selectedAges}
-            onToggle={val => toggle(selectedAges, setSelectedAges, val)}
+            onToggle={val => toggle(setSelectedAges, val)}
           />
         </div>
         <div>
@@ -133,7 +132,7 @@ export function BookFilters() {
           <ListFilter
             options={themes}
             selected={selectedThemes}
-            onToggle={val => toggle(selectedThemes, setSelectedThemes, val)}
+            onToggle={val => toggle(setSelectedThemes, val)}
           />
         </div>
         <div>
@@ -160,7 +159,7 @@ export function BookFilters() {
           <ListFilter
             options={availability}
             selected={selectedAvailability}
-            onToggle={val => toggle(selectedAvailability, setSelectedAvailability, val)}
+            onToggle={val => toggle(setSelectedAvailability, val)}
           />
         </div>
       </PopoverContent>
