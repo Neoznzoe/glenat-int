@@ -15,8 +15,11 @@ import {
 } from 'lucide-react';
 import { ReactNode } from 'react';
 
-const getQuickLinks = (onViewAll?: () => void): QuickAccessItem[] => [
-  { label: 'Éditions', icon: Building },
+const getQuickLinks = (
+  onViewEditions?: () => void,
+  onViewAll?: () => void,
+): QuickAccessItem[] => [
+  { label: 'Éditions', icon: Building, onClick: onViewEditions },
   { label: 'Tout le catalogue', icon: BookOpen, onClick: onViewAll },
   { label: 'Kiosque', icon: Store },
   { label: 'Les auteurs', icon: UserPen },
@@ -33,11 +36,17 @@ const getQuickLinks = (onViewAll?: () => void): QuickAccessItem[] => [
 interface CatalogueLayoutProps {
   children: ReactNode;
   active: string;
+  onViewEditions?: () => void;
   onViewAll?: () => void;
 }
 
-export function CatalogueLayout({ children, active, onViewAll }: CatalogueLayoutProps) {
-  const quickLinks = getQuickLinks(onViewAll);
+export function CatalogueLayout({
+  children,
+  active,
+  onViewEditions,
+  onViewAll,
+}: CatalogueLayoutProps) {
+  const quickLinks = getQuickLinks(onViewEditions, onViewAll);
   return (
     <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
       <QuickAccess items={quickLinks} active={active} />
