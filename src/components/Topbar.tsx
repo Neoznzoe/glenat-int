@@ -1,6 +1,21 @@
-import { Search, Bell, User, ChevronDown, ShoppingBag } from 'lucide-react';
+import {
+  Search,
+  Bell,
+  User,
+  ChevronDown,
+  ShoppingBag,
+  Settings,
+  KeyRound,
+  LogOut,
+} from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 import { ThemeToggle } from './ThemeToggle';
 
 export function Topbar() {
@@ -31,16 +46,41 @@ export function Topbar() {
         </Button>
 
         {/* Profil utilisateur */}
-        <div className="flex items-center space-x-2">
-          <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center">
-            <User className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <div className="hidden md:block">
-            <div className="text-sm font-medium text-foreground">Victor Besson</div>
-            <div className="text-xs text-muted-foreground">Glénat Grenoble</div>
-          </div>
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="flex items-center space-x-2 p-0 h-auto focus-visible:ring-0"
+            >
+              <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center">
+                <User className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="hidden md:block text-left">
+                <div className="text-sm font-medium text-foreground">Victor Besson</div>
+                <div className="text-xs text-muted-foreground">Glénat Grenoble</div>
+              </div>
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem>
+              <User className="mr-2 h-4 w-4" />
+              <span>Mon profil</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Paramètres</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <KeyRound className="mr-2 h-4 w-4" />
+              <span>Contrôle mot de passe</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Déconnexion</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
