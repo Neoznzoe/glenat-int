@@ -44,7 +44,7 @@ export function BookCard({
         )}
         <img src={cover} alt={title} className="h-48 w-auto shadow-md" />
       </div>
-      <div className="flex flex-col p-4 text-sm flex-1">
+      <div className="flex flex-col p-4 text-sm flex-1 bg-background">
         <div className="space-y-1">
           <h4 className="font-semibold text-base truncate" title={title}>
             {title}
