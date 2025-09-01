@@ -9,43 +9,62 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import CatalogueLayout from './CatalogueLayout';
-import BookFilters from '@/components/BookFilters';
 import BookCard, { BookCardProps } from '@/components/BookCard';
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Fragment, useState } from 'react';
 import OnePiece110 from '@/assets/images/onepiece_110.webp';
 import NayaPika from '@/assets/images/naya_pika.webp';
 import JulesMatrat from '@/assets/images/jules_matrat.webp';
 import CombatVie from '@/assets/images/le_combat_dune_vie.webp';
 import Odysee from '@/assets/images/odyssee.webp';
-import ControNatura from '@/assets/images/contro-natura.webp';
-import Brume01 from '@/assets/images/brume-01.webp';
-import Shangri17 from '@/assets/images/shangri-17.webp';
-import Momie from '@/assets/images/momie-bandelette.webp';
 import Cemotions from '@/assets/images/couleurs-emotions.webp';
-import { useState } from 'react';
 
-interface CatalogueAllProps {
+interface OfficesProps {
   onBackToCatalogue?: () => void;
+  onViewAll?: () => void;
   onViewKiosque?: () => void;
-  onViewOffices?: () => void;
 }
 
-export function CatalogueAll({ onBackToCatalogue, onViewKiosque, onViewOffices }: CatalogueAllProps) {
-  const filters = [
-    'Toutes',
-    'BD',
-    'Manga',
-    'Jeunesse',
-    'Découverte',
-    'Livres',
-    'Voyage',
-    'Montagne',
+interface OfficeGroup {
+  office: string;
+  date: string;
+  shipping: string;
+  books: BookCardProps[];
+}
+
+export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque }: OfficesProps) {
+  const publishers = [
+    'Hugo',
+    'Comix Buro',
+    'Disney',
+    'Éditions Licences',
+    'Glénat bd',
+    'Glénat Jeunesse',
+    'Glénat Livres',
+    'Glénat Manga',
+    'Rando Editions',
+    "Vents d'Ouest",
+    'Livres diffusés',
   ];
 
-  const [activeFilter, setActiveFilter] = useState('Toutes');
+  const [selectedPublishers, setSelectedPublishers] = useState<string[]>([]);
 
-  const books: BookCardProps[] = [
+  const togglePublisher = (publisher: string) => {
+    setSelectedPublishers(prev =>
+      prev.includes(publisher)
+        ? prev.filter(p => p !== publisher)
+        : [...prev, publisher]
+    );
+  };
+
+  const books1: BookCardProps[] = [
     {
       cover: OnePiece110,
       title: 'One Piece - Tome 110',
@@ -55,7 +74,6 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque, onViewOffices }
       publicationDate: '01/02/2025',
       priceHT: '7.99',
       stock: 86,
-      views: 140,
       color: '--glenat-manga',
       ribbonText: 'NOUVEAUTÉ',
     },
@@ -82,6 +100,9 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque, onViewOffices }
       color: '--glenat-bd',
       ribbonText: 'À paraître',
     },
+  ];
+
+  const books2: BookCardProps[] = [
     {
       cover: CombatVie,
       title: "Paul Watson - Le combat d'une vie",
@@ -112,57 +133,26 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque, onViewOffices }
       ean: '9791026400134',
       authors: 'Anna Llenas',
       publisher: 'Glénat Jeunesse',
-      publicationDate: "10/10/2014",
+      publicationDate: '10/10/2014',
       priceHT: '20.76',
       stock: 14574,
       color: '--glenat-jeunesse',
     },
+  ];
+
+  const offices: OfficeGroup[] = [
     {
-      cover: ControNatura,
-      title: 'Contro Natura - Sang bleu',
-      ean: '9782344069080',
-      authors: 'M.Andolfo · I.Bigarella',
-      publisher: 'Glénat BD',
-      publicationDate: '27/08/2025',
-      priceHT: '18.96',
-      stock: 3373,
-      color: '--glenat-bd',
-      ribbonText: "nouveauté"
+      office: '25503',
+      date: '22/01/2025',
+      shipping: 'Envoi Chronolivre mardi 07/01/2025 à 18h55',
+      books: books1,
     },
     {
-      cover: Shangri17,
-      title: 'Shangri-la Frontier - Tome 17',
-      ean: '9782344066379',
-      authors: 'Katarina · R.Fuji',
-      publisher: 'Glénat Manga',
-      publicationDate: '27/08/2025',
-      priceHT: '6.82',
-      stock: 6292,
-      color: '--glenat-manga',
-      ribbonText: "nouveauté"
+      office: '25504',
+      date: '05/02/2025',
+      shipping: 'Envoi Chronolivre mardi 21/01/2025 à 18h55',
+      books: books2,
     },
-    {
-      cover: Brume01,
-      title:'Brume - Tome 01',
-      ean: '9782344051733',
-      authors: 'J.Pélissier · C.Hinder',
-      publisher: 'Glénat BD',
-      publicationDate: "26/04/2023",
-      priceHT: '11.85',
-      stock: 24479,
-      color: '--glenat-bd',
-    },
-    {
-      cover: Momie,
-      title: 'Les bandelettes de Momie Molette',
-      ean: '9782344057049',
-      authors: 'Loïc Clément · Julien Arnal',
-      publisher: 'Glénat Jeunesse',
-      publicationDate: "09/10/2024",
-      priceHT: '11.85',
-      stock: 1952,
-      color: '--glenat-jeunesse',
-    }
   ];
 
   return (
@@ -180,7 +170,7 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque, onViewOffices }
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Tout le catalogue</BreadcrumbPage>
+            <BreadcrumbPage>Prochaines offices</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -191,33 +181,60 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque, onViewOffices }
           <Input type="search" placeholder="Rechercher..." className="sm:w-64" />
         </CardHeader>
         <div className="px-6 space-y-4">
-          <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
-            {filters.map(filter => (
-              <Button
-                key={filter}
-                variant={activeFilter === filter ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveFilter(filter)}
-                className="whitespace-nowrap"
+          <Tabs defaultValue="all">
+            <TabsList className="flex justify-start border-b bg-transparent p-0 text-sm text-muted-foreground rounded-none">
+              <TabsTrigger
+                value="all"
+                className="w-32 rounded-none border-b-2 border-transparent px-4 py-2 flex items-center justify-center text-center data-[state=active]:border-[#ff3b30] data-[state=active]:bg-transparent data-[state=active]:text-[#ff3b30] data-[state=active]:shadow-none"
               >
-                {filter}
-              </Button>
-            ))}
-            <BookFilters />
-          </div>
+                Toute
+              </TabsTrigger>
+              <TabsTrigger
+                value="filters"
+                className="w-32 rounded-none border-b-2 border-transparent px-4 py-2 flex items-center justify-center text-center data-[state=active]:border-[#ff3b30] data-[state=active]:bg-transparent data-[state=active]:text-[#ff3b30] data-[state=active]:shadow-none"
+              >
+                Filtres
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="filters" className="mt-4">
+              <div className="flex flex-col gap-2">
+                {publishers.map(pub => (
+                  <label key={pub} className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={selectedPublishers.includes(pub)}
+                      onCheckedChange={() => togglePublisher(pub)}
+                    />
+                    <span>{pub}</span>
+                  </label>
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
           <Separator />
         </div>
         <CardContent className="p-6">
           <CatalogueLayout
-            active="Tout le catalogue"
+            active="Prochaines offices"
             onViewEditions={onBackToCatalogue}
+            onViewAll={onViewAll}
             onViewKiosque={onViewKiosque}
-            onViewOffices={onViewOffices}
           >
-            <h3 className="mb-4 font-semibold text-xl">Tout le catalogue</h3>
+            <h3 className="mb-4 font-semibold text-xl">Prochaines offices</h3>
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
-              {books.map(book => (
-                <BookCard key={book.ean} {...book} />
+              {offices.map(group => (
+                <Fragment key={group.office}>
+                  <Card className="col-span-full w-fit min-w-[280px]">
+                    <CardHeader className="py-2">
+                      <CardTitle className="text-lg">
+                        Office {group.office} : {group.date}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">{group.shipping}</p>
+                    </CardHeader>
+                  </Card>
+                  {group.books.map(book => (
+                    <BookCard key={book.ean} {...book} />
+                  ))}
+                </Fragment>
               ))}
             </div>
           </CatalogueLayout>
@@ -227,5 +244,4 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque, onViewOffices }
   );
 }
 
-export default CatalogueAll;
-
+export default Offices;
