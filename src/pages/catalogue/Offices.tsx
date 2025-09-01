@@ -11,13 +11,10 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import CatalogueLayout from './CatalogueLayout';
 import BookCard, { BookCardProps } from '@/components/BookCard';
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { ListFilter as ListFilterIcon } from 'lucide-react';
 import { Fragment, useState } from 'react';
 import OnePiece110 from '@/assets/images/onepiece_110.webp';
 import NayaPika from '@/assets/images/naya_pika.webp';
@@ -181,23 +178,19 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque }: Offices
           <Input type="search" placeholder="Rechercher..." className="sm:w-64" />
         </CardHeader>
         <div className="px-6 space-y-4">
-          <Tabs defaultValue="all">
-            <TabsList className="flex justify-start border-b bg-transparent p-0 text-sm text-muted-foreground rounded-none">
-              <TabsTrigger
-                value="all"
-                className="w-32 rounded-none border-b-2 border-transparent px-4 py-2 flex items-center justify-center text-center data-[state=active]:border-[#ff3b30] data-[state=active]:bg-transparent data-[state=active]:text-[#ff3b30] data-[state=active]:shadow-none"
-              >
-                Toute
-              </TabsTrigger>
-              <TabsTrigger
-                value="filters"
-                className="w-32 rounded-none border-b-2 border-transparent px-4 py-2 flex items-center justify-center text-center data-[state=active]:border-[#ff3b30] data-[state=active]:bg-transparent data-[state=active]:text-[#ff3b30] data-[state=active]:shadow-none"
-              >
-                Filtres
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="filters" className="mt-4">
-              <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
+            <Button variant="default" size="sm" className="whitespace-nowrap">
+              Toutes
+            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="whitespace-nowrap">
+                  <ListFilterIcon className="mr-2 h-4 w-4" />
+                  Filtres
+                  {selectedPublishers.length > 0 && ` (${selectedPublishers.length})`}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-4 space-y-2">
                 {publishers.map(pub => (
                   <label key={pub} className="flex items-center space-x-2">
                     <Checkbox
@@ -207,9 +200,9 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque }: Offices
                     <span>{pub}</span>
                   </label>
                 ))}
-              </div>
-            </TabsContent>
-          </Tabs>
+              </PopoverContent>
+            </Popover>
+          </div>
           <Separator />
         </div>
         <CardContent className="p-6">
