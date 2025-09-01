@@ -74,8 +74,8 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
   ];
 
   const [selectedPublishers, setSelectedPublishers] = useState<string[]>([]);
-  const [sortField, setSortField] = useState<'officeDate' | 'publicationDate' | 'views'>(
-    'officeDate'
+  const [sortField, setSortField] = useState<'publicationDate' | 'creationDate' | 'views'>(
+    'creationDate'
   );
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
 
@@ -96,8 +96,8 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
   };
 
   const sortOptions = {
-    officeDate: { label: "Date de l'office", icon: CalendarDays },
     publicationDate: { label: 'Date de mise en vente', icon: CalendarClock },
+    creationDate: { label: 'Date de création', icon: CalendarDays },
     views: { label: 'Vues', icon: BarChart3 },
   } as const;
 
@@ -263,31 +263,30 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
 
   const currentSort = sortOptions[sortField];
 
-  const sortedKiosques =
-    sortField === 'officeDate'
-      ? [...kiosques].sort((a, b) => {
-          const dateA = parseDate(a.date).getTime();
-          const dateB = parseDate(b.date).getTime();
-          return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
-        })
-      : kiosques.map(k => ({
-          ...k,
-          books: [...k.books].sort((a, b) => {
-            const valA =
-              sortField === 'views'
-                ? a.views ?? 0
-                : parseDate(a.publicationDate).getTime();
-            const valB =
-              sortField === 'views'
-                ? b.views ?? 0
-                : parseDate(b.publicationDate).getTime();
-            return sortDirection === 'asc' ? valA - valB : valB - valA;
-          }),
-        }));
+  const sortedKiosques = kiosques.map(k => ({
+    ...k,
+    books: [...k.books].sort((a, b) => {
+      const valA =
+        sortField === 'views'
+          ? a.views ?? 0
+          : sortField === 'creationDate'
+          ? parseDate(a.creationDate).getTime()
+          : parseDate(a.publicationDate).getTime();
+      const valB =
+        sortField === 'views'
+          ? b.views ?? 0
+          : sortField === 'creationDate'
+          ? parseDate(b.creationDate).getTime()
+          : parseDate(b.publicationDate).getTime();
+      return sortDirection === 'asc' ? valA - valB : valB - valA;
+    }),
+  }));
 
   const infoLabel =
     sortField === 'publicationDate'
       ? 'Date de mise en vente'
+      : sortField === 'creationDate'
+      ? 'Date de création'
       : sortField === 'views'
       ? 'Vues'
       : undefined;
@@ -400,31 +399,17 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
                 const headerValue =
                   sortField === 'views'
                     ? kiosque.books[0].views
+                    : sortField === 'creationDate'
+                    ? kiosque.books[0].creationDate
                     : kiosque.books[0].publicationDate;
-
-                const directionText =
-                  sortField === 'views'
-                    ? sortDirection === 'desc'
-                      ? 'Tri du plus de vues au moins de vues'
-                      : 'Tri du moins de vues au plus de vues'
-                    : sortDirection === 'desc'
-                    ? 'Tri du plus récent au plus ancien'
-                    : 'Tri du plus ancien au plus récent';
 
                 return (
                   <Fragment key={kiosque.office}>
                     <Card className="col-span-full">
                       <CardHeader className="py-2">
                         <CardTitle className="text-lg">
-                          {sortField === 'officeDate'
-                            ? `Office ${kiosque.office} : ${kiosque.date}`
-                            : `${infoLabel} : ${headerValue}`}
+                          {`${infoLabel} : ${headerValue}`}
                         </CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          {sortField === 'officeDate'
-                            ? kiosque.shipping
-                            : directionText}
-                        </p>
                       </CardHeader>
                     </Card>
                     {kiosque.books.map(book => (
@@ -437,6 +422,8 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
                             ? book.views
                             : infoLabel === 'Date de mise en vente'
                             ? book.publicationDate
+                            : infoLabel === 'Date de création'
+                            ? book.creationDate
                             : undefined
                         }
                       />
@@ -453,4 +440,3 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
 }
 
 export default Kiosque;
-
