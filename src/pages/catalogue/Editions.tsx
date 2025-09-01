@@ -9,48 +9,18 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
-import QuickAccess, { QuickAccessItem } from '@/components/QuickAccess';
+import CatalogueLayout from './CatalogueLayout';
 import EditionCard from '@/components/EditionCard';
 import UniversBD from '@/assets/logos/univers/univers-bd.svg';
 import UniversJeune from '@/assets/logos/univers/univers-jeunesse.svg';
 import UniversLivre from '@/assets/logos/univers/univers-livres.svg';
 import UniversManga from '@/assets/logos/univers/univers-manga.svg';
 
-import {
-  BookOpen,
-  CalendarDays,
-  Download,
-  Image,
-  Info,
-  Mail,
-  PackageX,
-  Sparkles,
-  Store,
-  TrendingUp,
-  UserPen,
-  Building
-} from 'lucide-react';
-
 interface CatalogueProps {
   onViewAll: () => void;
 }
 
 export function Catalogue({ onViewAll }: CatalogueProps) {
-  const quickLinks: QuickAccessItem[] = [
-    { label: 'Éditions', icon: Building},
-    { label: 'Kiosque', icon: Store },
-    { label: 'Les auteurs', icon: UserPen },
-    { label: 'Prochaines sorties', icon: CalendarDays },
-    { label: 'Dernières nouveautés', icon: Sparkles },
-    { label: 'Top des commandes', icon: TrendingUp },
-    { label: 'Newsletter journaliste', icon: Mail },
-    { label: 'Couverture à paraître', icon: Image },
-    { label: 'Télécharger le catalogue', icon: Download },
-    { label: 'Information à renseigner', icon: Info },
-    { label: 'Plus de stock', icon: PackageX },
-    { label: 'Voir tout le catalogue', icon: BookOpen, onClick: onViewAll },
-  ];
-
   const editions = [
     { title: 'Adonis', color: '--glenat-bd', logo: UniversBD },
     { title: 'Blanche', color: '--glenat-livre', logo: UniversLivre },
@@ -91,22 +61,19 @@ export function Catalogue({ onViewAll }: CatalogueProps) {
           <Separator />
         </div>
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-            <QuickAccess items={quickLinks} />
-            <div className="md:col-span-4">
-              <h3 className="mb-4 font-semibold text-xl">Éditions</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                {editions.map((ed) => (
-                  <EditionCard
-                    key={ed.title}
-                    title={ed.title}
-                    color={ed.color}
-                    logo={ed.logo}
-                  />
-                ))}
-              </div>
+          <CatalogueLayout active="Éditions" onViewAll={onViewAll}>
+            <h3 className="mb-4 font-semibold text-xl">Éditions</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              {editions.map((ed) => (
+                <EditionCard
+                  key={ed.title}
+                  title={ed.title}
+                  color={ed.color}
+                  logo={ed.logo}
+                />
+              ))}
             </div>
-          </div>
+          </CatalogueLayout>
         </CardContent>
       </Card>
     </div>

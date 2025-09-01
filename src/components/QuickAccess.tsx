@@ -1,5 +1,6 @@
 import { LucideIcon } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 export interface QuickAccessItem {
   label: string;
@@ -10,9 +11,10 @@ export interface QuickAccessItem {
 
 export interface QuickAccessProps {
   items: QuickAccessItem[];
+  active?: string;
 }
 
-export function QuickAccess({ items }: QuickAccessProps) {
+export function QuickAccess({ items, active }: QuickAccessProps) {
   return (
     <div>
       <h3 className="mb-4 font-semibold text-xl">Accès rapide</h3>
@@ -24,7 +26,12 @@ export function QuickAccess({ items }: QuickAccessProps) {
               onClick={item.onClick}
               className="block"
             >
-              <Card className="flex items-center gap-2 p-3 hover:bg-muted bg-background">
+              <Card
+                className={cn(
+                  'flex items-center gap-2 p-3 hover:bg-muted',
+                  active === item.label ? 'bg-muted' : 'bg-background',
+                )}
+              >
                 <item.icon className="h-4 w-4 text-muted-foreground" />
                 <span className="whitespace-nowrap text-sm">{item.label}</span>
               </Card>

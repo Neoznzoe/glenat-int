@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import QuickAccess, { QuickAccessItem } from '@/components/QuickAccess';
+import CatalogueLayout from './CatalogueLayout';
 import BookFilters from '@/components/BookFilters';
 import BookCard, { BookCardProps } from '@/components/BookCard';
 import OnePiece110 from '@/assets/images/onepiece_110.webp';
@@ -25,41 +25,11 @@ import Momie from '@/assets/images/momie-bandelette.webp';
 import Cemotions from '@/assets/images/couleurs-emotions.webp';
 import { useState } from 'react';
 
-import {
-  BookOpen,
-  Building,
-  CalendarDays,
-  Download,
-  Image,
-  Info,
-  Mail,
-  PackageX,
-  Sparkles,
-  Store,
-  TrendingUp,
-  UserPen,
-} from 'lucide-react';
-
 interface CatalogueAllProps {
   onBackToCatalogue?: () => void;
 }
 
 export function CatalogueAll({ onBackToCatalogue }: CatalogueAllProps) {
-  const quickLinks: QuickAccessItem[] = [
-    { label: 'Éditions', icon: Building},
-    { label: 'Kiosque', icon: Store },
-    { label: 'Les auteurs', icon: UserPen },
-    { label: 'Prochaines sorties', icon: CalendarDays },
-    { label: 'Dernières nouveautés', icon: Sparkles },
-    { label: 'Top des commandes', icon: TrendingUp },
-    { label: 'Newsletter journaliste', icon: Mail },
-    { label: 'Couverture à paraître', icon: Image },
-    { label: 'Télécharger le catalogue', icon: Download },
-    { label: 'Information à renseigner', icon: Info },
-    { label: 'Plus de stock', icon: PackageX },
-    { label: 'Voir tout le catalogue', icon: BookOpen },
-  ];
-
   const filters = [
     'Toutes',
     'BD',
@@ -236,17 +206,14 @@ export function CatalogueAll({ onBackToCatalogue }: CatalogueAllProps) {
           <Separator />
         </div>
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-            <QuickAccess items={quickLinks} />
-            <div className="md:col-span-4">
-              <h3 className="mb-4 font-semibold text-xl">Tout le catalogue</h3>
-              <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
-                {books.map(book => (
-                  <BookCard key={book.ean} {...book} />
-                ))}
-              </div>
+          <CatalogueLayout active="Voir tout le catalogue">
+            <h3 className="mb-4 font-semibold text-xl">Tout le catalogue</h3>
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+              {books.map(book => (
+                <BookCard key={book.ean} {...book} />
+              ))}
             </div>
-          </div>
+          </CatalogueLayout>
         </CardContent>
       </Card>
     </div>
