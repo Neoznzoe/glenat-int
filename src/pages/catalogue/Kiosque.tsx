@@ -321,32 +321,50 @@ export function Kiosque({ onBackToCatalogue, onViewAll }: KiosqueProps) {
           >
             <h3 className="mb-4 font-semibold text-xl">Kiosque</h3>
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
-              {sortedKiosques.map(kiosque => (
-                <Fragment key={kiosque.office}>
-                  <Card className="col-span-full">
-                    <CardHeader className="py-2">
-                      <CardTitle className="text-lg">
-                        Office {kiosque.office} : {kiosque.date}
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">{kiosque.shipping}</p>
-                    </CardHeader>
-                  </Card>
-                  {kiosque.books.map(book => (
-                    <BookCard
-                      key={book.ean}
-                      {...book}
-                      infoLabel={infoLabel}
-                      infoValue={
-                        sortField === 'views'
-                          ? book.views
-                          : sortField === 'publicationDate'
-                          ? book.publicationDate
-                          : book.creationDate
-                      }
-                    />
-                  ))}
-                </Fragment>
-              ))}
+              {sortedKiosques.map(kiosque => {
+                const headerValue =
+                  sortField === 'views'
+                    ? kiosque.books[0].views
+                    : sortField === 'publicationDate'
+                    ? kiosque.books[0].publicationDate
+                    : kiosque.books[0].creationDate;
+
+                const directionText =
+                  sortField === 'views'
+                    ? sortDirection === 'desc'
+                      ? 'Tri du plus de vues au moins de vues'
+                      : 'Tri du moins de vues au plus de vues'
+                    : sortDirection === 'desc'
+                    ? 'Tri du plus récent au plus ancien'
+                    : 'Tri du plus ancien au plus récent';
+
+                return (
+                  <Fragment key={kiosque.office}>
+                    <Card className="col-span-full w-fit min-w-[280px]">
+                      <CardHeader className="py-2">
+                        <CardTitle className="text-lg">
+                          {infoLabel} : {headerValue}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">{directionText}</p>
+                      </CardHeader>
+                    </Card>
+                    {kiosque.books.map(book => (
+                      <BookCard
+                        key={book.ean}
+                        {...book}
+                        infoLabel={infoLabel}
+                        infoValue={
+                          sortField === 'views'
+                            ? book.views
+                            : sortField === 'publicationDate'
+                            ? book.publicationDate
+                            : book.creationDate
+                        }
+                      />
+                    ))}
+                  </Fragment>
+                );
+              })}
             </div>
           </CatalogueLayout>
         </CardContent>
