@@ -19,7 +19,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   ListFilter as ListFilterIcon,
@@ -79,6 +78,9 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
     'officeDate'
   );
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
+
+  const toggleSortDirection = () =>
+    setSortDirection(prev => (prev === 'desc' ? 'asc' : 'desc'));
 
   const togglePublisher = (publisher: string) => {
     setSelectedPublishers(prev =>
@@ -329,11 +331,6 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
                 >
                   <currentSort.icon className="mr-2 h-4 w-4" />
                   Trier par {currentSort.label.toLowerCase()}
-                  {sortDirection === 'desc' ? (
-                    <ArrowDownWideNarrow className="ml-2 h-4 w-4" />
-                  ) : (
-                    <ArrowUpWideNarrow className="ml-2 h-4 w-4" />
-                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
@@ -346,15 +343,26 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
                     </DropdownMenuItem>
                   );
                 })}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setSortDirection('desc')}>
-                  Du plus récent au plus ancien
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSortDirection('asc')}>
-                  Du plus ancien au plus récent
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleSortDirection}
+              className="whitespace-nowrap flex items-center"
+            >
+              {sortDirection === 'desc' ? (
+                <>
+                  <ArrowDownWideNarrow className="mr-2 h-4 w-4" />
+                  Décroissant
+                </>
+              ) : (
+                <>
+                  <ArrowUpWideNarrow className="mr-2 h-4 w-4" />
+                  Croissant
+                </>
+              )}
+            </Button>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="whitespace-nowrap">
