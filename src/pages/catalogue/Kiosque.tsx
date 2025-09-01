@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import OnePiece110 from '@/assets/images/onepiece_110.webp';
 import NayaPika from '@/assets/images/naya_pika.webp';
 import JulesMatrat from '@/assets/images/jules_matrat.webp';
@@ -39,8 +39,15 @@ interface KiosqueBook extends BookCardProps {
   creationDate: string;
 }
 
+interface KiosqueGroup {
+  office: string;
+  date: string;
+  shipping: string;
+  books: KiosqueBook[];
+}
+
 export function Kiosque({ onBackToCatalogue, onViewAll }: KiosqueProps) {
-  const [creationSort, setCreationSort] = useState<string>();
+  const [creationSort, setCreationSort] = useState<string | undefined>('desc');
   const [saleSort, setSaleSort] = useState<string>();
   const [viewsSort, setViewsSort] = useState<string>();
   const [sortField, setSortField] = useState<'creationDate' | 'publicationDate' | 'views'>('creationDate');
@@ -70,151 +77,177 @@ export function Kiosque({ onBackToCatalogue, onViewAll }: KiosqueProps) {
     setSaleSort(undefined);
   };
 
-  const books: KiosqueBook[] = [
+  const kiosques: KiosqueGroup[] = [
     {
-      cover: OnePiece110,
-      title: 'One Piece - Tome 110',
-      ean: '9782380711102',
-      authors: 'E. Oda',
-      publisher: 'Glénat Manga',
-      publicationDate: '01/02/2025',
-      priceHT: '7.99',
-      stock: 86,
-      views: 140,
-      creationDate: '22/02/2024',
-      color: '--glenat-manga',
-      ribbonText: 'NOUVEAUTÉ',
+      office: '25501',
+      date: '05/09/2025',
+      shipping: 'Envoi Chronolivre mardi 02/09/2025 à 18h55',
+      books: [
+        {
+          cover: OnePiece110,
+          title: 'One Piece - Tome 110',
+          ean: '9782380711102',
+          authors: 'E. Oda',
+          publisher: 'Glénat Manga',
+          publicationDate: '01/02/2025',
+          priceHT: '7.99',
+          stock: 86,
+          views: 140,
+          creationDate: '22/02/2024',
+          color: '--glenat-manga',
+          ribbonText: 'NOUVEAUTÉ',
+        },
+        {
+          cover: NayaPika,
+          title: 'Naya Pika - Tome 03',
+          ean: '9782344059707',
+          authors: 'Rabat · Rodi · Aneko',
+          publisher: 'Glénat Jeunesse',
+          publicationDate: '03/04/2024',
+          priceHT: '10.95',
+          stock: 42,
+          creationDate: '15/03/2024',
+          views: 95,
+          color: '--glenat-jeunesse',
+        },
+        {
+          cover: JulesMatrat,
+          title: 'Jules Matrat - Tome 03',
+          ean: '9782344059905',
+          authors: 'Corbeyran · Horne',
+          publisher: 'Glénat BD',
+          publicationDate: '17/01/2024',
+          priceHT: '17.90',
+          stock: 58,
+          creationDate: '10/01/2024',
+          views: 45,
+          color: '--glenat-bd',
+          ribbonText: 'À paraître',
+        },
+      ],
     },
     {
-      cover: NayaPika,
-      title: 'Naya Pika - Tome 03',
-      ean: '9782344059707',
-      authors: 'Rabat · Rodi · Aneko',
-      publisher: 'Glénat Jeunesse',
-      publicationDate: '03/04/2024',
-      priceHT: '10.95',
-      stock: 42,
-      creationDate: '15/03/2024',
-      views: 95,
-      color: '--glenat-jeunesse',
+      office: '25502',
+      date: '15/09/2025',
+      shipping: 'Envoi Chronolivre mardi 09/09/2025 à 18h55',
+      books: [
+        {
+          cover: CombatVie,
+          title: "Paul Watson - Le combat d'une vie",
+          ean: '9782344059974',
+          authors: 'Paul Watson',
+          publisher: 'Glénat Livres',
+          publicationDate: '05/06/2024',
+          priceHT: '22.00',
+          stock: 12,
+          creationDate: '18/04/2024',
+          views: 60,
+          color: '--glenat-livre',
+          ribbonText: 'NOUVEAUTÉ',
+        },
+        {
+          cover: Odysee,
+          title: 'Alva Odyssée',
+          ean: '9782344059936',
+          authors: 'Alva',
+          publisher: 'Glénat Livres',
+          publicationDate: '19/06/2024',
+          priceHT: '19.95',
+          stock: 18,
+          creationDate: '02/05/2024',
+          views: 30,
+          color: '--glenat-livre',
+          ribbonText: 'PROVISOIRE',
+        },
+        {
+          cover: Cemotions,
+          title: 'La couleur des émotions - Un livre tout animé',
+          ean: '9791026400134',
+          authors: 'Anna Llenas',
+          publisher: 'Glénat Jeunesse',
+          publicationDate: '10/10/2014',
+          priceHT: '20.76',
+          stock: 14574,
+          creationDate: '01/01/2014',
+          views: 250,
+          color: '--glenat-jeunesse',
+        },
+      ],
     },
     {
-      cover: JulesMatrat,
-      title: 'Jules Matrat - Tome 03',
-      ean: '9782344059905',
-      authors: 'Corbeyran · Horne',
-      publisher: 'Glénat BD',
-      publicationDate: '17/01/2024',
-      priceHT: '17.90',
-      stock: 58,
-      creationDate: '10/01/2024',
-      views: 45,
-      color: '--glenat-bd',
-      ribbonText: 'À paraître',
-    },
-    {
-      cover: CombatVie,
-      title: "Paul Watson - Le combat d'une vie",
-      ean: '9782344059974',
-      authors: 'Paul Watson',
-      publisher: 'Glénat Livres',
-      publicationDate: '05/06/2024',
-      priceHT: '22.00',
-      stock: 12,
-      creationDate: '18/04/2024',
-      views: 60,
-      color: '--glenat-livre',
-      ribbonText: 'NOUVEAUTÉ',
-    },
-    {
-      cover: Odysee,
-      title: 'Alva Odyssée',
-      ean: '9782344059936',
-      authors: 'Alva',
-      publisher: 'Glénat Livres',
-      publicationDate: '19/06/2024',
-      priceHT: '19.95',
-      stock: 18,
-      creationDate: '02/05/2024',
-      views: 30,
-      color: '--glenat-livre',
-      ribbonText: 'PROVISOIRE',
-    },
-    {
-      cover: Cemotions,
-      title: 'La couleur des émotions - Un livre tout animé',
-      ean: '9791026400134',
-      authors: 'Anna Llenas',
-      publisher: 'Glénat Jeunesse',
-      publicationDate: '10/10/2014',
-      priceHT: '20.76',
-      stock: 14574,
-      creationDate: '01/01/2014',
-      views: 250,
-      color: '--glenat-jeunesse',
-    },
-    {
-      cover: ControNatura,
-      title: 'Contro Natura - Sang bleu',
-      ean: '9782344069080',
-      authors: 'M.Andolfo · I.Bigarella',
-      publisher: 'Glénat BD',
-      publicationDate: '27/08/2025',
-      priceHT: '18.96',
-      stock: 3373,
-      creationDate: '11/06/2025',
-      views: 12,
-      color: '--glenat-bd',
-      ribbonText: 'nouveauté',
-    },
-    {
-      cover: Shangri17,
-      title: 'Shangri-la Frontier - Tome 17',
-      ean: '9782344066379',
-      authors: 'Katarina · R.Fuji',
-      publisher: 'Glénat Manga',
-      publicationDate: '27/08/2025',
-      priceHT: '6.82',
-      stock: 6292,
-      creationDate: '20/07/2025',
-      views: 5,
-      color: '--glenat-manga',
-      ribbonText: 'nouveauté',
-    },
-    {
-      cover: Brume01,
-      title: 'Brume - Tome 01',
-      ean: '9782344051733',
-      authors: 'J.Pélissier · C.Hinder',
-      publisher: 'Glénat BD',
-      publicationDate: '26/04/2023',
-      priceHT: '11.85',
-      stock: 24479,
-      creationDate: '13/03/2023',
-      views: 410,
-      color: '--glenat-bd',
-    },
-    {
-      cover: Momie,
-      title: 'Les bandelettes de Momie Molette',
-      ean: '9782344057049',
-      authors: 'Loïc Clément · Julien Arnal',
-      publisher: 'Glénat Jeunesse',
-      publicationDate: '09/10/2024',
-      priceHT: '11.85',
-      stock: 1952,
-      creationDate: '25/09/2024',
-      views: 80,
-      color: '--glenat-jeunesse',
+      office: '25503',
+      date: '25/09/2025',
+      shipping: 'Envoi Chronolivre mardi 23/09/2025 à 18h55',
+      books: [
+        {
+          cover: ControNatura,
+          title: 'Contro Natura - Sang bleu',
+          ean: '9782344069080',
+          authors: 'M.Andolfo · I.Bigarella',
+          publisher: 'Glénat BD',
+          publicationDate: '27/08/2025',
+          priceHT: '18.96',
+          stock: 3373,
+          creationDate: '11/06/2025',
+          views: 12,
+          color: '--glenat-bd',
+          ribbonText: 'nouveauté',
+        },
+        {
+          cover: Shangri17,
+          title: 'Shangri-la Frontier - Tome 17',
+          ean: '9782344066379',
+          authors: 'Katarina · R.Fuji',
+          publisher: 'Glénat Manga',
+          publicationDate: '27/08/2025',
+          priceHT: '6.82',
+          stock: 6292,
+          creationDate: '20/07/2025',
+          views: 5,
+          color: '--glenat-manga',
+          ribbonText: 'nouveauté',
+        },
+        {
+          cover: Brume01,
+          title: 'Brume - Tome 01',
+          ean: '9782344051733',
+          authors: 'J.Pélissier · C.Hinder',
+          publisher: 'Glénat BD',
+          publicationDate: '26/04/2023',
+          priceHT: '11.85',
+          stock: 24479,
+          creationDate: '13/03/2023',
+          views: 410,
+          color: '--glenat-bd',
+        },
+        {
+          cover: Momie,
+          title: 'Les bandelettes de Momie Molette',
+          ean: '9782344057049',
+          authors: 'Loïc Clément · Julien Arnal',
+          publisher: 'Glénat Jeunesse',
+          publicationDate: '09/10/2024',
+          priceHT: '11.85',
+          stock: 1952,
+          creationDate: '25/09/2024',
+          views: 80,
+          color: '--glenat-jeunesse',
+        },
+      ],
     },
   ];
 
-  const sortedBooks = [...books].sort((a, b) => {
-    const fieldA = sortField === 'views' ? a.views ?? 0 : new Date(a[sortField]).getTime();
-    const fieldB = sortField === 'views' ? b.views ?? 0 : new Date(b[sortField]).getTime();
-    const comparison = fieldA < fieldB ? -1 : fieldA > fieldB ? 1 : 0;
-    return sortDirection === 'asc' ? comparison : -comparison;
-  });
+  const sortedKiosques = kiosques.map(k => ({
+    ...k,
+    books: [...k.books].sort((a, b) => {
+      const fieldA =
+        sortField === 'views' ? a.views ?? 0 : new Date(a[sortField]).getTime();
+      const fieldB =
+        sortField === 'views' ? b.views ?? 0 : new Date(b[sortField]).getTime();
+      const comparison = fieldA < fieldB ? -1 : fieldA > fieldB ? 1 : 0;
+      return sortDirection === 'asc' ? comparison : -comparison;
+    }),
+  }));
 
   const infoLabel =
     sortField === 'creationDate'
@@ -288,19 +321,31 @@ export function Kiosque({ onBackToCatalogue, onViewAll }: KiosqueProps) {
           >
             <h3 className="mb-4 font-semibold text-xl">Kiosque</h3>
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
-              {sortedBooks.map(book => (
-                <BookCard
-                  key={book.ean}
-                  {...book}
-                  infoLabel={infoLabel}
-                  infoValue={
-                    sortField === 'views'
-                      ? book.views
-                      : sortField === 'publicationDate'
-                      ? book.publicationDate
-                      : book.creationDate
-                  }
-                />
+              {sortedKiosques.map(kiosque => (
+                <Fragment key={kiosque.office}>
+                  <Card className="col-span-full">
+                    <CardHeader className="py-2">
+                      <CardTitle className="text-lg">
+                        Office {kiosque.office} : {kiosque.date}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">{kiosque.shipping}</p>
+                    </CardHeader>
+                  </Card>
+                  {kiosque.books.map(book => (
+                    <BookCard
+                      key={book.ean}
+                      {...book}
+                      infoLabel={infoLabel}
+                      infoValue={
+                        sortField === 'views'
+                          ? book.views
+                          : sortField === 'publicationDate'
+                          ? book.publicationDate
+                          : book.creationDate
+                      }
+                    />
+                  ))}
+                </Fragment>
               ))}
             </div>
           </CatalogueLayout>
