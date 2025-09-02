@@ -21,7 +21,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           cancelButton:
             'group-[.toast]:bg-muted group-[.toast]:text-muted-foreground',
           closeButton:
-            'absolute right-3 top-3 rounded p-1 text-muted-foreground hover:text-foreground',
+            'absolute top-3 right-3 left-auto rounded p-1 text-muted-foreground hover:text-foreground',
         },
       }}
       {...props}
