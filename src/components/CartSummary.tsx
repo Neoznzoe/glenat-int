@@ -39,20 +39,25 @@ export default function CartSummary({ onSelectOpenChange }: Props) {
               className="w-16 h-24 object-cover flex-shrink-0"
             />
             <div className="flex-1">
-              <div className="flex justify-between gap-2 min-w-0">
-                <p
-                  className="font-medium leading-snug flex-1 truncate"
-                  title={item.title}
-                >
-                  {item.title}
-                </p>
+              <div className="flex justify-between gap-2">
+                <div className="min-w-0 max-w-[65%]">
+                  <p
+                    className="font-medium leading-snug truncate"
+                    title={item.title}
+                  >
+                    {item.title}
+                  </p>
+                  <p
+                    className="text-xs text-muted-foreground truncate"
+                    title={item.authors}
+                  >
+                    {item.authors}
+                  </p>
+                </div>
                 <p className="text-sm font-medium whitespace-nowrap ml-2">
                   {(item.priceHT * item.quantity).toFixed(2)} €
                 </p>
               </div>
-              <p className="text-xs text-muted-foreground" title={item.authors}>
-                {item.authors}
-              </p>
               <Select
                 value={String(item.quantity)}
                 onOpenChange={onSelectOpenChange}
