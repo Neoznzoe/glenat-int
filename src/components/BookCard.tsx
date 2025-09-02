@@ -1,6 +1,8 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { useAppDispatch } from '@/hooks/redux';
+import { addItem } from '@/store/cartSlice';
 
 export interface BookCardProps {
   cover: string;
@@ -33,6 +35,11 @@ export function BookCard({
   infoLabel,
   infoValue,
 }: BookCardProps) {
+  const dispatch = useAppDispatch();
+
+  const handleAddToCart = () => {
+    dispatch(addItem({ ean, title, cover, priceHT }));
+  };
   return (
     <Card className="flex flex-col overflow-hidden min-w-[230px]">
       <div
@@ -76,7 +83,11 @@ export function BookCard({
           <Button variant="link" className="justify-start px-0 h-auto">
             Lire dans le kiosque{views !== undefined ? ` (${views} vues)` : ''}
           </Button>
-          <Button size="sm" className="w-fit leading-none">
+          <Button
+            size="sm"
+            className="w-fit leading-none"
+            onClick={handleAddToCart}
+          >
             Ajouter à mon panier
           </Button>
         </div>

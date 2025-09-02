@@ -17,8 +17,11 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { ThemeToggle } from './ThemeToggle';
+import { useAppSelector } from '@/hooks/redux';
 
 export function Topbar() {
+  const itemCount = useAppSelector((state) => state.cart.items.length);
+
   return (
     <header className="h-16 bg-background border-b border-border flex items-center justify-between px-6">
       {/* Barre de recherche */}
@@ -43,6 +46,11 @@ export function Topbar() {
         </Button>
         <Button variant="ghost" size="sm" className="relative">
           <ShoppingBag className="h-5 w-5" />
+          {itemCount > 0 && (
+            <span className="absolute -top-1 -right-1 h-4 w-4 bg-[#ff3b30] text-[10px] text-white rounded-full flex items-center justify-center">
+              {itemCount}
+            </span>
+          )}
         </Button>
 
         {/* Profil utilisateur */}
