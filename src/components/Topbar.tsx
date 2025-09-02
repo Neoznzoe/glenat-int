@@ -17,8 +17,26 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { ThemeToggle } from './ThemeToggle';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from './ui/hover-card';
+import { useAppSelector } from '@/hooks/redux';
+import CartSummary from './CartSummary';
+import { useState } from 'react';
 
 export function Topbar() {
+  const itemCount = useAppSelector((state) =>
+    state.cart.items.reduce((sum, i) => sum + i.quantity, 0),
+  );
+  const [open, setOpen] = useState(false);
+  const [selectOpen, setSelectOpen] = useState(false);
+
+  // Prevent the hover card from briefly closing when interacting with the
+  // quantity selector inside the cart summary. If the select dropdown is open,
+  // ignore close events coming from the hover card.
+  const handleHoverOpenChange = (next: boolean) => {
+    if (!next && selectOpen) return;
+    setOpen(next);
+  };
+
   return (
     <header className="h-16 bg-background border-b border-border flex items-center justify-between px-6">
       {/* Barre de recherche */}
@@ -41,9 +59,26 @@ export function Topbar() {
           <Bell className="h-5 w-5" />
           <span className="absolute -top-1 -right-1 h-3 w-3 bg-[#ff3b30] rounded-full"></span>
         </Button>
-        <Button variant="ghost" size="sm" className="relative">
-          <ShoppingBag className="h-5 w-5" />
-        </Button>
+        <HoverCard
+          open={open || selectOpen}
+          onOpenChange={handleHoverOpenChange}
+          openDelay={0}
+          closeDelay={150}
+        >
+          <HoverCardTrigger asChild>
+            <Button variant="ghost" size="sm" className="relative">
+              <ShoppingBag className="h-5 w-5" />
+              {itemCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 bg-[#ff3b30] text-[10px] text-white rounded-full flex items-center justify-center">
+                  {itemCount}
+                </span>
+              )}
+            </Button>
+          </HoverCardTrigger>
+          <HoverCardContent className="w-[28rem] p-0" align="end">
+            <CartSummary onSelectOpenChange={setSelectOpen} />
+          </HoverCardContent>
+        </HoverCard>
 
         {/* Profil utilisateur */}
         <DropdownMenu>
