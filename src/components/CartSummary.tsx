@@ -12,7 +12,11 @@ import { Button } from './ui/button';
 import { Trash2 } from 'lucide-react';
 import { removeItem, updateQuantity } from '@/store/cartSlice';
 
-export default function CartSummary() {
+interface Props {
+  onSelectOpenChange?: (open: boolean) => void;
+}
+
+export default function CartSummary({ onSelectOpenChange }: Props) {
   const items = useAppSelector((state) => state.cart.items);
   const dispatch = useAppDispatch();
   const total = items.reduce(
@@ -21,12 +25,13 @@ export default function CartSummary() {
   );
 
   return (
-    <div className="p-4 text-sm w-80">
+    <div className="p-4 text-sm w-96">
+      <h3 className="text-base font-medium mb-4">Votre panier</h3>
       <ScrollArea className="max-h-96 pr-4">
         {items.map((item) => (
           <div
             key={item.ean}
-            className="flex gap-2 pb-4 border-b last:border-none relative"
+            className="flex gap-2 py-4 border-b last:border-none relative"
           >
             <img
               src={item.cover}
@@ -34,22 +39,36 @@ export default function CartSummary() {
               className="w-16 h-24 object-cover flex-shrink-0"
             />
             <div className="flex-1">
-              <p className="font-medium truncate" title={item.title}>
-                {item.title}
-              </p>
-              <p className="text-xs text-muted-foreground truncate" title={item.authors}>
+              <div className="flex justify-between gap-2">
+                <p
+                  className="font-medium leading-snug"
+                  style={{
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
+                  title={item.title}
+                >
+                  {item.title}
+                </p>
+                <p className="text-sm font-medium whitespace-nowrap ml-2">
+                  {parseFloat(item.priceHT).toFixed(2)} €
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground" title={item.authors}>
                 {item.authors}
               </p>
-              <p className="text-xs">{parseFloat(item.priceHT).toFixed(2)} €</p>
               <Select
                 value={String(item.quantity)}
+                onOpenChange={onSelectOpenChange}
                 onValueChange={(value) =>
                   dispatch(
                     updateQuantity({ ean: item.ean, quantity: Number(value) }),
                   )
                 }
               >
-                <SelectTrigger className="h-7 w-16 mt-1">
+                <SelectTrigger className="h-7 w-16 mt-2">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -72,12 +91,12 @@ export default function CartSummary() {
           </div>
         ))}
       </ScrollArea>
-      <Separator className="my-2" />
-      <div className="flex justify-between font-medium mb-2">
+      <Separator className="my-4" />
+      <div className="flex justify-between font-medium mb-4">
         <span>Total</span>
         <span>{total.toFixed(2)} €</span>
       </div>
-      <Separator className="my-2" />
+      <Separator className="my-4" />
       <Button variant="link" className="w-full justify-center">
         Voir mon panier
       </Button>

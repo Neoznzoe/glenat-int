@@ -20,11 +20,14 @@ import { ThemeToggle } from './ThemeToggle';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from './ui/hover-card';
 import { useAppSelector } from '@/hooks/redux';
 import CartSummary from './CartSummary';
+import { useState } from 'react';
 
 export function Topbar() {
   const itemCount = useAppSelector((state) =>
     state.cart.items.reduce((sum, i) => sum + i.quantity, 0),
   );
+  const [open, setOpen] = useState(false);
+  const [selectOpen, setSelectOpen] = useState(false);
 
   return (
     <header className="h-16 bg-background border-b border-border flex items-center justify-between px-6">
@@ -48,7 +51,12 @@ export function Topbar() {
           <Bell className="h-5 w-5" />
           <span className="absolute -top-1 -right-1 h-3 w-3 bg-[#ff3b30] rounded-full"></span>
         </Button>
-        <HoverCard openDelay={0} closeDelay={150}>
+        <HoverCard
+          open={open || selectOpen}
+          onOpenChange={setOpen}
+          openDelay={0}
+          closeDelay={150}
+        >
           <HoverCardTrigger asChild>
             <Button variant="ghost" size="sm" className="relative">
               <ShoppingBag className="h-5 w-5" />
@@ -59,8 +67,8 @@ export function Topbar() {
               )}
             </Button>
           </HoverCardTrigger>
-          <HoverCardContent className="w-80 p-0" align="end">
-            <CartSummary />
+          <HoverCardContent className="w-96 p-0" align="end">
+            <CartSummary onSelectOpenChange={setSelectOpen} />
           </HoverCardContent>
         </HoverCard>
 
