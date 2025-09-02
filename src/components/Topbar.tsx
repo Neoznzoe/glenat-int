@@ -17,10 +17,14 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { ThemeToggle } from './ThemeToggle';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from './ui/hover-card';
 import { useAppSelector } from '@/hooks/redux';
+import CartSummary from './CartSummary';
 
 export function Topbar() {
-  const itemCount = useAppSelector((state) => state.cart.items.length);
+  const itemCount = useAppSelector((state) =>
+    state.cart.items.reduce((sum, i) => sum + i.quantity, 0),
+  );
 
   return (
     <header className="h-16 bg-background border-b border-border flex items-center justify-between px-6">
@@ -44,14 +48,21 @@ export function Topbar() {
           <Bell className="h-5 w-5" />
           <span className="absolute -top-1 -right-1 h-3 w-3 bg-[#ff3b30] rounded-full"></span>
         </Button>
-        <Button variant="ghost" size="sm" className="relative">
-          <ShoppingBag className="h-5 w-5" />
-          {itemCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-4 w-4 bg-[#ff3b30] text-[10px] text-white rounded-full flex items-center justify-center">
-              {itemCount}
-            </span>
-          )}
-        </Button>
+        <HoverCard openDelay={0} closeDelay={150}>
+          <HoverCardTrigger asChild>
+            <Button variant="ghost" size="sm" className="relative">
+              <ShoppingBag className="h-5 w-5" />
+              {itemCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 bg-[#ff3b30] text-[10px] text-white rounded-full flex items-center justify-center">
+                  {itemCount}
+                </span>
+              )}
+            </Button>
+          </HoverCardTrigger>
+          <HoverCardContent className="w-80 p-0" align="end">
+            <CartSummary />
+          </HoverCardContent>
+        </HoverCard>
 
         {/* Profil utilisateur */}
         <DropdownMenu>
