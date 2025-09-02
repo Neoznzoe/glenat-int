@@ -25,9 +25,9 @@ export default function CartSummary({ onSelectOpenChange }: Props) {
   );
 
   return (
-    <div className="p-4 text-sm w-96">
+    <div className="p-4 text-sm w-[28rem]">
       <h3 className="text-base font-medium mb-4">Votre panier</h3>
-      <ScrollArea className="h-96 pr-4">
+      <ScrollArea className="max-h-[32rem] pr-4">
         {items.map((item) => (
           <div
             key={item.ean}
@@ -40,9 +40,14 @@ export default function CartSummary({ onSelectOpenChange }: Props) {
             />
             <div className="flex-1">
               <div className="flex justify-between gap-2">
-                <div className="min-w-0 max-w-[65%]">
+                <div className="min-w-0 max-w-[70%]">
                   <p
-                    className="font-medium leading-snug truncate"
+                    className="font-medium leading-snug overflow-hidden"
+                    style={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                    }}
                     title={item.title}
                   >
                     {item.title}

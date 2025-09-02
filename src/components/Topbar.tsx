@@ -67,7 +67,7 @@ export function Topbar() {
               )}
             </Button>
           </HoverCardTrigger>
-          <HoverCardContent className="w-96 p-0" align="end">
+          <HoverCardContent className="w-[28rem] p-0" align="end">
             <CartSummary onSelectOpenChange={setSelectOpen} />
           </HoverCardContent>
         </HoverCard>
