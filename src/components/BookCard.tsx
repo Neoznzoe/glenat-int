@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useAppDispatch } from '@/hooks/redux';
 import { addItem } from '@/store/cartSlice';
+import { toast } from 'sonner';
 
 export interface BookCardProps {
   cover: string;
@@ -47,6 +48,7 @@ export function BookCard({
         priceHT: parseFloat(priceHT),
       }),
     );
+    toast.success('Ajouté au panier', { description: title });
   };
   return (
     <Card className="flex flex-col overflow-hidden min-w-[230px]">
