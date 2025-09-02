@@ -38,11 +38,11 @@ export function Topbar() {
         <ThemeToggle />
         {/* Notifications */}
         <Button variant="ghost" size="sm" className="relative">
-          <Bell className="h-5 w-5 text-muted-foreground" />
+          <Bell className="h-5 w-5" />
           <span className="absolute -top-1 -right-1 h-3 w-3 bg-[#ff3b30] rounded-full"></span>
         </Button>
         <Button variant="ghost" size="sm" className="relative">
-          <ShoppingBag className="h-5 w-5 text-muted-foreground" />
+          <ShoppingBag className="h-5 w-5" />
         </Button>
 
         {/* Profil utilisateur */}
@@ -51,7 +51,7 @@ export function Topbar() {
             <Button
               variant="ghost"
               size="sm"
-              className="ml-2 flex items-center space-x-2 focus-visible:ring-0 py-1"
+              className="ml-2 my-1 flex items-center space-x-2 focus-visible:ring-0 h-auto py-1.5"
             >
               <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center">
                 <User className="h-4 w-4 text-muted-foreground" />
