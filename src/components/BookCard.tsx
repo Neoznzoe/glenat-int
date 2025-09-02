@@ -38,7 +38,15 @@ export function BookCard({
   const dispatch = useAppDispatch();
 
   const handleAddToCart = () => {
-    dispatch(addItem({ ean, title, cover, priceHT, authors }));
+    dispatch(
+      addItem({
+        ean,
+        title,
+        cover,
+        authors,
+        priceHT: parseFloat(priceHT),
+      }),
+    );
   };
   return (
     <Card className="flex flex-col overflow-hidden min-w-[230px]">

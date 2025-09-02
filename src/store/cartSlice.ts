@@ -5,7 +5,7 @@ export interface CartItem {
   title: string;
   authors: string;
   cover: string;
-  priceHT: string;
+  priceHT: number;
   quantity: number;
 }
 

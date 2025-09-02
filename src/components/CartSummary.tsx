@@ -20,7 +20,7 @@ export default function CartSummary({ onSelectOpenChange }: Props) {
   const items = useAppSelector((state) => state.cart.items);
   const dispatch = useAppDispatch();
   const total = items.reduce(
-    (sum, item) => sum + parseFloat(item.priceHT) * item.quantity,
+    (sum, item) => sum + item.priceHT * item.quantity,
     0,
   );
 
@@ -47,7 +47,7 @@ export default function CartSummary({ onSelectOpenChange }: Props) {
                   {item.title}
                 </p>
                 <p className="text-sm font-medium whitespace-nowrap ml-2">
-                  {parseFloat(item.priceHT).toFixed(2)} €
+                  {(item.priceHT * item.quantity).toFixed(2)} €
                 </p>
               </div>
               <p className="text-xs text-muted-foreground" title={item.authors}>
