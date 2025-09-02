@@ -27,7 +27,7 @@ export default function CartSummary({ onSelectOpenChange }: Props) {
   return (
     <div className="p-4 text-sm w-[28rem]">
       <h3 className="text-base font-medium mb-4">Votre panier</h3>
-      <ScrollArea className="max-h-[32rem] pr-4">
+      <ScrollArea className="max-h-[32rem] overflow-y-auto pr-4">
         {items.map((item) => (
           <div
             key={item.ean}
