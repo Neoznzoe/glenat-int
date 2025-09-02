@@ -29,6 +29,14 @@ export function Topbar() {
   const [open, setOpen] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
 
+  // Prevent the hover card from briefly closing when interacting with the
+  // quantity selector inside the cart summary. If the select dropdown is open,
+  // ignore close events coming from the hover card.
+  const handleHoverOpenChange = (next: boolean) => {
+    if (!next && selectOpen) return;
+    setOpen(next);
+  };
+
   return (
     <header className="h-16 bg-background border-b border-border flex items-center justify-between px-6">
       {/* Barre de recherche */}
@@ -53,7 +61,7 @@ export function Topbar() {
         </Button>
         <HoverCard
           open={open || selectOpen}
-          onOpenChange={setOpen}
+          onOpenChange={handleHoverOpenChange}
           openDelay={0}
           closeDelay={150}
         >
