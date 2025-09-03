@@ -13,14 +13,15 @@ import { Button } from '@/components/ui/button';
 import QuickAccess, { QuickAccessItem } from '@/components/QuickAccess';
 import LinksCard, { LinkItem } from '@/components/LinksCard';
 import { Monitor, Package } from 'lucide-react';
-import { useState } from 'react';
 
-export function Services() {
-  const [active, setActive] = useState('Informatique');
+interface ServicesProps {
+  onViewProduction: () => void;
+}
 
+export function Services({ onViewProduction }: ServicesProps) {
   const quickLinks: QuickAccessItem[] = [
-    { label: 'Informatique', icon: Monitor, onClick: () => setActive('Informatique') },
-    { label: 'Production', icon: Package, onClick: () => setActive('Production') },
+    { label: 'Informatique', icon: Monitor },
+    { label: 'Production', icon: Package, onClick: onViewProduction },
   ];
 
   const cards: { title: string; links: LinkItem[] }[] = [
@@ -166,13 +167,11 @@ export function Services() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href="#" onClick={() => setActive('Informatique')}>
-              Services
-            </BreadcrumbLink>
+            <BreadcrumbLink href="#">Services</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>{active}</BreadcrumbPage>
+            <BreadcrumbPage>Informatique</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -189,9 +188,9 @@ export function Services() {
           </div>
           <Separator />
           <div className="pt-2 grid grid-cols-1 md:grid-cols-5 gap-6">
-            <QuickAccess items={quickLinks} active={active} />
+            <QuickAccess items={quickLinks} active="Informatique" />
             <div className="md:col-span-4">
-              <h3 className="mb-4 font-semibold text-xl">{active}</h3>
+              <h3 className="mb-4 font-semibold text-xl">Informatique</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {cards.map((card) => (
                   <LinksCard key={card.title} title={card.title} links={card.links} />
