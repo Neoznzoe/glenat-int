@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { ExternalLink, CircleHelp } from 'lucide-react';
+import { SquareArrowOutUpRight, CircleHelp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export interface LinkItem {
@@ -10,7 +10,6 @@ export interface LinkItem {
   badge?: string;
   badgeColor?: string;
   highlight?: boolean;
-  external?: boolean;
   badgePosition?: 'left' | 'right';
   separator?: boolean;
 }
@@ -59,13 +58,17 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
               {link.type === 'link' || (link.href && !link.type) ? (
                 <a
                   href={link.href}
-                  className={`flex items-center justify-between py-4 transition-colors ${
+                  className={`flex items-center justify-between py-2 transition-colors ${
                     link.highlight
                       ? 'text-[#ff3b30] font-semibold'
                       : 'hover:text-[#ff3b30]'
                   }`}
                 >
-                  <span className="text-base flex items-center">
+                  <span
+                    className={`text-base flex items-center ${
+                      link.label.includes('/') ? 'text-gray-700' : ''
+                    }`}
+                  >
                     {link.badge && link.badgePosition === 'left' && (
                       <span
                         className={`mr-1.5 text-sm font-semibold text-white px-2 py-0.5 rounded ${
@@ -86,15 +89,13 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
                       </span>
                     )}
                   </span>
-                  {link.external && (
-                    <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                  )}
+                  <SquareArrowOutUpRight className="h-3 w-3 text-muted-foreground" />
                 </a>
               ) : (
                 <span
-                  className={`flex items-center py-4 text-base ${
+                  className={`flex items-center py-2 text-base ${
                     link.type === 'header' ? 'font-semibold' : ''
-                  }`}
+                  } ${link.label.includes('/') ? 'text-gray-700' : ''}`}
                 >
                   {link.label}
                 </span>

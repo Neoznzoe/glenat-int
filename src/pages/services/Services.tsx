@@ -25,101 +25,101 @@ export function Services() {
 
   const cards: { title: string; links: LinkItem[] }[] = [
     {
-      title: 'G\u00e9n\u00e9ral',
-      links: [
-        {
-          label: 'Documentations, notices, proc\u00e9dures',
-          type: 'header',
-        },
-        { label: 'informatique / charte informatique', type: 'text', separator: false },
-        { label: 'charte informatique', href: '#', type: 'link', separator: true },
-      ],
-    },
-    {
-      title: 'Mat\u00e9riel, r\u00e9seaux et acc\u00e8s internet',
-      links: [
-        { label: 'Formulaire de demande', type: 'header' },
-        {
-          label: 'informatique / charte informatique',
-          type: 'text',
-          separator: true,
-        },
-        { label: 'demande investissement', href: '#', type: 'link', separator: false },
-        { label: 'demande interventions', href: '#', type: 'link', separator: false },
-      ],
-    },
-    {
-      title: 'Site internet et intranet',
-      links: [
-        { label: 'contact utile', type: 'header' },
-        { label: 'Matthieu Nicolas', type: 'text', separator: false },
-        {
-          label: 'documentations, notices, proc\u00e9dures',
-          type: 'header',
-          separator: true,
-        },
-        { label: 'informatique/internet', type: 'text', separator: false },
-        {
-          label: 'site internet - mentions obligatoires',
-          href: '#',
-          type: 'link',
-          separator: false,
-        },
-        {
-          label: 'mailnblack - connexion compte office 365',
-          href: '#',
-          type: 'link',
-          separator: false,
-        },
-        { label: 'formulaire de demande', type: 'header', separator: true },
-        {
-          label: "demande d'interventions informatique",
-          href: '#',
-          type: 'link',
-          separator: false,
-        },
-      ],
-    },
-    {
-      title: 'Nautilus',
-      links: [
-        { label: 'contact utiles', type: 'header' },
-        { label: 'catherine jullin', type: 'text', separator: false },
-        {
-          label: 'documentations, notices, proc\u00e9dures',
-          type: 'header',
-          separator: true,
-        },
-        { label: 'proc\u00e9dures internes / note de frais', type: 'text', separator: false },
-        {
-          label: 'proc\u00e9dure de commandes voyages',
-          href: '#',
-          type: 'link',
-          separator: false,
-        },
-        { label: 'horaires tgv 2025', href: '#', type: 'link', separator: false },
-        { label: 'manuel utilisateurs notilus', href: '#', type: 'link', separator: false },
-        { label: 'place de d\u00e9placement multimodal', href: '#', type: 'link', separator: false },
-        {
-          label: 'note de demande d\u00e9placement professionnel',
-          href: '#',
-          type: 'link',
-          separator: false,
-        },
-        {
-          label: 'Notilus 2022 - Manuel utilisateurs',
-          href: '#',
-          type: 'link',
-          separator: false,
-        },
-        {
-          label: 'Notilus 2022 - proc\u00e9dures simplifi\u00e9e',
-          href: '#',
-          type: 'link',
-          separator: false,
-        },
-      ],
-    },
+        title: 'G\u00e9n\u00e9ral',
+        links: [
+          {
+            label: 'Documentations, notices, proc\u00e9dures',
+            type: 'header',
+          },
+          { label: 'Informatique / charte informatique', type: 'text', separator: false },
+          { label: 'Charte informatique', href: '#', type: 'link', separator: true },
+        ],
+      },
+      {
+        title: 'Mat\u00e9riel, r\u00e9seaux et acc\u00e8s internet',
+        links: [
+          { label: 'Formulaire de demande', type: 'header' },
+          {
+            label: 'Informatique / charte informatique',
+            type: 'text',
+            separator: true,
+          },
+          { label: 'Demande investissement', href: '#', type: 'link', separator: false },
+          { label: 'Demande interventions', href: '#', type: 'link', separator: false },
+        ],
+      },
+      {
+        title: 'Site internet et intranet',
+        links: [
+          { label: 'Contact utile', type: 'header' },
+          { label: 'Matthieu Nicolas', type: 'text', separator: false },
+          {
+            label: 'Documentations, notices, proc\u00e9dures',
+            type: 'header',
+            separator: true,
+          },
+          { label: 'Informatique/internet', type: 'text', separator: false },
+          {
+            label: 'Site internet - mentions obligatoires',
+            href: '#',
+            type: 'link',
+            separator: false,
+          },
+          {
+            label: 'Mailnblack - connexion compte Office 365',
+            href: '#',
+            type: 'link',
+            separator: false,
+          },
+          { label: 'Formulaire de demande', type: 'header', separator: true },
+          {
+            label: "Demande d'interventions informatique",
+            href: '#',
+            type: 'link',
+            separator: false,
+          },
+        ],
+      },
+      {
+        title: 'Nautilus',
+        links: [
+          { label: 'Contact utiles', type: 'header' },
+          { label: 'Catherine Jullin', type: 'text', separator: false },
+          {
+            label: 'Documentations, notices, proc\u00e9dures',
+            type: 'header',
+            separator: true,
+          },
+          { label: 'Proc\u00e9dures internes / note de frais', type: 'text', separator: false },
+          {
+            label: 'Proc\u00e9dure de commandes voyages',
+            href: '#',
+            type: 'link',
+            separator: false,
+          },
+          { label: 'Horaires TGV 2025', href: '#', type: 'link', separator: false },
+          { label: 'Manuel utilisateurs Notilus', href: '#', type: 'link', separator: false },
+          { label: 'Place de d\u00e9placement multimodal', href: '#', type: 'link', separator: false },
+          {
+            label: 'Note de demande d\u00e9placement professionnel',
+            href: '#',
+            type: 'link',
+            separator: false,
+          },
+          {
+            label: 'Notilus 2022 - Manuel utilisateurs',
+            href: '#',
+            type: 'link',
+            separator: false,
+          },
+          {
+            label: 'Notilus 2022 - proc\u00e9dures simplifi\u00e9e',
+            href: '#',
+            type: 'link',
+            separator: false,
+          },
+        ],
+      },
   ];
 
   return (
