@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { ExternalLink } from 'lucide-react';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { SquareArrowOutUpRight, CircleHelp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export interface LinkItem {
   label: string;
-  href: string;
+  type?: 'link' | 'header' | 'text';
+  href?: string;
   badge?: string;
   badgeColor?: string;
   highlight?: boolean;
   badgePosition?: 'left' | 'right';
+  separator?: boolean;
 }
 
 export interface LinksCardProps {
@@ -39,47 +41,66 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
   };
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden">
-      <CardHeader className="bg-[#ff3b30] text-white px-6 py-4">
-        <CardTitle className="text-2xl">{title}</CardTitle>
+    <Card className="flex flex-col h-full overflow-hidden bg-background">
+      <CardHeader className="bg-[#ff3b30] text-white p-4 flex flex-row items-center justify-between space-y-0">
+        <h3 className="text-lg font-semibold leading-none">{title}</h3>
+        <CircleHelp className="h-4 w-4" />
       </CardHeader>
       <CardContent className="p-0 flex flex-col flex-1">
-        <ul className="flex-1 divide-y">
-          {displayed.map((link) => (
-            <li key={link.label}>
-              <a
-                href={link.href}
-                className={`flex items-center justify-between px-6 py-2 transition-colors ${
-                  link.highlight
-                    ? 'bg-[#ff3b30]/10 text-[#ff3b30] font-semibold'
-                    : 'hover:bg-muted text-foreground'
+        <ul className="flex-1 py-4">
+          {displayed.map((link) => {
+            const slashTextClass = link.label.includes('/')
+              ? 'text-gray-700 dark:text-gray-300'
+              : '';
+            return (
+              <li
+                key={link.label}
+                className={`mx-4 pb-2 last:pb-0 ${
+                  link.separator ? 'border-t border-border pt-2' : ''
                 }`}
               >
-                <span className="text-sm flex items-center">
-                  {link.badge && link.badgePosition === 'left' && (
-                    <span
-                      className={`mr-1.5 text-sm font-semibold text-white px-2 py-0.5 rounded ${
-                        link.badgeColor ?? 'bg-green-500'
-                      }`}
-                    >
-                      {link.badge}
+                {link.type === 'link' || (link.href && !link.type) ? (
+                  <a
+                    href={link.href}
+                    className={`flex w-full items-center justify-between rounded-sm transition-colors hover:bg-muted/80 ${
+                      link.highlight ? 'text-[#ff3b30] font-semibold' : ''
+                    }`}
+                  >
+                    <span className={`text-base flex items-center ${slashTextClass}`}>
+                      {link.badge && link.badgePosition === 'left' && (
+                        <span
+                          className={`mr-1.5 text-sm font-semibold text-white px-2 py-0.5 rounded ${
+                            link.badgeColor ?? 'bg-green-500'
+                          }`}
+                        >
+                          {link.badge}
+                        </span>
+                      )}
+                      {link.label}
+                      {link.badge && link.badgePosition !== 'left' && (
+                        <span
+                          className={`ml-1.5 text-sm font-semibold text-white px-2 py-0.5 rounded ${
+                            link.badgeColor ?? 'bg-green-500'
+                          }`}
+                        >
+                          {link.badge}
+                        </span>
+                      )}
                     </span>
-                  )}
-                  {link.label}
-                  {link.badge && link.badgePosition !== 'left' && (
-                    <span
-                      className={`ml-1.5 text-sm font-semibold text-white px-2 py-0.5 rounded ${
-                        link.badgeColor ?? 'bg-green-500'
-                      }`}
-                    >
-                      {link.badge}
-                    </span>
-                  )}
-                </span>
-                <ExternalLink className="h-3 w-3 text-muted-foreground" />
-              </a>
-            </li>
-          ))}
+                    <SquareArrowOutUpRight className="h-3 w-3 text-muted-foreground" />
+                  </a>
+                ) : (
+                  <span
+                    className={`flex items-center text-base ${
+                      link.type === 'header' ? 'font-semibold' : ''
+                    } ${slashTextClass}`}
+                  >
+                    {link.label}
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ul>
         {canToggle && (
           <div className="flex justify-end p-4 mt-auto">

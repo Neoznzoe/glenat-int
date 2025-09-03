@@ -8,6 +8,8 @@ import CatalogueAll from './pages/catalogue/CatalogueAll';
 import Kiosque from './pages/catalogue/Kiosque';
 import Offices from './pages/catalogue/Offices';
 import Nouveautes from './pages/catalogue/Nouveautes';
+import Services from './pages/services/Services';
+import Production from './pages/services/Production';
 import { Toaster } from '@/components/ui/sonner';
 
 function App() {
@@ -18,7 +20,7 @@ function App() {
     <>
       <div className="flex h-screen bg-background text-foreground overflow-hidden">
         <Sidebar
-          activePage={activePage}
+          activePage={activePage.startsWith('services') ? 'services' : activePage}
           onNavigate={setActivePage}
           jobCount={jobCount}
         />
@@ -27,6 +29,12 @@ function App() {
           <main className="flex-1 overflow-auto">
             {activePage === 'home' && <Home />}
             {activePage === 'emploi' && <Emploi />}
+            {activePage === 'services' && (
+              <Services onViewProduction={() => setActivePage('servicesProduction')} />
+            )}
+            {activePage === 'servicesProduction' && (
+              <Production onViewInformatique={() => setActivePage('services')} />
+            )}
             {activePage === 'catalogue' && (
               <Catalogue
                 onViewAll={() => setActivePage('catalogueAll')}
