@@ -40,7 +40,7 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
 
   return (
     <Card className="flex flex-col h-full overflow-hidden">
-      <CardHeader className="bg-[#ff3b30] text-white p-3 flex items-center justify-between">
+      <CardHeader className="bg-[#ff3b30] text-white p-4 flex flex-row items-center justify-between space-y-0">
         <h3 className="text-lg font-semibold leading-none">{title}</h3>
         <CircleHelp className="h-4 w-4" />
       </CardHeader>
