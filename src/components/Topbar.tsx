@@ -76,7 +76,7 @@ export function Topbar() {
             <Button variant="ghost" size="sm" className="relative">
               <Bell className="h-5 w-5" />
               {notificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 bg-[#ff3b30] text-[10px] text-white rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 bg-[#ff3b30] text-[10px] text-white rounded-full flex items-center justify-center">
                   {notificationCount}
                 </span>
               )}
@@ -96,7 +96,7 @@ export function Topbar() {
             <Button variant="ghost" size="sm" className="relative">
               <ShoppingBag className="h-5 w-5" />
               {itemCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 bg-[#ff3b30] text-[10px] text-white rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 bg-[#ff3b30] text-[10px] text-white rounded-full flex items-center justify-center">
                   {itemCount}
                 </span>
               )}
