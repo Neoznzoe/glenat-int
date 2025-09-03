@@ -51,14 +51,16 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
           {displayed.map((link, idx) => (
             <li
               key={link.label}
-              className={`mx-4 pb-2 last:pb-0 ${
-                (link.separator ?? idx !== 0) ? 'border-t border-border' : ''
+              className={`mx-4 last:pb-0 ${
+                (link.separator ?? idx !== 0)
+                  ? 'border-t border-border pb-2'
+                  : 'pb-2'
               }`}
             >
               {link.type === 'link' || (link.href && !link.type) ? (
                 <a
                   href={link.href}
-                  className={`flex items-center justify-between pt-2 transition-colors ${
+                  className={`flex items-center justify-between transition-colors ${
                     link.highlight
                       ? 'text-[#ff3b30] font-semibold'
                       : 'hover:text-[#ff3b30]'
@@ -93,7 +95,7 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
                 </a>
               ) : (
                 <span
-                  className={`flex items-center pt-2 text-base ${
+                  className={`flex items-center text-base ${
                     link.type === 'header' ? 'font-semibold' : ''
                   } ${link.label.includes('/') ? 'text-gray-700' : ''}`}
                 >
