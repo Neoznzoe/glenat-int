@@ -41,7 +41,7 @@ export function Topbar() {
       label: "Demande d'installation nouvel entrant à traiter",
     },
   ];
-  const notificationCount = notifications.length;
+  const notificationCount = notifications.reduce((sum, n) => sum + n.count, 0);
   const [open, setOpen] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
 

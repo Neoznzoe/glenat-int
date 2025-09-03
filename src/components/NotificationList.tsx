@@ -28,13 +28,15 @@ export default function NotificationList({ notifications }: Props) {
           <li key={index}>
             <a
               href={n.href ?? '#'}
-              className="flex items-center justify-between border px-3 py-2 rounded hover:bg-muted"
+              className="flex items-start justify-between border px-3 py-2 rounded hover:bg-muted"
             >
-              <span>
-                <span className="font-semibold mr-1">{n.count}</span>
-                {n.label}
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-start space-x-2">
+                <span className="flex-shrink-0 bg-[#ff3b30] text-white text-xs font-semibold w-8 h-8 rounded flex items-center justify-center">
+                  {n.count}
+                </span>
+                <span className="text-[#ff3b30] text-xs leading-tight">{n.label}</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground self-center" />
             </a>
           </li>
         ))}
