@@ -8,6 +8,7 @@ import CatalogueAll from './pages/catalogue/CatalogueAll';
 import Kiosque from './pages/catalogue/Kiosque';
 import Offices from './pages/catalogue/Offices';
 import Nouveautes from './pages/catalogue/Nouveautes';
+import Services from './pages/services/Services';
 import { Toaster } from '@/components/ui/sonner';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
           <main className="flex-1 overflow-auto">
             {activePage === 'home' && <Home />}
             {activePage === 'emploi' && <Emploi />}
+            {activePage === 'services' && <Services />}
             {activePage === 'catalogue' && (
               <Catalogue
                 onViewAll={() => setActivePage('catalogueAll')}
