@@ -26,6 +26,7 @@ export function Topbar() {
   const itemCount = useAppSelector((state) =>
     state.cart.items.reduce((sum, i) => sum + i.quantity, 0),
   );
+  const notificationCount = 0;
   const [open, setOpen] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
 
@@ -57,7 +58,9 @@ export function Topbar() {
         {/* Notifications */}
         <Button variant="ghost" size="sm" className="relative">
           <Bell className="h-5 w-5" />
-          <span className="absolute -top-1 -right-1 h-3 w-3 bg-[#ff3b30] rounded-full"></span>
+          {notificationCount > 0 && (
+            <span className="absolute -top-1 -right-1 h-3 w-3 bg-[#ff3b30] rounded-full"></span>
+          )}
         </Button>
         <HoverCard
           open={open || selectOpen}
