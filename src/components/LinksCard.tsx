@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { ExternalLink } from 'lucide-react';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { ExternalLink, CircleHelp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export interface LinkItem {
@@ -40,8 +40,9 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
 
   return (
     <Card className="flex flex-col h-full overflow-hidden">
-      <CardHeader className="bg-[#ff3b30] text-white p-3">
-        <CardTitle className="text-lg">{title}</CardTitle>
+      <CardHeader className="bg-[#ff3b30] text-white p-3 flex items-center justify-between">
+        <h3 className="text-lg font-semibold leading-none">{title}</h3>
+        <CircleHelp className="h-4 w-4" />
       </CardHeader>
       <CardContent className="p-0 flex flex-col flex-1">
         <ul className="flex-1 divide-y">
