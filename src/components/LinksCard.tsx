@@ -47,18 +47,18 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
         <CircleHelp className="h-4 w-4" />
       </CardHeader>
       <CardContent className="p-0 flex flex-col flex-1">
-        <ul className="flex-1">
+        <ul className="flex-1 py-4">
           {displayed.map((link, idx) => (
             <li
               key={link.label}
-              className={`mx-4 ${
-                (link.separator ?? idx !== 0) ? 'border-t border-muted' : ''
+              className={`mx-4 pb-2 last:pb-0 ${
+                (link.separator ?? idx !== 0) ? 'border-t border-border' : ''
               }`}
             >
               {link.type === 'link' || (link.href && !link.type) ? (
                 <a
                   href={link.href}
-                  className={`flex items-center justify-between py-2 transition-colors ${
+                  className={`flex items-center justify-between pt-2 transition-colors ${
                     link.highlight
                       ? 'text-[#ff3b30] font-semibold'
                       : 'hover:text-[#ff3b30]'
@@ -93,7 +93,7 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
                 </a>
               ) : (
                 <span
-                  className={`flex items-center py-2 text-base ${
+                  className={`flex items-center pt-2 text-base ${
                     link.type === 'header' ? 'font-semibold' : ''
                   } ${link.label.includes('/') ? 'text-gray-700' : ''}`}
                 >
