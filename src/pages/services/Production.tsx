@@ -75,7 +75,7 @@ export function Production({ onViewInformatique }: ProductionProps) {
           href: '#',
           type: 'link',
         },
-        { label: 'Formulaires de demande', type: 'header', separator: true },
+        { label: 'Formulaires de demande', type: 'header' },
         { label: "Demande d'interventions informatique", href: '#', type: 'link' },
       ],
     },

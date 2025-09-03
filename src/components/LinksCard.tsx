@@ -48,7 +48,7 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
       </CardHeader>
       <CardContent className="p-0 flex flex-col flex-1">
         <ul className="flex-1 py-4">
-          {displayed.map((link, idx) => {
+          {displayed.map((link) => {
             const slashTextClass = link.label.includes('/')
               ? 'text-gray-700 dark:text-gray-300'
               : '';
@@ -56,8 +56,8 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
               <li
                 key={link.label}
                 className={`mx-4 pb-2 last:pb-0 ${
-                  (link.separator ?? idx !== 0) ? 'border-t border-border' : ''
-                } ${link.separator ? 'pt-2' : ''}`}
+                  link.separator ? 'border-t border-border pt-2' : ''
+                }`}
               >
                 {link.type === 'link' || (link.href && !link.type) ? (
                   <a
