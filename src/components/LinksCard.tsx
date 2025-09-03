@@ -9,6 +9,7 @@ export interface LinkItem {
   badge?: string;
   badgeColor?: string;
   highlight?: boolean;
+  external?: boolean;
   badgePosition?: 'left' | 'right';
 }
 
@@ -45,18 +46,21 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
         <CircleHelp className="h-4 w-4" />
       </CardHeader>
       <CardContent className="p-0 flex flex-col flex-1">
-        <ul className="flex-1 divide-y">
-          {displayed.map((link) => (
-            <li key={link.label}>
+        <ul className="flex-1">
+          {displayed.map((link, idx) => (
+            <li
+              key={link.label}
+              className={`mx-4 ${idx !== 0 ? 'border-t border-muted' : ''}`}
+            >
               <a
                 href={link.href}
-                className={`flex items-center justify-between p-3 transition-colors ${
+                className={`flex items-center justify-between py-4 transition-colors ${
                   link.highlight
-                    ? 'bg-[#ff3b30]/10 text-[#ff3b30] font-semibold'
-                    : 'hover:bg-muted text-foreground'
+                    ? 'text-[#ff3b30] font-semibold'
+                    : 'hover:text-[#ff3b30]'
                 }`}
               >
-                <span className="text-sm flex items-center">
+                <span className="text-base flex items-center">
                   {link.badge && link.badgePosition === 'left' && (
                     <span
                       className={`mr-1.5 text-sm font-semibold text-white px-2 py-0.5 rounded ${
@@ -77,13 +81,15 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
                     </span>
                   )}
                 </span>
-                <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                {link.external && (
+                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                )}
               </a>
             </li>
           ))}
         </ul>
         {canToggle && (
-          <div className="flex justify-end p-3 mt-auto">
+          <div className="flex justify-end p-4 mt-auto">
             <Button variant="default" size="sm" onClick={handleToggle}>
               {expanded ? 'Voir moins' : 'Voir plus'}
             </Button>
