@@ -40,8 +40,8 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
 
   return (
     <Card className="flex flex-col h-full overflow-hidden">
-      <CardHeader className="bg-[#ff3b30] text-white p-4">
-        <CardTitle className="text-2xl">{title}</CardTitle>
+      <CardHeader className="bg-[#ff3b30] text-white p-3">
+        <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
       <CardContent className="p-0 flex flex-col flex-1">
         <ul className="flex-1 divide-y">
@@ -49,7 +49,7 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
             <li key={link.label}>
               <a
                 href={link.href}
-                className={`flex items-center justify-between px-4 py-2 transition-colors ${
+                className={`flex items-center justify-between p-3 transition-colors ${
                   link.highlight
                     ? 'bg-[#ff3b30]/10 text-[#ff3b30] font-semibold'
                     : 'hover:bg-muted text-foreground'
@@ -82,7 +82,7 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
           ))}
         </ul>
         {canToggle && (
-          <div className="flex justify-end p-4 mt-auto">
+          <div className="flex justify-end p-3 mt-auto">
             <Button variant="default" size="sm" onClick={handleToggle}>
               {expanded ? 'Voir moins' : 'Voir plus'}
             </Button>
