@@ -1,4 +1,11 @@
-import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -6,11 +13,14 @@ import { Button } from '@/components/ui/button';
 import QuickAccess, { QuickAccessItem } from '@/components/QuickAccess';
 import LinksCard, { LinkItem } from '@/components/LinksCard';
 import { Monitor, Package } from 'lucide-react';
+import { useState } from 'react';
 
 export function Services() {
+  const [active, setActive] = useState('Informatique');
+
   const quickLinks: QuickAccessItem[] = [
-    { label: 'Informatique', icon: Monitor },
-    { label: 'Production', icon: Package },
+    { label: 'Informatique', icon: Monitor, onClick: () => setActive('Informatique') },
+    { label: 'Production', icon: Package, onClick: () => setActive('Production') },
   ];
 
   const cards: { title: string; links: LinkItem[] }[] = [
@@ -81,7 +91,13 @@ export function Services() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Services</BreadcrumbPage>
+            <BreadcrumbLink href="#" onClick={() => setActive('Informatique')}>
+              Services
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{active}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -91,9 +107,6 @@ export function Services() {
           <CardTitle className="text-[2.5rem]">Services</CardTitle>
           <Input type="search" placeholder="Rechercher..." className="sm:w-64" />
         </CardHeader>
-        <div className="px-6">
-          <Separator />
-        </div>
         <CardContent className="p-6 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="text-xl font-semibold">Interventions en cours (0)</div>
@@ -101,10 +114,11 @@ export function Services() {
           </div>
           <Separator />
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <QuickAccess items={quickLinks} />
+            <QuickAccess items={quickLinks} active={active} />
             <div className="lg:col-span-3">
+              <h3 className="mb-4 font-semibold text-xl">{active}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {cards.map(card => (
+                {cards.map((card) => (
                   <LinksCard key={card.title} title={card.title} links={card.links} />
                 ))}
               </div>
