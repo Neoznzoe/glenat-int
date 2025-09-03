@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button';
 
 export interface LinkItem {
   label: string;
-  href: string;
+  type?: 'link' | 'header' | 'text';
+  href?: string;
   badge?: string;
   badgeColor?: string;
   highlight?: boolean;
   external?: boolean;
   badgePosition?: 'left' | 'right';
+  separator?: boolean;
 }
 
 export interface LinksCardProps {
@@ -50,41 +52,53 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
           {displayed.map((link, idx) => (
             <li
               key={link.label}
-              className={`mx-4 ${idx !== 0 ? 'border-t border-muted' : ''}`}
+              className={`mx-4 ${
+                (link.separator ?? idx !== 0) ? 'border-t border-muted' : ''
+              }`}
             >
-              <a
-                href={link.href}
-                className={`flex items-center justify-between py-4 transition-colors ${
-                  link.highlight
-                    ? 'text-[#ff3b30] font-semibold'
-                    : 'hover:text-[#ff3b30]'
-                }`}
-              >
-                <span className="text-base flex items-center">
-                  {link.badge && link.badgePosition === 'left' && (
-                    <span
-                      className={`mr-1.5 text-sm font-semibold text-white px-2 py-0.5 rounded ${
-                        link.badgeColor ?? 'bg-green-500'
-                      }`}
-                    >
-                      {link.badge}
-                    </span>
+              {link.type === 'link' || (link.href && !link.type) ? (
+                <a
+                  href={link.href}
+                  className={`flex items-center justify-between py-4 transition-colors ${
+                    link.highlight
+                      ? 'text-[#ff3b30] font-semibold'
+                      : 'hover:text-[#ff3b30]'
+                  }`}
+                >
+                  <span className="text-base flex items-center">
+                    {link.badge && link.badgePosition === 'left' && (
+                      <span
+                        className={`mr-1.5 text-sm font-semibold text-white px-2 py-0.5 rounded ${
+                          link.badgeColor ?? 'bg-green-500'
+                        }`}
+                      >
+                        {link.badge}
+                      </span>
+                    )}
+                    {link.label}
+                    {link.badge && link.badgePosition !== 'left' && (
+                      <span
+                        className={`ml-1.5 text-sm font-semibold text-white px-2 py-0.5 rounded ${
+                          link.badgeColor ?? 'bg-green-500'
+                        }`}
+                      >
+                        {link.badge}
+                      </span>
+                    )}
+                  </span>
+                  {link.external && (
+                    <ExternalLink className="h-3 w-3 text-muted-foreground" />
                   )}
+                </a>
+              ) : (
+                <span
+                  className={`flex items-center py-4 text-base ${
+                    link.type === 'header' ? 'font-semibold' : ''
+                  }`}
+                >
                   {link.label}
-                  {link.badge && link.badgePosition !== 'left' && (
-                    <span
-                      className={`ml-1.5 text-sm font-semibold text-white px-2 py-0.5 rounded ${
-                        link.badgeColor ?? 'bg-green-500'
-                      }`}
-                    >
-                      {link.badge}
-                    </span>
-                  )}
                 </span>
-                {link.external && (
-                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                )}
-              </a>
+              )}
             </li>
           ))}
         </ul>
