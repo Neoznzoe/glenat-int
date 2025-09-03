@@ -48,66 +48,61 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
       </CardHeader>
       <CardContent className="p-0 flex flex-col flex-1">
         <ul className="flex-1 py-4">
-          {displayed.map((link, idx) => (
-            <li
-              key={link.label}
-              className={`mx-4 pb-2 last:pb-0 ${
-                (link.separator ?? idx !== 0) ? 'border-t border-border' : ''
-              } ${link.separator ? 'pt-2' : ''}`}
-            >
-              {link.type === 'link' || (link.href && !link.type) ? (
-                <a
-                  href={link.href}
-                  className={`flex items-center justify-between transition-colors ${
-                    link.highlight
-                      ? 'text-[#ff3b30] font-semibold'
-                      : 'hover:text-[#ff3b30]'
-                  }`}
-                >
-                  <span
-                    className={`text-base flex items-center ${
-                      link.label.includes('/')
-                        ? 'text-gray-700 dark:text-gray-300'
-                        : ''
+          {displayed.map((link, idx) => {
+            const slashTextClass = link.label.includes('/')
+              ? 'text-gray-700 dark:text-gray-300'
+              : '';
+            return (
+              <li
+                key={link.label}
+                className={`mx-4 pb-2 last:pb-0 ${
+                  (link.separator ?? idx !== 0) ? 'border-t border-border' : ''
+                } ${link.separator ? 'pt-2' : ''}`}
+              >
+                {link.type === 'link' || (link.href && !link.type) ? (
+                  <a
+                    href={link.href}
+                    className={`flex items-center justify-between transition-colors ${
+                      link.highlight
+                        ? 'text-[#ff3b30] font-semibold'
+                        : 'hover:text-[#ff3b30]'
                     }`}
                   >
-                    {link.badge && link.badgePosition === 'left' && (
-                      <span
-                        className={`mr-1.5 text-sm font-semibold text-white px-2 py-0.5 rounded ${
-                          link.badgeColor ?? 'bg-green-500'
-                        }`}
-                      >
-                        {link.badge}
-                      </span>
-                    )}
+                    <span className={`text-base flex items-center ${slashTextClass}`}>
+                      {link.badge && link.badgePosition === 'left' && (
+                        <span
+                          className={`mr-1.5 text-sm font-semibold text-white px-2 py-0.5 rounded ${
+                            link.badgeColor ?? 'bg-green-500'
+                          }`}
+                        >
+                          {link.badge}
+                        </span>
+                      )}
+                      {link.label}
+                      {link.badge && link.badgePosition !== 'left' && (
+                        <span
+                          className={`ml-1.5 text-sm font-semibold text-white px-2 py-0.5 rounded ${
+                            link.badgeColor ?? 'bg-green-500'
+                          }`}
+                        >
+                          {link.badge}
+                        </span>
+                      )}
+                    </span>
+                    <SquareArrowOutUpRight className="h-3 w-3 text-muted-foreground" />
+                  </a>
+                ) : (
+                  <span
+                    className={`flex items-center text-base ${
+                      link.type === 'header' ? 'font-semibold' : ''
+                    } ${slashTextClass}`}
+                  >
                     {link.label}
-                    {link.badge && link.badgePosition !== 'left' && (
-                      <span
-                        className={`ml-1.5 text-sm font-semibold text-white px-2 py-0.5 rounded ${
-                          link.badgeColor ?? 'bg-green-500'
-                        }`}
-                      >
-                        {link.badge}
-                      </span>
-                    )}
                   </span>
-                  <SquareArrowOutUpRight className="h-3 w-3 text-muted-foreground" />
-                </a>
-              ) : (
-                <span
-                  className={`flex items-center text-base ${
-                    link.type === 'header' ? 'font-semibold' : ''
-                  } ${
-                    link.label.includes('/')
-                      ? 'text-gray-700 dark:text-gray-300'
-                      : ''
-                  }`}
-                >
-                  {link.label}
-                </span>
-              )}
-            </li>
-          ))}
+                )}
+              </li>
+            );
+          })}
         </ul>
         {canToggle && (
           <div className="flex justify-end p-4 mt-auto">

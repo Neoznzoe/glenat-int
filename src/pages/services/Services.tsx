@@ -177,7 +177,7 @@ export function Services() {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <Card>
+      <Card className="bg-background">
         <CardHeader className="sm:flex-row sm:items-center sm:justify-between gap-4 p-4">
           <CardTitle className="text-[2.5rem]">Services</CardTitle>
           <Input type="search" placeholder="Rechercher..." className="sm:w-64" />
