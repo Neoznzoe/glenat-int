@@ -41,7 +41,7 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
   };
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden">
+    <Card className="flex flex-col h-full overflow-hidden bg-background">
       <CardHeader className="bg-[#ff3b30] text-white p-4 flex flex-row items-center justify-between space-y-0">
         <h3 className="text-lg font-semibold leading-none">{title}</h3>
         <CircleHelp className="h-4 w-4" />
@@ -66,7 +66,9 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
                 >
                   <span
                     className={`text-base flex items-center ${
-                      link.label.includes('/') ? 'text-gray-700' : ''
+                      link.label.includes('/')
+                        ? 'text-gray-700 dark:text-gray-300'
+                        : ''
                     }`}
                   >
                     {link.badge && link.badgePosition === 'left' && (
@@ -95,7 +97,11 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
                 <span
                   className={`flex items-center text-base ${
                     link.type === 'header' ? 'font-semibold' : ''
-                  } ${link.label.includes('/') ? 'text-gray-700' : ''}`}
+                  } ${
+                    link.label.includes('/')
+                      ? 'text-gray-700 dark:text-gray-300'
+                      : ''
+                  }`}
                 >
                   {link.label}
                 </span>
