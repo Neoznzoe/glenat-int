@@ -19,6 +19,18 @@ interface Props {
 export default function CartSummary({ onSelectOpenChange }: Props) {
   const items = useAppSelector((state) => state.cart.items);
   const dispatch = useAppDispatch();
+  if (items.length === 0) {
+    return (
+      <div className="p-4 text-sm w-[28rem]">
+        <h3 className="text-base font-medium mb-4">Votre panier</h3>
+        <p className="text-muted-foreground mb-4">
+          Vous n'avez encore aucun produit dans votre panier.
+        </p>
+        <Separator />
+      </div>
+    );
+  }
+
   const total = items.reduce(
     (sum, item) => sum + item.priceHT * item.quantity,
     0,
