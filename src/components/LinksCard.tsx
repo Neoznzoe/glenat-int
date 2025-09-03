@@ -51,11 +51,9 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
           {displayed.map((link, idx) => (
             <li
               key={link.label}
-              className={`mx-4 last:pb-0 ${
-                (link.separator ?? idx !== 0)
-                  ? 'border-t border-border pb-2'
-                  : 'pb-2'
-              }`}
+              className={`mx-4 pb-2 last:pb-0 ${
+                (link.separator ?? idx !== 0) ? 'border-t border-border' : ''
+              } ${link.separator ? 'pt-2' : ''}`}
             >
               {link.type === 'link' || (link.href && !link.type) ? (
                 <a
