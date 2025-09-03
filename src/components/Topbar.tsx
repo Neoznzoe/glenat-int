@@ -21,12 +21,27 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from './ui/hover-card';
 import { useAppSelector } from '@/hooks/redux';
 import CartSummary from './CartSummary';
 import { useState } from 'react';
+import NotificationList from './NotificationList';
 
 export function Topbar() {
   const itemCount = useAppSelector((state) =>
     state.cart.items.reduce((sum, i) => sum + i.quantity, 0),
   );
-  const notificationCount = 0;
+  const notifications = [
+    {
+      count: 2,
+      label: "Demande d'investissement informatique et téléphonie à traiter",
+    },
+    {
+      count: 24,
+      label: "Demande d'intervention informatique à traiter",
+    },
+    {
+      count: 10,
+      label: "Demande d'installation nouvel entrant à traiter",
+    },
+  ];
+  const notificationCount = notifications.length;
   const [open, setOpen] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
 
@@ -56,12 +71,21 @@ export function Topbar() {
       <div className="flex items-center space-x-2">
         <ThemeToggle />
         {/* Notifications */}
-        <Button variant="ghost" size="sm" className="relative">
-          <Bell className="h-5 w-5" />
-          {notificationCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-3 w-3 bg-[#ff3b30] rounded-full"></span>
-          )}
-        </Button>
+        <HoverCard openDelay={0} closeDelay={150}>
+          <HoverCardTrigger asChild>
+            <Button variant="ghost" size="sm" className="relative">
+              <Bell className="h-5 w-5" />
+              {notificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 bg-[#ff3b30] text-[10px] text-white rounded-full flex items-center justify-center">
+                  {notificationCount}
+                </span>
+              )}
+            </Button>
+          </HoverCardTrigger>
+          <HoverCardContent className="w-80 p-0" align="end">
+            <NotificationList notifications={notifications} />
+          </HoverCardContent>
+        </HoverCard>
         <HoverCard
           open={open || selectOpen}
           onOpenChange={handleHoverOpenChange}
