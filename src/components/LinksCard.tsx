@@ -40,7 +40,7 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
 
   return (
     <Card className="flex flex-col h-full overflow-hidden">
-      <CardHeader className="bg-[#ff3b30] text-white px-6 py-4">
+      <CardHeader className="bg-[#ff3b30] text-white p-4">
         <CardTitle className="text-2xl">{title}</CardTitle>
       </CardHeader>
       <CardContent className="p-0 flex flex-col flex-1">
@@ -49,7 +49,7 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
             <li key={link.label}>
               <a
                 href={link.href}
-                className={`flex items-center justify-between px-6 py-2 transition-colors ${
+                className={`flex items-center justify-between px-4 py-2 transition-colors ${
                   link.highlight
                     ? 'bg-[#ff3b30]/10 text-[#ff3b30] font-semibold'
                     : 'hover:bg-muted text-foreground'

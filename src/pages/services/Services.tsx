@@ -103,21 +103,21 @@ export function Services() {
       </Breadcrumb>
 
       <Card>
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <CardHeader className="sm:flex-row sm:items-center sm:justify-between gap-4 p-4">
           <CardTitle className="text-[2.5rem]">Services</CardTitle>
           <Input type="search" placeholder="Rechercher..." className="sm:w-64" />
         </CardHeader>
-        <CardContent className="p-6 space-y-6">
+        <CardContent className="p-4 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="text-xl font-semibold">Interventions en cours (0)</div>
             <Button>Nouvelle demande d'intervention</Button>
           </div>
           <Separator />
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             <QuickAccess items={quickLinks} active={active} />
-            <div className="lg:col-span-3">
+            <div className="md:col-span-4">
               <h3 className="mb-4 font-semibold text-xl">{active}</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {cards.map((card) => (
                   <LinksCard key={card.title} title={card.title} links={card.links} />
                 ))}
