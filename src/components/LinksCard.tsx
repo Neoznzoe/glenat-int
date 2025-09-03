@@ -62,10 +62,8 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
                 {link.type === 'link' || (link.href && !link.type) ? (
                   <a
                     href={link.href}
-                    className={`flex items-center justify-between transition-colors ${
-                      link.highlight
-                        ? 'text-[#ff3b30] font-semibold'
-                        : 'hover:text-[#ff3b30]'
+                    className={`flex w-full items-center justify-between rounded-sm px-2 py-1 transition-colors hover:bg-muted ${
+                      link.highlight ? 'text-[#ff3b30] font-semibold' : ''
                     }`}
                   >
                     <span className={`text-base flex items-center ${slashTextClass}`}>
