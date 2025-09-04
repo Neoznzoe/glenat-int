@@ -63,9 +63,11 @@ export function CatalogueLayout({
     onViewNouveautes,
   );
   return (
-    <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-      <QuickAccess items={quickLinks} active={active} />
-      <div className="md:col-span-4">{children}</div>
+    <div className="flex flex-col md:flex-row gap-6">
+      <div className="w-full md:w-64 shrink">
+        <QuickAccess items={quickLinks} active={active} />
+      </div>
+      <div className="flex-1 shrink-0">{children}</div>
     </div>
   );
 }
