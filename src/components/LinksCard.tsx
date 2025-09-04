@@ -41,7 +41,7 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
   };
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden bg-background">
+    <Card className="flex flex-col h-full overflow-hidden bg-card">
       <CardHeader className="bg-primary text-primary-foreground p-4 flex flex-row items-center justify-between space-y-0">
         <h3 className="text-lg font-semibold leading-none">{title}</h3>
         <CircleHelp className="h-4 w-4" />
@@ -55,7 +55,7 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
             return (
               <li
                 key={link.label}
-                className={`mx-4 pb-2 last:pb-0 ${
+                className={`mx-4 pb-2 last:pb-0 bg-background ${
                   link.separator ? 'border-t border-border pt-2' : ''
                 }`}
               >
