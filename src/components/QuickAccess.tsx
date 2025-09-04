@@ -24,14 +24,7 @@ export function QuickAccess({ items, active }: QuickAccessProps) {
         isSidebarExpanded ? 'md:w-16' : 'md:w-64',
       )}
     >
-      <h3
-        className={cn(
-          'mb-4 font-semibold text-lg',
-          isSidebarExpanded && 'md:sr-only',
-        )}
-      >
-        Accès rapide
-      </h3>
+      <h3 className="mb-4 font-semibold text-lg truncate">Accès rapide</h3>
       <ul className="space-y-2">
         {items.map((item) => (
           <li key={item.label}>
@@ -46,15 +39,14 @@ export function QuickAccess({ items, active }: QuickAccessProps) {
                   active === item.label
                     ? 'bg-muted border-primary text-primary hover:bg-muted hover:text-primary'
                     : 'bg-background border-transparent',
-                  isSidebarExpanded && 'md:p-2 md:justify-center',
+                  isSidebarExpanded && 'md:p-2',
                 )}
               >
-                <item.icon className="h-4 w-4" />
+                <item.icon className="h-4 w-4 flex-shrink-0" />
                 <span
                   className={cn(
-                    'whitespace-nowrap text-sm',
+                    'text-sm truncate',
                     active === item.label && 'font-semibold',
-                    isSidebarExpanded && 'md:hidden',
                   )}
                 >
                   {item.label}
