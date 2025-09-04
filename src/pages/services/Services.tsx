@@ -191,7 +191,7 @@ export function Services({ onViewProduction }: ServicesProps) {
             <QuickAccess items={quickLinks} active="Informatique" />
             <div className="md:col-span-4">
               <h3 className="mb-4 font-semibold text-xl">Informatique</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {cards.map((card) => (
                   <LinksCard key={card.title} title={card.title} links={card.links} />
                 ))}
