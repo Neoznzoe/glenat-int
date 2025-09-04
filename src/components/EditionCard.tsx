@@ -11,7 +11,7 @@ export function EditionCard({ title, color, logo }: EditionCardProps) {
   return (
     <Card className="overflow-hidden">
       <div
-        className="flex items-center gap-2 p-3 text-[#262626]"
+        className="flex items-center gap-2 p-3 text-foreground"
         style={{ backgroundColor: `var(${color})` }}
       >
         {logo ? (

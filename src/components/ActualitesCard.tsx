@@ -44,7 +44,7 @@ export function ActualitesCard() {
 
   return (
     <Card className="lg:col-span-2 overflow-hidden">
-      <CardHeader className="bg-[#ff3b30] text-white px-6 py-4">
+      <CardHeader className="bg-primary text-primary-foreground px-6 py-4">
         <CardTitle className="flex items-center space-x-2">
           <HomeIcon className="h-5 w-5" />
           <span>Actualités</span>

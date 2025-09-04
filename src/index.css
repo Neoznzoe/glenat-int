@@ -49,6 +49,13 @@
   --chart-3: #706677;
   --chart-4: #ccb7ae;
   --chart-5: #d6cfcb;
+  --calendar-institution-bg: #d9f99d;
+  --calendar-institution-fg: #365314;
+  --calendar-other-bg: #fde047;
+  --calendar-other-fg: #78350f;
+  --calendar-holiday-bg: #0369a1;
+  --calendar-single-bg: #0ea5e9;
+  --primary-hover: #e0241b;
   --sidebar: #f9fafb;
   --sidebar-foreground: #262626;
   --sidebar-primary: #f59e0b;
@@ -102,6 +109,13 @@
   --chart-3: #ccb7ae;
   --chart-4: #706677;
   --chart-5: #565264;
+  --calendar-institution-bg: #d9f99d;
+  --calendar-institution-fg: #365314;
+  --calendar-other-bg: #fde047;
+  --calendar-other-fg: #78350f;
+  --calendar-holiday-bg: #0369a1;
+  --calendar-single-bg: #0ea5e9;
+  --primary-hover: #e0241b;
   --sidebar: #0f0f0f;
   --sidebar-foreground: #e5e5e5;
   --sidebar-primary: #f59e0b;
@@ -260,8 +274,6 @@
 
 :root {
   /* Couleurs personnalisées */
-  --sidebar-red: #ff3b30;
-  --sidebar-red-hover: #e6342a;
   --text-dark: #1f2937;
   --text-medium: #4b5563;
   --text-light: #6b7280;
@@ -294,22 +306,6 @@ body {
 }
 
 /* Utilitaires personnalisés */
-.sidebar-red {
-  background-color: var(--sidebar-red);
-}
-
-.sidebar-red-hover:hover {
-  background-color: var(--sidebar-red-hover);
-}
-
-.text-sidebar-red {
-  color: var(--sidebar-red);
-}
-
-.border-sidebar-red {
-  border-color: var(--sidebar-red);
-}
-
 /* Animations et transitions */
 .transition-smooth {
   transition: all 0.2s ease-in-out;
@@ -345,8 +341,8 @@ body {
 
 /* Styles pour les boutons */
 .btn-primary {
-  background-color: var(--sidebar-red);
-  color: white;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
   border: none;
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--radius-md);
@@ -355,7 +351,7 @@ body {
 }
 
 .btn-primary:hover {
-  background-color: var(--sidebar-red-hover);
+  background-color: var(--primary-hover);
 }
 
 /* Responsive design */
@@ -372,7 +368,7 @@ body {
 
 /* Focus states pour l'accessibilité */
 .focus-ring:focus {
-  outline: 2px solid var(--sidebar-red);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
@@ -397,8 +393,8 @@ body {
   position: absolute;
   top: -4px;
   right: -4px;
-  background-color: var(--sidebar-red);
-  color: white;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
   border-radius: 50%;
   width: 12px;
   height: 12px;

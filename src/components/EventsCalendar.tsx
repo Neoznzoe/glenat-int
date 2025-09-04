@@ -136,12 +136,20 @@ export function EventsCalendar() {
             }),
           }}
           modifiersClassNames={{
-            institution: 'bg-lime-200 text-lime-800',
-            other: 'bg-yellow-200 text-yellow-800',
+            institution:
+              'bg-[var(--calendar-institution-bg)] text-[var(--calendar-institution-fg)]',
+            other:
+              'bg-[var(--calendar-other-bg)] text-[var(--calendar-other-fg)]',
           }}
           modifiersStyles={{
-            holiday: { backgroundColor: '#0369a1', color: 'white' },
-            single: { backgroundColor: '#0ea5e9', color: 'white' },
+            holiday: {
+              backgroundColor: 'var(--calendar-holiday-bg)',
+              color: 'var(--primary-foreground)',
+            },
+            single: {
+              backgroundColor: 'var(--calendar-single-bg)',
+              color: 'var(--primary-foreground)',
+            },
           }}
           components={{
             Day: (
@@ -210,29 +218,29 @@ export function EventsCalendar() {
 
               if (type === 'institution') {
                 applyRangeStyle(
-                  '#d9f99d',
-                  '#365314',
+                  'var(--calendar-institution-bg)',
+                  'var(--calendar-institution-fg)',
                   prevType === 'institution',
                   nextType === 'institution'
                 );
               } else if (type === 'other') {
                 applyRangeStyle(
-                  '#fde047',
-                  '#78350f',
+                  'var(--calendar-other-bg)',
+                  'var(--calendar-other-fg)',
                   prevType === 'other',
                   nextType === 'other'
                 );
               } else if (type === 'holiday') {
                 customStyle = {
                   ...customStyle,
-                  backgroundColor: '#0369a1',
-                  color: 'white',
+                  backgroundColor: 'var(--calendar-holiday-bg)',
+                  color: 'var(--primary-foreground)',
                   borderRadius: '6px',
                 };
               } else if (type === 'weekend') {
                 applyRangeStyle(
-                  theme === 'dark' ? '#171717' : '#F4F5F6',
-                  theme === 'dark' ? '#a3a3a3' : '#C6CBD2',
+                  theme === 'dark' ? 'var(--background)' : 'var(--secondary)',
+                  'var(--muted-foreground)',
                   prevType === 'weekend',
                   nextType === 'weekend'
                 );
@@ -240,7 +248,10 @@ export function EventsCalendar() {
                   customStyle = {
                   ...customStyle,
                   backgroundColor: 'transparent',
-                  color: theme === 'dark' ? '#545964' : '#E9EBED',
+                  color:
+                    theme === 'dark'
+                      ? 'var(--muted-foreground)'
+                      : 'var(--muted)',
                   borderRadius: 0,
                   marginLeft: 0,
                   marginRight: 0,

@@ -55,7 +55,7 @@ export function Sidebar({ activePage, onNavigate, jobCount }: SidebarProps) {
 
   return (
     <div
-      className={`bg-[#ff3b30] text-white flex flex-col h-screen transition-all duration-300 ease-in-out relative ${
+      className={`bg-primary text-primary-foreground flex flex-col h-screen transition-all duration-300 ease-in-out relative ${
         isExpanded ? 'w-64' : 'w-16'
       }`}
       onMouseEnter={() => setIsHovered(true)}
@@ -110,7 +110,7 @@ export function Sidebar({ activePage, onNavigate, jobCount }: SidebarProps) {
                         {item.label}
                       </span>
                       {item.badge ? (
-                        <span className="absolute -top-[5px] -right-[5px] bg-white text-[#ff3b30] text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                        <span className="absolute -top-[5px] -right-[5px] bg-white text-primary text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                           {item.badge}
                         </span>
                       ) : null}

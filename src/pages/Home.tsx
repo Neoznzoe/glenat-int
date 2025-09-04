@@ -183,7 +183,7 @@ export function Home() {
       label: 'opérations informatiques en cours',
       href: '#',
       badge: '74',
-      badgeColor: 'bg-[#ff3b30]',
+      badgeColor: 'bg-primary',
       highlight: true,
       badgePosition: 'left',
     },
@@ -268,7 +268,7 @@ export function Home() {
               <p className="text-base lg:text-lg font-semibold">
                 Bonjour {userName}
               </p>
-              <p className="text-base lg:text-lg font-semibold text-[#ff3b30]">
+              <p className="text-base lg:text-lg font-semibold text-primary">
                 Bonne journée !
               </p>
             </div>
