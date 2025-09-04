@@ -188,10 +188,10 @@ export function Services({ onViewProduction }: ServicesProps) {
           </div>
           <Separator />
           <div className="pt-2 flex flex-col md:flex-row gap-6">
-            <div className="w-full md:w-64 shrink">
+            <div className="min-w-0 w-full md:w-64 shrink">
               <QuickAccess items={quickLinks} active="Informatique" />
             </div>
-            <div className="flex-1 shrink-0">
+            <div className="flex-auto shrink-0">
               <h3 className="mb-4 font-semibold text-xl">Informatique</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {cards.map((card) => (

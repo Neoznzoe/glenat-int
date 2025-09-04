@@ -64,10 +64,10 @@ export function CatalogueLayout({
   );
   return (
     <div className="flex flex-col md:flex-row gap-6">
-      <div className="w-full md:w-64 shrink">
+      <div className="min-w-0 w-full md:w-64 shrink">
         <QuickAccess items={quickLinks} active={active} />
       </div>
-      <div className="flex-1 shrink-0">{children}</div>
+      <div className="flex-auto shrink-0">{children}</div>
     </div>
   );
 }
