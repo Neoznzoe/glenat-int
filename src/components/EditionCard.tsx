@@ -19,7 +19,9 @@ export function EditionCard({ title, color, logo }: EditionCardProps) {
         ) : (
           <BookOpen className="h-4 w-4" />
         )}
-        <span className="font-semibold text-lg">{title}</span>
+        <span className="font-semibold text-lg" style={{ color: 'var(--black)' }}>
+          {title}
+        </span>
       </div>
       <CardContent className="p-4 bg-background">
         <ul className="text-sm space-y-1">
