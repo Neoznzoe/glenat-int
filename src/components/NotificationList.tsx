@@ -31,7 +31,7 @@ export default function NotificationList({ notifications }: Props) {
               className="flex w-full items-center justify-between border px-3 py-2 rounded bg-background hover:bg-muted"
             >
               <div className="flex items-center space-x-2 pr-2">
-                <span className="flex-shrink-0 bg-[#ff3b30] text-white text-[10px] font-semibold w-6 h-6 rounded flex items-center justify-center">
+                <span className="flex-shrink-0 bg-primary text-primary-foreground text-[10px] font-semibold w-6 h-6 rounded flex items-center justify-center">
                   {n.count}
                 </span>
                 <span className="text-foreground text-xs leading-tight">{n.label}</span>

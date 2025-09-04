@@ -58,7 +58,7 @@ export function BookCard({
       >
         {ribbonText && (
           <div className="pointer-events-none absolute top-4 -right-8 rotate-45 z-20">
-            <span className="block w-[120px] text-center bg-[#ff3b30] text-white uppercase text-[10px] leading-4 font-semibold tracking-wide py-1 shadow-md">
+            <span className="block w-[120px] text-center bg-primary text-primary-foreground uppercase text-[10px] leading-4 font-semibold tracking-wide py-1 shadow-md">
               {ribbonText}
             </span>
           </div>

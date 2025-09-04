@@ -15,11 +15,11 @@ export const jobOffers: JobOfferProps[] = [
         'Le Groupe Glénat recherche pour son service éditorial livres, un·e chargé·e de développement commercial (F/H).',
       subtitle: 'Chargé·e de développement commercial (F/H)',
       jobInfo: [
-        { icon: MapPin, text: 'Grenoble', color: 'text-[#004072]' },
-        { icon: Briefcase, text: 'CDI', sub: 'dès que possible', color: 'text-[#00D27A]' },
+        { icon: MapPin, text: 'Grenoble', color: 'text-[var(--glenat-livre)]' },
+        { icon: Briefcase, text: 'CDI', sub: 'dès que possible', color: 'text-[var(--glenat-jeunesse)]' },
         { icon: User, text: 'Contact', sub: 'Anais Grillet', color: 'text-primary' },
-        { icon: CalendarDays, text: 'Annonce du :', sub: '25/07/2025', color: 'text-[#F5803E]' },
-        { icon: Wallet, text: 'Rémunération', sub: 'A définir selon le profil.', color: 'text-[#27BCFD]' },
+        { icon: CalendarDays, text: 'Annonce du :', sub: '25/07/2025', color: 'text-[var(--glenat-manga)]' },
+        { icon: Wallet, text: 'Rémunération', sub: 'A définir selon le profil.', color: 'text-[var(--glenat-livre)]' },
       ],
       resume:
         '',
@@ -46,13 +46,13 @@ export const jobOffers: JobOfferProps[] = [
         {
           icon: MapPin,
           text: 'Boulogne-Billancourt (92)',
-          color: 'text-[#004072]',
+          color: 'text-[var(--glenat-livre)]',
         },
         {
           icon: Briefcase,
           text: 'CDD',
           sub: '03/11/2025–14/03/2026',
-          color: 'text-[#00D27A]',
+          color: 'text-[var(--glenat-jeunesse)]',
         },
         {
           icon: User,
@@ -64,13 +64,13 @@ export const jobOffers: JobOfferProps[] = [
           icon: CalendarDays,
           text: 'Annonce du :',
           sub: '31/07/2025',
-          color: 'text-[#F5803E]',
+          color: 'text-[var(--glenat-manga)]',
         },
         {
           icon: Wallet,
           text: 'Rémunération',
           sub: 'À définir selon profil',
-          color: 'text-[#27BCFD]',
+          color: 'text-[var(--glenat-livre)]',
         },
       ],
       resume:

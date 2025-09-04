@@ -42,7 +42,7 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
 
   return (
     <Card className="flex flex-col h-full overflow-hidden bg-background">
-      <CardHeader className="bg-[#ff3b30] text-white p-4 flex flex-row items-center justify-between space-y-0">
+      <CardHeader className="bg-primary text-primary-foreground p-4 flex flex-row items-center justify-between space-y-0">
         <h3 className="text-lg font-semibold leading-none">{title}</h3>
         <CircleHelp className="h-4 w-4" />
       </CardHeader>
@@ -63,7 +63,7 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
                   <a
                     href={link.href}
                     className={`flex w-full items-center justify-between rounded-sm transition-colors hover:bg-muted/80 ${
-                      link.highlight ? 'text-[#ff3b30] font-semibold' : ''
+                    link.highlight ? 'text-primary font-semibold' : ''
                     }`}
                   >
                     <span className={`text-base flex items-center ${slashTextClass}`}>
