@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SidebarContext } from './context/SidebarContext';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { Home } from './pages/Home';
@@ -14,72 +15,76 @@ import { Toaster } from '@/components/ui/sonner';
 
 function App() {
   const [activePage, setActivePage] = useState('home');
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const jobCount = jobOffers.length;
 
   return (
-    <>
-      <div className="flex h-screen bg-background text-foreground overflow-hidden">
-        <Sidebar
-          activePage={activePage.startsWith('services') ? 'services' : activePage}
-          onNavigate={setActivePage}
-          jobCount={jobCount}
-        />
-        <div className="flex-1 flex flex-col">
-          <Topbar />
-          <main className="flex-1 overflow-auto">
-            {activePage === 'home' && <Home />}
-            {activePage === 'emploi' && <Emploi />}
-            {activePage === 'services' && (
-              <Services onViewProduction={() => setActivePage('servicesProduction')} />
-            )}
-            {activePage === 'servicesProduction' && (
-              <Production onViewInformatique={() => setActivePage('services')} />
-            )}
-            {activePage === 'catalogue' && (
-              <Catalogue
-                onViewAll={() => setActivePage('catalogueAll')}
-                onViewKiosque={() => setActivePage('kiosque')}
-                onViewOffices={() => setActivePage('offices')}
-                onViewNouveautes={() => setActivePage('nouveautes')}
-              />
-            )}
-            {activePage === 'catalogueAll' && (
-              <CatalogueAll
-                onBackToCatalogue={() => setActivePage('catalogue')}
-                onViewKiosque={() => setActivePage('kiosque')}
-                onViewOffices={() => setActivePage('offices')}
-                onViewNouveautes={() => setActivePage('nouveautes')}
-              />
-            )}
-            {activePage === 'kiosque' && (
-              <Kiosque
-                onBackToCatalogue={() => setActivePage('catalogue')}
-                onViewAll={() => setActivePage('catalogueAll')}
-                onViewOffices={() => setActivePage('offices')}
-                onViewNouveautes={() => setActivePage('nouveautes')}
-              />
-            )}
-            {activePage === 'offices' && (
-              <Offices
-                onBackToCatalogue={() => setActivePage('catalogue')}
-                onViewAll={() => setActivePage('catalogueAll')}
-                onViewKiosque={() => setActivePage('kiosque')}
-                onViewNouveautes={() => setActivePage('nouveautes')}
-              />
-            )}
-            {activePage === 'nouveautes' && (
-              <Nouveautes
-                onBackToCatalogue={() => setActivePage('catalogue')}
-                onViewAll={() => setActivePage('catalogueAll')}
-                onViewKiosque={() => setActivePage('kiosque')}
-                onViewOffices={() => setActivePage('offices')}
-              />
-            )}
-          </main>
+    <SidebarContext.Provider value={isSidebarExpanded}>
+      <>
+        <div className="flex h-screen bg-background text-foreground overflow-hidden">
+          <Sidebar
+            activePage={activePage.startsWith('services') ? 'services' : activePage}
+            onNavigate={setActivePage}
+            jobCount={jobCount}
+            onExpandChange={setIsSidebarExpanded}
+          />
+          <div className="flex-1 flex flex-col">
+            <Topbar />
+            <main className="flex-1 overflow-auto">
+              {activePage === 'home' && <Home />}
+              {activePage === 'emploi' && <Emploi />}
+              {activePage === 'services' && (
+                <Services onViewProduction={() => setActivePage('servicesProduction')} />
+              )}
+              {activePage === 'servicesProduction' && (
+                <Production onViewInformatique={() => setActivePage('services')} />
+              )}
+              {activePage === 'catalogue' && (
+                <Catalogue
+                  onViewAll={() => setActivePage('catalogueAll')}
+                  onViewKiosque={() => setActivePage('kiosque')}
+                  onViewOffices={() => setActivePage('offices')}
+                  onViewNouveautes={() => setActivePage('nouveautes')}
+                />
+              )}
+              {activePage === 'catalogueAll' && (
+                <CatalogueAll
+                  onBackToCatalogue={() => setActivePage('catalogue')}
+                  onViewKiosque={() => setActivePage('kiosque')}
+                  onViewOffices={() => setActivePage('offices')}
+                  onViewNouveautes={() => setActivePage('nouveautes')}
+                />
+              )}
+              {activePage === 'kiosque' && (
+                <Kiosque
+                  onBackToCatalogue={() => setActivePage('catalogue')}
+                  onViewAll={() => setActivePage('catalogueAll')}
+                  onViewOffices={() => setActivePage('offices')}
+                  onViewNouveautes={() => setActivePage('nouveautes')}
+                />
+              )}
+              {activePage === 'offices' && (
+                <Offices
+                  onBackToCatalogue={() => setActivePage('catalogue')}
+                  onViewAll={() => setActivePage('catalogueAll')}
+                  onViewKiosque={() => setActivePage('kiosque')}
+                  onViewNouveautes={() => setActivePage('nouveautes')}
+                />
+              )}
+              {activePage === 'nouveautes' && (
+                <Nouveautes
+                  onBackToCatalogue={() => setActivePage('catalogue')}
+                  onViewAll={() => setActivePage('catalogueAll')}
+                  onViewKiosque={() => setActivePage('kiosque')}
+                  onViewOffices={() => setActivePage('offices')}
+                />
+              )}
+            </main>
+          </div>
         </div>
-      </div>
-      <Toaster />
-    </>
+        <Toaster />
+      </>
+    </SidebarContext.Provider>
   );
 }
 

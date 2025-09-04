@@ -18,7 +18,7 @@ import {
   LibraryBig,
   Newspaper,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoG from '../assets/logos/glenat/glenat_G.svg';
 
@@ -26,13 +26,18 @@ interface SidebarProps {
   activePage: string;
   onNavigate: (page: string) => void;
   jobCount: number;
+  onExpandChange?: (expanded: boolean) => void;
 }
 
-export function Sidebar({ activePage, onNavigate, jobCount }: SidebarProps) {
+export function Sidebar({ activePage, onNavigate, jobCount, onExpandChange }: SidebarProps) {
   const [isPinned, setIsPinned] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
   const isExpanded = isPinned || isHovered;
+
+  useEffect(() => {
+    onExpandChange?.(isExpanded);
+  }, [isExpanded, onExpandChange]);
 
   const menuItems = [
     { id: 'home', icon: Home, label: 'Accueil' },
