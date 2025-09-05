@@ -1,7 +1,6 @@
 import { LucideIcon } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { useSidebar } from '@/context/SidebarContext';
 
 export interface QuickAccessItem {
   label: string;
@@ -16,14 +15,8 @@ export interface QuickAccessProps {
 }
 
 export function QuickAccess({ items, active }: QuickAccessProps) {
-  const isSidebarExpanded = useSidebar();
   return (
-    <div
-      className={cn(
-        'w-full transition-[width] md:shrink-0',
-        isSidebarExpanded ? 'md:w-48' : 'md:w-64',
-      )}
-    >
+    <div className="w-full md:w-64 md:shrink-0">
       <h3 className="mb-4 font-semibold text-lg">Accès rapide</h3>
       <ul className="space-y-2">
         {items.map((item) => (
