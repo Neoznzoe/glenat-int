@@ -15,15 +15,9 @@ import UniversBD from '@/assets/logos/univers/univers-bd.svg';
 import UniversJeune from '@/assets/logos/univers/univers-jeunesse.svg';
 import UniversLivre from '@/assets/logos/univers/univers-livres.svg';
 import UniversManga from '@/assets/logos/univers/univers-manga.svg';
+import { Link } from 'react-router-dom';
 
-interface CatalogueProps {
-  onViewAll: () => void;
-  onViewKiosque: () => void;
-  onViewOffices: () => void;
-  onViewNouveautes: () => void;
-}
-
-export function Catalogue({ onViewAll, onViewKiosque, onViewOffices, onViewNouveautes }: CatalogueProps) {
+export function Catalogue() {
   const editions = [
     { title: 'Adonis', color: '--glenat-bd', logo: UniversBD },
     { title: 'Blanche', color: '--glenat-livre', logo: UniversLivre },
@@ -46,11 +40,15 @@ export function Catalogue({ onViewAll, onViewKiosque, onViewOffices, onViewNouve
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="#">Accueil</BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link to="/">Accueil</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href="#">Catalogue</BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link to="/catalogue">Catalogue</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -68,13 +66,7 @@ export function Catalogue({ onViewAll, onViewKiosque, onViewOffices, onViewNouve
           <Separator />
         </div>
         <CardContent className="p-6">
-          <CatalogueLayout
-            active="Éditions"
-            onViewAll={onViewAll}
-            onViewKiosque={onViewKiosque}
-            onViewOffices={onViewOffices}
-            onViewNouveautes={onViewNouveautes}
-          >
+          <CatalogueLayout active="Éditions">
             <h3 className="mb-4 font-semibold text-xl">Éditions</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {editions.map((ed) => (

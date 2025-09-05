@@ -15,19 +15,13 @@ import {
 } from 'lucide-react';
 import { ReactNode } from 'react';
 
-const getQuickLinks = (
-  onViewEditions?: () => void,
-  onViewAll?: () => void,
-  onViewKiosque?: () => void,
-  onViewOffices?: () => void,
-  onViewNouveautes?: () => void,
-): QuickAccessItem[] => [
-  { label: 'Éditions', icon: Building, onClick: onViewEditions },
-  { label: 'Tout le catalogue', icon: BookOpen, onClick: onViewAll },
-  { label: 'Kiosque', icon: Store, onClick: onViewKiosque },
+const quickLinks: QuickAccessItem[] = [
+  { label: 'Éditions', icon: Building, href: '/catalogue' },
+  { label: 'Tout le catalogue', icon: BookOpen, href: '/catalogue/all' },
+  { label: 'Kiosque', icon: Store, href: '/catalogue/kiosque' },
   { label: 'Les auteurs', icon: UserPen },
-  { label: 'Prochaines offices', icon: CalendarDays, onClick: onViewOffices },
-  { label: 'Dernières nouveautés', icon: Sparkles, onClick: onViewNouveautes },
+  { label: 'Prochaines offices', icon: CalendarDays, href: '/catalogue/offices' },
+  { label: 'Dernières nouveautés', icon: Sparkles, href: '/catalogue/nouveautes' },
   { label: 'Top des commandes', icon: TrendingUp },
   { label: 'Newsletter journaliste', icon: Mail },
   { label: 'Couverture à paraître', icon: Image },
@@ -39,29 +33,9 @@ const getQuickLinks = (
 interface CatalogueLayoutProps {
   children: ReactNode;
   active: string;
-  onViewEditions?: () => void;
-  onViewAll?: () => void;
-  onViewKiosque?: () => void;
-  onViewOffices?: () => void;
-  onViewNouveautes?: () => void;
 }
 
-export function CatalogueLayout({
-  children,
-  active,
-  onViewEditions,
-  onViewAll,
-  onViewKiosque,
-  onViewOffices,
-  onViewNouveautes,
-}: CatalogueLayoutProps) {
-  const quickLinks = getQuickLinks(
-    onViewEditions,
-    onViewAll,
-    onViewKiosque,
-    onViewOffices,
-    onViewNouveautes,
-  );
+export function CatalogueLayout({ children, active }: CatalogueLayoutProps) {
   return (
     <div className="flex flex-col md:flex-row gap-6">
       <QuickAccess items={quickLinks} active={active} />

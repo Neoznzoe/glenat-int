@@ -13,15 +13,12 @@ import { Button } from '@/components/ui/button';
 import QuickAccess, { QuickAccessItem } from '@/components/QuickAccess';
 import LinksCard, { LinkItem } from '@/components/LinksCard';
 import { Monitor, Package } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-interface ServicesProps {
-  onViewProduction: () => void;
-}
-
-export function Services({ onViewProduction }: ServicesProps) {
+export function Services() {
   const quickLinks: QuickAccessItem[] = [
-    { label: 'Informatique', icon: Monitor },
-    { label: 'Production', icon: Package, onClick: onViewProduction },
+    { label: 'Informatique', icon: Monitor, href: '/services' },
+    { label: 'Production', icon: Package, href: '/services/production' },
   ];
 
   const cards: { title: string; links: LinkItem[] }[] = [
@@ -163,11 +160,15 @@ export function Services({ onViewProduction }: ServicesProps) {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="#">Accueil</BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link to="/">Accueil</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href="#">Services</BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link to="/services">Services</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>

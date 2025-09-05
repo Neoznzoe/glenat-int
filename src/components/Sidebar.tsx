@@ -19,17 +19,16 @@ import {
   Newspaper,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoG from '../assets/logos/glenat/glenat_G.svg';
 
 interface SidebarProps {
-  activePage: string;
-  onNavigate: (page: string) => void;
   jobCount: number;
   onExpandChange?: (expanded: boolean) => void;
 }
 
-export function Sidebar({ activePage, onNavigate, jobCount, onExpandChange }: SidebarProps) {
+export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const [isPinned, setIsPinned] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -40,23 +39,25 @@ export function Sidebar({ activePage, onNavigate, jobCount, onExpandChange }: Si
   }, [isExpanded, onExpandChange]);
 
   const menuItems = [
-    { id: 'home', icon: Home, label: 'Accueil' },
-    { id: 'qui', icon: UserRoundSearch, label: 'Qui fait quoi' },
-    { id: 'catalogue', icon: LibraryBig, label: "Catalogue" },
-    { id: 'doc', icon: Files, label: "Glénat'Doc" },
-    { id: 'fee', icon: Users, label: "Glénat'Fée" },
-    { id: 'agenda', icon: Calendar, label: 'Agenda' },
-    { id: 'planning', icon: CalendarDays, label: 'Planning' },
-    { id: 'contrats', icon: Signature, label: 'Contrats' },
-    { id: 'rh', icon: PersonStanding, label: 'Ressources humaines' },
-    { id: 'temps', icon: CalendarClock, label: 'Saisie des temps' },
-    { id: 'atelier', icon: Hammer, label: 'Travaux atelier' },
-    { id: 'espace', icon: SquareUserRound, label: 'Mon espace' },
-    { id: 'emploi', icon: BriefcaseBusiness, label: 'Emploi', badge: jobCount },
-    { id: 'annonces', icon: Newspaper, label: 'Petites annonces' },
-    { id: 'services', icon: Info, label: 'Services' },
-    { id: 'administration', icon: Settings, label: 'Administration' },
+    { id: 'home', icon: Home, label: 'Accueil', path: '/' },
+    { id: 'qui', icon: UserRoundSearch, label: 'Qui fait quoi', path: '/qui' },
+    { id: 'catalogue', icon: LibraryBig, label: 'Catalogue', path: '/catalogue' },
+    { id: 'doc', icon: Files, label: "Glénat'Doc", path: '/doc' },
+    { id: 'fee', icon: Users, label: "Glénat'Fée", path: '/fee' },
+    { id: 'agenda', icon: Calendar, label: 'Agenda', path: '/agenda' },
+    { id: 'planning', icon: CalendarDays, label: 'Planning', path: '/planning' },
+    { id: 'contrats', icon: Signature, label: 'Contrats', path: '/contrats' },
+    { id: 'rh', icon: PersonStanding, label: 'Ressources humaines', path: '/rh' },
+    { id: 'temps', icon: CalendarClock, label: 'Saisie des temps', path: '/temps' },
+    { id: 'atelier', icon: Hammer, label: 'Travaux atelier', path: '/atelier' },
+    { id: 'espace', icon: SquareUserRound, label: 'Mon espace', path: '/espace' },
+    { id: 'emploi', icon: BriefcaseBusiness, label: 'Emploi', path: '/emploi', badge: jobCount },
+    { id: 'annonces', icon: Newspaper, label: 'Petites annonces', path: '/annonces' },
+    { id: 'services', icon: Info, label: 'Services', path: '/services' },
+    { id: 'administration', icon: Settings, label: 'Administration', path: '/administration' },
   ];
+
+  const location = useLocation();
 
   return (
     <div
@@ -93,12 +94,13 @@ export function Sidebar({ activePage, onNavigate, jobCount, onExpandChange }: Si
             {menuItems
               .filter(item => item.id !== 'administration')
               .map(item => {
-                const isActive = item.id === activePage;
+                const isActive = item.path === '/'
+                  ? location.pathname === '/'
+                  : location.pathname.startsWith(item.path);
                 return (
                   <li key={item.id}>
-                    <button
-                      type="button"
-                      onClick={() => onNavigate(item.id)}
+                    <NavLink
+                      to={item.path}
                       className={`relative flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
                         isActive
                           ? 'bg-white/20 text-white'
@@ -119,7 +121,7 @@ export function Sidebar({ activePage, onNavigate, jobCount, onExpandChange }: Si
                           {item.badge}
                         </span>
                       ) : null}
-                    </button>
+                    </NavLink>
                   </li>
                 );
               })}
@@ -132,12 +134,13 @@ export function Sidebar({ activePage, onNavigate, jobCount, onExpandChange }: Si
             {menuItems
               .filter(item => item.id === 'administration')
               .map(item => {
-                const isActive = item.id === activePage;
+                const isActive = item.path === '/'
+                  ? location.pathname === '/'
+                  : location.pathname.startsWith(item.path);
                 return (
                   <li key={item.id}>
-                    <button
-                      type="button"
-                      onClick={() => onNavigate(item.id)}
+                    <NavLink
+                      to={item.path}
                       className={`flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
                         isActive
                           ? 'bg-white/20 text-white'
@@ -153,7 +156,7 @@ export function Sidebar({ activePage, onNavigate, jobCount, onExpandChange }: Si
                       >
                         {item.label}
                       </span>
-                    </button>
+                    </NavLink>
                   </li>
                 );
               })}
