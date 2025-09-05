@@ -52,6 +52,11 @@ export function Topbar() {
   const [open, setOpen] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
   const [searchScope, setSearchScope] = useState('catalogue');
+  const scopeLabels = {
+    catalogue: 'Catalogue',
+    glenatdoc: "Glénat'doc",
+    'qui-fait-quoi': 'Qui fait quoi',
+  } as const;
 
   // Prevent the hover card from briefly closing when interacting with the
   // quantity selector inside the cart summary. If the select dropdown is open,
@@ -70,20 +75,20 @@ export function Topbar() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Rechercher..."
-              className="pl-10 bg-muted border-input focus:bg-background"
+              placeholder={`Rechercher dans ${scopeLabels[searchScope]}`}
+              className="pl-10 pr-36 bg-muted border-input focus:bg-background"
             />
+            <Select value={searchScope} onValueChange={setSearchScope}>
+              <SelectTrigger className="absolute top-0 right-0 h-full w-36 border-l border-input bg-muted pr-8 pl-2 text-sm focus:ring-0 focus:ring-offset-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="catalogue">Catalogue</SelectItem>
+                <SelectItem value="glenatdoc">Glénat'doc</SelectItem>
+                <SelectItem value="qui-fait-quoi">Qui fait quoi</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Select value={searchScope} onValueChange={setSearchScope}>
-            <SelectTrigger className="w-[9rem]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="catalogue">Catalogue</SelectItem>
-              <SelectItem value="glenatdoc">Glénat'doc</SelectItem>
-              <SelectItem value="qui-fait-quoi">Qui fait quoi</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
