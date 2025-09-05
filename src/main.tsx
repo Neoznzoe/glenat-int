@@ -14,7 +14,7 @@ const queryClient = new QueryClient();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <MsalProvider instance={msalInstance}>
+    {/* <MsalProvider instance={msalInstance}> */}
       <Provider store={store}>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
@@ -24,6 +24,6 @@ createRoot(document.getElementById('root')!).render(
           </ThemeProvider>
         </QueryClientProvider>
       </Provider>
-    </MsalProvider>
+    {/* </MsalProvider> */}
   </StrictMode>,
 );

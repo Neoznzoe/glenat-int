@@ -384,7 +384,7 @@ export function Kiosque() {
         <CardContent className="p-6">
           <CatalogueLayout active="Kiosque">
             <h3 className="mb-4 font-semibold text-xl">Kiosque</h3>
-            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 bg-ba">
               {sortedKiosques.map(kiosque => {
                 const headerValue =
                   sortField === 'views'
@@ -395,7 +395,7 @@ export function Kiosque() {
 
                 return (
                   <Fragment key={kiosque.office}>
-                    <Card className="col-span-full">
+                    <Card className="col-span-full bg-background">
                       <CardHeader className="py-2">
                         <CardTitle className="text-lg">
                           {`${infoLabel} : ${headerValue}`}

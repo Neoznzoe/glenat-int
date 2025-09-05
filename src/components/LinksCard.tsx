@@ -41,12 +41,12 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
   };
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden bg-background">
+    <Card className="flex flex-col h-full overflow-hidden">
       <CardHeader className="bg-primary text-primary-foreground p-4 flex flex-row items-center justify-between space-y-0">
         <h3 className="text-lg font-semibold leading-none">{title}</h3>
         <CircleHelp className="h-4 w-4" />
       </CardHeader>
-      <CardContent className="p-0 flex flex-col flex-1">
+      <CardContent className="p-0 flex flex-col flex-1 bg-background">
         <ul className="flex-1 py-4">
           {displayed.map((link) => {
             const slashTextClass = link.label.includes('/')

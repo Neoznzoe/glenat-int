@@ -229,7 +229,7 @@ export function Nouveautes() {
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
               {sortedReleases.map(group => (
                 <Fragment key={group.date}>
-                  <Card className="col-span-full w-fit min-w-[280px]">
+                  <Card className="col-span-full w-fit min-w-[280px] bg-background">
                     <CardHeader className="py-2">
                       <CardTitle className="text-lg">
                         Date de sortie : {group.date}

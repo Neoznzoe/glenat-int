@@ -68,4 +68,3 @@ Ce document décrit pas à pas le fonctionnement de l'application **glenat-int**
 6. Les effets (`useEffect`, notifications toast) mettent à jour l'interface lorsque les données changent.
 
 Ce texte peut être adapté pour une présentation ou une formation afin d'expliquer clairement chaque couche de l'application.
-
