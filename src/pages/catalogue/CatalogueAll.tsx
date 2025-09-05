@@ -24,15 +24,9 @@ import Shangri17 from '@/assets/images/shangri-17.webp';
 import Momie from '@/assets/images/momie-bandelette.webp';
 import Cemotions from '@/assets/images/couleurs-emotions.webp';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
-interface CatalogueAllProps {
-  onBackToCatalogue?: () => void;
-  onViewKiosque?: () => void;
-  onViewOffices?: () => void;
-  onViewNouveautes?: () => void;
-}
-
-export function CatalogueAll({ onBackToCatalogue, onViewKiosque, onViewOffices, onViewNouveautes }: CatalogueAllProps) {
+export function CatalogueAll() {
   const filters = [
     'Toutes',
     'BD',
@@ -171,12 +165,14 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque, onViewOffices, 
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="#">Accueil</BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link to="/">Accueil</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href="#" onClick={onBackToCatalogue}>
-              Catalogue
+            <BreadcrumbLink asChild>
+              <Link to="/catalogue">Catalogue</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -209,13 +205,7 @@ export function CatalogueAll({ onBackToCatalogue, onViewKiosque, onViewOffices, 
           <Separator />
         </div>
         <CardContent className="p-6">
-          <CatalogueLayout
-            active="Tout le catalogue"
-            onViewEditions={onBackToCatalogue}
-            onViewKiosque={onViewKiosque}
-            onViewOffices={onViewOffices}
-            onViewNouveautes={onViewNouveautes}
-          >
+          <CatalogueLayout active="Tout le catalogue">
             <h3 className="mb-4 font-semibold text-xl">Tout le catalogue</h3>
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
               {books.map(book => (

@@ -8,6 +8,7 @@ import './index.css';
 import { ThemeProvider } from './components/ThemeProvider';
 import { store } from './store';
 import { msalInstance } from './lib/msal';
+import { BrowserRouter } from 'react-router-dom';
 
 const queryClient = new QueryClient();
 
@@ -17,7 +18,9 @@ createRoot(document.getElementById('root')!).render(
       <Provider store={store}>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
-            <App />
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
           </ThemeProvider>
         </QueryClientProvider>
       </Provider>

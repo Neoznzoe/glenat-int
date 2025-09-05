@@ -39,13 +39,7 @@ import Brume01 from '@/assets/images/brume-01.webp';
 import Shangri17 from '@/assets/images/shangri-17.webp';
 import Momie from '@/assets/images/momie-bandelette.webp';
 import Cemotions from '@/assets/images/couleurs-emotions.webp';
-
-interface KiosqueProps {
-  onBackToCatalogue?: () => void;
-  onViewAll?: () => void;
-  onViewOffices?: () => void;
-  onViewNouveautes?: () => void;
-}
+import { Link } from 'react-router-dom';
 
 interface KiosqueBook extends BookCardProps {
   creationDate: string;
@@ -58,7 +52,7 @@ interface KiosqueGroup {
   books: KiosqueBook[];
 }
 
-export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNouveautes }: KiosqueProps) {
+export function Kiosque() {
   const publishers = [
     'Hugo',
     'Comix Buro',
@@ -296,12 +290,14 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="#">Accueil</BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link to="/">Accueil</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href="#" onClick={onBackToCatalogue}>
-              Catalogue
+            <BreadcrumbLink asChild>
+              <Link to="/catalogue">Catalogue</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -386,13 +382,7 @@ export function Kiosque({ onBackToCatalogue, onViewAll, onViewOffices, onViewNou
           <Separator />
         </div>
         <CardContent className="p-6">
-          <CatalogueLayout
-            active="Kiosque"
-            onViewEditions={onBackToCatalogue}
-            onViewAll={onViewAll}
-            onViewOffices={onViewOffices}
-            onViewNouveautes={onViewNouveautes}
-          >
+          <CatalogueLayout active="Kiosque">
             <h3 className="mb-4 font-semibold text-xl">Kiosque</h3>
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
               {sortedKiosques.map(kiosque => {

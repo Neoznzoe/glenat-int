@@ -26,13 +26,7 @@ import JulesMatrat from '@/assets/images/jules_matrat.webp';
 import CombatVie from '@/assets/images/le_combat_dune_vie.webp';
 import Odysee from '@/assets/images/odyssee.webp';
 import Cemotions from '@/assets/images/couleurs-emotions.webp';
-
-interface OfficesProps {
-  onBackToCatalogue?: () => void;
-  onViewAll?: () => void;
-  onViewKiosque?: () => void;
-  onViewNouveautes?: () => void;
-}
+import { Link } from 'react-router-dom';
 
 interface OfficeGroup {
   office: string;
@@ -41,7 +35,7 @@ interface OfficeGroup {
   books: BookCardProps[];
 }
 
-export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNouveautes }: OfficesProps) {
+export function Offices() {
   const publishers = [
     'Hugo',
     'Comix Buro',
@@ -183,12 +177,14 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="#">Accueil</BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link to="/">Accueil</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href="#" onClick={onBackToCatalogue}>
-              Catalogue
+            <BreadcrumbLink asChild>
+              <Link to="/catalogue">Catalogue</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -245,13 +241,7 @@ export function Offices({ onBackToCatalogue, onViewAll, onViewKiosque, onViewNou
           <Separator />
         </div>
         <CardContent className="p-6">
-          <CatalogueLayout
-            active="Prochaines offices"
-            onViewEditions={onBackToCatalogue}
-            onViewAll={onViewAll}
-            onViewKiosque={onViewKiosque}
-            onViewNouveautes={onViewNouveautes}
-          >
+          <CatalogueLayout active="Prochaines offices">
             <h3 className="mb-4 font-semibold text-xl">Prochaines offices</h3>
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
               {sortedOffices.map(group => (

@@ -2,6 +2,7 @@ import { LucideIcon } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/context/SidebarContext';
+import { Link } from 'react-router-dom';
 
 export interface QuickAccessItem {
   label: string;
@@ -28,11 +29,7 @@ export function QuickAccess({ items, active }: QuickAccessProps) {
       <ul className="space-y-2">
         {items.map((item) => (
           <li key={item.label}>
-            <a
-              href={item.href ?? '#'}
-              onClick={item.onClick}
-              className="block"
-            >
+            <Link to={item.href ?? '#'} onClick={item.onClick} className="block">
               <Card
                 className={cn(
                   'group flex items-center gap-2 p-3 border transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground',
@@ -51,7 +48,7 @@ export function QuickAccess({ items, active }: QuickAccessProps) {
                   {item.label}
                 </span>
               </Card>
-            </a>
+            </Link>
           </li>
         ))}
       </ul>

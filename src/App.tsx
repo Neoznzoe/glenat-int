@@ -2,19 +2,11 @@ import { useState } from 'react';
 import { SidebarContext } from './context/SidebarContext';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
-import { Home } from './pages/Home';
-import Emploi, { jobOffers } from './pages/Emploi';
-import Catalogue from './pages/catalogue/Editions';
-import CatalogueAll from './pages/catalogue/CatalogueAll';
-import Kiosque from './pages/catalogue/Kiosque';
-import Offices from './pages/catalogue/Offices';
-import Nouveautes from './pages/catalogue/Nouveautes';
-import Services from './pages/services/Services';
-import Production from './pages/services/Production';
 import { Toaster } from '@/components/ui/sonner';
+import AppRoutes from './routes';
+import { jobOffers } from './pages/Emploi';
 
 function App() {
-  const [activePage, setActivePage] = useState('home');
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const jobCount = jobOffers.length;
 
@@ -22,63 +14,11 @@ function App() {
     <SidebarContext.Provider value={isSidebarExpanded}>
       <>
         <div className="flex h-screen bg-background text-foreground overflow-hidden">
-          <Sidebar
-            activePage={activePage.startsWith('services') ? 'services' : activePage}
-            onNavigate={setActivePage}
-            jobCount={jobCount}
-            onExpandChange={setIsSidebarExpanded}
-          />
+          <Sidebar jobCount={jobCount} onExpandChange={setIsSidebarExpanded} />
           <div className="flex-1 flex flex-col">
             <Topbar />
             <main className="flex-1 overflow-auto">
-              {activePage === 'home' && <Home />}
-              {activePage === 'emploi' && <Emploi />}
-              {activePage === 'services' && (
-                <Services onViewProduction={() => setActivePage('servicesProduction')} />
-              )}
-              {activePage === 'servicesProduction' && (
-                <Production onViewInformatique={() => setActivePage('services')} />
-              )}
-              {activePage === 'catalogue' && (
-                <Catalogue
-                  onViewAll={() => setActivePage('catalogueAll')}
-                  onViewKiosque={() => setActivePage('kiosque')}
-                  onViewOffices={() => setActivePage('offices')}
-                  onViewNouveautes={() => setActivePage('nouveautes')}
-                />
-              )}
-              {activePage === 'catalogueAll' && (
-                <CatalogueAll
-                  onBackToCatalogue={() => setActivePage('catalogue')}
-                  onViewKiosque={() => setActivePage('kiosque')}
-                  onViewOffices={() => setActivePage('offices')}
-                  onViewNouveautes={() => setActivePage('nouveautes')}
-                />
-              )}
-              {activePage === 'kiosque' && (
-                <Kiosque
-                  onBackToCatalogue={() => setActivePage('catalogue')}
-                  onViewAll={() => setActivePage('catalogueAll')}
-                  onViewOffices={() => setActivePage('offices')}
-                  onViewNouveautes={() => setActivePage('nouveautes')}
-                />
-              )}
-              {activePage === 'offices' && (
-                <Offices
-                  onBackToCatalogue={() => setActivePage('catalogue')}
-                  onViewAll={() => setActivePage('catalogueAll')}
-                  onViewKiosque={() => setActivePage('kiosque')}
-                  onViewNouveautes={() => setActivePage('nouveautes')}
-                />
-              )}
-              {activePage === 'nouveautes' && (
-                <Nouveautes
-                  onBackToCatalogue={() => setActivePage('catalogue')}
-                  onViewAll={() => setActivePage('catalogueAll')}
-                  onViewKiosque={() => setActivePage('kiosque')}
-                  onViewOffices={() => setActivePage('offices')}
-                />
-              )}
+              <AppRoutes />
             </main>
           </div>
         </div>

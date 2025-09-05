@@ -26,20 +26,14 @@ import JulesMatrat from '@/assets/images/jules_matrat.webp';
 import CombatVie from '@/assets/images/le_combat_dune_vie.webp';
 import Odysee from '@/assets/images/odyssee.webp';
 import Cemotions from '@/assets/images/couleurs-emotions.webp';
-
-interface NouveautesProps {
-  onBackToCatalogue?: () => void;
-  onViewAll?: () => void;
-  onViewKiosque?: () => void;
-  onViewOffices?: () => void;
-}
+import { Link } from 'react-router-dom';
 
 interface ReleaseGroup {
   date: string;
   books: BookCardProps[];
 }
 
-export function Nouveautes({ onBackToCatalogue, onViewAll, onViewKiosque, onViewOffices }: NouveautesProps) {
+export function Nouveautes() {
   const publishers = [
     'Hugo',
     'Comix Buro',
@@ -166,12 +160,14 @@ export function Nouveautes({ onBackToCatalogue, onViewAll, onViewKiosque, onView
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="#">Accueil</BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link to="/">Accueil</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href="#" onClick={onBackToCatalogue}>
-              Catalogue
+            <BreadcrumbLink asChild>
+              <Link to="/catalogue">Catalogue</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -228,13 +224,7 @@ export function Nouveautes({ onBackToCatalogue, onViewAll, onViewKiosque, onView
           <Separator />
         </div>
         <CardContent className="p-6">
-          <CatalogueLayout
-            active="Dernières nouveautés"
-            onViewEditions={onBackToCatalogue}
-            onViewAll={onViewAll}
-            onViewKiosque={onViewKiosque}
-            onViewOffices={onViewOffices}
-          >
+          <CatalogueLayout active="Dernières nouveautés">
             <h3 className="mb-4 font-semibold text-xl">Dernières nouveautés</h3>
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
               {sortedReleases.map(group => (
