@@ -27,7 +27,7 @@ export function EditionCard({ title, color, logo }: EditionCardProps) {
         <ul className="text-sm space-y-1">
           <li>
             <a href="#" className="hover:underline">
-              Voir l'univers
+              Voir les collections
             </a>
           </li>
           <li>

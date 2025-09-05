@@ -6,28 +6,26 @@ import {
   Download,
   Image,
   Info,
-  Mail,
   PackageX,
   Sparkles,
-  Store,
   TrendingUp,
   UserPen,
 } from 'lucide-react';
 import { ReactNode } from 'react';
 
 const quickLinks: QuickAccessItem[] = [
-  { label: 'Éditions', icon: Building, href: '/catalogue' },
-  { label: 'Tout le catalogue', icon: BookOpen, href: '/catalogue/all' },
-  { label: 'Kiosque', icon: Store, href: '/catalogue/kiosque' },
-  { label: 'Les auteurs', icon: UserPen },
   { label: 'Prochaines offices', icon: CalendarDays, href: '/catalogue/offices' },
   { label: 'Dernières nouveautés', icon: Sparkles, href: '/catalogue/nouveautes' },
-  { label: 'Top des commandes', icon: TrendingUp },
-  { label: 'Newsletter journaliste', icon: Mail },
-  { label: 'Couverture à paraître', icon: Image },
+  { label: 'Éditions', icon: Building, href: '/catalogue' },
+  { label: 'Les auteurs', icon: UserPen },
+  { label: 'Tout le catalogue', icon: BookOpen, href: '/catalogue/all' },
+
   { label: 'Télécharger le catalogue', icon: Download },
+  // { label: 'Kiosque', icon: Store, href: '/catalogue/kiosque' },
+  { label: 'Top des commandes', icon: TrendingUp },//???//
+  { label: 'Couverture à paraître', icon: Image },
   { label: 'Information à renseigner', icon: Info },
-  { label: 'Plus de stock', icon: PackageX },
+  { label: 'Plus de stock', icon: PackageX },//??//
 ];
 
 interface CatalogueLayoutProps {
