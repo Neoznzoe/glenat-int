@@ -1,14 +1,27 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SidebarContext } from './context/SidebarContext';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { Toaster } from '@/components/ui/sonner';
 import AppRoutes from './routes';
 import { jobOffers } from './pages/Emploi';
+import { useMsal } from '@azure/msal-react';
 
 function App() {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const jobCount = jobOffers.length;
+  const { instance, accounts, inProgress } = useMsal();
+
+  useEffect(() => {
+    if (accounts.length === 0 && inProgress === 'none') {
+      instance
+        .ssoSilent({ scopes: ['User.Read'] })
+        .then((response) => instance.setActiveAccount(response.account))
+        .catch(() => instance.loginRedirect({ scopes: ['User.Read'] }));
+    } else if (accounts.length > 0 && !instance.getActiveAccount()) {
+      instance.setActiveAccount(accounts[0]);
+    }
+  }, [accounts, inProgress, instance]);
 
   return (
     <SidebarContext.Provider value={isSidebarExpanded}>

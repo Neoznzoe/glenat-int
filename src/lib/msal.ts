@@ -6,6 +6,10 @@ const config: Configuration = {
     authority: `https://login.microsoftonline.com/${import.meta.env.VITE_AZURE_TENANT_ID ?? ''}`,
     redirectUri: window.location.origin,
   },
+  cache: {
+    cacheLocation: 'localStorage',
+    storeAuthStateInCookie: true,
+  },
 };
 
 export const msalInstance = new PublicClientApplication(config);

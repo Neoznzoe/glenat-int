@@ -29,11 +29,14 @@ import { useAppSelector } from '@/hooks/redux';
 import CartSummary from './CartSummary';
 import { useState } from 'react';
 import NotificationList from './NotificationList';
+import { useMsal } from '@azure/msal-react';
 
 export function Topbar() {
   const itemCount = useAppSelector((state) =>
     state.cart.items.reduce((sum, i) => sum + i.quantity, 0),
   );
+  const { accounts } = useMsal();
+  const account = accounts[0];
   const notifications = [
     {
       count: 2,
@@ -51,12 +54,12 @@ export function Topbar() {
   const notificationCount = notifications.reduce((sum, n) => sum + n.count, 0);
   const [open, setOpen] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
-  const [searchScope, setSearchScope] = useState('catalogue');
   const scopeLabels = {
     catalogue: 'Catalogue',
     glenatdoc: "Glénat'doc",
     'qui-fait-quoi': 'Qui fait quoi',
   } as const;
+  const [searchScope, setSearchScope] = useState<keyof typeof scopeLabels>('catalogue');
 
   // Prevent the hover card from briefly closing when interacting with the
   // quantity selector inside the cart summary. If the select dropdown is open,
@@ -78,7 +81,12 @@ export function Topbar() {
               placeholder={`Rechercher dans ${scopeLabels[searchScope]}`}
               className="pl-10 pr-36 bg-muted border-input focus:bg-background"
             />
-            <Select value={searchScope} onValueChange={setSearchScope}>
+            <Select
+              value={searchScope}
+              onValueChange={(value) =>
+                setSearchScope(value as keyof typeof scopeLabels)
+              }
+            >
               <SelectTrigger className="absolute top-0 right-0 h-full w-36 border-l border-input bg-muted pr-8 pl-2 text-sm focus:ring-0 focus:ring-offset-0">
                 <SelectValue />
               </SelectTrigger>
@@ -144,8 +152,8 @@ export function Topbar() {
                 <User className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="hidden md:block text-left">
-                <div className="text-sm font-medium text-foreground">Victor Besson</div>
-                <div className="text-xs text-muted-foreground">Glénat Grenoble</div>
+                <div className="text-sm font-medium text-foreground">{account?.name}</div>
+                <div className="text-xs text-muted-foreground">{account?.username}</div>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground ml-1" />
             </Button>
