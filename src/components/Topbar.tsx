@@ -28,9 +28,12 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from './ui/hover-card';
 import { useAppSelector } from '@/hooks/redux';
 import CartSummary from './CartSummary';
 import { useState } from 'react';
+import { useAccount, useMsal } from '@azure/msal-react';
 import NotificationList from './NotificationList';
 
 export function Topbar() {
+  const { instance, accounts } = useMsal();
+  const account = useAccount(instance.getActiveAccount() ?? accounts[0] ?? null);
   const itemCount = useAppSelector((state) =>
     state.cart.items.reduce((sum, i) => sum + i.quantity, 0),
   );
@@ -64,6 +67,10 @@ export function Topbar() {
   const handleHoverOpenChange = (next: boolean) => {
     if (!next && selectOpen) return;
     setOpen(next);
+  };
+
+  const handleLogout = () => {
+    void instance.logoutRedirect({ postLogoutRedirectUri: window.location.origin });
   };
 
   return (
@@ -144,8 +151,12 @@ export function Topbar() {
                 <User className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="hidden md:block text-left">
-                <div className="text-sm font-medium text-foreground">Victor Besson</div>
-                <div className="text-xs text-muted-foreground">Glénat Grenoble</div>
+                <div className="text-sm font-medium text-foreground">
+                  {account?.name ?? ''}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {account?.username ?? ''}
+                </div>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground ml-1" />
             </Button>
@@ -163,7 +174,7 @@ export function Topbar() {
               <KeyRound className="mr-2 h-4 w-4" />
               <span>Contrôle mot de passe</span>
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Déconnexion</span>
             </DropdownMenuItem>
