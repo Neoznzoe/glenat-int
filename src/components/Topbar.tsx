@@ -35,8 +35,8 @@ export function Topbar() {
   const itemCount = useAppSelector((state) =>
     state.cart.items.reduce((sum, i) => sum + i.quantity, 0),
   );
-  const { accounts } = useMsal();
-  const account = accounts[0];
+  const { instance } = useMsal();
+  const account = instance.getActiveAccount();
   const notifications = [
     {
       count: 2,
