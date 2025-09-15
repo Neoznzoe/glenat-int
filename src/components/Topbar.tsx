@@ -27,9 +27,10 @@ import { ThemeToggle } from './ThemeToggle';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from './ui/hover-card';
 import { useAppSelector } from '@/hooks/redux';
 import CartSummary from './CartSummary';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import NotificationList from './NotificationList';
 import { useMsal } from '@azure/msal-react';
+import { hasMsalConfig } from '@/lib/msal';
 
 export function Topbar() {
   const itemCount = useAppSelector((state) =>
@@ -37,6 +38,20 @@ export function Topbar() {
   );
   const { instance } = useMsal();
   const account = instance.getActiveAccount();
+
+  useEffect(() => {
+    console.log('MSAL active account', account);
+    console.log('MSAL cached accounts', instance.getAllAccounts());
+  }, [account, instance]);
+
+  const handleLogin = () => {
+    if (!hasMsalConfig) return;
+    instance.loginRedirect({ scopes: ['User.Read'] });
+  };
+
+  const handleLogout = () => {
+    instance.logoutRedirect();
+  };
   const notifications = [
     {
       count: 2,
@@ -141,42 +156,54 @@ export function Topbar() {
         </HoverCard>
 
         {/* Profil utilisateur */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="ml-2 my-1 flex items-center space-x-2 focus-visible:ring-0 h-auto py-1.5"
-            >
-              <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="hidden md:block text-left">
-                <div className="text-sm font-medium text-foreground">{account?.name}</div>
-                <div className="text-xs text-muted-foreground">{account?.username}</div>
-              </div>
-              <ChevronDown className="h-4 w-4 text-muted-foreground ml-1" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuItem>
-              <User className="mr-2 h-4 w-4" />
-              <span>Mon profil</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Paramètres</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <KeyRound className="mr-2 h-4 w-4" />
-              <span>Contrôle mot de passe</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Déconnexion</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {account ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-2 my-1 flex items-center space-x-2 focus-visible:ring-0 h-auto py-1.5"
+              >
+                <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="hidden md:block text-left">
+                  <div className="text-sm font-medium text-foreground">{account.name}</div>
+                  <div className="text-xs text-muted-foreground">{account.username}</div>
+                </div>
+                <ChevronDown className="h-4 w-4 text-muted-foreground ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem>
+                <User className="mr-2 h-4 w-4" />
+                <span>Mon profil</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Paramètres</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <KeyRound className="mr-2 h-4 w-4" />
+                <span>Contrôle mot de passe</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Déconnexion</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-2"
+            onClick={handleLogin}
+            disabled={!hasMsalConfig}
+          >
+            Connexion
+          </Button>
+        )}
       </div>
     </header>
   );
