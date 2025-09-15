@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/sonner';
 import AppRoutes from './routes';
 import { jobOffers } from './pages/Emploi';
 import { useMsal } from '@azure/msal-react';
+import { hasMsalConfig } from './lib/msal';
 
 function App() {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
@@ -13,6 +14,8 @@ function App() {
   const { instance, accounts, inProgress } = useMsal();
 
   useEffect(() => {
+    if (!hasMsalConfig) return;
+
     if (accounts.length === 0 && inProgress === 'none') {
       instance
         .ssoSilent({ scopes: ['User.Read'] })
