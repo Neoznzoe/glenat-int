@@ -30,7 +30,7 @@ import CartSummary from './CartSummary';
 import { useState } from 'react';
 import { useAccount, useMsal } from '@azure/msal-react';
 import NotificationList from './NotificationList';
-import { msalConfig } from '@/lib/msal';
+import { isMsalConfigured, msalConfig } from '@/lib/msal';
 
 export function Topbar() {
   const { instance, accounts } = useMsal();
@@ -72,6 +72,10 @@ export function Topbar() {
   };
 
   const handleLogout = () => {
+    if (!isMsalConfigured) {
+      return;
+    }
+
     void instance.logoutRedirect({
       account: primaryAccount ?? undefined,
       postLogoutRedirectUri:

@@ -24,19 +24,17 @@ const sanitizeEnvValue = (value?: string) => {
 const readEnv = (key: AzureEnvKey) =>
   sanitizeEnvValue(import.meta.env[key] as string | undefined);
 
-const requireEnv = (key: AzureEnvKey) => {
-  const value = readEnv(key);
+const clientIdFromEnv = readEnv('VITE_AZURE_CLIENT_ID');
+export const isMsalConfigured = Boolean(clientIdFromEnv);
 
-  if (!value) {
-    throw new Error(
-      `Missing required environment variable "${key}" for Azure AD authentication.`,
-    );
-  }
+if (!isMsalConfigured) {
+  console.warn(
+    'Office 365 authentication is disabled because the environment variable "VITE_AZURE_CLIENT_ID" is not defined.',
+  );
+}
 
-  return value;
-};
-
-const clientId = requireEnv('VITE_AZURE_CLIENT_ID');
+const fallbackClientId = '00000000-0000-0000-0000-000000000000';
+const clientId = clientIdFromEnv ?? fallbackClientId;
 const tenantId = readEnv('VITE_AZURE_TENANT_ID');
 const authorityFromEnv = readEnv('VITE_AZURE_AUTHORITY');
 
@@ -72,7 +70,9 @@ export const loginRequest: RedirectRequest = {
 
 export const msalInstance = new PublicClientApplication(msalConfig);
 
-export const msalInitialization = msalInstance.initialize().catch((error) => {
-  console.error('MSAL initialization failed', error);
-  throw error;
-});
+export const msalInitialization = isMsalConfigured
+  ? msalInstance.initialize().catch((error) => {
+      console.error('MSAL initialization failed', error);
+      throw error;
+    })
+  : Promise.resolve();

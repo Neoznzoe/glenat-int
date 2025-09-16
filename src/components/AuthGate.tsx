@@ -2,7 +2,11 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { InteractionStatus } from '@azure/msal-browser';
 import { useMsal } from '@azure/msal-react';
 
-import { loginRequest, msalInitialization } from '@/lib/msal';
+import {
+  isMsalConfigured,
+  loginRequest,
+  msalInitialization,
+} from '@/lib/msal';
 
 type AuthGateProps = {
   children: ReactNode;
@@ -10,10 +14,14 @@ type AuthGateProps = {
 
 export function AuthGate({ children }: AuthGateProps) {
   const { instance, inProgress } = useMsal();
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(!isMsalConfigured);
   const [initializationFailed, setInitializationFailed] = useState(false);
 
   useEffect(() => {
+    if (!isMsalConfigured) {
+      return;
+    }
+
     let isMounted = true;
 
     const initialize = async () => {
@@ -58,7 +66,7 @@ export function AuthGate({ children }: AuthGateProps) {
   }, [instance]);
 
   useEffect(() => {
-    if (!isInitialized || initializationFailed) return;
+    if (!isMsalConfigured || !isInitialized || initializationFailed) return;
 
     const activeAccount = instance.getActiveAccount();
 
@@ -66,6 +74,10 @@ export function AuthGate({ children }: AuthGateProps) {
       void instance.loginRedirect(loginRequest);
     }
   }, [inProgress, instance, initializationFailed, isInitialized]);
+
+  if (!isMsalConfigured) {
+    return <>{children}</>;
+  }
 
   if (initializationFailed) {
     return null;
