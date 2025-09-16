@@ -31,11 +31,50 @@ import { useState } from 'react';
 import { useAccount, useMsal } from '@azure/msal-react';
 import NotificationList from './NotificationList';
 import { isMsalConfigured, msalConfig } from '@/lib/msal';
+import { useGraphProfile } from '@/hooks/useGraphProfile';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+
+const buildInitials = (
+  givenName?: string,
+  surname?: string,
+  displayName?: string,
+  username?: string,
+) => {
+  const explicitNames = [givenName, surname].filter((part): part is string => Boolean(part?.length));
+  const base =
+    explicitNames.length > 0
+      ? explicitNames.join(' ')
+      : displayName && displayName.length > 0
+        ? displayName
+        : username ?? '';
+
+  const tokens = base.split(/\s+/).filter(Boolean);
+
+  if (tokens.length === 0) {
+    return username ? username.charAt(0).toUpperCase() : '';
+  }
+
+  return tokens
+    .slice(0, 2)
+    .map((token) => token.charAt(0).toUpperCase())
+    .join('');
+};
 
 export function Topbar() {
   const { instance, accounts } = useMsal();
   const primaryAccount = instance.getActiveAccount() ?? accounts[0] ?? null;
   const account = useAccount(primaryAccount);
+  const { profile } = useGraphProfile();
+
+  const displayName = profile?.displayName ?? account?.name ?? '';
+  const username = profile?.userPrincipalName ?? account?.username ?? '';
+  const jobTitle = profile?.jobTitle ?? '';
+  const avatarInitials = buildInitials(
+    profile?.givenName,
+    profile?.surname,
+    displayName,
+    username,
+  );
   const itemCount = useAppSelector((state) =>
     state.cart.items.reduce((sum, i) => sum + i.quantity, 0),
   );
@@ -158,15 +197,20 @@ export function Topbar() {
               size="sm"
               className="ml-2 my-1 flex items-center space-x-2 focus-visible:ring-0 h-auto py-1.5"
             >
-              <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="hidden md:block text-left">
+              <Avatar className="h-8 w-8">
+                {profile?.photo ? (
+                  <AvatarImage src={profile.photo} alt={displayName} />
+                ) : null}
+                <AvatarFallback className="text-xs font-medium">
+                  {avatarInitials || <User className="h-4 w-4 text-muted-foreground" />}
+                </AvatarFallback>
+              </Avatar>
+              <div className="hidden md:block text-left" title={jobTitle}>
                 <div className="text-sm font-medium text-foreground">
-                  {account?.name ?? ''}
+                  {displayName}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {account?.username ?? ''}
+                  {username}
                 </div>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground ml-1" />

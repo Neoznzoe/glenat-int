@@ -64,8 +64,10 @@ export const msalConfig: Configuration = {
   },
 };
 
+export const graphScopes = ['User.Read'] as const;
+
 export const loginRequest: RedirectRequest = {
-  scopes: ['User.Read'],
+  scopes: [...graphScopes],
 };
 
 export const msalInstance = new PublicClientApplication(msalConfig);
