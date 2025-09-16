@@ -15,17 +15,24 @@ export const useGraphProfile = () => {
   const activeAccount = instance.getActiveAccount() ?? accounts[0] ?? null;
 
   const accountId = activeAccount?.homeAccountId ?? null;
+  const enabled = isMsalConfigured && Boolean(activeAccount);
 
-  const queryResult = useQuery({
+  const queryResult = useQuery<GraphProfile>({
     queryKey: graphProfileQueryKey(accountId),
-    queryFn: () => fetchGraphProfile(instance, activeAccount!),
-    enabled: isMsalConfigured && Boolean(activeAccount),
+    queryFn: () => {
+      if (!activeAccount) {
+        throw new Error('No active Microsoft 365 account available.');
+      }
+
+      return fetchGraphProfile(instance, activeAccount);
+    },
+    enabled,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     retry: 1,
   });
 
-  const profile = activeAccount ? ((queryResult.data ?? null) as GraphProfile | null) : null;
+  const profile = enabled ? ((queryResult.data ?? null) as GraphProfile | null) : null;
 
   return {
     ...queryResult,

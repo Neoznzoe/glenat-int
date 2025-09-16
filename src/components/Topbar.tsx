@@ -72,16 +72,26 @@ export function Topbar() {
   const displayName = profile?.displayName ?? account?.name ?? '';
   const username = profile?.userPrincipalName ?? account?.username ?? '';
   const jobTitle = profile?.jobTitle ?? '';
-  const mail = profile?.mail ?? username;
+  const email = profile?.mail ?? username;
   const explicitNameParts = [profile?.givenName, profile?.surname].filter(
     (part): part is string => Boolean(part?.length),
   );
+  const nameFromGraph =
+    explicitNameParts.length > 0 ? explicitNameParts.join(' ') : displayName;
   const fullName =
-    explicitNameParts.length > 0
-      ? explicitNameParts.join(' ')
-      : displayName || mail;
-  const tooltipDetails = [fullName, jobTitle, mail]
-    .filter((part): part is string => Boolean(part && part.length))
+    (nameFromGraph && nameFromGraph.trim().length > 0
+      ? nameFromGraph
+      : email || username)
+      || 'Utilisateur';
+  const azureEnabled = isMsalConfigured;
+  const hasActiveAccount = Boolean(primaryAccount);
+  const connectionStatus = !azureEnabled
+    ? 'Connexion Office 365 désactivée'
+    : hasActiveAccount
+      ? ''
+      : 'Aucun compte Microsoft 365 connecté';
+  const tooltipDetails = [fullName, jobTitle, email, connectionStatus]
+    .filter((part): part is string => Boolean(part && part.trim().length))
     .filter((part, index, array) => array.indexOf(part) === index)
     .join('\n');
   const preferredUsernameClaim = (
@@ -94,8 +104,9 @@ export function Topbar() {
     profile?.givenName,
     profile?.surname,
     fullName,
-    mail,
+    email || username,
   );
+  const canLogout = azureEnabled && hasActiveAccount;
   const itemCount = useAppSelector((state) =>
     state.cart.items.reduce((sum, i) => sum + i.quantity, 0),
   );
@@ -132,7 +143,7 @@ export function Topbar() {
   };
 
   const handleLogout = () => {
-    if (!isMsalConfigured) {
+    if (!canLogout) {
       return;
     }
 
@@ -224,7 +235,7 @@ export function Topbar() {
             >
               <Avatar className="h-8 w-8">
                 {profile?.photo ? (
-                  <AvatarImage src={profile.photo} alt={fullName || mail} />
+                  <AvatarImage src={profile.photo} alt={fullName} />
                 ) : null}
                 <AvatarFallback className="text-xs font-medium">
                   {avatarInitials || <User className="h-4 w-4 text-muted-foreground" />}
@@ -238,14 +249,19 @@ export function Topbar() {
                 {jobTitle ? (
                   <span className="text-xs text-muted-foreground truncate">{jobTitle}</span>
                 ) : null}
-                {mail ? (
+                {email ? (
                   <span
                     className={cn(
                       'text-muted-foreground truncate',
                       jobTitle ? 'text-[10px]' : 'text-xs',
                     )}
                   >
-                    {mail}
+                    {email}
+                  </span>
+                ) : null}
+                {connectionStatus ? (
+                  <span className="text-[10px] text-muted-foreground truncate">
+                    {connectionStatus}
                   </span>
                 ) : null}
               </div>
@@ -265,9 +281,9 @@ export function Topbar() {
               <KeyRound className="mr-2 h-4 w-4" />
               <span>Contrôle mot de passe</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem onClick={handleLogout} disabled={!canLogout}>
               <LogOut className="mr-2 h-4 w-4" />
-              <span>Déconnexion</span>
+              <span>{canLogout ? 'Déconnexion' : 'Déconnexion indisponible'}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
