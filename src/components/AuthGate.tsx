@@ -2,7 +2,7 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { InteractionStatus } from '@azure/msal-browser';
 import { useMsal } from '@azure/msal-react';
 
-import { loginRequest } from '@/lib/msal';
+import { loginRequest, msalInitialization } from '@/lib/msal';
 
 type AuthGateProps = {
   children: ReactNode;
@@ -11,11 +11,23 @@ type AuthGateProps = {
 export function AuthGate({ children }: AuthGateProps) {
   const { instance, inProgress } = useMsal();
   const [isInitialized, setIsInitialized] = useState(false);
+  const [initializationFailed, setInitializationFailed] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
     const initialize = async () => {
+      try {
+        await msalInitialization;
+      } catch {
+        if (isMounted) {
+          setInitializationFailed(true);
+          setIsInitialized(true);
+        }
+
+        return;
+      }
+
       try {
         const response = await instance.handleRedirectPromise();
 
@@ -30,7 +42,7 @@ export function AuthGate({ children }: AuthGateProps) {
           instance.setActiveAccount(accounts[0]);
         }
       } catch (error) {
-        console.error('MSAL initialization error', error);
+        console.error('MSAL redirect handling failed', error);
       } finally {
         if (isMounted) {
           setIsInitialized(true);
@@ -46,14 +58,18 @@ export function AuthGate({ children }: AuthGateProps) {
   }, [instance]);
 
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!isInitialized || initializationFailed) return;
 
     const activeAccount = instance.getActiveAccount();
 
     if (!activeAccount && inProgress === InteractionStatus.None) {
       void instance.loginRedirect(loginRequest);
     }
-  }, [inProgress, instance, isInitialized]);
+  }, [inProgress, instance, initializationFailed, isInitialized]);
+
+  if (initializationFailed) {
+    return null;
+  }
 
   if (!isInitialized || !instance.getActiveAccount()) {
     return null;

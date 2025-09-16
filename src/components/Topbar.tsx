@@ -30,10 +30,12 @@ import CartSummary from './CartSummary';
 import { useState } from 'react';
 import { useAccount, useMsal } from '@azure/msal-react';
 import NotificationList from './NotificationList';
+import { msalConfig } from '@/lib/msal';
 
 export function Topbar() {
   const { instance, accounts } = useMsal();
-  const account = useAccount(instance.getActiveAccount() ?? accounts[0] ?? null);
+  const primaryAccount = instance.getActiveAccount() ?? accounts[0] ?? null;
+  const account = useAccount(primaryAccount);
   const itemCount = useAppSelector((state) =>
     state.cart.items.reduce((sum, i) => sum + i.quantity, 0),
   );
@@ -70,7 +72,12 @@ export function Topbar() {
   };
 
   const handleLogout = () => {
-    void instance.logoutRedirect({ postLogoutRedirectUri: window.location.origin });
+    void instance.logoutRedirect({
+      account: primaryAccount ?? undefined,
+      postLogoutRedirectUri:
+        msalConfig.auth.postLogoutRedirectUri ??
+        (typeof window !== 'undefined' ? window.location.origin : undefined),
+    });
   };
 
   return (
