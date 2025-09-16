@@ -33,6 +33,8 @@ import NotificationList from './NotificationList';
 import { isMsalConfigured, msalConfig } from '@/lib/msal';
 import { useGraphProfile } from '@/hooks/useGraphProfile';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { useQueryClient } from '@tanstack/react-query';
+import { cn } from '@/lib/utils';
 
 const buildInitials = (
   givenName?: string,
@@ -65,15 +67,34 @@ export function Topbar() {
   const primaryAccount = instance.getActiveAccount() ?? accounts[0] ?? null;
   const account = useAccount(primaryAccount);
   const { profile } = useGraphProfile();
+  const queryClient = useQueryClient();
 
   const displayName = profile?.displayName ?? account?.name ?? '';
   const username = profile?.userPrincipalName ?? account?.username ?? '';
   const jobTitle = profile?.jobTitle ?? '';
+  const mail = profile?.mail ?? username;
+  const explicitNameParts = [profile?.givenName, profile?.surname].filter(
+    (part): part is string => Boolean(part?.length),
+  );
+  const fullName =
+    explicitNameParts.length > 0
+      ? explicitNameParts.join(' ')
+      : displayName || mail;
+  const tooltipDetails = [fullName, jobTitle, mail]
+    .filter((part): part is string => Boolean(part && part.length))
+    .filter((part, index, array) => array.indexOf(part) === index)
+    .join('\n');
+  const preferredUsernameClaim = (
+    primaryAccount?.idTokenClaims as { preferred_username?: unknown } | undefined
+  )?.preferred_username;
+  const logoutHint =
+    primaryAccount?.username ??
+    (typeof preferredUsernameClaim === 'string' ? preferredUsernameClaim : undefined);
   const avatarInitials = buildInitials(
     profile?.givenName,
     profile?.surname,
-    displayName,
-    username,
+    fullName,
+    mail,
   );
   const itemCount = useAppSelector((state) =>
     state.cart.items.reduce((sum, i) => sum + i.quantity, 0),
@@ -115,8 +136,12 @@ export function Topbar() {
       return;
     }
 
+    void queryClient.cancelQueries({ queryKey: ['microsoft-graph'] });
+    queryClient.removeQueries({ queryKey: ['microsoft-graph'] });
+
     void instance.logoutRedirect({
       account: primaryAccount ?? undefined,
+      ...(logoutHint ? { logoutHint } : {}),
       postLogoutRedirectUri:
         msalConfig.auth.postLogoutRedirectUri ??
         (typeof window !== 'undefined' ? window.location.origin : undefined),
@@ -199,19 +224,30 @@ export function Topbar() {
             >
               <Avatar className="h-8 w-8">
                 {profile?.photo ? (
-                  <AvatarImage src={profile.photo} alt={displayName} />
+                  <AvatarImage src={profile.photo} alt={fullName || mail} />
                 ) : null}
                 <AvatarFallback className="text-xs font-medium">
                   {avatarInitials || <User className="h-4 w-4 text-muted-foreground" />}
                 </AvatarFallback>
               </Avatar>
-              <div className="hidden md:block text-left" title={jobTitle}>
-                <div className="text-sm font-medium text-foreground">
-                  {displayName}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {username}
-                </div>
+              <div
+                className="hidden md:flex flex-col text-left leading-tight"
+                title={tooltipDetails}
+              >
+                <span className="text-sm font-medium text-foreground truncate">{fullName}</span>
+                {jobTitle ? (
+                  <span className="text-xs text-muted-foreground truncate">{jobTitle}</span>
+                ) : null}
+                {mail ? (
+                  <span
+                    className={cn(
+                      'text-muted-foreground truncate',
+                      jobTitle ? 'text-[10px]' : 'text-xs',
+                    )}
+                  >
+                    {mail}
+                  </span>
+                ) : null}
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground ml-1" />
             </Button>

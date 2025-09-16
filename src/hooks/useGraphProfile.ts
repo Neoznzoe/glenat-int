@@ -14,8 +14,10 @@ export const useGraphProfile = () => {
   const { instance, accounts } = useMsal();
   const activeAccount = instance.getActiveAccount() ?? accounts[0] ?? null;
 
+  const accountId = activeAccount?.homeAccountId ?? null;
+
   const queryResult = useQuery({
-    queryKey: graphProfileQueryKey(activeAccount?.homeAccountId ?? null),
+    queryKey: graphProfileQueryKey(accountId),
     queryFn: () => fetchGraphProfile(instance, activeAccount!),
     enabled: isMsalConfigured && Boolean(activeAccount),
     staleTime: 5 * 60 * 1000,
@@ -23,8 +25,10 @@ export const useGraphProfile = () => {
     retry: 1,
   });
 
+  const profile = activeAccount ? ((queryResult.data ?? null) as GraphProfile | null) : null;
+
   return {
     ...queryResult,
-    profile: (queryResult.data ?? null) as GraphProfile | null,
+    profile,
   };
 };
