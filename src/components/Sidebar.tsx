@@ -18,10 +18,13 @@ import {
   LibraryBig,
   Newspaper,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoG from '../assets/logos/glenat/glenat_G.svg';
+import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
+import { computeEffectivePermissions } from '@/lib/mockDb';
+import type { PermissionKey } from '@/lib/access-control';
 
 interface SidebarProps {
   jobCount: number;
@@ -38,26 +41,123 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     onExpandChange?.(isExpanded);
   }, [isExpanded, onExpandChange]);
 
-  const menuItems = [
-    { id: 'home', icon: Home, label: 'Accueil', path: '/' },
-    { id: 'qui', icon: UserRoundSearch, label: 'Qui fait quoi', path: '/qui' },
-    { id: 'catalogue', icon: LibraryBig, label: 'Catalogue', path: '/catalogue' },
-    { id: 'doc', icon: Files, label: "Glénat'Doc", path: '/doc' },
-    { id: 'fee', icon: Users, label: "Glénat'Fée", path: '/fee' },
-    { id: 'agenda', icon: Calendar, label: 'Agenda', path: '/agenda' },
-    { id: 'planning', icon: CalendarDays, label: 'Planning', path: '/planning' },
-    { id: 'contrats', icon: Signature, label: 'Contrats', path: '/contrats' },
-    { id: 'rh', icon: PersonStanding, label: 'Ressources humaines', path: '/rh' },
-    { id: 'temps', icon: CalendarClock, label: 'Saisie des temps', path: '/temps' },
-    { id: 'atelier', icon: Hammer, label: 'Travaux atelier', path: '/atelier' },
-    { id: 'espace', icon: SquareUserRound, label: 'Mon espace', path: '/espace' },
-    { id: 'emploi', icon: BriefcaseBusiness, label: 'Emploi', path: '/emploi', badge: jobCount },
-    { id: 'annonces', icon: Newspaper, label: 'Petites annonces', path: '/annonces' },
-    { id: 'services', icon: Info, label: 'Services', path: '/services' },
-    { id: 'administration', icon: Settings, label: 'Administration', path: '/administration' },
+  const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
+  const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
+
+  const accessiblePermissions = useMemo(() => {
+    if (!currentUser) {
+      return new Set<PermissionKey>();
+    }
+    return new Set(computeEffectivePermissions(currentUser, groups));
+  }, [currentUser, groups]);
+
+  const menuItems: Array<{
+    id: string;
+    icon: typeof Home;
+    label: string;
+    path: string;
+    permission: PermissionKey;
+    badge?: number;
+  }> = [
+    { id: 'home', icon: Home, label: 'Accueil', path: '/', permission: 'home' },
+    {
+      id: 'qui',
+      icon: UserRoundSearch,
+      label: 'Qui fait quoi',
+      path: '/qui',
+      permission: 'qui',
+    },
+    {
+      id: 'catalogue',
+      icon: LibraryBig,
+      label: 'Catalogue',
+      path: '/catalogue',
+      permission: 'catalogue',
+    },
+    { id: 'doc', icon: Files, label: "Glénat'Doc", path: '/doc', permission: 'doc' },
+    { id: 'fee', icon: Users, label: "Glénat'Fée", path: '/fee', permission: 'fee' },
+    { id: 'agenda', icon: Calendar, label: 'Agenda', path: '/agenda', permission: 'agenda' },
+    {
+      id: 'planning',
+      icon: CalendarDays,
+      label: 'Planning',
+      path: '/planning',
+      permission: 'planning',
+    },
+    {
+      id: 'contrats',
+      icon: Signature,
+      label: 'Contrats',
+      path: '/contrats',
+      permission: 'contrats',
+    },
+    { id: 'rh', icon: PersonStanding, label: 'Ressources humaines', path: '/rh', permission: 'rh' },
+    {
+      id: 'temps',
+      icon: CalendarClock,
+      label: 'Saisie des temps',
+      path: '/temps',
+      permission: 'temps',
+    },
+    {
+      id: 'atelier',
+      icon: Hammer,
+      label: 'Travaux atelier',
+      path: '/atelier',
+      permission: 'atelier',
+    },
+    {
+      id: 'espace',
+      icon: SquareUserRound,
+      label: 'Mon espace',
+      path: '/espace',
+      permission: 'espace',
+    },
+    {
+      id: 'emploi',
+      icon: BriefcaseBusiness,
+      label: 'Emploi',
+      path: '/emploi',
+      permission: 'emploi',
+      badge: jobCount,
+    },
+    {
+      id: 'annonces',
+      icon: Newspaper,
+      label: 'Petites annonces',
+      path: '/annonces',
+      permission: 'annonces',
+    },
+    { id: 'services', icon: Info, label: 'Services', path: '/services', permission: 'services' },
+    {
+      id: 'administration',
+      icon: Settings,
+      label: 'Administration',
+      path: '/administration',
+      permission: 'administration',
+    },
   ];
 
+  const showAllMenus = loadingCurrentUser || loadingGroups || !currentUser;
+
+  const userCanAccess = (permission: PermissionKey) => {
+    if (showAllMenus) {
+      return true;
+    }
+    if (currentUser?.isSuperAdmin) {
+      return true;
+    }
+    return accessiblePermissions.has(permission);
+  };
+
   const location = useLocation();
+
+  const mainMenuItems = menuItems.filter(
+    (item) => item.id !== 'administration' && userCanAccess(item.permission),
+  );
+  const adminMenuItems = menuItems.filter(
+    (item) => item.id === 'administration' && userCanAccess(item.permission),
+  );
 
   return (
     <div
@@ -91,9 +191,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
         {/* Menu principal */}
         <nav className="p-2">
           <ul className="space-y-1">
-            {menuItems
-              .filter(item => item.id !== 'administration')
-              .map(item => {
+            {mainMenuItems.map(item => {
                 const isActive = item.path === '/'
                   ? location.pathname === '/'
                   : location.pathname.startsWith(item.path);
@@ -131,9 +229,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
         {/* Bloc Administration */}
         <nav className="p-2">
           <ul>
-            {menuItems
-              .filter(item => item.id === 'administration')
-              .map(item => {
+            {adminMenuItems.map(item => {
                 const isActive = item.path === '/'
                   ? location.pathname === '/'
                   : location.pathname.startsWith(item.path);

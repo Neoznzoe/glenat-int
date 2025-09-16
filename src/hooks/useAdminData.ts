@@ -1,0 +1,72 @@
+import {
+  listUsers,
+  listGroups,
+  listPermissions,
+  listAuditLog,
+  getCurrentUser,
+  updateUserAccess,
+  type UpdateUserAccessPayload,
+  type UserAccount,
+  type PermissionOverride,
+  type AuditLogEntry,
+} from '@/lib/mockDb';
+import { type GroupDefinition, type PermissionDefinition } from '@/lib/access-control';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+const USERS_QUERY_KEY = ['admin', 'users'] as const;
+const GROUPS_QUERY_KEY = ['admin', 'groups'] as const;
+const PERMISSIONS_QUERY_KEY = ['admin', 'permissions'] as const;
+const CURRENT_USER_QUERY_KEY = ['admin', 'current-user'] as const;
+const AUDIT_LOG_QUERY_KEY = ['admin', 'audit-log'] as const;
+
+export function useAdminUsers() {
+  return useQuery<UserAccount[]>({ queryKey: USERS_QUERY_KEY, queryFn: listUsers });
+}
+
+export function useAdminGroups() {
+  return useQuery<GroupDefinition[]>({
+    queryKey: GROUPS_QUERY_KEY,
+    queryFn: listGroups,
+  });
+}
+
+export function usePermissionDefinitions() {
+  return useQuery<PermissionDefinition[]>({
+    queryKey: PERMISSIONS_QUERY_KEY,
+    queryFn: listPermissions,
+  });
+}
+
+export function useAuditLog(limit = 25) {
+  return useQuery<AuditLogEntry[]>({
+    queryKey: [...AUDIT_LOG_QUERY_KEY, limit],
+    queryFn: () => listAuditLog(limit),
+  });
+}
+
+export function useCurrentUser() {
+  return useQuery<UserAccount>({ queryKey: CURRENT_USER_QUERY_KEY, queryFn: getCurrentUser });
+}
+
+interface UpdateUserOptions {
+  actorId?: string;
+}
+
+export function useUpdateUserAccess(options?: UpdateUserOptions) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: Omit<UpdateUserAccessPayload, 'actorId'>) =>
+      updateUserAccess({ ...payload, actorId: options?.actorId }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: AUDIT_LOG_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY }),
+      ]);
+    },
+  });
+}
+
+export type { UserAccount, PermissionOverride, AuditLogEntry };
+export { USERS_QUERY_KEY, GROUPS_QUERY_KEY, PERMISSIONS_QUERY_KEY, CURRENT_USER_QUERY_KEY, AUDIT_LOG_QUERY_KEY };

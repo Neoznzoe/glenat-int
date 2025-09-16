@@ -8,6 +8,7 @@ import CatalogueAll from './pages/catalogue/CatalogueAll';
 import Kiosque from './pages/catalogue/Kiosque';
 import Offices from './pages/catalogue/Offices';
 import Nouveautes from './pages/catalogue/Nouveautes';
+import Administration from './pages/administration/Administration';
 
 export function AppRoutes() {
   return (
@@ -21,6 +22,7 @@ export function AppRoutes() {
       <Route path="/catalogue/kiosque" element={<Kiosque />} />
       <Route path="/catalogue/offices" element={<Offices />} />
       <Route path="/catalogue/nouveautes" element={<Nouveautes />} />
+      <Route path="/administration" element={<Administration />} />
     </Routes>
   );
 }
