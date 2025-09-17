@@ -225,7 +225,8 @@ const LOCATIONS = [
 const PHONE_PREFIXES = ['01', '02', '03', '04', '05', '09'];
 
 function pickFrom<T>(list: T[], index: number): T {
-  return list[index % list.length];
+  const normalizedIndex = ((index % list.length) + list.length) % list.length;
+  return list[normalizedIndex];
 }
 
 function createEmail(firstName: string, lastName: string): string {
@@ -265,7 +266,7 @@ function createUsers(groups: GroupDefinition[], count = 120): UserAccount[] {
 
   for (let index = 1; index <= count; index += 1) {
     const firstName = pickFrom(FIRST_NAMES, index);
-    const lastName = pickFrom(LAST_NAMES, FIRST_NAMES.length - index);
+    const lastName = pickFrom(LAST_NAMES, index);
     const displayName = `${firstName} ${lastName}`;
     const email = createEmail(firstName, lastName);
     const azureOid = generateGuid(index);
