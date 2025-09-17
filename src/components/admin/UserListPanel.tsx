@@ -37,7 +37,7 @@ export function UserListPanel({
   const groupsById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
 
   return (
-    <Card className="h-full">
+    <Card className="flex h-full flex-col">
       <CardHeader className="space-y-4">
         <div>
           <CardTitle>Collaborateurs</CardTitle>
@@ -63,8 +63,8 @@ export function UserListPanel({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
-        <ScrollArea className="h-[520px]">
+      <CardContent className="flex-1 overflow-hidden pt-0">
+        <ScrollArea className="h-full">
           <Table>
             <TableHeader>
               <TableRow>
