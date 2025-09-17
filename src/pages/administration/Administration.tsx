@@ -9,11 +9,7 @@ import {
   type PermissionOverride,
   type UserAccount,
 } from '@/hooks/useAdminData';
-import {
-  computeEffectivePermissions,
-  evaluatePermission,
-  type PermissionOverrideMode,
-} from '@/lib/mockDb';
+import { computeEffectivePermissions, evaluatePermission } from '@/lib/mockDb';
 import {
   PERMISSION_DEFINITIONS,
   type GroupDefinition,
@@ -21,57 +17,15 @@ import {
   type PermissionKey,
 } from '@/lib/access-control';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
+import { UserListPanel } from '@/components/admin/UserListPanel';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
+  UserAccessEditor,
+  type PermissionEvaluationRow,
+} from '@/components/admin/UserAccessEditor';
+import { type DraftAccessState, type PermissionSelectValue } from '@/components/admin/access-types';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
-
-const PERMISSION_SELECT_OPTIONS: Array<{
-  value: PermissionSelectValue;
-  label: string;
-  description: string;
-}> = [
-  {
-    value: 'inherit',
-    label: 'Hérité',
-    description: 'Conserver la règle fournie par les groupes ou la base.',
-  },
-  {
-    value: 'allow',
-    label: 'Autoriser',
-    description: 'Accès accordé explicitement pour cette personne.',
-  },
-  {
-    value: 'deny',
-    label: 'Refuser',
-    description: 'Bloquer l’accès même si le groupe le permet.',
-  },
-];
-
-const STATUS_STYLES: Record<'active' | 'inactive', string> = {
-  active: 'bg-emerald-500/10 text-emerald-600 border border-emerald-200',
-  inactive: 'bg-amber-500/10 text-amber-600 border border-amber-200',
-};
-
-type PermissionSelectValue = 'inherit' | PermissionOverrideMode;
-
-type DraftState = {
-  groups: string[];
-  permissionOverrides: PermissionOverride[];
-};
 
 function arraysAreEqual(left: string[], right: string[]) {
   if (left.length !== right.length) {
@@ -95,46 +49,6 @@ function overridesAreEqual(left: PermissionOverride[], right: PermissionOverride
   return true;
 }
 
-function getPermissionSelectValue(
-  overrides: PermissionOverride[],
-  key: PermissionKey,
-): PermissionSelectValue {
-  const override = overrides.find((candidate) => candidate.key === key);
-  return override ? override.mode : 'inherit';
-}
-
-function describePermissionOrigin(
-  origin:
-    | 'superadmin'
-    | 'override-allow'
-    | 'override-deny'
-    | 'group'
-    | 'base'
-    | 'none',
-  inheritedFrom: string[],
-  basePermission: boolean,
-) {
-  switch (origin) {
-    case 'superadmin':
-      return 'Super administrateur – accès permanent';
-    case 'override-allow':
-      return 'Autorisation directe définie pour cet utilisateur';
-    case 'override-deny':
-      return 'Refus direct défini pour cet utilisateur';
-    case 'group':
-      return `Hérité des groupes : ${inheritedFrom.join(', ')}`;
-    case 'base':
-      return basePermission
-        ? 'Accès de base fourni à tous les utilisateurs'
-        : 'Hérité des règles par défaut';
-    case 'none':
-    default:
-      return inheritedFrom.length
-        ? `Refusé (les groupes n’autorisent pas l’accès)`
-        : 'Aucun groupe ne fournit cet accès';
-  }
-}
-
 function mapGroupIdToName(groups: GroupDefinition[], ids: string[]) {
   const byId = new Map(groups.map((group) => [group.id, group.name]));
   return ids.map((id) => byId.get(id) ?? id);
@@ -148,7 +62,7 @@ export function Administration() {
   const { data: currentUser } = useCurrentUser();
   const [search, setSearch] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<DraftState>({ groups: [], permissionOverrides: [] });
+  const [draft, setDraft] = useState<DraftAccessState>({ groups: [], permissionOverrides: [] });
 
   const updateUserMutation = useUpdateUserAccess({ actorId: currentUser?.id });
 
@@ -213,7 +127,7 @@ export function Administration() {
     () => (permissions.length ? permissions : PERMISSION_DEFINITIONS),
     [permissions],
   );
-  const permissionEvaluations = useMemo(() => {
+  const permissionEvaluations = useMemo<PermissionEvaluationRow[]>(() => {
     if (!previewUser) {
       return [];
     }
@@ -251,7 +165,6 @@ export function Administration() {
     };
   }, [users, groups]);
 
-  const groupsById = useMemo(() => new Map(groups?.map((group) => [group.id, group])), [groups]);
   const permissionsByKey = useMemo(
     () => new Map(permissionDefinitions.map((permission) => [permission.key, permission])),
     [permissionDefinitions],
@@ -382,317 +295,30 @@ export function Administration() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[2fr_3fr]">
-        <Card className="h-full">
-          <CardHeader className="space-y-4">
-            <div>
-              <CardTitle>Collaborateurs</CardTitle>
-              <CardDescription>
-                Sélectionnez un utilisateur pour consulter et modifier ses autorisations.
-              </CardDescription>
-            </div>
-            <Input
-              placeholder="Rechercher par nom, email ou service..."
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </CardHeader>
-          <CardContent className="pt-0">
-            <ScrollArea className="h-[520px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Utilisateur</TableHead>
-                    <TableHead>Groupes</TableHead>
-                    <TableHead className="text-right">Dernière connexion</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => {
-                    const isSelected = user.id === selectedUser?.id;
-                    const accessCount = groups
-                      ? computeEffectivePermissions(user, groups).length
-                      : 0;
-                    return (
-                      <TableRow
-                        key={user.id}
-                        data-state={isSelected ? 'selected' : undefined}
-                        className={cn(
-                          'cursor-pointer',
-                          isSelected && 'bg-muted/80',
-                        )}
-                        onClick={() => setSelectedUserId(user.id)}
-                      >
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{user.displayName}</span>
-                            <span className="text-xs text-muted-foreground">{user.email}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {user.jobTitle} · {user.department}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {user.groups.map((groupId) => {
-                              const group = groupsById.get(groupId);
-                              if (!group) {
-                                return null;
-                              }
-                              return (
-                                <Badge
-                                  key={group.id}
-                                  variant="outline"
-                                  className={cn('border', group.accentColor, 'text-xs')}
-                                >
-                                  {group.name}
-                                </Badge>
-                              );
-                            })}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(user.lastConnection), {
-                            locale: fr,
-                            addSuffix: true,
-                          })}
-                          <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-                            {accessCount} accès
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {!filteredUsers.length && (
-                    <TableRow>
-                      <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
-                        Aucun utilisateur ne correspond à la recherche.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-
-        <Card className="h-full">
-          <CardHeader className="space-y-2">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <CardTitle>
-                  {selectedUser ? selectedUser.displayName : 'Sélectionnez un utilisateur'}
-                </CardTitle>
-                <CardDescription>
-                  {selectedUser
-                    ? `${selectedUser.jobTitle} — ${selectedUser.department}`
-                    : 'Choisissez une personne dans la liste pour afficher ses droits.'}
-                </CardDescription>
-              </div>
-              {selectedUser && (
-                <div className="flex flex-wrap gap-2">
-                  <Badge className={cn('border text-xs', STATUS_STYLES[selectedUser.status])}>
-                    {selectedUser.status === 'active' ? 'Actif' : 'Inactif'}
-                  </Badge>
-                  {selectedUser.isSuperAdmin && (
-                    <Badge className="border bg-primary/10 text-primary border-primary/40 text-xs">
-                      Super administrateur
-                    </Badge>
-                  )}
-                </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {!selectedUser && (
-              <div className="text-sm text-muted-foreground">
-                Sélectionnez un collaborateur pour modifier ses groupes et exceptions d’accès.
-              </div>
-            )}
-
-            {selectedUser && (
-              <div className="space-y-8">
-                <section className="space-y-3">
-                  <div>
-                    <h3 className="text-lg font-semibold">Groupes métiers</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Les groupes déterminent les accès partagés. Vous pouvez ajouter ou retirer un
-                      utilisateur d’un groupe pour modifier ses droits.
-                    </p>
-                  </div>
-                  <div className="grid gap-3">
-                    {groups.map((group) => {
-                      const groupId = `group-${group.id}`;
-                      const checked = draft.groups.includes(group.id);
-                      return (
-                        <label
-                          key={group.id}
-                          htmlFor={groupId}
-                          className={cn(
-                            'flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition',
-                            checked ? 'border-primary/50 bg-primary/5' : 'border-border',
-                            isSuperAdmin && 'opacity-80 cursor-not-allowed',
-                          )}
-                        >
-                          <Checkbox
-                            id={groupId}
-                            disabled={isSuperAdmin || isLoading || updateUserMutation.isPending}
-                            checked={checked}
-                            onCheckedChange={(value) =>
-                              handleGroupToggle(group.id, value === true)
-                            }
-                          />
-                          <div className="space-y-1">
-                            <div className="font-medium">{group.name}</div>
-                            <p className="text-sm text-muted-foreground">{group.description}</p>
-                            <div className="flex flex-wrap gap-1 pt-1">
-                              {group.defaultPermissions.map((permission) => {
-                                const definition = permissionsByKey.get(permission);
-                                if (!definition) {
-                                  return null;
-                                }
-                                const isActive = effectivePermissionSet.has(permission);
-                                return (
-                                  <Badge
-                                    key={permission}
-                                    variant="outline"
-                                    className={cn(
-                                      'text-[10px] uppercase tracking-wide border',
-                                      isActive
-                                        ? 'border-emerald-200 bg-emerald-500/10 text-emerald-600'
-                                        : 'border-border text-muted-foreground',
-                                    )}
-                                  >
-                                    {definition.label}
-                                  </Badge>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </section>
-
-                <section className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold">Permissions détaillées</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Les exceptions permettent de surcharger les droits hérités des groupes.
-                      </p>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {effectivePermissionSet.size} accès actifs
-                    </div>
-                  </div>
-                  <ScrollArea className="h-[260px] rounded-lg border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Élément</TableHead>
-                          <TableHead>Origine</TableHead>
-                          <TableHead className="w-44">Décision</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {permissionEvaluations.map(({ definition, evaluation }) => {
-                          const value = getPermissionSelectValue(
-                            draft.permissionOverrides,
-                            definition.key,
-                          );
-                          const allowed = evaluation.effective;
-                          return (
-                            <TableRow key={definition.key}>
-                              <TableCell>
-                                <div className="flex flex-col">
-                                  <span className="font-medium">{definition.label}</span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {definition.category}
-                                  </span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-col gap-1">
-                                  <Badge
-                                    variant="outline"
-                                    className={cn(
-                                      'w-fit text-xs border',
-                                      allowed
-                                        ? 'border-emerald-200 bg-emerald-500/10 text-emerald-600'
-                                        : 'border-rose-200 bg-rose-500/10 text-rose-600',
-                                    )}
-                                  >
-                                    {allowed ? 'Autorisé' : 'Refusé'}
-                                  </Badge>
-                                  <span className="text-xs text-muted-foreground">
-                                    {describePermissionOrigin(
-                                      evaluation.origin,
-                                      evaluation.inheritedFrom,
-                                      evaluation.basePermission,
-                                    )}
-                                  </span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Select
-                                  value={value}
-                                  onValueChange={(selected) =>
-                                    handlePermissionChange(
-                                      definition.key,
-                                      selected as PermissionSelectValue,
-                                    )
-                                  }
-                                  disabled={isSuperAdmin || updateUserMutation.isPending}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {PERMISSION_SELECT_OPTIONS.map((option) => (
-                                      <SelectItem key={option.value} value={option.value}>
-                                        <div className="flex flex-col">
-                                          <span>{option.label}</span>
-                                          <span className="text-xs text-muted-foreground">
-                                            {option.description}
-                                          </span>
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                </section>
-
-                <div className="flex flex-wrap items-center justify-end gap-3">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={handleReset}
-                    disabled={!isDirty || updateUserMutation.isPending}
-                  >
-                    Réinitialiser
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={
-                      isSuperAdmin || !isDirty || updateUserMutation.isPending || isLoading
-                    }
-                  >
-                    {updateUserMutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <UserListPanel
+          filteredUsers={filteredUsers}
+          search={search}
+          onSearchChange={setSearch}
+          groups={groups}
+          selectedUserId={selectedUserId}
+          onSelectUser={setSelectedUserId}
+          isLoading={loadingUsers || loadingGroups}
+        />
+        <UserAccessEditor
+          user={selectedUser}
+          draft={draft}
+          groups={groups}
+          permissionEvaluations={permissionEvaluations}
+          effectivePermissionSet={effectivePermissionSet}
+          isDirty={isDirty}
+          isSaving={updateUserMutation.isPending}
+          isSuperAdmin={isSuperAdmin}
+          isLoading={isLoading}
+          onToggleGroup={handleGroupToggle}
+          onPermissionChange={handlePermissionChange}
+          onReset={handleReset}
+          onSave={handleSave}
+        />
       </div>
 
       <Card>

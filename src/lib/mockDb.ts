@@ -15,6 +15,23 @@ export interface PermissionOverride {
   note?: string;
 }
 
+export type PermissionEvaluationOrigin =
+  | 'superadmin'
+  | 'override-allow'
+  | 'override-deny'
+  | 'group'
+  | 'base'
+  | 'none';
+
+export interface PermissionEvaluation {
+  key: PermissionKey;
+  effective: boolean;
+  origin: PermissionEvaluationOrigin;
+  inheritedFrom: string[];
+  basePermission: boolean;
+  overrideMode?: PermissionOverrideMode;
+}
+
 export interface UserAccount {
   id: string;
   firstName: string;
@@ -535,7 +552,7 @@ export function evaluatePermission(
   user: UserAccount,
   groups: GroupDefinition[],
   key: PermissionKey,
-) {
+): PermissionEvaluation {
   const inheritedFrom = groups
     .filter(
       (group) => user.groups.includes(group.id) && group.defaultPermissions.includes(key),
