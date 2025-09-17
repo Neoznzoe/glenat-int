@@ -29,6 +29,8 @@ import { useAppSelector } from '@/hooks/redux';
 import CartSummary from './CartSummary';
 import { useState } from 'react';
 import NotificationList from './NotificationList';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { useAuth } from '@/context/AuthContext';
 
 export function Topbar() {
   const itemCount = useAppSelector((state) =>
@@ -52,6 +54,7 @@ export function Topbar() {
   const [open, setOpen] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
   const [searchScope, setSearchScope] = useState('catalogue');
+  const { user, loading: authLoading, logout } = useAuth();
   const scopeLabels = {
     catalogue: 'Catalogue',
     glenatdoc: "Glénat'doc",
@@ -140,12 +143,24 @@ export function Topbar() {
               size="sm"
               className="ml-2 my-1 flex items-center space-x-2 focus-visible:ring-0 h-auto py-1.5"
             >
-              <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-muted-foreground" />
-              </div>
+              <Avatar className="h-8 w-8">
+                {user?.photoUrl ? (
+                  <AvatarImage src={user.photoUrl} alt={user.displayName} />
+                ) : (
+                  <AvatarFallback>
+                    <User className="h-4 w-4 text-muted-foreground" />
+                  </AvatarFallback>
+                )}
+              </Avatar>
               <div className="hidden md:block text-left">
-                <div className="text-sm font-medium text-foreground">Victor Besson</div>
-                <div className="text-xs text-muted-foreground">Glénat Grenoble</div>
+                <div className="text-sm font-medium text-foreground">
+                  {authLoading ? 'Connexion…' : user?.displayName ?? 'Utilisateur'}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {authLoading
+                    ? 'Synchronisation en cours'
+                    : user?.jobTitle ?? user?.officeLocation ?? user?.mail ?? user?.userPrincipalName ?? ''}
+                </div>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground ml-1" />
             </Button>
@@ -163,7 +178,12 @@ export function Topbar() {
               <KeyRound className="mr-2 h-4 w-4" />
               <span>Contrôle mot de passe</span>
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault();
+                void logout();
+              }}
+            >
               <LogOut className="mr-2 h-4 w-4" />
               <span>Déconnexion</span>
             </DropdownMenuItem>
