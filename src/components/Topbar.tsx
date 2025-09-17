@@ -75,7 +75,7 @@ export function Topbar() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder={`Rechercher dans ${scopeLabels[searchScope]}`}
+              placeholder={`Rechercher dans ${scopeLabels[searchScope as keyof typeof scopeLabels]}`}
               className="pl-10 pr-36 bg-muted border-input focus:bg-background"
             />
             <Select value={searchScope} onValueChange={setSearchScope}>
