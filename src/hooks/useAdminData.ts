@@ -1,15 +1,15 @@
 import {
-  listUsers,
-  listGroups,
-  listPermissions,
-  listAuditLog,
-  getCurrentUser,
-  updateUserAccess,
+  fetchUsers,
+  fetchGroups,
+  fetchPermissions,
+  fetchAuditLog,
+  fetchCurrentUser,
+  persistUserAccess,
   type UpdateUserAccessPayload,
   type UserAccount,
   type PermissionOverride,
   type AuditLogEntry,
-} from '@/lib/mockDb';
+} from '@/lib/adminApi';
 import { type GroupDefinition, type PermissionDefinition } from '@/lib/access-control';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -20,32 +20,32 @@ const CURRENT_USER_QUERY_KEY = ['admin', 'current-user'] as const;
 const AUDIT_LOG_QUERY_KEY = ['admin', 'audit-log'] as const;
 
 export function useAdminUsers() {
-  return useQuery<UserAccount[]>({ queryKey: USERS_QUERY_KEY, queryFn: listUsers });
+  return useQuery<UserAccount[]>({ queryKey: USERS_QUERY_KEY, queryFn: fetchUsers });
 }
 
 export function useAdminGroups() {
   return useQuery<GroupDefinition[]>({
     queryKey: GROUPS_QUERY_KEY,
-    queryFn: listGroups,
+    queryFn: fetchGroups,
   });
 }
 
 export function usePermissionDefinitions() {
   return useQuery<PermissionDefinition[]>({
     queryKey: PERMISSIONS_QUERY_KEY,
-    queryFn: listPermissions,
+    queryFn: fetchPermissions,
   });
 }
 
 export function useAuditLog(limit = 25) {
   return useQuery<AuditLogEntry[]>({
     queryKey: [...AUDIT_LOG_QUERY_KEY, limit],
-    queryFn: () => listAuditLog(limit),
+    queryFn: () => fetchAuditLog(limit),
   });
 }
 
 export function useCurrentUser() {
-  return useQuery<UserAccount>({ queryKey: CURRENT_USER_QUERY_KEY, queryFn: getCurrentUser });
+  return useQuery<UserAccount>({ queryKey: CURRENT_USER_QUERY_KEY, queryFn: fetchCurrentUser });
 }
 
 interface UpdateUserOptions {
@@ -57,7 +57,7 @@ export function useUpdateUserAccess(options?: UpdateUserOptions) {
 
   return useMutation({
     mutationFn: (payload: Omit<UpdateUserAccessPayload, 'actorId'>) =>
-      updateUserAccess({ ...payload, actorId: options?.actorId }),
+      persistUserAccess({ ...payload, actorId: options?.actorId }),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY }),

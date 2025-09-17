@@ -8,20 +8,24 @@ import { ThemeProvider } from './components/ThemeProvider';
 import { store } from './store';
 import { BrowserRouter } from 'react-router-dom';
 import { queryClient } from './lib/queryClient';
-import { ensureDatabaseSeeded } from './lib/mockDb';
+import { startMockServer } from './lib/mockServer';
 
-ensureDatabaseSeeded();
+async function bootstrap() {
+  await startMockServer();
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <Provider store={store}>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </Provider>
-  </StrictMode>,
-);
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <Provider store={store}>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </ThemeProvider>
+        </QueryClientProvider>
+      </Provider>
+    </StrictMode>,
+  );
+}
+
+void bootstrap();
