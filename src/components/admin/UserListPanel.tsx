@@ -63,7 +63,7 @@ export function UserListPanel({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-1 min-h-0 flex-col overflow-hidden pt-0">
+      <CardContent className="flex flex-1 min-h-0 flex-col overflow-hidden pt-0 max-h-[1680px]">
         <ScrollArea className="flex-1 min-h-0">
           <Table>
             <TableHeader>
