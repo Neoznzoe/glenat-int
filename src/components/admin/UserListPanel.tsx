@@ -45,19 +45,23 @@ export function UserListPanel({
             Sélectionnez un utilisateur pour consulter et modifier ses autorisations.
           </CardDescription>
         </div>
-        <Input
-          placeholder="Rechercher par nom, email ou service..."
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-        />
-        <Button
-          variant={showOnlyInactive ? 'default' : 'outline'}
-          size="sm"
-          className="justify-start"
-          onClick={onToggleShowOnlyInactive}
-        >
-          {showOnlyInactive ? 'Afficher tous les utilisateurs' : 'Afficher uniquement les inactifs'}
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Input
+            placeholder="Rechercher par nom, email ou service..."
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            className="flex-1"
+          />
+          <Button
+            variant={showOnlyInactive ? 'default' : 'outline'}
+            size="sm"
+            className="sm:whitespace-nowrap"
+            onClick={onToggleShowOnlyInactive}
+            aria-pressed={showOnlyInactive}
+          >
+            Afficher les utilisateurs inactifs
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="pt-0">
         <ScrollArea className="h-[520px]">
