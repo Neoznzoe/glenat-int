@@ -62,20 +62,22 @@ export function Administration() {
   const { data: currentUser } = useCurrentUser();
   const [search, setSearch] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [showOnlyInactive, setShowOnlyInactive] = useState(false);
   const [draft, setDraft] = useState<DraftAccessState>({ groups: [], permissionOverrides: [] });
 
   const updateUserMutation = useUpdateUserAccess({ actorId: currentUser?.id });
 
   const lowerSearch = search.trim().toLowerCase();
   const filteredUsers = useMemo(() => {
+    const candidates = showOnlyInactive ? users.filter((user) => user.status === 'inactive') : users;
     if (!lowerSearch) {
-      return users;
+      return candidates;
     }
-    return users.filter((user) => {
+    return candidates.filter((user) => {
       const haystack = `${user.displayName} ${user.email} ${user.department}`.toLowerCase();
       return haystack.includes(lowerSearch);
     });
-  }, [users, lowerSearch]);
+  }, [users, lowerSearch, showOnlyInactive]);
 
   useEffect(() => {
     if (!users.length) {
@@ -299,6 +301,8 @@ export function Administration() {
           filteredUsers={filteredUsers}
           search={search}
           onSearchChange={setSearch}
+          showOnlyInactive={showOnlyInactive}
+          onToggleShowOnlyInactive={() => setShowOnlyInactive((current) => !current)}
           groups={groups}
           selectedUserId={selectedUserId}
           onSelectUser={setSelectedUserId}

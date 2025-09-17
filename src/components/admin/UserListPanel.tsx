@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,6 +15,8 @@ interface UserListPanelProps {
   filteredUsers: UserAccount[];
   search: string;
   onSearchChange: (value: string) => void;
+  showOnlyInactive: boolean;
+  onToggleShowOnlyInactive: () => void;
   groups: GroupDefinition[];
   selectedUserId: string | null;
   onSelectUser: (userId: string) => void;
@@ -24,6 +27,8 @@ export function UserListPanel({
   filteredUsers,
   search,
   onSearchChange,
+  showOnlyInactive,
+  onToggleShowOnlyInactive,
   groups,
   selectedUserId,
   onSelectUser,
@@ -45,6 +50,14 @@ export function UserListPanel({
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
         />
+        <Button
+          variant={showOnlyInactive ? 'default' : 'outline'}
+          size="sm"
+          className="justify-start"
+          onClick={onToggleShowOnlyInactive}
+        >
+          {showOnlyInactive ? 'Afficher tous les utilisateurs' : 'Afficher uniquement les inactifs'}
+        </Button>
       </CardHeader>
       <CardContent className="pt-0">
         <ScrollArea className="h-[520px]">
