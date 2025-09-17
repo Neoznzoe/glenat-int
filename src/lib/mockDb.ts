@@ -225,7 +225,85 @@ const LOCATIONS = [
 const PHONE_PREFIXES = ['01', '02', '03', '04', '05', '09'];
 
 function pickFrom<T>(list: T[], index: number): T {
-  return list[index % list.length];
+  const normalizedIndex = ((index % list.length) + list.length) % list.length;
+  return list[normalizedIndex];
+}
+
+function shouldRepairDisplayName(displayName: string): boolean {
+  if (!displayName) {
+    return true;
+  }
+  const trimmed = displayName.trim();
+  if (!trimmed) {
+    return true;
+  }
+  const normalizedTrimmed = trimmed.toLowerCase();
+  return normalizedTrimmed.includes('undefined');
+}
+
+function shouldRepairEmail(email: string): boolean {
+  if (!email) {
+    return true;
+  }
+  const normalized = email.trim().toLowerCase();
+  return !normalized || normalized.includes('undefined');
+}
+
+function parseUserIndex(userId: string, fallback: number): number {
+  const match = userId.match(/^user-(\d{1,})$/);
+  if (!match) {
+    return fallback;
+  }
+  const parsed = Number.parseInt(match[1] ?? '', 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function repairUser(user: UserAccount, index: number): UserAccount {
+  const normalizedLastNameRaw = typeof user.lastName === 'string' ? user.lastName.trim() : '';
+  const normalizedLastName =
+    normalizedLastNameRaw && normalizedLastNameRaw.toLowerCase() !== 'undefined'
+      ? normalizedLastNameRaw
+      : '';
+  if (normalizedLastName) {
+    const repaired: UserAccount = {
+      ...user,
+      lastName: normalizedLastName,
+    };
+
+    if (shouldRepairDisplayName(user.displayName)) {
+      repaired.displayName = `${user.firstName} ${normalizedLastName}`;
+    }
+
+    if (shouldRepairEmail(user.email)) {
+      const regeneratedEmail = createEmail(user.firstName, normalizedLastName);
+      repaired.email = regeneratedEmail;
+      repaired.azureUpn = regeneratedEmail;
+    } else if (shouldRepairEmail(user.azureUpn)) {
+      repaired.azureUpn = user.email;
+    }
+
+    return repaired;
+  }
+
+  const fallbackIndex = parseUserIndex(user.id, index);
+  const regeneratedLastName = pickFrom(LAST_NAMES, fallbackIndex);
+  const regeneratedEmail = createEmail(user.firstName, regeneratedLastName);
+
+  return {
+    ...user,
+    lastName: regeneratedLastName,
+    displayName: `${user.firstName} ${regeneratedLastName}`,
+    email: regeneratedEmail,
+    azureUpn: regeneratedEmail,
+  };
+}
+
+function sanitizeDatabase(db: DatabaseSchema): DatabaseSchema {
+  const sanitizedUsers = db.users.map((user, index) => repairUser(user, index));
+  return {
+    ...db,
+    users: sanitizedUsers,
+  };
 }
 
 function createEmail(firstName: string, lastName: string): string {
@@ -265,7 +343,7 @@ function createUsers(groups: GroupDefinition[], count = 120): UserAccount[] {
 
   for (let index = 1; index <= count; index += 1) {
     const firstName = pickFrom(FIRST_NAMES, index);
-    const lastName = pickFrom(LAST_NAMES, FIRST_NAMES.length - index);
+    const lastName = pickFrom(LAST_NAMES, index);
     const displayName = `${firstName} ${lastName}`;
     const email = createEmail(firstName, lastName);
     const azureOid = generateGuid(index);
@@ -386,8 +464,9 @@ function readDatabase(): DatabaseSchema {
       try {
         const parsed = JSON.parse(raw) as DatabaseSchema;
         if (parsed.version === DB_VERSION) {
-          inMemoryDb = parsed;
-          return inMemoryDb;
+          const sanitized = sanitizeDatabase(parsed);
+          persistDatabase(sanitized);
+          return sanitized;
         }
       } catch (error) {
         console.warn('Invalid database in localStorage, seeding a fresh copy.', error);
@@ -412,9 +491,15 @@ function simulateLatency<T>(value: T, delay = 200): Promise<T> {
 
 export async function listUsers(): Promise<UserAccount[]> {
   const db = readDatabase();
-  const sorted = [...db.users].sort((left, right) =>
-    left.lastName.localeCompare(right.lastName, 'fr'),
-  );
+  const sorted = [...db.users].sort((left, right) => {
+    const leftLastName = left.lastName?.trim() ?? '';
+    const rightLastName = right.lastName?.trim() ?? '';
+    const comparison = leftLastName.localeCompare(rightLastName, 'fr');
+    if (comparison !== 0) {
+      return comparison;
+    }
+    return left.firstName.localeCompare(right.firstName, 'fr');
+  });
   return simulateLatency(sorted);
 }
 
@@ -572,10 +657,12 @@ export function evaluatePermission(
 
   const override = user.permissionOverrides.find((candidate) => candidate.key === key);
   if (override) {
+    const origin: PermissionEvaluationOrigin =
+      override.mode === 'allow' ? 'override-allow' : 'override-deny';
     return {
       key,
       effective: override.mode === 'allow',
-      origin: (override.mode === 'allow' ? 'override-allow' : 'override-deny') as const,
+      origin,
       overrideMode: override.mode,
       inheritedFrom,
       basePermission,

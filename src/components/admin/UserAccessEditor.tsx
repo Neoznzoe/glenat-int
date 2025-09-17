@@ -106,7 +106,7 @@ export function UserAccessEditor({
   const groupMap = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
 
   return (
-    <Card className="h-full">
+    <Card className="flex flex-col">
       <CardHeader className="space-y-2">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -189,7 +189,7 @@ export function UserAccessEditor({
                   {effectivePermissionSet.size} accès actifs pour ce profil
                 </div>
               </div>
-              <ScrollArea className="h-[280px]">
+              <div>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -256,7 +256,7 @@ export function UserAccessEditor({
                     })}
                   </TableBody>
                 </Table>
-              </ScrollArea>
+              </div>
             </section>
 
             <div className="flex flex-wrap items-center justify-end gap-3">

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,6 +15,8 @@ interface UserListPanelProps {
   filteredUsers: UserAccount[];
   search: string;
   onSearchChange: (value: string) => void;
+  showOnlyInactive: boolean;
+  onToggleShowOnlyInactive: () => void;
   groups: GroupDefinition[];
   selectedUserId: string | null;
   onSelectUser: (userId: string) => void;
@@ -24,6 +27,8 @@ export function UserListPanel({
   filteredUsers,
   search,
   onSearchChange,
+  showOnlyInactive,
+  onToggleShowOnlyInactive,
   groups,
   selectedUserId,
   onSelectUser,
@@ -32,7 +37,7 @@ export function UserListPanel({
   const groupsById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
 
   return (
-    <Card className="h-full">
+    <Card className="flex h-full flex-col">
       <CardHeader className="space-y-4">
         <div>
           <CardTitle>Collaborateurs</CardTitle>
@@ -40,14 +45,26 @@ export function UserListPanel({
             Sélectionnez un utilisateur pour consulter et modifier ses autorisations.
           </CardDescription>
         </div>
-        <Input
-          placeholder="Rechercher par nom, email ou service..."
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-        />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Input
+            placeholder="Rechercher par nom, email ou service..."
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            className="flex-1"
+          />
+          <Button
+            variant={showOnlyInactive ? 'default' : 'outline'}
+            size="sm"
+            className="sm:whitespace-nowrap"
+            onClick={onToggleShowOnlyInactive}
+            aria-pressed={showOnlyInactive}
+          >
+            Afficher les utilisateurs inactifs
+          </Button>
+        </div>
       </CardHeader>
-      <CardContent className="pt-0">
-        <ScrollArea className="h-[520px]">
+      <CardContent className="flex flex-1 min-h-0 flex-col overflow-hidden pt-0 max-h-[1680px]">
+        <ScrollArea className="flex-1 min-h-0">
           <Table>
             <TableHeader>
               <TableRow>
