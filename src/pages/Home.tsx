@@ -112,12 +112,6 @@ export function Home() {
     ? plannedTravel
     : plannedTravel.slice(0, 2);
 
-  const todayStr = new Date().toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-
   const visitingRows = (() => {
     return visitingDisplayed.map((r) => {
       const isManon = String(r.name).toLowerCase().includes('manon roux');

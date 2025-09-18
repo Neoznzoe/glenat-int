@@ -1,4 +1,5 @@
 import {
+  Suspense,
   createContext,
   useCallback,
   useContext,
@@ -342,16 +343,33 @@ export interface SecureRoutesProps {
 }
 
 export function SecureRoutes({ routes }: SecureRoutesProps): ReactElement {
+  const fallback = (
+    <div className="p-8 text-center text-muted-foreground">
+      Chargement de la page…
+    </div>
+  );
+
   return (
     <Routes>
       {routes.map((route) => (
         <Route
           key={route.path}
           path={route.path}
-          element={<RouteRenderer path={route.path} element={route.element} />}
+          element={
+            <Suspense fallback={fallback}>
+              <RouteRenderer path={route.path} element={route.element} />
+            </Suspense>
+          }
         />
       ))}
-      <Route path="/ci/*" element={<EncryptedRoute routes={routes} />} />
+      <Route
+        path="/ci/*"
+        element={
+          <Suspense fallback={fallback}>
+            <EncryptedRoute routes={routes} />
+          </Suspense>
+        }
+      />
     </Routes>
   );
 }

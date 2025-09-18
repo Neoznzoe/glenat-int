@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { SidebarContext } from './context/SidebarContext';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { Toaster } from '@/components/ui/sonner';
 import AppRoutes, { ROUTES_CONFIG } from './routes';
-import { jobOffers } from './pages/Emploi';
+import { jobOffers } from '@/data/jobOffers';
 import { SecureRoutingProvider } from './lib/secureRouting';
 
 function App() {
@@ -20,7 +20,15 @@ function App() {
             <div className="flex-1 flex flex-col">
               <Topbar />
               <main className="flex-1 overflow-auto">
-                <AppRoutes />
+                <Suspense
+                  fallback={
+                    <div className="p-8 text-center text-muted-foreground">
+                      Chargement de la page…
+                    </div>
+                  }
+                >
+                  <AppRoutes />
+                </Suspense>
               </main>
             </div>
           </div>
