@@ -93,7 +93,7 @@ export interface UpdateUserAccessPayload {
 }
 
 const STORAGE_KEY = 'glenat-admin-database-v1';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 let inMemoryDb: DatabaseSchema | null = null;
 
 function deepClone<T>(value: T): T {
@@ -299,7 +299,45 @@ function repairUser(user: UserAccount, index: number): UserAccount {
 }
 
 function sanitizeDatabase(db: DatabaseSchema): DatabaseSchema {
-  const sanitizedUsers = db.users.map((user, index) => repairUser(user, index));
+  // First, repair obviously broken fields
+  let sanitizedUsers = db.users.map((user, index) => repairUser(user, index));
+
+  // Then, ensure uniqueness of display names (first + last) to avoid duplicates
+  const seen = new Set<string>();
+  sanitizedUsers = sanitizedUsers.map((user, index) => {
+    const first = user.firstName;
+    const normalizeLast = (ln: string) => (ln ?? '').trim();
+    let last = normalizeLast(user.lastName);
+    const makeKey = (fn: string, ln: string) => `${fn} ${ln}`.trim();
+
+    let key = makeKey(first, last);
+    if (last && !seen.has(key)) {
+      seen.add(key);
+      return user;
+    }
+
+    // Try to find a different last name that makes the combination unique
+    for (let attempt = 0; attempt < LAST_NAMES.length; attempt += 1) {
+      const candidateLast = pickFrom(LAST_NAMES, index + attempt);
+      const candidateKey = makeKey(first, candidateLast);
+      if (!seen.has(candidateKey)) {
+        seen.add(candidateKey);
+        const email = createEmail(first, candidateLast);
+        return {
+          ...user,
+          lastName: candidateLast,
+          displayName: `${first} ${candidateLast}`,
+          email,
+          azureUpn: email,
+        };
+      }
+    }
+
+    // Fallback: accept as is (should be rare)
+    seen.add(key);
+    return user;
+  });
+
   return {
     ...db,
     users: sanitizedUsers,
@@ -342,8 +380,14 @@ function createUsers(groups: GroupDefinition[], count = 120): UserAccount[] {
   users.push(superAdmin);
 
   for (let index = 1; index <= count; index += 1) {
-    const firstName = pickFrom(FIRST_NAMES, index);
-    const lastName = pickFrom(LAST_NAMES, index);
+    // Ensure unique display names by enumerating combinations of
+    // FIRST_NAMES x LAST_NAMES deterministically before repeating.
+    const zeroBased = index - 1;
+    const lastIndex = zeroBased % LAST_NAMES.length;
+    const firstIndex = Math.floor(zeroBased / LAST_NAMES.length);
+
+    const firstName = pickFrom(FIRST_NAMES, firstIndex);
+    const lastName = pickFrom(LAST_NAMES, lastIndex);
     const displayName = `${firstName} ${lastName}`;
     const email = createEmail(firstName, lastName);
     const azureOid = generateGuid(index);
