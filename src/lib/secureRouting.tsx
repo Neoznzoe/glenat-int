@@ -40,6 +40,7 @@ interface SecureRoutingContextValue {
   getCachedToken: (path: string, search: string) => string | undefined;
   setDecryptedLocation: (location: DecryptedLocation) => void;
   currentLocation: DecryptedLocation;
+  tokenVersion: number;
 }
 
 const defaultLocation: DecryptedLocation = {
@@ -94,6 +95,7 @@ export function SecureRoutingProvider({
 }: SecureRoutingProviderProps): ReactElement {
   const encryptionEnabled = isUrlEncryptionConfigured();
   const [cache, setCache] = useState<Record<string, string>>({});
+  const [tokenVersion, setTokenVersion] = useState(0);
   const pendingRef = useRef<Record<string, Promise<string>>>({});
   const [currentLocation, setCurrentLocation] = useState<DecryptedLocation>(() => {
     if (typeof window === 'undefined') {
@@ -163,15 +165,33 @@ export function SecureRoutingProvider({
     });
   }, [ensureToken, routes, encryptionEnabled]);
 
+  const setDecryptedLocation = useCallback(
+    (location: DecryptedLocation) => {
+      setCurrentLocation(location);
+      setCache({});
+      pendingRef.current = {};
+      setTokenVersion((previous) => previous + 1);
+    },
+    [setCache, setCurrentLocation, setTokenVersion],
+  );
+
   const value = useMemo(
     () => ({
       encryptionEnabled,
       ensureToken,
       getCachedToken,
-      setDecryptedLocation: setCurrentLocation,
+      setDecryptedLocation,
       currentLocation,
+      tokenVersion,
     }),
-    [encryptionEnabled, ensureToken, getCachedToken, currentLocation],
+    [
+      encryptionEnabled,
+      ensureToken,
+      getCachedToken,
+      setDecryptedLocation,
+      currentLocation,
+      tokenVersion,
+    ],
   );
 
   return (
@@ -337,18 +357,13 @@ export function SecureRoutes({ routes }: SecureRoutesProps): ReactElement {
 }
 
 export function useEncryptedPath(target: string): string {
-  const { encryptionEnabled, ensureToken, getCachedToken } =
+  const { encryptionEnabled, ensureToken, getCachedToken, tokenVersion } =
     useSecureRoutingContext();
 
   const isInternal = target.startsWith('/');
 
   const { path, search } = useMemo(() => splitTarget(target), [target]);
-  const [resolved, setResolved] = useState<string | null>(() => {
-    if (!encryptionEnabled || !isInternal) {
-      return null;
-    }
-    return getCachedToken(path, search) ?? null;
-  });
+  const [resolved, setResolved] = useState<string | null>(null);
 
   useEffect(() => {
     if (!encryptionEnabled || !isInternal) {
@@ -357,6 +372,15 @@ export function useEncryptedPath(target: string): string {
     }
 
     let cancelled = false;
+
+    setResolved(null);
+
+    const cached = getCachedToken(path, search);
+
+    if (cached) {
+      setResolved(cached);
+      return;
+    }
 
     void ensureToken(path, search).then((token) => {
       if (cancelled) {
@@ -368,7 +392,15 @@ export function useEncryptedPath(target: string): string {
     return () => {
       cancelled = true;
     };
-  }, [encryptionEnabled, ensureToken, path, search, isInternal]);
+  }, [
+    encryptionEnabled,
+    ensureToken,
+    getCachedToken,
+    path,
+    search,
+    isInternal,
+    tokenVersion,
+  ]);
 
   if (!encryptionEnabled || !isInternal) {
     return target;
