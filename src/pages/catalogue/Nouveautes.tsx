@@ -26,7 +26,7 @@ import JulesMatrat from '@/assets/images/jules_matrat.webp';
 import CombatVie from '@/assets/images/le_combat_dune_vie.webp';
 import Odysee from '@/assets/images/odyssee.webp';
 import Cemotions from '@/assets/images/couleurs-emotions.webp';
-import { Link } from 'react-router-dom';
+import { SecureLink } from '@/components/routing/SecureLink';
 
 interface ReleaseGroup {
   date: string;
@@ -161,13 +161,13 @@ export function Nouveautes() {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/">Accueil</Link>
+              <SecureLink to="/">Accueil</SecureLink>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/catalogue">Catalogue</Link>
+              <SecureLink to="/catalogue">Catalogue</SecureLink>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />

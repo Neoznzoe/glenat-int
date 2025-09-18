@@ -21,6 +21,34 @@ Application interne construite avec **React**, **Vite** et **TypeScript**. Elle 
    npm run dev
    ```
 
+## 🔐 Chiffrement des URLs (AES-256-GCM)
+
+Les appels réseau **et la navigation applicative** sont encapsulés dans des URLs chiffrées grâce à AES-256-GCM. Dès qu'une clé est fournie, les routes telles que `/catalogue/nouveautes` sont automatiquement exposées comme `/ci/amPPhBtip/pZGy2/...` tandis que le routeur interne résout le chemin original côté client.
+
+Un exemple de configuration est fourni dans le fichier `.env` (ignoré par Git) :
+
+```
+# Exemple de clé AES-256-GCM encodée en Base64 URL-safe pour les URLs sécurisées
+VITE_AES_GCM_KEY=nPB0h7q3M-0U8c5QO9gdC5cd4u3_KD6PtMnbo2FA7WE
+```
+
+Avant la mise en production, remplacez la valeur ci-dessus par votre propre clé secrète.
+
+Pour générer une nouvelle clé partagée de 32 octets (256 bits) encodée en Base64 URL-safe :
+
+```bash
+# Exemple de génération d'une clé aléatoire depuis Node.js
+node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))" >> .env.local
+```
+
+Ajoutez ensuite la ligne suivante dans votre fichier `.env.local` :
+
+```
+VITE_AES_GCM_KEY=<valeur_générée>
+```
+
+En développement, le serveur mock se charge automatiquement de déchiffrer les URLs reçues afin de conserver la même API qu'auparavant.
+
 ## 🧠 Technologies principales
 - **React** pour la construction des interfaces.
 - **TypeScript** pour un typage statique robuste.
