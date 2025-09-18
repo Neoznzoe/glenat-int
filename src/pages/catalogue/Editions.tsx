@@ -15,7 +15,7 @@ import UniversBD from '@/assets/logos/univers/univers-bd.svg';
 import UniversJeune from '@/assets/logos/univers/univers-jeunesse.svg';
 import UniversLivre from '@/assets/logos/univers/univers-livres.svg';
 import UniversManga from '@/assets/logos/univers/univers-manga.svg';
-import { Link } from 'react-router-dom';
+import { SecureLink } from '@/components/routing/SecureLink';
 
 export function Catalogue() {
   const editions = [
@@ -41,13 +41,13 @@ export function Catalogue() {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/">Accueil</Link>
+              <SecureLink to="/">Accueil</SecureLink>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/catalogue">Catalogue</Link>
+              <SecureLink to="/catalogue">Catalogue</SecureLink>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />

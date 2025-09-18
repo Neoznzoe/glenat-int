@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { type RouteDefinition, SecureRoutes } from '@/lib/secureRouting';
 import { Home } from './pages/Home';
 import Emploi from './pages/Emploi';
 import Services from './pages/services/Services';
@@ -10,21 +10,21 @@ import Offices from './pages/catalogue/Offices';
 import Nouveautes from './pages/catalogue/Nouveautes';
 import Administration from './pages/administration/Administration';
 
+export const ROUTES_CONFIG: RouteDefinition[] = [
+  { path: '/', element: <Home /> },
+  { path: '/emploi', element: <Emploi /> },
+  { path: '/services', element: <Services /> },
+  { path: '/services/production', element: <Production /> },
+  { path: '/catalogue', element: <Catalogue /> },
+  { path: '/catalogue/all', element: <CatalogueAll /> },
+  { path: '/catalogue/kiosque', element: <Kiosque /> },
+  { path: '/catalogue/offices', element: <Offices /> },
+  { path: '/catalogue/nouveautes', element: <Nouveautes /> },
+  { path: '/administration', element: <Administration /> },
+];
+
 export function AppRoutes() {
-  return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/emploi" element={<Emploi />} />
-      <Route path="/services" element={<Services />} />
-      <Route path="/services/production" element={<Production />} />
-      <Route path="/catalogue" element={<Catalogue />} />
-      <Route path="/catalogue/all" element={<CatalogueAll />} />
-      <Route path="/catalogue/kiosque" element={<Kiosque />} />
-      <Route path="/catalogue/offices" element={<Offices />} />
-      <Route path="/catalogue/nouveautes" element={<Nouveautes />} />
-      <Route path="/administration" element={<Administration />} />
-    </Routes>
-  );
+  return <SecureRoutes routes={ROUTES_CONFIG} />;
 }
 
 export default AppRoutes;

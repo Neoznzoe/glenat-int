@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import QuickAccess, { QuickAccessItem } from '@/components/QuickAccess';
 import LinksCard, { LinkItem } from '@/components/LinksCard';
 import { Monitor, Package } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { SecureLink } from '@/components/routing/SecureLink';
 
 export function Production() {
   const quickLinks: QuickAccessItem[] = [
@@ -120,13 +120,13 @@ export function Production() {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/">Accueil</Link>
+              <SecureLink to="/">Accueil</SecureLink>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/services">Services</Link>
+              <SecureLink to="/services">Services</SecureLink>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />

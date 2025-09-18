@@ -24,7 +24,7 @@ import Shangri17 from '@/assets/images/shangri-17.webp';
 import Momie from '@/assets/images/momie-bandelette.webp';
 import Cemotions from '@/assets/images/couleurs-emotions.webp';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { SecureLink } from '@/components/routing/SecureLink';
 
 export function CatalogueAll() {
   const filters = [
@@ -166,13 +166,13 @@ export function CatalogueAll() {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/">Accueil</Link>
+              <SecureLink to="/">Accueil</SecureLink>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/catalogue">Catalogue</Link>
+              <SecureLink to="/catalogue">Catalogue</SecureLink>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />

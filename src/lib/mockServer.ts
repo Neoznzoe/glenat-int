@@ -12,6 +12,7 @@ import {
   type UpdateUserAccessPayload,
 } from './mockDb';
 import { type GroupDefinition, type PermissionDefinition } from './access-control';
+import { decryptUrlToken, isUrlEncryptionConfigured } from './urlEncryption';
 
 interface UpdateUserAccessRequestBody {
   groups?: string[];
@@ -105,6 +106,45 @@ export async function startMockServer(): Promise<void> {
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const request = input instanceof Request ? input : new Request(input, init);
     const url = new URL(request.url, window.location.origin);
+
+    if (url.pathname.startsWith('/secure/') && isUrlEncryptionConfigured()) {
+      const token = url.pathname.replace('/secure/', '');
+      try {
+        const payload = await decryptUrlToken(token);
+        const method = request.method.toUpperCase();
+
+        if (payload.method && payload.method !== method) {
+          return errorResponse('Méthode HTTP inattendue pour ce jeton.', 405);
+        }
+
+        const targetUrl = new URL(
+          `${payload.path}${payload.search ?? ''}`,
+          window.location.origin,
+        );
+
+        const bodyText =
+          method === 'GET' || method === 'HEAD' ? undefined : await request.clone().text();
+
+        const headers = new Headers();
+        request.headers.forEach((value, key) => {
+          headers.append(key, value);
+        });
+
+        const proxiedRequest = new Request(targetUrl.toString(), {
+          method,
+          headers,
+          body: bodyText,
+        });
+
+        const handled = await handleAdminRequest(proxiedRequest);
+        if (handled) {
+          return handled;
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Jeton chiffré invalide';
+        return errorResponse(message, 400);
+      }
+    }
 
     if (url.pathname.startsWith('/api/admin/')) {
       const handled = await handleAdminRequest(request.clone());

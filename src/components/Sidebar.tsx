@@ -19,12 +19,13 @@ import {
   Newspaper,
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoG from '../assets/logos/glenat/glenat_G.svg';
 import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
 import { computeEffectivePermissions } from '@/lib/mockDb';
 import type { PermissionKey } from '@/lib/access-control';
+import { useDecryptedLocation } from '@/lib/secureRouting';
+import { SecureNavLink } from '@/components/routing/SecureLink';
 
 interface SidebarProps {
   jobCount: number;
@@ -150,7 +151,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     return accessiblePermissions.has(permission);
   };
 
-  const location = useLocation();
+  const location = useDecryptedLocation();
 
   const mainMenuItems = menuItems.filter(
     (item) => item.id !== 'administration' && userCanAccess(item.permission),
@@ -191,13 +192,13 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
         {/* Menu principal */}
         <nav className="p-2">
           <ul className="space-y-1">
-            {mainMenuItems.map(item => {
+            {mainMenuItems.map((item) => {
                 const isActive = item.path === '/'
                   ? location.pathname === '/'
                   : location.pathname.startsWith(item.path);
                 return (
                   <li key={item.id}>
-                    <NavLink
+                    <SecureNavLink
                       to={item.path}
                       className={`relative flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
                         isActive
@@ -219,7 +220,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
                           {item.badge}
                         </span>
                       ) : null}
-                    </NavLink>
+                    </SecureNavLink>
                   </li>
                 );
               })}
@@ -229,13 +230,13 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
         {/* Bloc Administration */}
         <nav className="p-2">
           <ul>
-            {adminMenuItems.map(item => {
+            {adminMenuItems.map((item) => {
                 const isActive = item.path === '/'
                   ? location.pathname === '/'
                   : location.pathname.startsWith(item.path);
                 return (
                   <li key={item.id}>
-                    <NavLink
+                    <SecureNavLink
                       to={item.path}
                       className={`flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
                         isActive
@@ -252,7 +253,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
                       >
                         {item.label}
                       </span>
-                    </NavLink>
+                    </SecureNavLink>
                   </li>
                 );
               })}
