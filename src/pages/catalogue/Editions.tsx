@@ -52,7 +52,7 @@ export function Catalogue() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Éditions</BreadcrumbPage>
+            <BreadcrumbPage>Accueil</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -67,7 +67,7 @@ export function Catalogue() {
         </div>
         <CardContent className="p-6">
           <CatalogueLayout active="Éditions">
-            <h3 className="mb-4 font-semibold text-xl">Éditions</h3>
+            <h3 className="mb-4 font-semibold text-xl">Accueil</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {editions.map((ed) => (
                 <EditionCard

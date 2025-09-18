@@ -30,6 +30,10 @@ export interface PresenceListProps<T extends Record<string, ReactNode>> {
   count?: number;
   searchable?: boolean;
   sortable?: boolean;
+  /** Optional list of keys allowed for sorting; defaults to all columns. */
+  sortKeys?: (keyof T)[];
+  /** Optional function to style each row. */
+  rowClassName?: (row: T, index: number) => string | undefined;
   showMore?: boolean;
   showLess?: boolean;
   emptyMessage?: string;
@@ -51,6 +55,8 @@ export function PresenceList<T extends Record<string, ReactNode>>({
   count,
   searchable,
   sortable,
+  sortKeys,
+  rowClassName,
   showMore,
   showLess,
   emptyMessage,
@@ -79,7 +85,10 @@ export function PresenceList<T extends Record<string, ReactNode>>({
               <SelectValue placeholder="Trier par" />
             </SelectTrigger>
             <SelectContent>
-              {columns.map((col) => (
+              {(sortKeys
+                ? columns.filter((col) => sortKeys.includes(col.key))
+                : columns
+              ).map((col) => (
                 <SelectItem key={String(col.key)} value={String(col.key)}>
                   {col.label}
                 </SelectItem>
@@ -108,7 +117,7 @@ export function PresenceList<T extends Record<string, ReactNode>>({
           </TableHeader>
           <TableBody>
             {rows.map((row, idx) => (
-              <TableRow key={idx}>
+              <TableRow key={idx} className={rowClassName?.(row, idx)}>
                 {columns.map((col) => (
                   <TableCell
                     key={String(col.key)}

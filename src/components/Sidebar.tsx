@@ -17,6 +17,7 @@ import {
   Hammer,
   LibraryBig,
   Newspaper,
+  Store,
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
@@ -72,7 +73,14 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       id: 'catalogue',
       icon: LibraryBig,
       label: 'Catalogue',
-      path: '/catalogue',
+      path: '/catalogue/offices',
+      permission: 'catalogue',
+    },
+    {
+      id: 'kiosque',
+      icon: Store,
+      label: 'Kiosque',
+      path: '/catalogue/kiosque',
       permission: 'catalogue',
     },
     { id: 'doc', icon: Files, label: "Glénat'Doc", path: '/doc', permission: 'doc' },

@@ -28,7 +28,7 @@ export function InfiniteCarousel({
       }
     >
       <div className="relative overflow-hidden">
-        <div className="marquee-track flex items-center gap-4 will-change-transform">
+        <div className="marquee-track flex items-center gap-4 will-change-transform group-hover:[animation-play-state:paused]">
           {track.map((c, i) => (
             <a
               key={i}

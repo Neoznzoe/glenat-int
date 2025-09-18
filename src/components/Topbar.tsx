@@ -53,7 +53,7 @@ export function Topbar() {
   const notificationCount = notifications.reduce((sum, n) => sum + n.count, 0);
   const [open, setOpen] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
-  const [searchScope, setSearchScope] = useState('catalogue');
+  const [searchScope, setSearchScope] = useState('qui-fait-quoi');
   const { user, loading: authLoading, logout } = useAuth();
   const scopeLabels = {
     catalogue: 'Catalogue',
@@ -86,9 +86,9 @@ export function Topbar() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="qui-fait-quoi">Qui fait quoi</SelectItem>
                 <SelectItem value="catalogue">Catalogue</SelectItem>
                 <SelectItem value="glenatdoc">Glénat'doc</SelectItem>
-                <SelectItem value="qui-fait-quoi">Qui fait quoi</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -36,7 +36,12 @@ interface CatalogueLayoutProps {
 export function CatalogueLayout({ children, active }: CatalogueLayoutProps) {
   return (
     <div className="flex flex-col md:flex-row gap-6">
-      <QuickAccess items={quickLinks} active={active} />
+      {(() => {
+        const items = quickLinks.map((item) =>
+          item.href === '/catalogue' ? { ...item, label: 'Accueil' } : item
+        );
+        return <QuickAccess items={items} active={active} />;
+      })()}
       <div className="flex-1">{children}</div>
     </div>
   );

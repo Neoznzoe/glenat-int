@@ -1,4 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useState, useRef, useLayoutEffect } from 'react';
 import { InfiniteCarousel } from '@/components/InfiniteCarousel';
 import { EventsCalendar } from '@/components/EventsCalendar';
@@ -110,6 +111,22 @@ export function Home() {
   const plannedTravelDisplayed = showAllPlanned
     ? plannedTravel
     : plannedTravel.slice(0, 2);
+
+  const todayStr = new Date().toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+
+  const visitingRows = (() => {
+    return visitingDisplayed.map((r) => {
+      const isManon = String(r.name).toLowerCase().includes('manon roux');
+      return {
+        ...r,
+        date: isManon ? <Badge variant="default">Aujourd'hui</Badge> : r.date,
+      } as any;
+    });
+  })();
 
   const sharePointLinks: LinkItem[] = [
     { label: 'Accueil office 365', href: '#' },
@@ -349,14 +366,15 @@ export function Home() {
                 { key: 'email', label: 'Email' },
                 { key: 'date', label: 'Date' },
               ]}
-              rows={visitingDisplayed}
+              rows={visitingRows}
               count={visitingToday.length}
-              searchable
-              sortable
+              rowClassName={(row) =>
+                String(row.name).toLowerCase().includes('manon roux')
+                  ? 'bg-primary/5'
+                  : undefined
+              }
               showMore={!showAllVisiting && visitingToday.length > 2}
               showLess={showAllVisiting && visitingToday.length > 2}
-              onSearch={(value) => console.log('search visiting', value)}
-              onSort={(value) => console.log('sort visiting', value)}
               onShowMore={() => setShowAllVisiting(true)}
               onShowLess={() => setShowAllVisiting(false)}
               emptyMessage="aucune visite chez nous"
@@ -372,9 +390,9 @@ export function Home() {
               count={travelingToday.length}
               searchable
               sortable
+              sortKeys={['name']}
               showMore={!showAllTraveling && travelingToday.length > 2}
               showLess={showAllTraveling && travelingToday.length > 2}
-              onSearch={(value) => console.log('search traveling', value)}
               onSort={(value) => console.log('sort traveling', value)}
               onShowMore={() => setShowAllTraveling(true)}
               onShowLess={() => setShowAllTraveling(false)}
@@ -392,9 +410,9 @@ export function Home() {
               count={plannedTravel.length}
               searchable
               sortable
+              sortKeys={['date', 'name']}
               showMore={!showAllPlanned && plannedTravel.length > 2}
               showLess={showAllPlanned && plannedTravel.length > 2}
-              onSearch={(value) => console.log('search planned', value)}
               onSort={(value) => console.log('sort planned', value)}
               onShowMore={() => setShowAllPlanned(true)}
               onShowLess={() => setShowAllPlanned(false)}
