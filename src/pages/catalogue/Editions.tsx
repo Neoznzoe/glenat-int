@@ -13,13 +13,10 @@ import CatalogueLayout from './CatalogueLayout';
 import EditionCard from '@/components/EditionCard';
 import { useEffect, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
-import {
-  fetchCatalogueEditions,
-  type CatalogueEdition,
-} from '@/lib/fakeApi/catalogue';
+import { fetchCatalogueEditions, type CatalogueEdition } from '@/lib/catalogue';
 
 export function Catalogue() {
-  const [editions, setEditions] = useState<CatalogueEdition[]>([]);
+  const [editions, setEditions] = useState<CatalogueEdition[] | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -72,9 +69,7 @@ export function Catalogue() {
         <CardContent className="p-6">
           <CatalogueLayout active="Éditions">
             <h3 className="mb-4 font-semibold text-xl">Accueil</h3>
-            {editions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Chargement des éditions…</p>
-            ) : (
+            {editions && (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 {editions.map(edition => (
                   <EditionCard

@@ -21,10 +21,7 @@ import {
 } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
-import {
-  fetchCatalogueOffices,
-  type CatalogueOfficeGroup,
-} from '@/lib/fakeApi/catalogue';
+import { fetchCatalogueOffices, type CatalogueOfficeGroup } from '@/lib/catalogue';
 
 export function Offices() {
   const publishers = [
@@ -43,7 +40,7 @@ export function Offices() {
 
   const [selectedPublishers, setSelectedPublishers] = useState<string[]>([]);
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
-  const [offices, setOffices] = useState<CatalogueOfficeGroup[]>([]);
+  const [offices, setOffices] = useState<CatalogueOfficeGroup[] | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -79,11 +76,13 @@ export function Offices() {
     return new Date(year, month - 1, day);
   };
 
-  const sortedOffices = [...offices].sort((a, b) => {
-    const dateA = parseDate(a.date).getTime();
-    const dateB = parseDate(b.date).getTime();
-    return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
-  });
+  const sortedOffices = offices
+    ? [...offices].sort((a, b) => {
+        const dateA = parseDate(a.date).getTime();
+        const dateB = parseDate(b.date).getTime();
+        return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+      })
+    : [];
 
   return (
     <div className="p-6 space-y-6">
@@ -156,9 +155,7 @@ export function Offices() {
         <CardContent className="p-6">
           <CatalogueLayout active="Prochaines offices">
             <h3 className="mb-4 font-semibold text-xl">Prochaines offices</h3>
-            {sortedOffices.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Chargement des offices…</p>
-            ) : (
+            {sortedOffices.length > 0 && (
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
                 {sortedOffices.map(group => (
                   <Fragment key={group.office}>

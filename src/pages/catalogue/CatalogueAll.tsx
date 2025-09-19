@@ -15,10 +15,7 @@ import BookFilters from '@/components/BookFilters';
 import BookCard from '@/components/BookCard';
 import { useEffect, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
-import {
-  fetchCatalogueBooks,
-  type CatalogueBook,
-} from '@/lib/fakeApi/catalogue';
+import { fetchCatalogueBooks, type CatalogueBook } from '@/lib/catalogue';
 
 export function CatalogueAll() {
   const filters = [
@@ -33,7 +30,7 @@ export function CatalogueAll() {
   ];
 
   const [activeFilter, setActiveFilter] = useState('Toutes');
-  const [books, setBooks] = useState<CatalogueBook[]>([]);
+  const [books, setBooks] = useState<CatalogueBook[] | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -100,9 +97,7 @@ export function CatalogueAll() {
         <CardContent className="p-6">
           <CatalogueLayout active="Tout le catalogue">
             <h3 className="mb-4 font-semibold text-xl">Tout le catalogue</h3>
-            {books.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Chargement du catalogue…</p>
-            ) : (
+            {books && (
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
                 {books.map(book => (
                   <BookCard key={book.ean} {...book} />

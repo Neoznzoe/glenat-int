@@ -21,10 +21,7 @@ import {
 } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
-import {
-  fetchCatalogueReleases,
-  type CatalogueReleaseGroup,
-} from '@/lib/fakeApi/catalogue';
+import { fetchCatalogueReleases, type CatalogueReleaseGroup } from '@/lib/catalogue';
 
 export function Nouveautes() {
   const publishers = [
@@ -43,7 +40,7 @@ export function Nouveautes() {
 
   const [selectedPublishers, setSelectedPublishers] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
-  const [releases, setReleases] = useState<CatalogueReleaseGroup[]>([]);
+  const [releases, setReleases] = useState<CatalogueReleaseGroup[] | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -80,11 +77,13 @@ export function Nouveautes() {
     return new Date(year, month - 1, day);
   };
 
-  const sortedReleases = [...releases].sort((a, b) => {
-    const dateA = parseDate(a.date).getTime();
-    const dateB = parseDate(b.date).getTime();
-    return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-  });
+  const sortedReleases = releases
+    ? [...releases].sort((a, b) => {
+        const dateA = parseDate(a.date).getTime();
+        const dateB = parseDate(b.date).getTime();
+        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+      })
+    : [];
 
   return (
     <div className="p-6 space-y-6">
@@ -157,9 +156,7 @@ export function Nouveautes() {
         <CardContent className="p-6">
           <CatalogueLayout active="Dernières nouveautés">
             <h3 className="mb-4 font-semibold text-xl">Dernières nouveautés</h3>
-            {sortedReleases.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Chargement des nouveautés…</p>
-            ) : (
+            {sortedReleases.length > 0 && (
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
                 {sortedReleases.map(group => (
                   <Fragment key={group.date}>

@@ -258,3 +258,94 @@ export const catalogueDb: CatalogueDb = {
 };
 
 export default catalogueDb;
+
+
+const cloneBook = (ean: string): CatalogueBook => {
+  const book = catalogueDb.books.find(item => item.ean === ean);
+
+  if (!book) {
+    throw new Error(`Livre introuvable pour l'EAN ${ean}`);
+  }
+
+  return { ...book };
+};
+
+const logRequest = (endpoint: string) => {
+  console.info(`[catalogueApi] ${endpoint} appelé`);
+};
+
+const logResponse = (endpoint: string, payload: unknown) => {
+  console.info(`[catalogueApi] ${endpoint} réponse`, payload);
+};
+
+export interface CatalogueReleaseGroup {
+  date: string;
+  books: CatalogueBook[];
+}
+
+export interface CatalogueOfficeGroup {
+  office: string;
+  date: string;
+  shipping: string;
+  books: CatalogueBook[];
+}
+
+export interface CatalogueKiosqueGroup {
+  office: string;
+  date: string;
+  shipping: string;
+  books: CatalogueBook[];
+}
+
+export async function fetchCatalogueBooks(): Promise<CatalogueBook[]> {
+  const endpoint = 'fetchCatalogueBooks';
+  logRequest(endpoint);
+  const data = catalogueDb.books.map(book => ({ ...book }));
+  logResponse(endpoint, data);
+  return Promise.resolve(data);
+}
+
+export async function fetchCatalogueReleases(): Promise<CatalogueReleaseGroup[]> {
+  const endpoint = 'fetchCatalogueReleases';
+  logRequest(endpoint);
+  const data = catalogueDb.releases.map(release => ({
+    date: release.date,
+    books: release.bookEans.map(cloneBook),
+  }));
+  logResponse(endpoint, data);
+  return Promise.resolve(data);
+}
+
+export async function fetchCatalogueOffices(): Promise<CatalogueOfficeGroup[]> {
+  const endpoint = 'fetchCatalogueOffices';
+  logRequest(endpoint);
+  const data = catalogueDb.offices.map(office => ({
+    office: office.office,
+    date: office.date,
+    shipping: office.shipping,
+    books: office.bookEans.map(cloneBook),
+  }));
+  logResponse(endpoint, data);
+  return Promise.resolve(data);
+}
+
+export async function fetchCatalogueKiosques(): Promise<CatalogueKiosqueGroup[]> {
+  const endpoint = 'fetchCatalogueKiosques';
+  logRequest(endpoint);
+  const data = catalogueDb.kiosques.map(kiosque => ({
+    office: kiosque.office,
+    date: kiosque.date,
+    shipping: kiosque.shipping,
+    books: kiosque.bookEans.map(cloneBook),
+  }));
+  logResponse(endpoint, data);
+  return Promise.resolve(data);
+}
+
+export async function fetchCatalogueEditions(): Promise<CatalogueEdition[]> {
+  const endpoint = 'fetchCatalogueEditions';
+  logRequest(endpoint);
+  const data = catalogueDb.editions.map(edition => ({ ...edition }));
+  logResponse(endpoint, data);
+  return Promise.resolve(data);
+}

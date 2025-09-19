@@ -30,10 +30,7 @@ import {
 } from 'lucide-react';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
-import {
-  fetchCatalogueKiosques,
-  type CatalogueKiosqueGroup,
-} from '@/lib/fakeApi/catalogue';
+import { fetchCatalogueKiosques, type CatalogueKiosqueGroup } from '@/lib/catalogue';
 
 export function Kiosque() {
   const publishers = [
@@ -55,7 +52,7 @@ export function Kiosque() {
     'creationDate'
   );
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
-  const [kiosques, setKiosques] = useState<CatalogueKiosqueGroup[]>([]);
+  const [kiosques, setKiosques] = useState<CatalogueKiosqueGroup[] | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -99,7 +96,7 @@ export function Kiosque() {
 
   const sortedKiosques = useMemo(
     () =>
-      kiosques.map(k => ({
+      (kiosques ?? []).map(k => ({
         ...k,
         books: [...k.books].sort((a, b) => {
           const valueA =
@@ -230,9 +227,7 @@ export function Kiosque() {
         <CardContent className="p-6">
           <CatalogueLayout active="Kiosque">
             <h3 className="mb-4 font-semibold text-xl">Kiosque</h3>
-            {sortedKiosques.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Chargement du kiosque…</p>
-            ) : (
+            {sortedKiosques.length > 0 && (
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 bg-ba">
                 {sortedKiosques.map(kiosque => {
                   const [firstBook] = kiosque.books;
