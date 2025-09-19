@@ -323,8 +323,12 @@ function EncryptedRoute({ routes }: EncryptedRouteProps): ReactElement {
 
   if (!payload) {
     return (
-      <div className="p-8 text-center">
-        <p className="text-muted-foreground">Chargement de la page sécurisée…</p>
+      <div className="flex justify-center py-12">
+        <span
+          aria-hidden="true"
+          className="inline-flex h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent"
+        />
+        <span className="sr-only">Chargement…</span>
       </div>
     );
   }
@@ -344,8 +348,12 @@ export interface SecureRoutesProps {
 
 export function SecureRoutes({ routes }: SecureRoutesProps): ReactElement {
   const fallback = (
-    <div className="p-8 text-center text-muted-foreground">
-      Chargement de la page…
+    <div className="flex justify-center py-12">
+      <span
+        aria-hidden="true"
+        className="inline-flex h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent"
+      />
+      <span className="sr-only">Chargement…</span>
     </div>
   );
 
