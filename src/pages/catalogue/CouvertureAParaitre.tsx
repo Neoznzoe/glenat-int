@@ -31,17 +31,20 @@ type CouvertureApiResponse = {
 const couvertureEans: string[] = [
   '9782344062814',
   '9782344065822',
-  '9782344059869',
-  '9782344059905',
+  '9782344068380',
+  '9782344062661',
   '9782344069080',
   '9782344051733',
+  '9782344060797',
+  '9782344068489',
+  '9782344065327',
 ];
 
 function CouvertureCard({ state }: { state: CouvertureStatus }) {
   return (
     <div className="flex h-full flex-col items-center rounded-xl border border-dashed border-border/60 bg-card/40 p-4 text-center">
       <span className="text-sm font-semibold text-muted-foreground">EAN {state.ean}</span>
-      <div className="mt-3 flex h-48 w-full items-center justify-center overflow-hidden rounded-lg border bg-background">
+      <div className="mt-3 flex h-48 w-full items-center justify-center overflow-hidden rounded-lg bg-background">
         {state.status === 'success' ? (
           <img src={state.imageBase64} alt={`Couverture ${state.ean}`} className="h-full w-full object-contain" />
         ) : state.status === 'error' ? (
@@ -168,12 +171,8 @@ export function CouvertureAParaitre() {
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <CardTitle className="text-[2.5rem]">Catalogue</CardTitle>
-            <CardDescription className="mt-2 max-w-2xl text-base">
-              Cette page présente un aperçu des couvertures à paraître et prouve le bon
-              fonctionnement des appels API sur l'application.
-            </CardDescription>
           </div>
-          <Input type="search" placeholder="Rechercher..." className="sm:w-64" disabled />
+          <Input type="search" placeholder="Rechercher..." className="sm:w-64" />
         </CardHeader>
         <div className="px-6">
           <Separator />
@@ -181,10 +180,6 @@ export function CouvertureAParaitre() {
         <CardContent className="p-6 space-y-6">
           <CatalogueLayout active="Couverture à paraître">
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Appels réalisés sur {states.length} EAN pour vérifier le bon fonctionnement de l'API
-                Couverture.
-              </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
                 {states.map((state) => (
                   <CouvertureCard key={state.ean} state={state} />
