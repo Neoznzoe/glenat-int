@@ -30,7 +30,7 @@ function App() {
               <main className="flex-1 overflow-auto">
                 <Suspense
                   fallback={
-                    <div className="flex min-h-[240px] flex-1 items-center justify-center">
+                    <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center">
                       <span
                         aria-hidden="true"
                         className="inline-flex h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent"
