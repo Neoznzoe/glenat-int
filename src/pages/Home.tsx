@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { InfiniteCarousel } from '@/components/InfiniteCarousel';
 import { EventsCalendar } from '@/components/EventsCalendar';
 import { ActualitesCard } from '@/components/ActualitesCard';
@@ -249,13 +249,15 @@ function HomeContent() {
     ? plannedTravel
     : plannedTravel.slice(0, 2);
 
-  const visitingRows = (() => {
-    return visitingDisplayed.map((r) => {
-      const isManon = String(r.name).toLowerCase().includes('manon roux');
+  type VisitingRow = { name: string; email: string; date: ReactNode };
+
+  const visitingRows: VisitingRow[] = (() => {
+    return visitingDisplayed.map(row => {
+      const isManon = String(row.name).toLowerCase().includes('manon roux');
       return {
-        ...r,
-        date: isManon ? <Badge variant="default">Aujourd'hui</Badge> : r.date,
-      } as any;
+        ...row,
+        date: isManon ? <Badge variant="default">Aujourd'hui</Badge> : row.date,
+      };
     });
   })();
 

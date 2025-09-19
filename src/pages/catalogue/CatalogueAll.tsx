@@ -12,19 +12,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import CatalogueLayout from './CatalogueLayout';
 import BookFilters from '@/components/BookFilters';
-import BookCard, { BookCardProps } from '@/components/BookCard';
-import OnePiece110 from '@/assets/images/onepiece_110.webp';
-import NayaPika from '@/assets/images/naya_pika.webp';
-import JulesMatrat from '@/assets/images/jules_matrat.webp';
-import CombatVie from '@/assets/images/le_combat_dune_vie.webp';
-import Odysee from '@/assets/images/odyssee.webp';
-import ControNatura from '@/assets/images/contro-natura.webp';
-import Brume01 from '@/assets/images/brume-01.webp';
-import Shangri17 from '@/assets/images/shangri-17.webp';
-import Momie from '@/assets/images/momie-bandelette.webp';
-import Cemotions from '@/assets/images/couleurs-emotions.webp';
-import { useState } from 'react';
+import BookCard from '@/components/BookCard';
+import { useEffect, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
+import {
+  fetchCatalogueBooks,
+  type CatalogueBook,
+} from '@/lib/fakeApi/catalogue';
 
 export function CatalogueAll() {
   const filters = [
@@ -39,126 +33,25 @@ export function CatalogueAll() {
   ];
 
   const [activeFilter, setActiveFilter] = useState('Toutes');
+  const [books, setBooks] = useState<CatalogueBook[]>([]);
 
-  const books: BookCardProps[] = [
-    {
-      cover: OnePiece110,
-      title: 'One Piece - Tome 110',
-      ean: '9782380711102',
-      authors: 'E. Oda',
-      publisher: 'Glénat Manga',
-      publicationDate: '01/02/2025',
-      priceHT: '7.99',
-      stock: 86,
-      views: 140,
-      color: '--glenat-manga',
-      ribbonText: 'NOUVEAUTÉ',
-    },
-    {
-      cover: NayaPika,
-      title: 'Naya Pika - Tome 03',
-      ean: '9782344059707',
-      authors: 'Rabat · Rodi · Aneko',
-      publisher: 'Glénat Jeunesse',
-      publicationDate: '03/04/2024',
-      priceHT: '10.95',
-      stock: 42,
-      color: '--glenat-jeunesse',
-    },
-    {
-      cover: JulesMatrat,
-      title: 'Jules Matrat - Tome 03',
-      ean: '9782344059905',
-      authors: 'Corbeyran · Horne',
-      publisher: 'Glénat BD',
-      publicationDate: '17/01/2024',
-      priceHT: '17.90',
-      stock: 58,
-      color: '--glenat-bd',
-      ribbonText: 'À paraître',
-    },
-    {
-      cover: CombatVie,
-      title: "Paul Watson - Le combat d'une vie",
-      ean: '9782344059974',
-      authors: 'Paul Watson',
-      publisher: 'Glénat Livres',
-      publicationDate: '05/06/2024',
-      priceHT: '22.00',
-      stock: 12,
-      color: '--glenat-livre',
-      ribbonText: 'NOUVEAUTÉ',
-    },
-    {
-      cover: Odysee,
-      title: 'Alva Odyssée',
-      ean: '9782344059936',
-      authors: 'Alva',
-      publisher: 'Glénat Livres',
-      publicationDate: '19/06/2024',
-      priceHT: '19.95',
-      stock: 18,
-      color: '--glenat-livre',
-      ribbonText: 'PROVISOIRE',
-    },
-    {
-      cover: Cemotions,
-      title: 'La couleur des émotions - Un livre tout animé',
-      ean: '9791026400134',
-      authors: 'Anna Llenas',
-      publisher: 'Glénat Jeunesse',
-      publicationDate: "10/10/2014",
-      priceHT: '20.76',
-      stock: 14574,
-      color: '--glenat-jeunesse',
-    },
-    {
-      cover: ControNatura,
-      title: 'Contro Natura - Sang bleu',
-      ean: '9782344069080',
-      authors: 'M.Andolfo · I.Bigarella',
-      publisher: 'Glénat BD',
-      publicationDate: '27/08/2025',
-      priceHT: '18.96',
-      stock: 3373,
-      color: '--glenat-bd',
-      ribbonText: "nouveauté"
-    },
-    {
-      cover: Shangri17,
-      title: 'Shangri-la Frontier - Tome 17',
-      ean: '9782344066379',
-      authors: 'Katarina · R.Fuji',
-      publisher: 'Glénat Manga',
-      publicationDate: '27/08/2025',
-      priceHT: '6.82',
-      stock: 6292,
-      color: '--glenat-manga',
-      ribbonText: "nouveauté"
-    },
-    {
-      cover: Brume01,
-      title:'Brume - Tome 01',
-      ean: '9782344051733',
-      authors: 'J.Pélissier · C.Hinder',
-      publisher: 'Glénat BD',
-      publicationDate: "26/04/2023",
-      priceHT: '11.85',
-      stock: 24479,
-      color: '--glenat-bd',
-    },
-    {
-      cover: Momie,
-      title: 'Les bandelettes de Momie Molette',
-      ean: '9782344057049',
-      authors: 'Loïc Clément · Julien Arnal',
-      publisher: 'Glénat Jeunesse',
-      publicationDate: "09/10/2024",
-      priceHT: '11.85',
-      stock: 1952,
-      color: '--glenat-jeunesse',
-    }
-  ];
+  useEffect(() => {
+    let isActive = true;
+
+    fetchCatalogueBooks()
+      .then(data => {
+        if (isActive) {
+          setBooks(data);
+        }
+      })
+      .catch(error => {
+        console.error('Impossible de récupérer le catalogue', error);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   return (
     <div className="p-6 space-y-6">
@@ -207,11 +100,15 @@ export function CatalogueAll() {
         <CardContent className="p-6">
           <CatalogueLayout active="Tout le catalogue">
             <h3 className="mb-4 font-semibold text-xl">Tout le catalogue</h3>
-            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
-              {books.map(book => (
-                <BookCard key={book.ean} {...book} />
-              ))}
-            </div>
+            {books.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Chargement du catalogue…</p>
+            ) : (
+              <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+                {books.map(book => (
+                  <BookCard key={book.ean} {...book} />
+                ))}
+              </div>
+            )}
           </CatalogueLayout>
         </CardContent>
       </Card>
@@ -220,4 +117,3 @@ export function CatalogueAll() {
 }
 
 export default CatalogueAll;
-
