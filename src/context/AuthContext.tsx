@@ -10,9 +10,10 @@ import {
   EventType,
   InteractionRequiredAuthError,
   type AccountInfo,
+  type AuthenticationResult,
+  type IPublicClientApplication,
 } from '@azure/msal-browser';
 import { useMsal } from '@azure/msal-react';
-import type { PublicClientApplication } from '@azure/msal-browser';
 import { loginRequest } from '@/lib/msal';
 
 interface UserProfile {
@@ -53,7 +54,7 @@ const convertBlobToDataUrl = (blob: Blob) =>
     reader.readAsDataURL(blob);
   });
 
-async function fetchUserProfile(instance: PublicClientApplication, account: AccountInfo) {
+async function fetchUserProfile(instance: IPublicClientApplication, account: AccountInfo) {
   const response = await instance.acquireTokenSilent({
     ...loginRequest,
     account,
@@ -101,8 +102,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const isAuthenticationResult = (
+      payload: unknown,
+    ): payload is AuthenticationResult =>
+      typeof payload === 'object' && payload !== null && 'account' in payload;
+
     const callbackId = instance.addEventCallback((event) => {
-      if (event.eventType === EventType.LOGIN_SUCCESS && event.payload?.account) {
+      if (event.eventType === EventType.LOGIN_SUCCESS && isAuthenticationResult(event.payload)) {
         instance.setActiveAccount(event.payload.account);
       }
 

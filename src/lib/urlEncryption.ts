@@ -65,7 +65,7 @@ async function importKey(): Promise<CryptoKey> {
 
   if (!keyPromise) {
     const crypto = getCrypto();
-    const keyBytes = base64UrlDecode(BASE64_KEY);
+    const keyBytes = base64UrlDecode(BASE64_KEY) as Uint8Array<ArrayBuffer>;
 
     if (keyBytes.byteLength !== 32) {
       throw new Error('La clé AES doit faire 32 octets (256 bits) une fois décodée.');

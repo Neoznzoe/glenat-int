@@ -1,14 +1,16 @@
+import { lazy } from 'react';
 import { type RouteDefinition, SecureRoutes } from '@/lib/secureRouting';
+
 import { Home } from './pages/Home';
-import Emploi from './pages/Emploi';
-import Services from './pages/services/Services';
-import Production from './pages/services/Production';
-import Catalogue from './pages/catalogue/Editions';
-import CatalogueAll from './pages/catalogue/CatalogueAll';
-import Kiosque from './pages/catalogue/Kiosque';
-import Offices from './pages/catalogue/Offices';
-import Nouveautes from './pages/catalogue/Nouveautes';
-import Administration from './pages/administration/Administration';
+const Emploi = lazy(() => import('./pages/Emploi'));
+const Services = lazy(() => import('./pages/services/Services'));
+const Production = lazy(() => import('./pages/services/Production'));
+const Catalogue = lazy(() => import('./pages/catalogue/Editions'));
+const CatalogueAll = lazy(() => import('./pages/catalogue/CatalogueAll'));
+const Kiosque = lazy(() => import('./pages/catalogue/Kiosque'));
+const Offices = lazy(() => import('./pages/catalogue/Offices'));
+const Nouveautes = lazy(() => import('./pages/catalogue/Nouveautes'));
+const Administration = lazy(() => import('./pages/administration/Administration'));
 
 export const ROUTES_CONFIG: RouteDefinition[] = [
   { path: '/', element: <Home /> },
@@ -21,6 +23,18 @@ export const ROUTES_CONFIG: RouteDefinition[] = [
   { path: '/catalogue/offices', element: <Offices /> },
   { path: '/catalogue/nouveautes', element: <Nouveautes /> },
   { path: '/administration', element: <Administration /> },
+];
+
+export const LAZY_ROUTE_PRELOADERS: Array<() => Promise<unknown>> = [
+  () => import('./pages/Emploi'),
+  () => import('./pages/services/Services'),
+  () => import('./pages/services/Production'),
+  () => import('./pages/catalogue/Editions'),
+  () => import('./pages/catalogue/CatalogueAll'),
+  () => import('./pages/catalogue/Kiosque'),
+  () => import('./pages/catalogue/Offices'),
+  () => import('./pages/catalogue/Nouveautes'),
+  () => import('./pages/administration/Administration'),
 ];
 
 export function AppRoutes() {

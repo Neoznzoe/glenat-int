@@ -1,4 +1,5 @@
 import {
+  Suspense,
   createContext,
   useCallback,
   useContext,
@@ -322,8 +323,12 @@ function EncryptedRoute({ routes }: EncryptedRouteProps): ReactElement {
 
   if (!payload) {
     return (
-      <div className="p-8 text-center">
-        <p className="text-muted-foreground">Chargement de la page sécurisée…</p>
+      <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center">
+        <span
+          aria-hidden="true"
+          className="inline-flex h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent"
+        />
+        <span className="sr-only">Chargement…</span>
       </div>
     );
   }
@@ -342,16 +347,37 @@ export interface SecureRoutesProps {
 }
 
 export function SecureRoutes({ routes }: SecureRoutesProps): ReactElement {
+  const fallback = (
+    <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center">
+      <span
+        aria-hidden="true"
+        className="inline-flex h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent"
+      />
+      <span className="sr-only">Chargement…</span>
+    </div>
+  );
+
   return (
     <Routes>
       {routes.map((route) => (
         <Route
           key={route.path}
           path={route.path}
-          element={<RouteRenderer path={route.path} element={route.element} />}
+          element={
+            <Suspense fallback={fallback}>
+              <RouteRenderer path={route.path} element={route.element} />
+            </Suspense>
+          }
         />
       ))}
-      <Route path="/ci/*" element={<EncryptedRoute routes={routes} />} />
+      <Route
+        path="/ci/*"
+        element={
+          <Suspense fallback={fallback}>
+            <EncryptedRoute routes={routes} />
+          </Suspense>
+        }
+      />
     </Routes>
   );
 }
