@@ -1,15 +1,23 @@
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { SidebarContext } from './context/SidebarContext';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { Toaster } from '@/components/ui/sonner';
-import AppRoutes, { ROUTES_CONFIG } from './routes';
+import AppRoutes, { LAZY_ROUTE_PRELOADERS, ROUTES_CONFIG } from './routes';
 import { jobOffers } from '@/data/jobOffers';
 import { SecureRoutingProvider } from './lib/secureRouting';
 
 function App() {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const jobCount = jobOffers.length;
+
+  useEffect(() => {
+    LAZY_ROUTE_PRELOADERS.forEach((preload) => {
+      void preload().catch(() => {
+        // Ignorer les erreurs de préchargement pour ne pas perturber l'expérience utilisateur
+      });
+    });
+  }, []);
 
   return (
     <SidebarContext.Provider value={isSidebarExpanded}>

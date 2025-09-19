@@ -1,7 +1,7 @@
 import { lazy } from 'react';
 import { type RouteDefinition, SecureRoutes } from '@/lib/secureRouting';
 
-const Home = lazy(() => import('./pages/Home').then((module) => ({ default: module.Home })));
+import { Home } from './pages/Home';
 const Emploi = lazy(() => import('./pages/Emploi'));
 const Services = lazy(() => import('./pages/services/Services'));
 const Production = lazy(() => import('./pages/services/Production'));
@@ -23,6 +23,18 @@ export const ROUTES_CONFIG: RouteDefinition[] = [
   { path: '/catalogue/offices', element: <Offices /> },
   { path: '/catalogue/nouveautes', element: <Nouveautes /> },
   { path: '/administration', element: <Administration /> },
+];
+
+export const LAZY_ROUTE_PRELOADERS: Array<() => Promise<unknown>> = [
+  () => import('./pages/Emploi'),
+  () => import('./pages/services/Services'),
+  () => import('./pages/services/Production'),
+  () => import('./pages/catalogue/Editions'),
+  () => import('./pages/catalogue/CatalogueAll'),
+  () => import('./pages/catalogue/Kiosque'),
+  () => import('./pages/catalogue/Offices'),
+  () => import('./pages/catalogue/Nouveautes'),
+  () => import('./pages/administration/Administration'),
 ];
 
 export function AppRoutes() {
