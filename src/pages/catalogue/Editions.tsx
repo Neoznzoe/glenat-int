@@ -11,29 +11,30 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import CatalogueLayout from './CatalogueLayout';
 import EditionCard from '@/components/EditionCard';
-import UniversBD from '@/assets/logos/univers/univers-bd.svg';
-import UniversJeune from '@/assets/logos/univers/univers-jeunesse.svg';
-import UniversLivre from '@/assets/logos/univers/univers-livres.svg';
-import UniversManga from '@/assets/logos/univers/univers-manga.svg';
+import { useEffect, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
+import { fetchCatalogueEditions, type CatalogueEdition } from '@/lib/catalogue';
 
 export function Catalogue() {
-  const editions = [
-    { title: 'Adonis', color: '--glenat-bd', logo: UniversBD },
-    { title: 'Blanche', color: '--glenat-livre', logo: UniversLivre },
-    { title: 'Comix Buro', color: '--glenat-jeunesse', logo: UniversJeune },
-    { title: 'Disney', color: '--glenat-bd', logo: UniversLivre },
-    { title: 'Éditions licences', color: '--glenat-livre', logo: UniversLivre },
-    { title: 'Cheval Magazine', color: '--glenat-livre', logo: UniversLivre },
-    { title: 'Glénat BD', color: '--glenat-bd', logo: UniversBD },
-    { title: 'Glénat Jeunesse', color: '--glenat-jeunesse', logo: UniversJeune },
-    { title: 'Glénat Manga', color: '--glenat-manga', logo: UniversManga },
-    { title: 'Hugo', color: '--glenat-livre', logo: UniversLivre },
-    { title: 'Livres diffusés', color: '--glenat-jeunesse', logo: UniversJeune },
-    { title: 'Rando éditions', color: '--glenat-livre', logo: UniversLivre },
-    { title: 'Glénat Livres', color: '--glenat-livre', logo: UniversLivre },
-    { title: "Vent d'Ouest", color: '--glenat-bd', logo: UniversBD },
-  ];
+  const [editions, setEditions] = useState<CatalogueEdition[] | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    fetchCatalogueEditions()
+      .then(data => {
+        if (isActive) {
+          setEditions(data);
+        }
+      })
+      .catch(error => {
+        console.error('Impossible de récupérer les éditions', error);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   return (
     <div className="p-6 space-y-6">
@@ -68,16 +69,18 @@ export function Catalogue() {
         <CardContent className="p-6">
           <CatalogueLayout active="Éditions">
             <h3 className="mb-4 font-semibold text-xl">Accueil</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              {editions.map((ed) => (
-                <EditionCard
-                  key={ed.title}
-                  title={ed.title}
-                  color={ed.color}
-                  logo={ed.logo}
-                />
-              ))}
-            </div>
+            {editions && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                {editions.map(edition => (
+                  <EditionCard
+                    key={edition.title}
+                    title={edition.title}
+                    color={edition.color}
+                    logo={edition.logo}
+                  />
+                ))}
+              </div>
+            )}
           </CatalogueLayout>
         </CardContent>
       </Card>

@@ -307,10 +307,10 @@ function sanitizeDatabase(db: DatabaseSchema): DatabaseSchema {
   sanitizedUsers = sanitizedUsers.map((user, index) => {
     const first = user.firstName;
     const normalizeLast = (ln: string) => (ln ?? '').trim();
-    let last = normalizeLast(user.lastName);
+    const last = normalizeLast(user.lastName);
     const makeKey = (fn: string, ln: string) => `${fn} ${ln}`.trim();
 
-    let key = makeKey(first, last);
+    const key = makeKey(first, last);
     if (last && !seen.has(key)) {
       seen.add(key);
       return user;
