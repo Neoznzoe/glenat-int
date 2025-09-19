@@ -578,6 +578,40 @@ export function Home() {
     };
   }, []);
 
+  // Appel de l'API "couverture" au chargement de la page d'accueil
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function fetchCouverture() {
+      try {
+        const endpoint = import.meta.env.DEV
+          ? '/extranet/couverture' // via proxy Vite en dev (évite CORS)
+          : 'https://api-recette.groupe-glenat.com/Api/v1.0/Extranet/couverture';
+
+        const res = await fetch(endpoint, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          console.error('Erreur API couverture:', res.status, res.statusText);
+          return;
+        }
+
+        const data = await res.json();
+        console.log('Données couverture reçues:', data);
+      } catch (err) {
+        if ((err as any)?.name !== 'AbortError') {
+          console.error('Erreur lors de la récupération de couverture:', err);
+        }
+      }
+    }
+
+    void fetchCouverture();
+    return () => controller.abort();
+  }, []);
+
   if (!isReady) {
     return <HomeSkeleton />;
   }

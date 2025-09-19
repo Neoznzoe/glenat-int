@@ -9,6 +9,17 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      // Proxy de dev pour contourner CORS sur l'API Extranet
+      '/extranet': {
+        target: 'https://api-recette.groupe-glenat.com',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (p) => p.replace(/^\/extranet/, '/Api/v1.0/Extranet'),
+      },
+    },
+  },
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
