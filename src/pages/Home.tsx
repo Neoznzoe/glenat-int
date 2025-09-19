@@ -13,14 +13,14 @@ const asset = (p: string) => new URL(p, import.meta.url).href;
 
 const covers = [
   { src: asset('../assets/images/aladin.webp'), href: '' },
-  { src: asset('../assets/images/eclipse_humaine.webp') , href: '' },
-  { src: asset('../assets/images/jaime_la_mode.webp') , href: '' },
-  { src: asset('../assets/images/le_combat_dune_vie.webp') , href: '' },
-  { src: asset('../assets/images/les_licorniers.webp') , href: '' },
-  { src: asset('../assets/images/montagne_europe.webp') , href: '' },
-  { src: asset('../assets/images/naya_pika.webp') , href: '' },
-  { src: asset('../assets/images/odyssee.webp') , href: '' },
-  { src: asset('../assets/images/jules_matrat.webp') , href: '' },
+  { src: asset('../assets/images/eclipse_humaine.webp'), href: '' },
+  { src: asset('../assets/images/jaime_la_mode.webp'), href: '' },
+  { src: asset('../assets/images/le_combat_dune_vie.webp'), href: '' },
+  { src: asset('../assets/images/les_licorniers.webp'), href: '' },
+  { src: asset('../assets/images/montagne_europe.webp'), href: '' },
+  { src: asset('../assets/images/naya_pika.webp'), href: '' },
+  { src: asset('../assets/images/odyssee.webp'), href: '' },
+  { src: asset('../assets/images/jules_matrat.webp'), href: '' },
   { src: asset('../assets/images/onepiece_110.webp'), href: '' },
 ];
 
@@ -576,40 +576,6 @@ export function Home() {
     return () => {
       window.cancelAnimationFrame(handle);
     };
-  }, []);
-
-  // Appel de l'API "couverture" au chargement de la page d'accueil
-  useEffect(() => {
-    const controller = new AbortController();
-
-    async function fetchCouverture() {
-      try {
-        const endpoint = import.meta.env.DEV
-          ? '/extranet/couverture' // via proxy Vite en dev (évite CORS)
-          : 'https://api-recette.groupe-glenat.com/Api/v1.0/Extranet/couverture';
-
-        const res = await fetch(endpoint, {
-          method: 'GET',
-          headers: { Accept: 'application/json' },
-          signal: controller.signal,
-        });
-
-        if (!res.ok) {
-          console.error('Erreur API couverture:', res.status, res.statusText);
-          return;
-        }
-
-        const data = await res.json();
-        console.log('Données couverture reçues:', data);
-      } catch (err) {
-        if ((err as any)?.name !== 'AbortError') {
-          console.error('Erreur lors de la récupération de couverture:', err);
-        }
-      }
-    }
-
-    void fetchCouverture();
-    return () => controller.abort();
   }, []);
 
   if (!isReady) {
