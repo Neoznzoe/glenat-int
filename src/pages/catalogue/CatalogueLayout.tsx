@@ -23,7 +23,7 @@ const quickLinks: QuickAccessItem[] = [
   { label: 'Télécharger le catalogue', icon: Download },
   // { label: 'Kiosque', icon: Store, href: '/catalogue/kiosque' },
   { label: 'Top des commandes', icon: TrendingUp },//???//
-  { label: 'Couverture à paraître', icon: Image },
+  { label: 'Couverture à paraître', icon: Image, href: '/catalogue/couverture-a-paraitre' },
   { label: 'Information à renseigner', icon: Info },
   { label: 'Plus de stock', icon: PackageX },//??//
 ];
