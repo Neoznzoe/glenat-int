@@ -171,18 +171,11 @@ export function BookDetails() {
       <div className="space-y-6">
         <div className="grid gap-6 xl:grid-cols-[360px,1fr]">
           <Card className="overflow-hidden rounded-2xl border shadow-sm">
-            <div className="relative flex items-center justify-center bg-white">
-              {book.ribbonText && (
-                <div className="pointer-events-none absolute top-6 -right-10 rotate-45 z-20">
-                  <span className="block w-[140px] text-center bg-primary text-primary-foreground uppercase text-[11px] leading-4 font-semibold tracking-wide py-1 shadow-md">
-                    {book.ribbonText}
-                  </span>
-                </div>
-              )}
+            <div className="relative aspect-[3/4] w-full overflow-hidden bg-white">
               <img
                 src={book.cover}
                 alt={book.title}
-                className="max-h-[520px] w-full object-contain shadow-2xl"
+                className="h-full w-full object-cover"
               />
             </div>
             <CardContent className="space-y-5 p-6">
