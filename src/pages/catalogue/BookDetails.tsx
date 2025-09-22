@@ -236,15 +236,9 @@ export function BookDetails() {
             <div className="rounded-2xl border bg-card p-6 shadow-sm space-y-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="space-y-3">
-                  <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                    {book.publisher}
-                  </p>
                   <h1 className="text-3xl font-semibold uppercase leading-tight">
                     {book.title}
                   </h1>
-                  {details?.subtitle && (
-                    <p className="text-base text-muted-foreground">{details.subtitle}</p>
-                  )}
                   {contributors.length > 0 ? (
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
                       {contributors.map((contributor) => (
@@ -262,7 +256,7 @@ export function BookDetails() {
                   )}
                   {recommendedAge && (
                     <div>
-                      <span className="inline-flex items-center rounded-md bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-foreground">
+                      <span className="inline-flex items-center rounded-md bg-slate-200 px-4 py-1.5 text-sm font-semibold text-foreground">
                         {recommendedAge}
                       </span>
                     </div>
@@ -316,7 +310,7 @@ export function BookDetails() {
                     {categories.map((category) => (
                       <span
                         key={category}
-                        className="inline-flex items-center rounded-md bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-foreground"
+                        className="inline-flex items-center rounded-md bg-slate-200 px-4 py-1.5 text-sm font-semibold uppercase tracking-wide text-foreground"
                       >
                         {category}
                       </span>
@@ -331,7 +325,7 @@ export function BookDetails() {
                       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         {item.label}
                       </p>
-                      <p className="text-sm font-medium text-foreground">{item.value}</p>
+                      <p className="text-lg font-medium text-foreground">{item.value}</p>
                     </div>
                   ))}
                 </div>
