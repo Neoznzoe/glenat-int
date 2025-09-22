@@ -157,7 +157,9 @@ export function BookDetails() {
     }
 
     const details = book.details;
+    const metadataEntries = details?.metadata ?? [];
     const specifications = details?.specifications ?? [];
+    const infoEntries = [...metadataEntries, ...specifications];
     const contributors = details?.contributors ?? [];
     const categories = details?.categories ?? [];
     const recommendedAge = details?.recommendedAge;
@@ -322,19 +324,14 @@ export function BookDetails() {
                   </div>
                 )}
               </div>
-              {specifications.length > 0 && (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {specifications.map((item) => (
-                    <div
-                      key={`${item.label}-${item.value}`}
-                      className="rounded-xl bg-muted/30 px-4 py-3"
-                    >
-                      <p className="text-xs uppercase text-muted-foreground">
+              {infoEntries.length > 0 && (
+                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+                  {infoEntries.map((item) => (
+                    <div key={`${item.label}-${item.value}`} className="space-y-1">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         {item.label}
                       </p>
-                      <p className="text-sm font-medium text-foreground">
-                        {item.value}
-                      </p>
+                      <p className="text-sm font-medium text-foreground">{item.value}</p>
                     </div>
                   ))}
                 </div>
