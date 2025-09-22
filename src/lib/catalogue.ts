@@ -28,14 +28,23 @@ export interface CatalogueBookStat {
 export interface CatalogueBookDetail {
   subtitle?: string;
   badges?: string[];
+  contributors?: CatalogueBookContributor[];
   metadata: CatalogueBookDetailEntry[];
   specifications: CatalogueBookDetailEntry[];
   stats: CatalogueBookStat[];
+  recommendedAge?: string;
+  officeCode?: string;
+  categories?: string[];
   priceTTC?: string;
   availabilityStatus?: string;
   availabilityNote?: string;
   availabilityDate?: string;
   relatedEans?: string[];
+}
+
+export interface CatalogueBookContributor {
+  name: string;
+  role: string;
 }
 
 export interface CatalogueBook extends BookCardProps {
@@ -94,6 +103,9 @@ export const catalogueDb: CatalogueDb = {
       details: {
         subtitle: 'Guide officiel des personnages de la saga des Empereurs',
         badges: ['Shonen Jump', 'Fiche personnage', 'Best-seller'],
+        contributors: [
+          { name: 'Eiichiro Oda', role: 'Auteur' },
+        ],
         metadata: [
           { label: 'Série', value: 'One Piece - Guides' },
           { label: 'Collection', value: 'One Piece' },
@@ -117,6 +129,9 @@ export const catalogueDb: CatalogueDb = {
           { label: 'Précommandes', value: '48', helper: '7 derniers jours' },
           { label: 'Dernière commande', value: '22/02/2024', helper: 'Librairie Kabuto' },
         ],
+        recommendedAge: 'DÈS 10 AN(S)',
+        officeCode: '12594',
+        categories: ['Glénat Manga', 'Shonen', 'Aventure', 'Action'],
         priceTTC: '7.90',
         availabilityStatus: 'Disponible',
         availabilityNote: 'En stock, expédition sous 48h',

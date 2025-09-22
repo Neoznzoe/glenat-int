@@ -13,6 +13,12 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { SecureLink } from '@/components/routing/SecureLink';
 import { useAppDispatch } from '@/hooks/redux';
 import { addItem } from '@/store/cartSlice';
@@ -25,10 +31,10 @@ import { useDecryptedLocation } from '@/lib/secureRouting';
 import { toast } from 'sonner';
 import {
   ArrowUpRight,
-  CalendarDays,
-  Info,
+  FileText,
   Loader2,
-  PackageCheck,
+  Printer,
+  Share2,
   ShoppingCart,
   Truck,
 } from 'lucide-react';
@@ -103,6 +109,20 @@ export function BookDetails() {
     toast.success('Ajouté au panier', { description: book.title });
   };
 
+  const handlePrintSheet = () => {
+    if (typeof window !== 'undefined') {
+      window.print();
+    }
+  };
+
+  const handleDownloadSheet = () => {
+    toast.info('Téléchargement de la fiche disponible prochainement');
+  };
+
+  const handleShareSheet = () => {
+    toast.info('Partage de la fiche disponible prochainement');
+  };
+
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -135,6 +155,10 @@ export function BookDetails() {
     const specifications = details?.specifications ?? [];
     const stats = details?.stats ?? [];
     const badges = details?.badges ?? [];
+    const contributors = details?.contributors ?? [];
+    const categories = details?.categories ?? [];
+    const recommendedAge = details?.recommendedAge;
+    const officeCode = details?.officeCode;
 
     return (
       <div className="space-y-6">
@@ -205,17 +229,95 @@ export function BookDetails() {
           </Card>
           <div className="space-y-6">
             <div className="rounded-2xl border bg-card p-6 shadow-sm space-y-6">
-              <div className="space-y-3">
-                <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                  {book.publisher}
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+                    {book.publisher}
+                  </p>
+                  <h1 className="text-3xl font-semibold uppercase leading-tight">
+                    {book.title}
+                  </h1>
+                  {details?.subtitle && (
+                    <p className="text-base text-muted-foreground">{details.subtitle}</p>
+                  )}
+                  {contributors.length > 0 ? (
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                      {contributors.map((contributor) => (
+                        <span
+                          key={`${contributor.name}-${contributor.role}`}
+                          className="inline-flex items-center gap-2"
+                        >
+                          <span className="font-semibold text-foreground">{contributor.name}</span>
+                          <span className="font-medium text-foreground">({contributor.role})</span>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{book.authors}</p>
+                  )}
+                  {recommendedAge && (
+                    <div>
+                      <span className="inline-flex items-center rounded-md bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-foreground">
+                        {recommendedAge}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="inline-flex items-center gap-2 self-start">
+                      <Printer className="h-4 w-4" />
+                      Impression
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        handlePrintSheet();
+                      }}
+                    >
+                      <Printer className="mr-2 h-4 w-4" />
+                      Imprimer la fiche
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        handleDownloadSheet();
+                      }}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Télécharger en PDF
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        handleShareSheet();
+                      }}
+                    >
+                      <Share2 className="mr-2 h-4 w-4" />
+                      Partager la fiche
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <p className="text-sm font-medium text-foreground">
+                  Parution : {book.publicationDate}
+                  {officeCode ? ` / Office ${officeCode}` : ''}
                 </p>
-                <h1 className="text-3xl font-semibold uppercase leading-tight">
-                  {book.title}
-                </h1>
-                <p className="text-base text-muted-foreground">
-                  {details?.subtitle ?? book.authors}
-                </p>
-                <p className="text-sm text-muted-foreground">{book.authors}</p>
+                {categories.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {categories.map((category) => (
+                      <span
+                        key={category}
+                        className="inline-flex items-center rounded-md bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-foreground"
+                      >
+                        {category}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               {badges.length > 0 && (
                 <div className="flex flex-wrap gap-2">
@@ -226,24 +328,6 @@ export function BookDetails() {
                   ))}
                 </div>
               )}
-              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                <span className="inline-flex items-center gap-2">
-                  <CalendarDays className="h-4 w-4 text-primary" />
-                  Parution : {book.publicationDate}
-                </span>
-                {details?.availabilityDate && (
-                  <span className="inline-flex items-center gap-2">
-                    <PackageCheck className="h-4 w-4 text-primary" />
-                    Disponibilité : {details.availabilityDate}
-                  </span>
-                )}
-                {book.creationDate && (
-                  <span className="inline-flex items-center gap-2">
-                    <Info className="h-4 w-4 text-primary" />
-                    Fiche créée le {book.creationDate}
-                  </span>
-                )}
-              </div>
               {metadata.length > 0 && (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {metadata.map((item) => (
