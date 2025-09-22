@@ -132,6 +132,14 @@ const resolveHttpsConfig = (): HttpsServerOptions | false => {
 
 export default defineConfig(() => {
   const httpsConfig = resolveHttpsConfig();
+  const cliPort = process.env.npm_config_port;
+  const envPort = process.env.VITE_DEV_PORT ?? process.env.PORT;
+  const port = Number(cliPort ?? envPort ?? 3000);
+  if (!Number.isFinite(port)) {
+    console.warn(
+      '[vite] Valeur de port invalide fournie via --port, VITE_DEV_PORT ou PORT. Utilisation du port 3000.',
+    );
+  }
 
   return {
     plugins: [react()],
@@ -142,6 +150,8 @@ export default defineConfig(() => {
     },
     server: {
       host: '0.0.0.0',
+      port: Number.isFinite(port) ? port : 3000,
+      strictPort: true,
       https: httpsConfig === false ? undefined : httpsConfig,
       proxy: {
         // Proxy de dev pour contourner CORS sur l'API Extranet
