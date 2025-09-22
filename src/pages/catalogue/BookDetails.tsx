@@ -171,10 +171,7 @@ export function BookDetails() {
       <div className="space-y-6">
         <div className="grid gap-6 xl:grid-cols-[360px,1fr]">
           <Card className="overflow-hidden rounded-2xl border shadow-sm">
-            <div
-              className="relative flex items-center justify-center bg-[var(--glenat-manga)] p-4"
-              style={{ backgroundColor: `var(${book.color})` }}
-            >
+            <div className="relative flex items-center justify-center bg-white">
               {book.ribbonText && (
                 <div className="pointer-events-none absolute top-6 -right-10 rotate-45 z-20">
                   <span className="block w-[140px] text-center bg-primary text-primary-foreground uppercase text-[11px] leading-4 font-semibold tracking-wide py-1 shadow-md">
@@ -185,7 +182,7 @@ export function BookDetails() {
               <img
                 src={book.cover}
                 alt={book.title}
-                className="h-[420px] w-auto rounded-lg object-cover shadow-2xl"
+                className="max-h-[520px] w-full object-contain shadow-2xl"
               />
             </div>
             <CardContent className="space-y-5 p-6">
@@ -203,7 +200,7 @@ export function BookDetails() {
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground">Prix HT</p>
-                    <p className="text-lg font-semibold">
+                    <p className="text-base font-semibold">
                       {priceHT ? `${priceHT} €` : '—'}
                     </p>
                   </div>
@@ -325,7 +322,7 @@ export function BookDetails() {
                       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         {item.label}
                       </p>
-                      <p className="text-lg font-medium text-foreground">{item.value}</p>
+                      <p className="text-base font-medium text-foreground">{item.value}</p>
                     </div>
                   ))}
                 </div>
