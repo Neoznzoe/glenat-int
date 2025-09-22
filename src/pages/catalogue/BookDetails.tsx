@@ -391,40 +391,40 @@ export function BookDetails() {
             </SecureLink>
           </div>
           <Tabs defaultValue="deja-paru" className="space-y-4">
-            <TabsList className="flex-wrap justify-start gap-2 border-b bg-transparent p-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:gap-4">
+            <TabsList className="flex-wrap justify-start gap-2 rounded-none border-b bg-transparent p-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:gap-4">
               <TabsTrigger
                 value="deja-paru"
-                className="rounded-none border-b-2 border-transparent px-0 pb-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                className="-mb-px rounded-none border-b-2 border-transparent px-0 pb-3 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
               >
                 Déjà paru
               </TabsTrigger>
               <TabsTrigger
                 value="a-paraitre"
-                className="rounded-none border-b-2 border-transparent px-0 pb-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                className="-mb-px rounded-none border-b-2 border-transparent px-0 pb-3 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
               >
                 À paraître
               </TabsTrigger>
               <TabsTrigger
                 value="meme-collection"
-                className="rounded-none border-b-2 border-transparent px-0 pb-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                className="-mb-px rounded-none border-b-2 border-transparent px-0 pb-3 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
               >
                 Même collection
               </TabsTrigger>
               <TabsTrigger
                 value="meme-theme"
-                className="rounded-none border-b-2 border-transparent px-0 pb-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                className="-mb-px rounded-none border-b-2 border-transparent px-0 pb-3 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
               >
                 Même thème
               </TabsTrigger>
               <TabsTrigger
                 value="meme-serie"
-                className="rounded-none border-b-2 border-transparent px-0 pb-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                className="-mb-px rounded-none border-b-2 border-transparent px-0 pb-3 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
               >
                 Même série
               </TabsTrigger>
               <TabsTrigger
                 value="meme-auteur"
-                className="rounded-none border-b-2 border-transparent px-0 pb-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                className="-mb-px rounded-none border-b-2 border-transparent px-0 pb-3 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
               >
                 Même auteur
               </TabsTrigger>
