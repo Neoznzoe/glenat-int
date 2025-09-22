@@ -436,7 +436,7 @@ export function BookDetails() {
                     <Card key={item.ean} className="overflow-hidden rounded-2xl border shadow-sm">
                       <SecureLink
                         to={`/catalogue/book?ean=${encodeURIComponent(item.ean)}`}
-                        className="group block"
+                        className="block"
                       >
                         <div
                           className="relative flex h-48 items-center justify-center"
@@ -445,7 +445,7 @@ export function BookDetails() {
                           <img
                             src={item.cover}
                             alt={item.title}
-                            className="h-full w-auto object-cover transition-transform duration-300 group-hover:scale-105"
+                            className="h-full w-auto object-cover"
                           />
                         </div>
                         <div className="space-y-1 p-4">
