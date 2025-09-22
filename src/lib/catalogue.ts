@@ -14,8 +14,33 @@ import UniversLivre from '@/assets/logos/univers/univers-livres.svg';
 import UniversManga from '@/assets/logos/univers/univers-manga.svg';
 import type { BookCardProps } from '@/components/BookCard';
 
+export interface CatalogueBookDetailEntry {
+  label: string;
+  value: string;
+}
+
+export interface CatalogueBookStat {
+  label: string;
+  value: string;
+  helper?: string;
+}
+
+export interface CatalogueBookDetail {
+  subtitle?: string;
+  badges?: string[];
+  metadata: CatalogueBookDetailEntry[];
+  specifications: CatalogueBookDetailEntry[];
+  stats: CatalogueBookStat[];
+  priceTTC?: string;
+  availabilityStatus?: string;
+  availabilityNote?: string;
+  availabilityDate?: string;
+  relatedEans?: string[];
+}
+
 export interface CatalogueBook extends BookCardProps {
   creationDate?: string;
+  details?: CatalogueBookDetail;
 }
 
 export interface CatalogueReleaseDefinition {
@@ -60,12 +85,50 @@ export const catalogueDb: CatalogueDb = {
       authors: 'E. Oda',
       publisher: 'Glénat Manga',
       publicationDate: '01/02/2025',
-      priceHT: '7.99',
+      priceHT: '7.90',
       stock: 86,
       views: 140,
       color: '--glenat-manga',
       ribbonText: 'NOUVEAUTÉ',
       creationDate: '22/02/2024',
+      details: {
+        subtitle: 'Guide officiel des personnages de la saga des Empereurs',
+        badges: ['Shonen Jump', 'Fiche personnage', 'Best-seller'],
+        metadata: [
+          { label: 'Série', value: 'One Piece - Guides' },
+          { label: 'Collection', value: 'One Piece' },
+          { label: 'Univers', value: 'Glénat Manga' },
+          { label: 'Type', value: 'Global Manga' },
+        ],
+        specifications: [
+          { label: 'EAN', value: '9782380711102' },
+          { label: 'ISBN', value: '978-2-38071-110-2' },
+          { label: 'Format', value: '130 x 180 mm' },
+          { label: 'Pagination', value: '324 pages' },
+          { label: 'Dimensions', value: '13,0 x 18,0 cm' },
+          { label: 'Poids', value: '320 g' },
+          { label: 'Date de parution', value: '01/02/2025' },
+          { label: 'Date de disponibilité', value: '22/01/2025' },
+          { label: 'Distributeur', value: 'Glénat' },
+        ],
+        stats: [
+          { label: 'Commandes totales', value: '320', helper: 'Depuis l’ouverture des précommandes' },
+          { label: 'Stock disponible', value: '86 ex', helper: 'Mise à jour en temps réel' },
+          { label: 'Précommandes', value: '48', helper: '7 derniers jours' },
+          { label: 'Dernière commande', value: '22/02/2024', helper: 'Librairie Kabuto' },
+        ],
+        priceTTC: '7.90',
+        availabilityStatus: 'Disponible',
+        availabilityNote: 'En stock, expédition sous 48h',
+        availabilityDate: '22/01/2025',
+        relatedEans: [
+          '9782723484223',
+          '9782723484230',
+          '9782723484247',
+          '9782723484216',
+          '9782723484209',
+        ],
+      },
     },
     {
       cover: NayaPika,
@@ -189,6 +252,67 @@ export const catalogueDb: CatalogueDb = {
       color: '--glenat-jeunesse',
       creationDate: '25/09/2024',
     },
+    {
+      cover: OnePiece110,
+      title: 'One Piece - Green',
+      ean: '9782723484223',
+      authors: 'E. Oda',
+      publisher: 'Glénat Manga',
+      publicationDate: '24/11/2010',
+      priceHT: '7.90',
+      stock: 420,
+      views: 520,
+      color: '--glenat-manga',
+      ribbonText: 'CLASSIQUE',
+    },
+    {
+      cover: OnePiece110,
+      title: 'One Piece - Blue Deep',
+      ean: '9782723484230',
+      authors: 'E. Oda',
+      publisher: 'Glénat Manga',
+      publicationDate: '02/05/2012',
+      priceHT: '7.90',
+      stock: 380,
+      views: 415,
+      color: '--glenat-manga',
+    },
+    {
+      cover: OnePiece110,
+      title: 'One Piece - Yellow',
+      ean: '9782723484247',
+      authors: 'E. Oda',
+      publisher: 'Glénat Manga',
+      publicationDate: '13/03/2013',
+      priceHT: '7.90',
+      stock: 255,
+      views: 362,
+      color: '--glenat-manga',
+    },
+    {
+      cover: OnePiece110,
+      title: 'One Piece - Blue',
+      ean: '9782723484216',
+      authors: 'E. Oda',
+      publisher: 'Glénat Manga',
+      publicationDate: '06/07/2002',
+      priceHT: '7.90',
+      stock: 310,
+      views: 298,
+      color: '--glenat-manga',
+    },
+    {
+      cover: OnePiece110,
+      title: 'One Piece - Red',
+      ean: '9782723484209',
+      authors: 'E. Oda',
+      publisher: 'Glénat Manga',
+      publicationDate: '06/07/2002',
+      priceHT: '7.90',
+      stock: 295,
+      views: 340,
+      color: '--glenat-manga',
+    },
   ],
   releases: [
     {
@@ -267,7 +391,24 @@ const cloneBook = (ean: string): CatalogueBook => {
     throw new Error(`Livre introuvable pour l'EAN ${ean}`);
   }
 
-  return { ...book };
+  const details = book.details
+    ? {
+        ...book.details,
+        badges: book.details.badges ? [...book.details.badges] : undefined,
+        metadata: book.details.metadata?.map(entry => ({ ...entry })) ?? [],
+        specifications:
+          book.details.specifications?.map(entry => ({ ...entry })) ?? [],
+        stats: book.details.stats?.map(stat => ({ ...stat })) ?? [],
+        relatedEans: book.details.relatedEans
+          ? [...book.details.relatedEans]
+          : undefined,
+      }
+    : undefined;
+
+  return {
+    ...book,
+    details,
+  };
 };
 
 const logRequest = (endpoint: string) => {
@@ -300,7 +441,7 @@ export interface CatalogueKiosqueGroup {
 export async function fetchCatalogueBooks(): Promise<CatalogueBook[]> {
   const endpoint = 'fetchCatalogueBooks';
   logRequest(endpoint);
-  const data = catalogueDb.books.map(book => ({ ...book }));
+  const data = catalogueDb.books.map(book => cloneBook(book.ean));
   logResponse(endpoint, data);
   return Promise.resolve(data);
 }
@@ -348,4 +489,57 @@ export async function fetchCatalogueEditions(): Promise<CatalogueEdition[]> {
   const data = catalogueDb.editions.map(edition => ({ ...edition }));
   logResponse(endpoint, data);
   return Promise.resolve(data);
+}
+
+export async function fetchCatalogueBook(
+  ean: string,
+): Promise<CatalogueBook | null> {
+  const endpoint = `fetchCatalogueBook:${ean}`;
+  logRequest(endpoint);
+
+  try {
+    const book = cloneBook(ean);
+    logResponse(endpoint, book);
+    return Promise.resolve(book);
+  } catch (error) {
+    logResponse(endpoint, null);
+    console.warn(`[catalogueApi] Livre introuvable pour l'EAN ${ean}`, error);
+    return Promise.resolve(null);
+  }
+}
+
+export async function fetchCatalogueRelatedBooks(
+  ean: string,
+): Promise<CatalogueBook[]> {
+  const endpoint = `fetchCatalogueRelatedBooks:${ean}`;
+  logRequest(endpoint);
+
+  try {
+    const book = cloneBook(ean);
+    const relatedEans = book.details?.relatedEans ?? [];
+    const related = relatedEans
+      .filter(relatedEan => relatedEan !== ean)
+      .map(relatedEan => {
+        try {
+          return cloneBook(relatedEan);
+        } catch (error) {
+          console.warn(
+            `[catalogueApi] Livre recommandé introuvable pour l'EAN ${relatedEan}`,
+            error,
+          );
+          return null;
+        }
+      })
+      .filter((item): item is CatalogueBook => item !== null);
+
+    logResponse(endpoint, related);
+    return Promise.resolve(related);
+  } catch (error) {
+    logResponse(endpoint, []);
+    console.warn(
+      `[catalogueApi] Impossible de récupérer les recommandations pour ${ean}`,
+      error,
+    );
+    return Promise.resolve([]);
+  }
 }
