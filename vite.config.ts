@@ -4,11 +4,11 @@ import react from '@vitejs/plugin-react';
 import type { ServerOptions as HttpsServerOptions } from 'https';
 import { defineConfig } from 'vite';
 
-const resolveHttpsConfig = (): HttpsServerOptions | undefined => {
-  const useHttps = process.env.VITE_DEV_HTTPS === 'true';
+const resolveHttpsConfig = (): HttpsServerOptions | false => {
+  const httpsFlag = process.env.VITE_DEV_HTTPS;
 
-  if (!useHttps) {
-    return undefined;
+  if (httpsFlag === 'false') {
+    return false;
   }
 
   const keyPath = process.env.VITE_DEV_HTTPS_KEY;
@@ -28,7 +28,13 @@ const resolveHttpsConfig = (): HttpsServerOptions | undefined => {
     }
   }
 
-  return {} as HttpsServerOptions;
+  if (httpsFlag && httpsFlag !== 'true') {
+    console.warn(
+      `[vite] Valeur « ${httpsFlag} » non reconnue pour VITE_DEV_HTTPS. HTTPS activé par défaut.`,
+    );
+  }
+
+  return {} satisfies HttpsServerOptions;
 };
 
 export default defineConfig(() => {
@@ -43,7 +49,7 @@ export default defineConfig(() => {
     },
     server: {
       host: '0.0.0.0',
-      https: httpsConfig,
+      https: httpsConfig === false ? undefined : httpsConfig,
       proxy: {
         // Proxy de dev pour contourner CORS sur l'API Extranet
         '/extranet': {
