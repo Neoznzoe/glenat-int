@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -22,6 +21,7 @@ import {
   fetchCatalogueRelatedBooks,
   type CatalogueBook,
 } from '@/lib/catalogue';
+import { useDecryptedLocation } from '@/lib/secureRouting';
 import { toast } from 'sonner';
 import {
   ArrowUpRight,
@@ -34,8 +34,12 @@ import {
 } from 'lucide-react';
 
 export function BookDetails() {
-  const [searchParams] = useSearchParams();
-  const ean = searchParams.get('ean');
+  const location = useDecryptedLocation();
+  const ean = useMemo(() => {
+    const search = location.search || '';
+    const params = new URLSearchParams(search.startsWith('?') ? search : `?${search}`);
+    return params.get('ean');
+  }, [location.search]);
   const dispatch = useAppDispatch();
   const [book, setBook] = useState<CatalogueBook | null>(null);
   const [relatedBooks, setRelatedBooks] = useState<CatalogueBook[]>([]);
