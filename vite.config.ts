@@ -1,3 +1,4 @@
+import fs from 'fs';
 import path from 'path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
@@ -10,6 +11,10 @@ export default defineConfig({
     },
   },
   server: {
+    https: {
+      key: fs.readFileSync('certs/dev.key'),
+      cert: fs.readFileSync('certs/dev.crt'),
+    },
     proxy: {
       // Proxy de dev pour contourner CORS sur l'API Extranet
       '/extranet': {

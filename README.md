@@ -16,10 +16,11 @@ Application interne construite avec **React**, **Vite** et **TypeScript**. Elle 
    ```bash
    npm install
    ```
-2. Lancer le serveur de développement :
+2. Lancer le serveur de développement en HTTPS (écoute sur toutes les interfaces en port 3000) :
    ```bash
-   npm run dev
+   npm run dev -- --host 0.0.0.0 --https --port 3000
    ```
+   > Lors du premier accès via l'adresse IP (par exemple https://192.168.x.x:3000), votre navigateur affichera un avertissement concernant le certificat auto-signé. Validez l'exception de sécurité pour faire confiance au certificat `certs/dev.crt` généré localement.
 
 ## 🔐 Chiffrement des URLs (AES-256-GCM)
 
