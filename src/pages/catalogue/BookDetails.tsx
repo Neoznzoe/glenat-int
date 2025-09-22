@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/breadcrumb';
 import CatalogueLayout from './CatalogueLayout';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -36,8 +35,15 @@ import {
   Printer,
   Share2,
   ShoppingCart,
-  Truck,
 } from 'lucide-react';
+
+const formatPrice = (price?: string | null) => {
+  if (!price) {
+    return null;
+  }
+
+  return price.replace('.', ',');
+};
 
 export function BookDetails() {
   const location = useDecryptedLocation();
@@ -151,14 +157,13 @@ export function BookDetails() {
     }
 
     const details = book.details;
-    const metadata = details?.metadata ?? [];
     const specifications = details?.specifications ?? [];
-    const stats = details?.stats ?? [];
-    const badges = details?.badges ?? [];
     const contributors = details?.contributors ?? [];
     const categories = details?.categories ?? [];
     const recommendedAge = details?.recommendedAge;
     const officeCode = details?.officeCode;
+    const priceTTC = formatPrice(details?.priceTTC ?? book.priceHT);
+    const priceHT = formatPrice(book.priceHT);
 
     return (
       <div className="space-y-6">
@@ -189,15 +194,17 @@ export function BookDetails() {
               <div className="flex flex-col gap-4">
                 <div className="flex items-end justify-between gap-6">
                   <div>
-                    <p className="text-sm text-muted-foreground">Prix HT</p>
-                    <p className="text-3xl font-semibold">{book.priceHT} €</p>
+                    <p className="text-sm text-muted-foreground">Prix TTC</p>
+                    <p className="text-3xl font-semibold">
+                      {priceTTC ? `${priceTTC} €` : '—'}
+                    </p>
                   </div>
-                  {details?.priceTTC && (
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Prix TTC</p>
-                      <p className="text-xl font-semibold">{details.priceTTC} €</p>
-                    </div>
-                  )}
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Prix HT</p>
+                    <p className="text-lg font-semibold">
+                      {priceHT ? `${priceHT} €` : '—'}
+                    </p>
+                  </div>
                 </div>
                 <Button size="lg" className="w-full" onClick={handleAddToCart}>
                   <ShoppingCart className="mr-2 h-4 w-4" />
@@ -219,10 +226,6 @@ export function BookDetails() {
                 <div className="flex items-center justify-between gap-4">
                   <span>Stock disponible</span>
                   <span className="font-medium text-foreground">{book.stock} ex</span>
-                </div>
-                <div className="flex items-center gap-3 rounded-xl bg-muted px-4 py-3 text-xs text-muted-foreground">
-                  <Truck className="h-4 w-4 text-primary" />
-                  <span>{details?.availabilityNote ?? 'Aucune information logistique pour le moment'}</span>
                 </div>
               </div>
             </CardContent>
@@ -319,32 +322,6 @@ export function BookDetails() {
                   </div>
                 )}
               </div>
-              {badges.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {badges.map((badge) => (
-                    <Badge key={badge} className="bg-primary/10 text-primary">
-                      {badge}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-              {metadata.length > 0 && (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {metadata.map((item) => (
-                    <div
-                      key={`${item.label}-${item.value}`}
-                      className="rounded-xl border border-dashed border-border/60 bg-muted/40 px-4 py-3"
-                    >
-                      <p className="text-xs uppercase text-muted-foreground">
-                        {item.label}
-                      </p>
-                      <p className="text-sm font-medium text-foreground">
-                        {item.value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
               {specifications.length > 0 && (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {specifications.map((item) => (
@@ -363,26 +340,6 @@ export function BookDetails() {
                 </div>
               )}
             </div>
-            {stats.length > 0 && (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {stats.map((stat) => (
-                  <Card
-                    key={`${stat.label}-${stat.value}`}
-                    className="rounded-2xl border bg-gradient-to-br from-muted/70 via-background to-background p-5 shadow-sm"
-                  >
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                      {stat.label}
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold text-foreground">
-                      {stat.value}
-                    </p>
-                    {stat.helper && (
-                      <p className="mt-1 text-xs text-muted-foreground">{stat.helper}</p>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            )}
             <Card className="rounded-2xl border shadow-sm">
               <CardContent className="p-6">
                 <Tabs defaultValue="resume" className="w-full">

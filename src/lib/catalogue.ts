@@ -94,7 +94,7 @@ export const catalogueDb: CatalogueDb = {
       authors: 'E. Oda',
       publisher: 'Glénat Manga',
       publicationDate: '01/02/2025',
-      priceHT: '7.90',
+      priceHT: '7.49',
       stock: 86,
       views: 140,
       color: '--glenat-manga',
