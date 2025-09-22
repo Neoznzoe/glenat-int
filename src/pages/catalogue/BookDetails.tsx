@@ -250,7 +250,7 @@ export function BookDetails() {
                   )}
                   {recommendedAge && (
                     <div>
-                      <span className="inline-flex items-center rounded-md bg-slate-200 px-4 py-1.5 text-xs font-semibold text-foreground">
+                      <span className="inline-flex items-center rounded-md bg-[#EBEBEB] px-4 py-1.5 text-xs font-semibold text-foreground">
                         {recommendedAge}
                       </span>
                     </div>
@@ -304,7 +304,7 @@ export function BookDetails() {
                     {categories.map((category) => (
                       <span
                         key={category}
-                        className="inline-flex items-center rounded-md bg-slate-200 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-foreground"
+                        className="inline-flex items-center rounded-md bg-[#EBEBEB] px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-foreground"
                       >
                         {category}
                       </span>
