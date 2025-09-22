@@ -166,6 +166,8 @@ export function BookDetails() {
     const officeCode = details?.officeCode;
     const priceTTC = formatPrice(details?.priceTTC ?? book.priceHT);
     const priceHT = formatPrice(book.priceHT);
+    const summaryText = details?.summary;
+    const authorBio = details?.authorBio;
 
     return (
       <div className="space-y-6">
@@ -326,11 +328,37 @@ export function BookDetails() {
                       <TabsTrigger value="auteur">Auteur</TabsTrigger>
                     </TabsList>
                   </div>
-                  <TabsContent value="resume" className="rounded-xl bg-muted/40 p-6 text-sm text-muted-foreground">
-                    Aucune donnée disponible
+                  <TabsContent
+                    value="resume"
+                    className="rounded-xl bg-muted/40 p-6 text-base leading-relaxed text-muted-foreground"
+                  >
+                    {summaryText ? (
+                      <div className="space-y-4">
+                        {summaryText.split('\n\n').map((paragraph, index) => (
+                          <p key={index} className="whitespace-pre-line">
+                            {paragraph}
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p>Aucune donnée disponible</p>
+                    )}
                   </TabsContent>
-                  <TabsContent value="auteur" className="rounded-xl bg-muted/40 p-6 text-sm text-muted-foreground">
-                    Aucune donnée disponible
+                  <TabsContent
+                    value="auteur"
+                    className="rounded-xl bg-muted/40 p-6 text-base leading-relaxed text-muted-foreground"
+                  >
+                    {authorBio ? (
+                      <div className="space-y-4">
+                        {authorBio.split('\n\n').map((paragraph, index) => (
+                          <p key={index} className="whitespace-pre-line">
+                            {paragraph}
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p>Aucune donnée disponible</p>
+                    )}
                   </TabsContent>
                 </Tabs>
               </CardContent>
