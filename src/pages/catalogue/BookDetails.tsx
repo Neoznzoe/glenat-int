@@ -170,13 +170,9 @@ export function BookDetails() {
     return (
       <div className="space-y-6">
         <div className="grid gap-6 xl:grid-cols-[360px,1fr]">
-          <Card className="overflow-hidden rounded-2xl border shadow-sm">
-            <div className="relative aspect-[3/4] w-full overflow-hidden bg-white">
-              <img
-                src={book.cover}
-                alt={book.title}
-                className="h-full w-full object-cover"
-              />
+          <Card className="rounded-2xl border shadow-sm">
+            <div className="relative w-full bg-white">
+              <img src={book.cover} alt={book.title} className="w-full h-auto" />
             </div>
             <CardContent className="space-y-5 p-6">
               <div className="flex items-center gap-2 text-sm font-medium text-emerald-600">
