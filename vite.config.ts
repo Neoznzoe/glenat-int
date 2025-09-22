@@ -10,6 +10,8 @@ export default defineConfig({
     },
   },
   server: {
+    host: true,
+    https: true,
     proxy: {
       // Proxy de dev pour contourner CORS sur l'API Extranet
       '/extranet': {
