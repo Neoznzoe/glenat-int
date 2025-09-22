@@ -244,7 +244,7 @@ export function BookDetails() {
                   )}
                   {recommendedAge && (
                     <div>
-                      <span className="inline-flex items-center rounded-md bg-slate-200 px-4 py-1.5 text-sm font-semibold text-foreground">
+                      <span className="inline-flex items-center rounded-md bg-slate-200 px-4 py-1.5 text-xs font-semibold text-foreground">
                         {recommendedAge}
                       </span>
                     </div>
@@ -298,7 +298,7 @@ export function BookDetails() {
                     {categories.map((category) => (
                       <span
                         key={category}
-                        className="inline-flex items-center rounded-md bg-slate-200 px-4 py-1.5 text-sm font-semibold uppercase tracking-wide text-foreground"
+                        className="inline-flex items-center rounded-md bg-slate-200 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-foreground"
                       >
                         {category}
                       </span>
@@ -310,7 +310,7 @@ export function BookDetails() {
                 <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
                   {infoEntries.map((item) => (
                     <div key={`${item.label}-${item.value}`} className="space-y-1">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                         {item.label}
                       </p>
                       <p className="text-base font-medium text-foreground">{item.value}</p>
@@ -326,11 +326,13 @@ export function BookDetails() {
                     <TabsList>
                       <TabsTrigger value="resume">Résumé</TabsTrigger>
                       <TabsTrigger value="auteur">Auteur</TabsTrigger>
+                      <TabsTrigger value="lire">Lire</TabsTrigger>
+                      <TabsTrigger value="internet">Internet</TabsTrigger>
                     </TabsList>
                   </div>
                   <TabsContent
                     value="resume"
-                    className="rounded-xl bg-muted/40 p-6 text-base leading-relaxed text-muted-foreground"
+                    className="rounded-xl bg-muted/40 p-6 text-base leading-relaxed text-foreground"
                   >
                     {summaryText ? (
                       <div className="space-y-4">
@@ -346,7 +348,7 @@ export function BookDetails() {
                   </TabsContent>
                   <TabsContent
                     value="auteur"
-                    className="rounded-xl bg-muted/40 p-6 text-base leading-relaxed text-muted-foreground"
+                    className="rounded-xl bg-muted/40 p-6 text-base leading-relaxed text-foreground"
                   >
                     {authorBio ? (
                       <div className="space-y-4">
@@ -359,6 +361,18 @@ export function BookDetails() {
                     ) : (
                       <p>Aucune donnée disponible</p>
                     )}
+                  </TabsContent>
+                  <TabsContent
+                    value="lire"
+                    className="rounded-xl bg-muted/40 p-6 text-base leading-relaxed text-foreground"
+                  >
+                    <p>Aucune donnée disponible</p>
+                  </TabsContent>
+                  <TabsContent
+                    value="internet"
+                    className="rounded-xl bg-muted/40 p-6 text-base leading-relaxed text-foreground"
+                  >
+                    <p>Aucune donnée disponible</p>
                   </TabsContent>
                 </Tabs>
               </CardContent>
@@ -376,38 +390,101 @@ export function BookDetails() {
               <ArrowUpRight className="h-4 w-4" />
             </SecureLink>
           </div>
-          {relatedBooks.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-              {relatedBooks.map((item) => (
-                <Card key={item.ean} className="overflow-hidden rounded-2xl border shadow-sm">
-                  <SecureLink to={`/catalogue/book?ean=${encodeURIComponent(item.ean)}`} className="group block">
-                    <div
-                      className="relative flex h-48 items-center justify-center"
-                      style={{ backgroundColor: `var(${item.color})` }}
-                    >
-                      <img
-                        src={item.cover}
-                        alt={item.title}
-                        className="h-full w-auto object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    </div>
-                    <div className="space-y-1 p-4">
-                      <p className="text-sm font-semibold leading-tight text-foreground">
-                        {item.title}
-                      </p>
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                        {item.authors}
-                      </p>
-                    </div>
-                  </SecureLink>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <p className="rounded-xl bg-muted/40 p-6 text-sm text-muted-foreground">
-              Aucune recommandation disponible pour le moment.
-            </p>
-          )}
+          <Tabs defaultValue="deja-paru" className="space-y-4">
+            <TabsList className="flex-wrap justify-start gap-2 border-b bg-transparent p-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:gap-4">
+              <TabsTrigger
+                value="deja-paru"
+                className="rounded-none border-b-2 border-transparent px-0 pb-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+              >
+                Déjà paru
+              </TabsTrigger>
+              <TabsTrigger
+                value="a-paraitre"
+                className="rounded-none border-b-2 border-transparent px-0 pb-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+              >
+                À paraître
+              </TabsTrigger>
+              <TabsTrigger
+                value="meme-collection"
+                className="rounded-none border-b-2 border-transparent px-0 pb-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+              >
+                Même collection
+              </TabsTrigger>
+              <TabsTrigger
+                value="meme-theme"
+                className="rounded-none border-b-2 border-transparent px-0 pb-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+              >
+                Même thème
+              </TabsTrigger>
+              <TabsTrigger
+                value="meme-serie"
+                className="rounded-none border-b-2 border-transparent px-0 pb-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+              >
+                Même série
+              </TabsTrigger>
+              <TabsTrigger
+                value="meme-auteur"
+                className="rounded-none border-b-2 border-transparent px-0 pb-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+              >
+                Même auteur
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="deja-paru" className="space-y-4">
+              {relatedBooks.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+                  {relatedBooks.map((item) => (
+                    <Card key={item.ean} className="overflow-hidden rounded-2xl border shadow-sm">
+                      <SecureLink
+                        to={`/catalogue/book?ean=${encodeURIComponent(item.ean)}`}
+                        className="group block"
+                      >
+                        <div
+                          className="relative flex h-48 items-center justify-center"
+                          style={{ backgroundColor: `var(${item.color})` }}
+                        >
+                          <img
+                            src={item.cover}
+                            alt={item.title}
+                            className="h-full w-auto object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                        </div>
+                        <div className="space-y-1 p-4">
+                          <p className="text-sm font-semibold leading-tight text-foreground">
+                            {item.title}
+                          </p>
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                            {item.authors}
+                          </p>
+                        </div>
+                      </SecureLink>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-xl bg-muted/40 p-6 text-sm text-muted-foreground">
+                  Aucune recommandation disponible pour le moment.
+                </p>
+              )}
+            </TabsContent>
+            <TabsContent value="a-paraitre" className="rounded-xl bg-muted/40 p-6 text-sm text-muted-foreground">
+              <p>Aucune recommandation disponible pour le moment.</p>
+            </TabsContent>
+            <TabsContent
+              value="meme-collection"
+              className="rounded-xl bg-muted/40 p-6 text-sm text-muted-foreground"
+            >
+              <p>Aucune recommandation disponible pour le moment.</p>
+            </TabsContent>
+            <TabsContent value="meme-theme" className="rounded-xl bg-muted/40 p-6 text-sm text-muted-foreground">
+              <p>Aucune recommandation disponible pour le moment.</p>
+            </TabsContent>
+            <TabsContent value="meme-serie" className="rounded-xl bg-muted/40 p-6 text-sm text-muted-foreground">
+              <p>Aucune recommandation disponible pour le moment.</p>
+            </TabsContent>
+            <TabsContent value="meme-auteur" className="rounded-xl bg-muted/40 p-6 text-sm text-muted-foreground">
+              <p>Aucune recommandation disponible pour le moment.</p>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     );
