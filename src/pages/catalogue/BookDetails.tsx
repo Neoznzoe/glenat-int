@@ -36,6 +36,7 @@ import {
   Share2,
   ShoppingCart,
 } from 'lucide-react';
+import MangaLogo from '@/assets/logos/univers/MANGA.png';
 
 const formatPrice = (price?: string | null) => {
   if (!price) {
@@ -224,9 +225,14 @@ export function BookDetails() {
             <div className="rounded-2xl border bg-card p-6 shadow-sm space-y-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="space-y-3">
-                  <h1 className="text-3xl font-semibold uppercase leading-tight">
-                    {book.title}
-                  </h1>
+                  <div className="flex items-center gap-6">
+                    <h1 className="text-3xl font-semibold uppercase leading-tight">
+                      {book.title}
+                    </h1>
+                    {book.ean === '9782380711102' && (
+                      <img src={MangaLogo} alt="Manga" className="h-8 w-auto" />
+                    )}
+                  </div>
                   {contributors.length > 0 ? (
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
                       {contributors.map((contributor) => (

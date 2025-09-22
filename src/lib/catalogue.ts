@@ -8,6 +8,11 @@ import Brume01 from '@/assets/images/brume-01.webp';
 import Shangri17 from '@/assets/images/shangri-17.webp';
 import Momie from '@/assets/images/momie-bandelette.webp';
 import Cemotions from '@/assets/images/couleurs-emotions.webp';
+import OnePieceGreen from '@/assets/images/onepiece-green.webp';
+import OnePieceBlue from '@/assets/images/onepiece-blue.webp';
+import OnePieceYellow from '@/assets/images/onepiece-yellow.webp';
+import OnePieceBlueDeep from '@/assets/images/onepiece-bluedeep.webp';
+import OnePieceRed from '@/assets/images/onepiece-red.webp';
 import UniversBD from '@/assets/logos/univers/univers-bd.svg';
 import UniversJeune from '@/assets/logos/univers/univers-jeunesse.svg';
 import UniversLivre from '@/assets/logos/univers/univers-livres.svg';
@@ -283,7 +288,7 @@ export const catalogueDb: CatalogueDb = {
       creationDate: '25/09/2024',
     },
     {
-      cover: OnePiece110,
+      cover: OnePieceGreen,
       title: 'One Piece - Green',
       ean: '9782723484223',
       authors: 'E. Oda',
@@ -296,7 +301,7 @@ export const catalogueDb: CatalogueDb = {
       ribbonText: 'CLASSIQUE',
     },
     {
-      cover: OnePiece110,
+      cover: OnePieceBlueDeep,
       title: 'One Piece - Blue Deep',
       ean: '9782723484230',
       authors: 'E. Oda',
@@ -308,7 +313,7 @@ export const catalogueDb: CatalogueDb = {
       color: '--glenat-manga',
     },
     {
-      cover: OnePiece110,
+      cover: OnePieceYellow,
       title: 'One Piece - Yellow',
       ean: '9782723484247',
       authors: 'E. Oda',
@@ -320,7 +325,7 @@ export const catalogueDb: CatalogueDb = {
       color: '--glenat-manga',
     },
     {
-      cover: OnePiece110,
+      cover: OnePieceBlue,
       title: 'One Piece - Blue',
       ean: '9782723484216',
       authors: 'E. Oda',
@@ -332,7 +337,7 @@ export const catalogueDb: CatalogueDb = {
       color: '--glenat-manga',
     },
     {
-      cover: OnePiece110,
+      cover: OnePieceRed,
       title: 'One Piece - Red',
       ean: '9782723484209',
       authors: 'E. Oda',
