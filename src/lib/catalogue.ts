@@ -8,14 +8,55 @@ import Brume01 from '@/assets/images/brume-01.webp';
 import Shangri17 from '@/assets/images/shangri-17.webp';
 import Momie from '@/assets/images/momie-bandelette.webp';
 import Cemotions from '@/assets/images/couleurs-emotions.webp';
+import OnePieceGreen from '@/assets/images/onepiece-green.webp';
+import OnePieceBlue from '@/assets/images/onepiece-blue.webp';
+import OnePieceYellow from '@/assets/images/onepiece-yellow.webp';
+import OnePieceBlueDeep from '@/assets/images/onepiece-bluedeep.webp';
+import OnePieceRed from '@/assets/images/onepiece-red.webp';
 import UniversBD from '@/assets/logos/univers/univers-bd.svg';
 import UniversJeune from '@/assets/logos/univers/univers-jeunesse.svg';
 import UniversLivre from '@/assets/logos/univers/univers-livres.svg';
 import UniversManga from '@/assets/logos/univers/univers-manga.svg';
 import type { BookCardProps } from '@/components/BookCard';
 
+export interface CatalogueBookDetailEntry {
+  label: string;
+  value: string;
+}
+
+export interface CatalogueBookStat {
+  label: string;
+  value: string;
+  helper?: string;
+}
+
+export interface CatalogueBookDetail {
+  subtitle?: string;
+  badges?: string[];
+  contributors?: CatalogueBookContributor[];
+  metadata: CatalogueBookDetailEntry[];
+  specifications: CatalogueBookDetailEntry[];
+  stats: CatalogueBookStat[];
+  recommendedAge?: string;
+  officeCode?: string;
+  categories?: string[];
+  priceTTC?: string;
+  availabilityStatus?: string;
+  availabilityNote?: string;
+  availabilityDate?: string;
+  relatedEans?: string[];
+  summary?: string;
+  authorBio?: string;
+}
+
+export interface CatalogueBookContributor {
+  name: string;
+  role: string;
+}
+
 export interface CatalogueBook extends BookCardProps {
   creationDate?: string;
+  details?: CatalogueBookDetail;
 }
 
 export interface CatalogueReleaseDefinition {
@@ -60,12 +101,69 @@ export const catalogueDb: CatalogueDb = {
       authors: 'E. Oda',
       publisher: 'Glénat Manga',
       publicationDate: '01/02/2025',
-      priceHT: '7.99',
+      priceHT: '7.49',
       stock: 86,
       views: 140,
       color: '--glenat-manga',
       ribbonText: 'NOUVEAUTÉ',
       creationDate: '22/02/2024',
+      details: {
+        subtitle: 'Guide officiel des personnages de la saga des Empereurs',
+        badges: ['Shonen Jump', 'Fiche personnage', 'Best-seller'],
+        contributors: [
+          { name: 'Eiichiro Oda', role: 'Auteur' },
+        ],
+        metadata: [
+          { label: 'Marque éditoriale', value: 'Glénat Manga' },
+          { label: 'Catégorie(s)', value: 'One Piece, Aventure' },
+          { label: 'Série', value: 'One Piece Data Book' },
+          { label: 'Collection', value: 'Shonen' },
+          { label: 'Mot(s) clé', value: 'guide book, humour, aventure, action' },
+          { label: 'Libellé de tomaison', value: 'Green' },
+          { label: 'Nombre de pages', value: '394 pages' },
+          { label: "Éditeur d'origine", value: 'Shueisha' },
+          { label: 'BC', value: 'business central · descriptif technique · suivi fabrication' },
+        ],
+        specifications: [
+          { label: 'EAN', value: '9782380711102' },
+          { label: 'ISBN', value: '978-2-38071-110-2' },
+          { label: 'Format', value: '130 x 180 mm' },
+          { label: 'Pagination', value: '394 pages' },
+          { label: 'Dimensions', value: '13,0 x 18,0 cm' },
+          { label: 'Poids', value: '320 g' },
+          { label: 'Date de parution', value: '01/02/2025' },
+          { label: 'Date de disponibilité', value: '22/01/2025' },
+          { label: 'Distributeur', value: 'Glénat' },
+          { label: 'Hachette', value: '4124558' },
+          { label: 'Façonnage', value: 'Souple' },
+          { label: 'Stock', value: '86 ex' },
+          { label: 'Presse', value: 'Pages à publier' },
+        ],
+        stats: [
+          { label: 'Commandes totales', value: '320', helper: 'Depuis l’ouverture des précommandes' },
+          { label: 'Stock disponible', value: '86 ex', helper: 'Mise à jour en temps réel' },
+          { label: 'Précommandes', value: '48', helper: '7 derniers jours' },
+          { label: 'Dernière commande', value: '22/02/2024', helper: 'Librairie Kabuto' },
+        ],
+        recommendedAge: 'DÈS 10 AN(S)',
+        officeCode: '12594',
+        categories: ['Glénat Manga', 'Shonen', 'Aventure', 'Action'],
+        priceTTC: '7.90',
+        availabilityStatus: 'Disponible',
+        availabilityNote: 'En stock, expédition sous 48h',
+        availabilityDate: '22/01/2025',
+        relatedEans: [
+          '9782723484223',
+          '9782723484230',
+          '9782723484247',
+          '9782723484216',
+          '9782723484209',
+        ],
+        summary:
+          "L’intervention de l’équipage des géants apporte une lueur d’espoir à Luffy et ses amis dans leur tentative de s’évader de l’île futuriste, mais c’était sans compter l’arrivée des cinq doyens venus leur barrer le chemin ! Pendant ce temps, le monde entier frémit à l’écoute du message de Végapunk dont la diffusion vient tout juste de débuter… Les aventures de Luffy à la poursuite du One Piece continuent !",
+        authorBio:
+          "Eiichiro Oda est né le 1er janvier 1975 à Kumamoto (Japon). Dès l’âge de 4 ans, il veut devenir mangaka. En 1992, alors qu’il est encore au lycée, il est récompensé lors du 44e concours Tezuka pour Wanted!. Après avoir été assistant auprès de divers auteurs comme Nobuhiro Watsuki (l’auteur de Kenshin le vagabond), c’est en 1997 qu’Eiichiro Oda publie le premier chapitre de One Piece dans le magazine Weekly Shônen Jump. Grâce aux personnages attachants, aux scènes d’action dynamiques et au scénario émouvant qui la caractérisent, la série fait l’unanimité auprès d’un large public.\n\nEn décembre 2014, One Piece est entré dans le livre des records comme la série dessinée par un seul auteur la plus imprimée au monde (320 866 000 exemplaires). Et, en 2021, ce sont plus de 490 millions de mangas One Piece qui ont déjà été imprimés à travers le monde, chaque nouveau volume étant distribué au Japon à plus de 3 millions d’exemplaires.\n\nSes déclinaisons en série TV, jeux vidéo ou films sont tout aussi populaires que la série originale. One Piece jouit également d’un succès international.",
+      },
     },
     {
       cover: NayaPika,
@@ -189,6 +287,67 @@ export const catalogueDb: CatalogueDb = {
       color: '--glenat-jeunesse',
       creationDate: '25/09/2024',
     },
+    {
+      cover: OnePieceGreen,
+      title: 'One Piece - Green',
+      ean: '9782723484223',
+      authors: 'E. Oda',
+      publisher: 'Glénat Manga',
+      publicationDate: '24/11/2010',
+      priceHT: '7.90',
+      stock: 420,
+      views: 520,
+      color: '--glenat-manga',
+      ribbonText: 'CLASSIQUE',
+    },
+    {
+      cover: OnePieceBlueDeep,
+      title: 'One Piece - Blue Deep',
+      ean: '9782723484230',
+      authors: 'E. Oda',
+      publisher: 'Glénat Manga',
+      publicationDate: '02/05/2012',
+      priceHT: '7.90',
+      stock: 380,
+      views: 415,
+      color: '--glenat-manga',
+    },
+    {
+      cover: OnePieceYellow,
+      title: 'One Piece - Yellow',
+      ean: '9782723484247',
+      authors: 'E. Oda',
+      publisher: 'Glénat Manga',
+      publicationDate: '13/03/2013',
+      priceHT: '7.90',
+      stock: 255,
+      views: 362,
+      color: '--glenat-manga',
+    },
+    {
+      cover: OnePieceBlue,
+      title: 'One Piece - Blue',
+      ean: '9782723484216',
+      authors: 'E. Oda',
+      publisher: 'Glénat Manga',
+      publicationDate: '06/07/2002',
+      priceHT: '7.90',
+      stock: 310,
+      views: 298,
+      color: '--glenat-manga',
+    },
+    {
+      cover: OnePieceRed,
+      title: 'One Piece - Red',
+      ean: '9782723484209',
+      authors: 'E. Oda',
+      publisher: 'Glénat Manga',
+      publicationDate: '06/07/2002',
+      priceHT: '7.90',
+      stock: 295,
+      views: 340,
+      color: '--glenat-manga',
+    },
   ],
   releases: [
     {
@@ -267,7 +426,24 @@ const cloneBook = (ean: string): CatalogueBook => {
     throw new Error(`Livre introuvable pour l'EAN ${ean}`);
   }
 
-  return { ...book };
+  const details = book.details
+    ? {
+        ...book.details,
+        badges: book.details.badges ? [...book.details.badges] : undefined,
+        metadata: book.details.metadata?.map(entry => ({ ...entry })) ?? [],
+        specifications:
+          book.details.specifications?.map(entry => ({ ...entry })) ?? [],
+        stats: book.details.stats?.map(stat => ({ ...stat })) ?? [],
+        relatedEans: book.details.relatedEans
+          ? [...book.details.relatedEans]
+          : undefined,
+      }
+    : undefined;
+
+  return {
+    ...book,
+    details,
+  };
 };
 
 const logRequest = (endpoint: string) => {
@@ -300,7 +476,7 @@ export interface CatalogueKiosqueGroup {
 export async function fetchCatalogueBooks(): Promise<CatalogueBook[]> {
   const endpoint = 'fetchCatalogueBooks';
   logRequest(endpoint);
-  const data = catalogueDb.books.map(book => ({ ...book }));
+  const data = catalogueDb.books.map(book => cloneBook(book.ean));
   logResponse(endpoint, data);
   return Promise.resolve(data);
 }
@@ -348,4 +524,57 @@ export async function fetchCatalogueEditions(): Promise<CatalogueEdition[]> {
   const data = catalogueDb.editions.map(edition => ({ ...edition }));
   logResponse(endpoint, data);
   return Promise.resolve(data);
+}
+
+export async function fetchCatalogueBook(
+  ean: string,
+): Promise<CatalogueBook | null> {
+  const endpoint = `fetchCatalogueBook:${ean}`;
+  logRequest(endpoint);
+
+  try {
+    const book = cloneBook(ean);
+    logResponse(endpoint, book);
+    return Promise.resolve(book);
+  } catch (error) {
+    logResponse(endpoint, null);
+    console.warn(`[catalogueApi] Livre introuvable pour l'EAN ${ean}`, error);
+    return Promise.resolve(null);
+  }
+}
+
+export async function fetchCatalogueRelatedBooks(
+  ean: string,
+): Promise<CatalogueBook[]> {
+  const endpoint = `fetchCatalogueRelatedBooks:${ean}`;
+  logRequest(endpoint);
+
+  try {
+    const book = cloneBook(ean);
+    const relatedEans = book.details?.relatedEans ?? [];
+    const related = relatedEans
+      .filter(relatedEan => relatedEan !== ean)
+      .map(relatedEan => {
+        try {
+          return cloneBook(relatedEan);
+        } catch (error) {
+          console.warn(
+            `[catalogueApi] Livre recommandé introuvable pour l'EAN ${relatedEan}`,
+            error,
+          );
+          return null;
+        }
+      })
+      .filter((item): item is CatalogueBook => item !== null);
+
+    logResponse(endpoint, related);
+    return Promise.resolve(related);
+  } catch (error) {
+    logResponse(endpoint, []);
+    console.warn(
+      `[catalogueApi] Impossible de récupérer les recommandations pour ${ean}`,
+      error,
+    );
+    return Promise.resolve([]);
+  }
 }

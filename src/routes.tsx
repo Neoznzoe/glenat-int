@@ -11,6 +11,7 @@ const Kiosque = lazy(() => import('./pages/catalogue/Kiosque'));
 const Offices = lazy(() => import('./pages/catalogue/Offices'));
 const Nouveautes = lazy(() => import('./pages/catalogue/Nouveautes'));
 const CouvertureAParaitre = lazy(() => import('./pages/catalogue/CouvertureAParaitre'));
+const BookDetails = lazy(() => import('./pages/catalogue/BookDetails'));
 const Administration = lazy(() => import('./pages/administration/Administration'));
 
 export const ROUTES_CONFIG: RouteDefinition[] = [
@@ -24,6 +25,7 @@ export const ROUTES_CONFIG: RouteDefinition[] = [
   { path: '/catalogue/offices', element: <Offices /> },
   { path: '/catalogue/nouveautes', element: <Nouveautes /> },
   { path: '/catalogue/couverture-a-paraitre', element: <CouvertureAParaitre /> },
+  { path: '/catalogue/book', element: <BookDetails /> },
   { path: '/administration', element: <Administration /> },
 ];
 
@@ -37,6 +39,7 @@ export const LAZY_ROUTE_PRELOADERS: Array<() => Promise<unknown>> = [
   () => import('./pages/catalogue/Offices'),
   () => import('./pages/catalogue/Nouveautes'),
   () => import('./pages/catalogue/CouvertureAParaitre'),
+  () => import('./pages/catalogue/BookDetails'),
   () => import('./pages/administration/Administration'),
 ];
 

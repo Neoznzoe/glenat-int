@@ -4,6 +4,7 @@ import { Separator } from '@/components/ui/separator';
 import { useAppDispatch } from '@/hooks/redux';
 import { addItem } from '@/store/cartSlice';
 import { toast } from 'sonner';
+import { SecureLink } from '@/components/routing/SecureLink';
 
 export interface BookCardProps {
   cover: string;
@@ -53,7 +54,7 @@ export function BookCard({
   return (
     <Card className="flex flex-col overflow-hidden min-w-[230px]">
       <div
-        className="relative flex items-center justify-center p-2"
+        className="relative flex items-center justify-center p-2 ring-offset-background focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-white/70"
         style={{ backgroundColor: `var(${color})` }}
       >
         {ribbonText && (
@@ -68,6 +69,13 @@ export function BookCard({
           alt={title}
           className="h-48 w-auto shadow-md rounded object-cover"
         />
+        <SecureLink
+          to={`/catalogue/book?ean=${encodeURIComponent(ean)}`}
+          className="absolute inset-0 block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          aria-label={`Voir la fiche de ${title}`}
+        >
+          <span className="sr-only">Voir la fiche de {title}</span>
+        </SecureLink>
       </div>
       <div className="flex flex-col p-4 text-sm flex-1 bg-background">
         <div className="space-y-1">
