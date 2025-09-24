@@ -1,0 +1,118 @@
+# Mise en place du déploiement automatisé Azure DevOps
+
+Ce guide décrit toutes les actions à réaliser dans Azure (Portail Azure et Azure DevOps) pour que chaque mise à jour de la branche `main` construise et déploie automatiquement l'image Docker de l'application.
+
+## 1. Préparer l'infrastructure Azure
+
+1. **Créer un Azure Container Registry (ACR)**
+   - Dans le [Portail Azure](https://portal.azure.com), cliquez sur **Créer une ressource** → **Containers** → **Azure Container Registry**.
+   - Renseignez :
+     - *Groupe de ressources* : choisissez-en un existant ou créez-en un nouveau.
+     - *Nom du registre* : nom global unique (ex. `monregistry`).
+     - *Région* : la plus proche de votre serveur.
+     - *SKU* : `Basic` suffit pour un premier usage.
+   - Validez et attendez la création. Notez le **Login server** affiché (ex. `monregistry.azurecr.io`).
+
+2. **Créer un service principal pour l'ACR**
+   - Dans le Portail Azure, ouvrez le registre ACR → **Contrôle d'accès (IAM)** → **Ajouter un rôle**.
+   - Attribuez le rôle **AcrPush** à une nouvelle **identité d'application** (service principal). Notez :
+     - *Application (client) ID*.
+     - *Directory (tenant) ID*.
+   - Générez un secret client : **Azure Active Directory** → l'application créée → **Certificats & secrets** → **Nouveau secret client**. Conservez le *secret value* (visible une seule fois).
+
+3. **Préparer un serveur d'hébergement**
+   - Machine Linux avec Docker installé (`docker --version`).
+   - Port 80/443 accessibles si le site est public.
+   - Domaine public pointant vers l'IP du serveur (à gérer hors Azure DevOps).
+
+## 2. Configurer Azure DevOps
+
+### 2.1 Créer la connexion de service vers l'ACR
+1. Dans Azure DevOps → **Project settings** → **Service connections** → **New service connection**.
+2. Choisissez **Docker Registry**.
+3. Sélectionnez **Azure Container Registry**.
+4. Renseignez :
+   - *Subscription* : celle qui contient l'ACR.
+   - *Azure Container Registry* : choisissez le registre.
+   - *Service connection name* : `SC-ACR` (doit correspondre au YAML).
+   - Cochez **Grant access permission to all pipelines**.
+5. Validez en s'assurant que l'authentification utilise le service principal créé plus haut (ID + secret + tenant).
+
+### 2.2 Déclarer les variables de pipeline
+1. Dans Azure DevOps → **Pipelines** → **Library** → **Variable groups** → **+ Variable group**.
+2. Créez un groupe `deploy-config` (nom libre) avec les variables :
+   - `imageName` : nom souhaité pour le dépôt d'image (ex. `mon-app`).
+   - `registry` : login server de l'ACR (ex. `monregistry.azurecr.io`).
+3. Rendez les variables secrètes si vous ne voulez pas qu'elles apparaissent en clair.
+4. Associez ce groupe à la pipeline (option **Authorize** lors de la première exécution) ou remplacez les valeurs directement dans `azure-pipelines.yml`.
+
+### 2.3 Créer l'environnement de déploiement
+1. Azure DevOps → **Pipelines** → **Environments** → **Create environment**.
+2. Nom : `production` (doit correspondre à la déclaration YAML).
+3. Type : `Virtual machines`.
+4. Conservez les valeurs par défaut et créez l'environnement.
+
+### 2.4 Installer et enregistrer l'agent auto-hébergé
+1. Dans l'environnement `production`, cliquez sur **Add resource** → **Virtual machines** → **Linux**.
+2. Générez un **Personal Access Token (PAT)** avec le scope `Agent Pools (read, manage)` (organisation → utilisateur → **Personal access tokens**).
+3. Sur le serveur :
+   ```bash
+   mkdir azdo-agent && cd azdo-agent
+   curl -O https://vstsagentpackage.azureedge.net/agent/3.239.1/vsts-agent-linux-x64-3.239.1.tar.gz
+   tar zxvf vsts-agent-linux-x64-3.239.1.tar.gz
+   ./config.sh
+   ```
+4. Lors de `./config.sh`, renseignez :
+   - URL de l'organisation Azure DevOps.
+   - PAT généré.
+   - Nom de l'agent (ex. `prod-agent-1`).
+   - Pool cible : celui proposé par l'environnement (ex. `production`).
+5. Ajoutez l'utilisateur de l'agent au groupe `docker` : `sudo usermod -aG docker <utilisateur>`. Redémarrez la session.
+6. Installez l'agent en service : `sudo ./svc.sh install` puis `sudo ./svc.sh start`.
+7. Vérifiez dans Azure DevOps que l'agent apparaît **online** dans l'environnement `production`.
+
+## 3. Mettre en place la pipeline
+
+1. **Ajouter les fichiers de build** : commitez dans le dépôt `Dockerfile`, `docker-compose.prod.yml` (optionnel) et `azure-pipelines.yml` fournis.
+2. **Créer la pipeline** :
+   - Azure DevOps → **Pipelines** → **Create Pipeline** → **Azure Repos Git** → sélectionnez le repo → **Existing Azure Pipelines YAML file**.
+   - Chemin : `azure-pipelines.yml` à la racine.
+   - Nommez la pipeline (ex. `deploy-prod`).
+3. **Autoriser la pipeline** : à la première exécution, autorisez l'accès à :
+   - La service connection `SC-ACR`.
+   - Le variable group (si utilisé).
+   - L'environnement `production`.
+
+## 4. Comprendre le déroulement du YAML
+
+- **Stage Build** :
+  1. Installe Node.js `18.20.8` via `NodeTool@0`.
+  2. Exécute `npm ci` et `npm run build` pour produire le dossier `dist`.
+  3. `Docker@2` construit l'image avec le `Dockerfile` et la pousse sur `$(registry)/$(imageName):$(Build.BuildId)`.
+
+- **Stage Deploy** (agent auto-hébergé) :
+  1. `Docker@2` se connecte au registre via `SC-ACR` (équivalent de `docker login`).
+  2. Script bash :
+     - `docker pull` de l'image taggée.
+     - Arrêt et suppression du conteneur `mon-app` existant (adapter le nom).
+     - `docker run` en détaché sur le port 80.
+
+> Adaptez le nom du conteneur, les ports, variables d'environnement ou volumes selon votre application. Pour `docker-compose`, remplacez le script par `docker compose pull && docker compose up -d`.
+
+## 5. Tester et valider
+
+1. Poussez un commit sur `main`.
+2. Sur Azure DevOps → **Pipelines**, suivez le run :
+   - `Build` doit réussir et publier l'image dans l'ACR (vérifiable dans le portail Azure → ACR → Repositories).
+   - `Deploy` doit s'exécuter sur l'agent auto-hébergé et relancer le conteneur.
+3. Sur le serveur, vérifiez `docker ps` pour confirmer que le conteneur tourne avec le dernier tag.
+4. Testez l'accès au domaine public.
+
+## 6. Étapes complémentaires (optionnelles)
+
+- **Certificats HTTPS** : installez un reverse-proxy (Nginx, Traefik) avec Let's Encrypt pour délivrer le site en HTTPS.
+- **Nettoyage des images** : planifiez `az acr repository delete` ou `docker image prune` pour éviter l'accumulation d'images.
+- **Surveillance** : configurez des alertes dans Azure Monitor ou Application Insights selon vos besoins.
+- **Rollback** : conservez l'ancien tag (`$(Build.BuildId-1)`) ou utilisez les *releases* Azure DevOps pour gérer plusieurs versions.
+
+Ce fichier regroupe toutes les données à renseigner et les services Azure à créer pour automatiser le déploiement continu depuis la branche `main` jusqu'à votre serveur Docker.

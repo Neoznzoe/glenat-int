@@ -1,0 +1,64 @@
+# Déclenche automatiquement la pipeline lorsque la branche main est mise à jour.
+trigger:
+  branches:
+    include:
+      - main
+
+# Utilise un agent Microsoft hébergé pour les étapes de build.
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  imageName: mon-app
+  registry: myregistry.azurecr.io
+
+stages:
+- stage: Build
+  displayName: Build & Push
+  jobs:
+  - job: BuildImage
+    steps:
+    # Installe la version de Node exigée par le serveur cible.
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '18.20.8'
+    # Installe les dépendances et produit le build statique.
+    - script: |
+        npm ci
+        npm run build
+      displayName: 'Install & Build'
+    # Construit l'image Docker puis la pousse dans l'Azure Container Registry.
+    - task: Docker@2
+      displayName: 'Build & Push Docker image'
+      inputs:
+        containerRegistry: 'SC-ACR'
+        repository: '$(imageName)'
+        command: 'buildAndPush'
+        Dockerfile: 'Dockerfile'
+        tags: |
+          $(Build.BuildId)
+
+- stage: Deploy
+  displayName: Deploy to Server
+  dependsOn: Build
+  jobs:
+  - deployment: DeployToServer
+    displayName: 'Run container on self-hosted server'
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          # Authentifie l'agent auto-hébergé auprès du registre d'images.
+          - task: Docker@2
+            displayName: 'Login to registry'
+            inputs:
+              command: login
+              containerRegistry: 'SC-ACR'
+          # Récupère la dernière image, remplace le conteneur existant et expose le site.
+          - script: |
+              docker pull $(registry)/$(imageName):$(Build.BuildId)
+              docker stop mon-app || true
+              docker rm mon-app || true
+              docker run -d --name mon-app -p 80:80 $(registry)/$(imageName):$(Build.BuildId)
+            displayName: 'Deploy container'
