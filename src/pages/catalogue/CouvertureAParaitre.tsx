@@ -13,12 +13,20 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import CatalogueLayout from './CatalogueLayout';
 import { SecureLink } from '@/components/routing/SecureLink';
-import { fetchCatalogueCover, type CatalogueCover } from '@/api/catalogue';
 
 type CouvertureStatus =
   | { status: 'loading'; ean: string }
-  | ({ status: 'success' } & CatalogueCover)
+  | { status: 'success'; ean: string; imageBase64: string; message?: string }
   | { status: 'error'; ean: string; message: string };
+
+type CouvertureApiResponse = {
+  success?: boolean;
+  message?: string;
+  result?: {
+    ean?: string;
+    imageBase64?: string;
+  };
+};
 
 const couvertureEans: string[] = [
   '9782344062814',
@@ -65,19 +73,41 @@ export function CouvertureAParaitre() {
     const controller = new AbortController();
     setStates(couvertureEans.map((ean) => ({ ean, status: 'loading' as const })));
 
+    const endpointBase = import.meta.env.DEV
+      ? '/extranet/couverture'
+      : 'https://api-recette.groupe-glenat.com/Api/v1.0/Extranet/couverture';
+
     const fetchCoverages = async () => {
       await Promise.all(
         couvertureEans.map(async (ean) => {
           try {
-            const result = await fetchCatalogueCover(ean, { signal: controller.signal });
-            if (controller.signal.aborted) return;
-            setStates((prev) =>
-              prev.map((item) =>
-                item.ean === ean
-                  ? { status: 'success', ...result }
-                  : item,
-              ),
-            );
+            const response = await fetch(`${endpointBase}?ean=${encodeURIComponent(ean)}`, {
+              method: 'GET',
+              headers: { Accept: 'application/json' },
+              signal: controller.signal,
+            });
+
+            if (!response.ok) {
+              throw new Error(`Erreur API (${response.status}) ${response.statusText}`);
+            }
+
+            const data = (await response.json()) as CouvertureApiResponse;
+            const imageBase64 = data?.result?.imageBase64;
+            const message = data?.message;
+
+            if ((data?.success ?? false) && imageBase64) {
+              if (controller.signal.aborted) return;
+              console.log('Couverture reçue:', ean, data);
+              setStates((prev) =>
+                prev.map((item) =>
+                  item.ean === ean
+                    ? { status: 'success', ean, imageBase64, message }
+                    : item
+                )
+              );
+            } else {
+              throw new Error(message ?? "Réponse inattendue de l'API couverture");
+            }
           } catch (error) {
             if (controller.signal.aborted) {
               return;
@@ -94,6 +124,7 @@ export function CouvertureAParaitre() {
             const message =
               error instanceof Error ? error.message : 'Erreur inconnue lors de la récupération';
 
+            console.error(`Erreur lors de la récupération de la couverture ${ean}:`, error);
             setStates((prev) =>
               prev.map((item) =>
                 item.ean === ean

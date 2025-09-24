@@ -25,7 +25,7 @@ import {
   fetchCatalogueBook,
   fetchCatalogueRelatedBooks,
   type CatalogueBook,
-} from '@/api/catalogue';
+} from '@/lib/catalogue';
 import { useDecryptedLocation } from '@/lib/secureRouting';
 import { toast } from 'sonner';
 import {

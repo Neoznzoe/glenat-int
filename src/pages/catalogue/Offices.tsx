@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
-import { fetchCatalogueOffices, type CatalogueOfficeGroup } from '@/api/catalogue';
+import { fetchCatalogueOffices, type CatalogueOfficeGroup } from '@/lib/catalogue';
 
 export function Offices() {
   const publishers = [

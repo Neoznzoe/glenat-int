@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
-import { fetchCatalogueKiosques, type CatalogueKiosqueGroup } from '@/api/catalogue';
+import { fetchCatalogueKiosques, type CatalogueKiosqueGroup } from '@/lib/catalogue';
 
 export function Kiosque() {
   const publishers = [

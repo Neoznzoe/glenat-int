@@ -15,7 +15,7 @@ import BookFilters from '@/components/BookFilters';
 import BookCard from '@/components/BookCard';
 import { useEffect, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
-import { fetchCatalogueBooks, type CatalogueBook } from '@/api/catalogue';
+import { fetchCatalogueBooks, type CatalogueBook } from '@/lib/catalogue';
 
 export function CatalogueAll() {
   const filters = [

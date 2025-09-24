@@ -492,17 +492,175 @@ export async function fetchCatalogueReleases(): Promise<CatalogueReleaseGroup[]>
   return Promise.resolve(data);
 }
 
+type OfficesApiResponse =
+  | OfficesApiRecord[]
+  | { data?: OfficesApiRecord[]; result?: OfficesApiRecord[]; items?: OfficesApiRecord[] };
+
+interface OfficesApiRecord {
+  office?: string;
+  officeCode?: string;
+  code?: string;
+  date?: string;
+  officeDate?: string;
+  office_date?: string;
+  shipping?: string;
+  shippingDate?: string;
+  shipping_date?: string;
+  bookEans?: string[];
+  book_eans?: string[];
+  books?: Array<{
+    ean?: string;
+  }>;
+}
+
+const OFFICES_ENDPOINT = '/api/catalogue/offices/upcoming';
+
+const normalizeDateFromApi = (value?: string): string => {
+  if (!value) {
+    return '';
+  }
+
+  const trimmed = value.trim();
+
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const parsed = new Date(trimmed);
+
+  if (!Number.isNaN(parsed.getTime())) {
+    try {
+      return parsed.toLocaleDateString('fr-FR');
+    } catch {
+      return trimmed;
+    }
+  }
+
+  return trimmed;
+};
+
+const resolveOfficesApiUrl = (): string => {
+  const baseUrl = import.meta.env.VITE_CATALOGUE_API_URL ?? import.meta.env.VITE_API_URL;
+
+  if (!baseUrl) {
+    return OFFICES_ENDPOINT;
+  }
+
+  return `${baseUrl.replace(/\/$/, '')}${OFFICES_ENDPOINT}`;
+};
+
+const extractOfficeRecords = (payload: OfficesApiResponse): OfficesApiRecord[] => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (Array.isArray(payload?.data)) {
+    return payload.data;
+  }
+
+  if (Array.isArray(payload?.result)) {
+    return payload.result;
+  }
+
+  if (Array.isArray(payload?.items)) {
+    return payload.items;
+  }
+
+  return [];
+};
+
+const mapOfficeRecord = (record: OfficesApiRecord): CatalogueOfficeGroup | null => {
+  const officeCode = record.office ?? record.officeCode ?? record.code;
+
+  if (!officeCode) {
+    return null;
+  }
+
+  const catalogueOffice = catalogueDb.offices.find(item => item.office === officeCode);
+
+  const normalizedDate = normalizeDateFromApi(
+    record.date ?? record.officeDate ?? record.office_date ?? catalogueOffice?.date,
+  );
+  const normalizedShipping = normalizeDateFromApi(
+    record.shipping ?? record.shippingDate ?? record.shipping_date ?? catalogueOffice?.shipping,
+  );
+
+  const eansFromRecord = [
+    ...(record.bookEans ?? []),
+    ...(record.book_eans ?? []),
+    ...(Array.isArray(record.books)
+      ? record.books
+          .map(book => book?.ean)
+          .filter((ean): ean is string => typeof ean === 'string' && ean.trim().length > 0)
+      : []),
+  ];
+
+  const eans = Array.from(
+    new Set([
+      ...eansFromRecord,
+      ...(catalogueOffice?.bookEans ?? []),
+    ]),
+  );
+
+  const books = eans
+    .map(ean => {
+      try {
+        return cloneBook(ean);
+      } catch (error) {
+        console.warn(
+          `[catalogueApi] Livre introuvable pour l'EAN ${ean} (office ${officeCode})`,
+          error,
+        );
+        return null;
+      }
+    })
+    .filter((book): book is CatalogueBook => book !== null);
+
+  return {
+    office: officeCode,
+    date: normalizedDate || catalogueOffice?.date || 'Date non communiquée',
+    shipping: normalizedShipping || catalogueOffice?.shipping || 'Expédition non communiquée',
+    books,
+  };
+};
+
+const fetchOfficesFromApi = async (): Promise<CatalogueOfficeGroup[]> => {
+  const response = await fetch(resolveOfficesApiUrl(), {
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erreur API offices (${response.status}) ${response.statusText}`);
+  }
+
+  const payload = (await response.json()) as OfficesApiResponse;
+  const records = extractOfficeRecords(payload);
+
+  return records
+    .map(mapOfficeRecord)
+    .filter((group): group is CatalogueOfficeGroup => group !== null);
+};
+
 export async function fetchCatalogueOffices(): Promise<CatalogueOfficeGroup[]> {
   const endpoint = 'fetchCatalogueOffices';
   logRequest(endpoint);
-  const data = catalogueDb.offices.map(office => ({
+
+  try {
+    const apiData = await fetchOfficesFromApi();
+    logResponse(endpoint, apiData);
+    return apiData;
+  } catch (error) {
+    console.error('[catalogueApi] Impossible de récupérer les offices via API', error);
+  }
+
+  const fallback = catalogueDb.offices.map(office => ({
     office: office.office,
     date: office.date,
     shipping: office.shipping,
     books: office.bookEans.map(cloneBook),
   }));
-  logResponse(endpoint, data);
-  return Promise.resolve(data);
+  logResponse(`${endpoint}:fallback`, fallback);
+  return fallback;
 }
 
 export async function fetchCatalogueKiosques(): Promise<CatalogueKiosqueGroup[]> {
@@ -577,101 +735,4 @@ export async function fetchCatalogueRelatedBooks(
     );
     return Promise.resolve([]);
   }
-}
-
-interface CatalogueCoverApiResponse {
-  success?: boolean;
-  message?: string;
-  result?: {
-    ean?: string;
-    imageBase64?: string;
-  };
-}
-
-export interface CatalogueCover {
-  ean: string;
-  imageBase64: string;
-  message?: string;
-}
-
-const CATALOGUE_COVER_ENDPOINT_DEV = '/extranet/couverture';
-const CATALOGUE_COVER_ENDPOINT_PROD =
-  'https://api-recette.groupe-glenat.com/Api/v1.0/Extranet/couverture';
-
-function resolveCatalogueCoverEndpoint(): string {
-  return import.meta.env.DEV
-    ? CATALOGUE_COVER_ENDPOINT_DEV
-    : CATALOGUE_COVER_ENDPOINT_PROD;
-}
-
-export async function fetchCatalogueCover(
-  ean: string,
-  options?: { signal?: AbortSignal },
-): Promise<CatalogueCover> {
-  const endpoint = `fetchCatalogueCover:${ean}`;
-  logRequest(endpoint);
-
-  const response = await fetch(
-    `${resolveCatalogueCoverEndpoint()}?ean=${encodeURIComponent(ean)}`,
-    {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-      signal: options?.signal,
-    },
-  );
-
-  if (!response.ok) {
-    logResponse(endpoint, { status: response.status });
-    throw new Error(`Erreur API (${response.status}) ${response.statusText}`);
-  }
-
-  const data = (await response.json()) as CatalogueCoverApiResponse;
-  const success = data?.success ?? false;
-  const imageBase64 = data?.result?.imageBase64;
-
-  if (success && imageBase64) {
-    const result: CatalogueCover = {
-      ean,
-      imageBase64,
-      message: data?.message,
-    };
-    logResponse(endpoint, { status: 'success' });
-    return result;
-  }
-
-  const message = data?.message ?? "Réponse inattendue de l'API couverture";
-  logResponse(endpoint, { status: 'error', message });
-  throw new Error(message);
-}
-
-export type CatalogueCoverStatus =
-  | ({ status: 'success' } & CatalogueCover)
-  | { status: 'error'; ean: string; message: string };
-
-export async function fetchCatalogueCovers(
-  eans: string[],
-  options?: { signal?: AbortSignal },
-): Promise<CatalogueCoverStatus[]> {
-  return Promise.all(
-    eans.map(async (ean) => {
-      try {
-        const cover = await fetchCatalogueCover(ean, options);
-        return { status: 'success', ...cover } satisfies CatalogueCoverStatus;
-      } catch (error) {
-        if (
-          options?.signal?.aborted ||
-          (error instanceof DOMException && error.name === 'AbortError') ||
-          (error instanceof Error && error.name === 'AbortError')
-        ) {
-          throw error;
-        }
-
-        const message =
-          error instanceof Error
-            ? error.message
-            : 'Erreur inconnue lors de la récupération';
-        return { status: 'error', ean, message } satisfies CatalogueCoverStatus;
-      }
-    }),
-  );
 }

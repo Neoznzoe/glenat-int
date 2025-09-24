@@ -9,7 +9,7 @@ import {
   type UserAccount,
   type PermissionOverride,
   type AuditLogEntry,
-} from '@/api/admin';
+} from '@/lib/adminApi';
 import { type GroupDefinition, type PermissionDefinition } from '@/lib/access-control';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
