@@ -1,0 +1,3589 @@
+{
+  "layout": {
+    "shell": {
+      "sidebar": {
+        "container": {},
+        "header": {
+          "logo": {},
+          "pinToggle": {}
+        },
+        "menu": {
+          "home": {},
+          "qui": {},
+          "catalogue": {},
+          "kiosque": {},
+          "doc": {},
+          "fee": {},
+          "agenda": {},
+          "planning": {},
+          "contrats": {},
+          "rh": {},
+          "temps": {},
+          "atelier": {},
+          "espace": {},
+          "emploi": {},
+          "annonces": {},
+          "services": {}
+        },
+        "menuAdministration": {
+          "administration": {}
+        },
+        "footer": {
+          "version": {}
+        }
+      },
+      "main": {
+        "topbar": {
+          "search": {
+            "input": {},
+            "scope": {}
+          },
+          "themeToggle": {},
+          "notifications": {
+            "button": {},
+            "notificationList": {}
+          },
+          "cart": {
+            "button": {},
+            "cartSummary": {}
+          },
+          "user": {
+            "dropdown": {
+              "trigger": {},
+              "menu": {
+                "profile": {},
+                "settings": {},
+                "password": {},
+                "logout": {}
+              }
+            }
+          }
+        },
+        "content": {}
+      },
+      "notifications": {
+        "toaster": {}
+      }
+    }
+  },
+  "components": {
+    "NotificationList": {
+      "header": {},
+      "items": {},
+      "empty": {}
+    },
+    "CartSummary": {
+      "header": {},
+      "empty": {},
+      "items": {},
+      "quantitySelect": {},
+      "remove": {},
+      "total": {},
+      "actions": {
+        "viewCart": {}
+      }
+    },
+    "InfiniteCarousel": {
+      "track": {},
+      "item": {}
+    },
+    "ActualitesCard": {
+      "card": {},
+      "search": {
+        "glenatFee": {},
+        "commande": {},
+        "contrats": {}
+      },
+      "newcomers": {},
+      "saintDay": {}
+    },
+    "EventsCalendar": {
+      "todayButton": {},
+      "monthGrid": {},
+      "legend": {}
+    },
+    "PresenceList": {
+      "header": {},
+      "controls": {
+        "search": {},
+        "sort": {}
+      },
+      "table": {},
+      "empty": {},
+      "footer": {}
+    },
+    "LinksCard": {
+      "header": {},
+      "list": {},
+      "footer": {}
+    },
+    "QuickAccess": {
+      "title": {},
+      "items": {}
+    },
+    "BookFilters": {
+      "trigger": {},
+      "author": {},
+      "format": {},
+      "edition": {},
+      "collections": {},
+      "age": {},
+      "themes": {},
+      "publication": {},
+      "availability": {}
+    },
+    "BookCard": {
+      "cover": {},
+      "actions": {
+        "open": {}
+      },
+      "body": {},
+      "footer": {
+        "read": {},
+        "addToCart": {}
+      }
+    },
+    "EditionCard": {
+      "header": {},
+      "links": {
+        "collections": {},
+        "catalogue": {}
+      }
+    },
+    "CatalogueQuickAccess": {
+      "prochainesOffices": {},
+      "dernieresNouveautes": {},
+      "editions": {},
+      "auteurs": {},
+      "catalogue": {},
+      "telecharger": {},
+      "topCommandes": {},
+      "couverture": {},
+      "information": {},
+      "stock": {}
+    },
+    "UserListPanel": {
+      "header": {
+        "title": {}
+      },
+      "controls": {
+        "search": {},
+        "toggleInactive": {}
+      },
+      "table": {},
+      "row": {
+        "badges": {},
+        "connection": {}
+      },
+      "empty": {},
+      "loading": {}
+    },
+    "UserAccessEditor": {
+      "header": {
+        "identity": {}
+      },
+      "section": {
+        "groups": {},
+        "overrides": {}
+      },
+      "actions": {
+        "reset": {},
+        "save": {}
+      }
+    },
+    "JobOffer": {
+      "header": {
+        "title": {},
+        "subtitle": {}
+      },
+      "summary": {},
+      "tabs": {
+        "resume": {},
+        "mission": {},
+        "profil": {},
+        "avantages": {}
+      }
+    },
+    "CouvertureCard": {
+      "ean": {},
+      "visual": {},
+      "status": {}
+    }
+  },
+  "pages": {
+    "home": {
+      "id": "page.home",
+      "title": "Accueil",
+      "url": "/",
+      "elements": [
+        {
+          "id": "page.home.header",
+          "label": "Carte d'accueil",
+          "type": "section",
+          "children": [
+            {
+              "id": "page.home.header.date.weekday",
+              "label": "Jour courant (texte en capitales)",
+              "type": "text"
+            },
+            {
+              "id": "page.home.header.date.full",
+              "label": "Date complète",
+              "type": "text"
+            },
+            {
+              "id": "page.home.header.greeting.user",
+              "label": "Message Bonjour Victor",
+              "type": "text"
+            },
+            {
+              "id": "page.home.header.greeting.salutation",
+              "label": "Message Bonne journée",
+              "type": "text"
+            },
+            {
+              "id": "page.home.header.next-office",
+              "label": "Prochaine office 255001",
+              "type": "text"
+            },
+            {
+              "id": "page.home.header.carousel",
+              "label": "Carrousel couvertures",
+              "type": "component",
+              "componentRef": "InfiniteCarousel",
+              "items": [
+                {
+                  "id": "page.home.header.carousel.aladin",
+                  "label": "Aladin"
+                },
+                {
+                  "id": "page.home.header.carousel.eclipse-humaine",
+                  "label": "Eclipse humaine"
+                },
+                {
+                  "id": "page.home.header.carousel.jaime-la-mode",
+                  "label": "J'aime la mode"
+                },
+                {
+                  "id": "page.home.header.carousel.le-combat-d-une-vie",
+                  "label": "Le combat d'une vie"
+                },
+                {
+                  "id": "page.home.header.carousel.les-licorniers",
+                  "label": "Les licorniers"
+                },
+                {
+                  "id": "page.home.header.carousel.montagne-europe",
+                  "label": "Montagne Europe"
+                },
+                {
+                  "id": "page.home.header.carousel.naya-pika",
+                  "label": "Naya Pika"
+                },
+                {
+                  "id": "page.home.header.carousel.odyssee",
+                  "label": "Odyssée"
+                },
+                {
+                  "id": "page.home.header.carousel.jules-matrat",
+                  "label": "Jules Matrat"
+                },
+                {
+                  "id": "page.home.header.carousel.one-piece-110",
+                  "label": "One Piece Tome 110"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "page.home.actualites",
+          "label": "Carte Actualités",
+          "type": "component",
+          "componentRef": "ActualitesCard",
+          "children": [
+            {
+              "id": "page.home.actualites.search.glenat-fee",
+              "label": "Recherche Glénat'Fée",
+              "type": "input"
+            },
+            {
+              "id": "page.home.actualites.search.commande",
+              "label": "Recherche Commande",
+              "type": "input"
+            },
+            {
+              "id": "page.home.actualites.search.contrats",
+              "label": "Recherche Contrats",
+              "type": "input"
+            },
+            {
+              "id": "page.home.actualites.newcomers",
+              "label": "Nouveaux arrivants",
+              "type": "list",
+              "items": [
+                {
+                  "id": "page.home.actualites.newcomers.alice-martin",
+                  "label": "Alice Martin"
+                },
+                {
+                  "id": "page.home.actualites.newcomers.bob-dupont",
+                  "label": "Bob Dupont"
+                },
+                {
+                  "id": "page.home.actualites.newcomers.charles-durand",
+                  "label": "Charles Durand"
+                }
+              ]
+            },
+            {
+              "id": "page.home.actualites.saint-day",
+              "label": "Bloc Bonnes fêtes (contenu dynamique par jour)",
+              "type": "dynamic-text"
+            }
+          ]
+        },
+        {
+          "id": "page.home.calendar",
+          "label": "Calendrier des événements",
+          "type": "component",
+          "componentRef": "EventsCalendar",
+          "children": [
+            {
+              "id": "page.home.calendar.control.today",
+              "label": "Bouton Aujourd'hui",
+              "type": "button"
+            },
+            {
+              "id": "page.home.calendar.control.month-navigation",
+              "label": "Navigation mois",
+              "type": "control"
+            },
+            {
+              "id": "page.home.calendar.legend.holidays",
+              "label": "Légende jours fériés",
+              "type": "legend"
+            },
+            {
+              "id": "page.home.calendar.legend.institution",
+              "label": "Légende événements institution",
+              "type": "legend"
+            },
+            {
+              "id": "page.home.calendar.legend.other",
+              "label": "Légende autres événements",
+              "type": "legend"
+            }
+          ]
+        },
+        {
+          "id": "page.home.presence.absents",
+          "label": "Absent aujourd'hui",
+          "type": "component",
+          "componentRef": "PresenceList",
+          "columns": [
+            "Nom",
+            "Email",
+            "Retour prévu"
+          ],
+          "items": [
+            {
+              "id": "page.home.presence.absents.david-bernard",
+              "label": "David Bernard",
+              "email": "david@example.com",
+              "retour": "12/09/2024"
+            },
+            {
+              "id": "page.home.presence.absents.emma-boucher",
+              "label": "Emma Boucher",
+              "email": "emma@example.com",
+              "retour": "15/09/2024"
+            },
+            {
+              "id": "page.home.presence.absents.julien-moreau",
+              "label": "Julien Moreau",
+              "email": "julien@example.com",
+              "retour": "16/09/2024"
+            },
+            {
+              "id": "page.home.presence.absents.sophie-lambert",
+              "label": "Sophie Lambert",
+              "email": "sophie@example.com",
+              "retour": "18/09/2024"
+            },
+            {
+              "id": "page.home.presence.absents.thomas-leroy",
+              "label": "Thomas Leroy",
+              "email": "thomas@example.com",
+              "retour": "19/09/2024"
+            },
+            {
+              "id": "page.home.presence.absents.camille-dupuis",
+              "label": "Camille Dupuis",
+              "email": "camille@example.com",
+              "retour": "20/09/2024"
+            },
+            {
+              "id": "page.home.presence.absents.hugo-richard",
+              "label": "Hugo Richard",
+              "email": "hugo@example.com",
+              "retour": "21/09/2024"
+            },
+            {
+              "id": "page.home.presence.absents.laura-lefevre",
+              "label": "Laura Lefevre",
+              "email": "laura@example.com",
+              "retour": "22/09/2024"
+            },
+            {
+              "id": "page.home.presence.absents.nicolas-caron",
+              "label": "Nicolas Caron",
+              "email": "nicolas@example.com",
+              "retour": "23/09/2024"
+            },
+            {
+              "id": "page.home.presence.absents.manon-roux",
+              "label": "Manon Roux",
+              "email": "manon@example.com",
+              "retour": "24/09/2024"
+            },
+            {
+              "id": "page.home.presence.absents.alexandre-garnier",
+              "label": "Alexandre Garnier",
+              "email": "alexandre@example.com",
+              "retour": "25/09/2024"
+            },
+            {
+              "id": "page.home.presence.absents.chlo-marchand",
+              "label": "Chloé Marchand",
+              "email": "chloe@example.com",
+              "retour": "26/09/2024"
+            },
+            {
+              "id": "page.home.presence.absents.pierre-fontaine",
+              "label": "Pierre Fontaine",
+              "email": "pierre@example.com",
+              "retour": "27/09/2024"
+            },
+            {
+              "id": "page.home.presence.absents.claire-perrot",
+              "label": "Claire Perrot",
+              "email": "claire@example.com",
+              "retour": "28/09/2024"
+            },
+            {
+              "id": "page.home.presence.absents.lucas-pelletier",
+              "label": "Lucas Pelletier",
+              "email": "lucas@example.com",
+              "retour": "29/09/2024"
+            }
+          ]
+        },
+        {
+          "id": "page.home.presence.telework",
+          "label": "Télétravail aujourd'hui",
+          "type": "component",
+          "componentRef": "PresenceList",
+          "columns": [
+            "Nom",
+            "Email"
+          ],
+          "items": [
+            {
+              "id": "page.home.presence.telework.alice-martin",
+              "label": "Alice Martin",
+              "email": "alice@example.com"
+            },
+            {
+              "id": "page.home.presence.telework.bob-dupont",
+              "label": "Bob Dupont",
+              "email": "bob@example.com"
+            },
+            {
+              "id": "page.home.presence.telework.paul-girard",
+              "label": "Paul Girard",
+              "email": "paul@example.com"
+            },
+            {
+              "id": "page.home.presence.telework.julie-robin",
+              "label": "Julie Robin",
+              "email": "julie@example.com"
+            },
+            {
+              "id": "page.home.presence.telework.h-l-ne-faure",
+              "label": "Hélène Faure",
+              "email": "helene@example.com"
+            },
+            {
+              "id": "page.home.presence.telework.antoine-picard",
+              "label": "Antoine Picard",
+              "email": "antoine@example.com"
+            },
+            {
+              "id": "page.home.presence.telework.marion-no-l",
+              "label": "Marion Noël",
+              "email": "marion@example.com"
+            },
+            {
+              "id": "page.home.presence.telework.fran-ois-tessier",
+              "label": "François Tessier",
+              "email": "francois@example.com"
+            },
+            {
+              "id": "page.home.presence.telework.isabelle-moulin",
+              "label": "Isabelle Moulin",
+              "email": "isabelle@example.com"
+            },
+            {
+              "id": "page.home.presence.telework.romain-barre",
+              "label": "Romain Barre",
+              "email": "romain@example.com"
+            },
+            {
+              "id": "page.home.presence.telework.c-line-robert",
+              "label": "Céline Robert",
+              "email": "celine@example.com"
+            },
+            {
+              "id": "page.home.presence.telework.vincent-colin",
+              "label": "Vincent Colin",
+              "email": "vincent@example.com"
+            },
+            {
+              "id": "page.home.presence.telework.aur-lie-lucas",
+              "label": "Aurélie Lucas",
+              "email": "aurelie@example.com"
+            },
+            {
+              "id": "page.home.presence.telework.mathieu-roger",
+              "label": "Mathieu Roger",
+              "email": "mathieu@example.com"
+            },
+            {
+              "id": "page.home.presence.telework.elodie-masson",
+              "label": "Elodie Masson",
+              "email": "elodie@example.com"
+            },
+            {
+              "id": "page.home.presence.telework.damien-millet",
+              "label": "Damien Millet",
+              "email": "damien@example.com"
+            },
+            {
+              "id": "page.home.presence.telework.charlotte-paris",
+              "label": "Charlotte Paris",
+              "email": "charlotte@example.com"
+            }
+          ]
+        },
+        {
+          "id": "page.home.presence.visiting",
+          "label": "En visite",
+          "type": "component",
+          "componentRef": "PresenceList",
+          "columns": [
+            "Nom",
+            "Email",
+            "Date"
+          ],
+          "items": [
+            {
+              "id": "page.home.presence.visiting.manon-roux",
+              "label": "Manon Roux",
+              "email": "manon@example.com",
+              "date": "24/09/2024",
+              "badge": "Aujourd'hui"
+            },
+            {
+              "id": "page.home.presence.visiting.alexandre-garnier",
+              "label": "Alexandre Garnier",
+              "email": "alexandre@example.com",
+              "date": "25/09/2024"
+            },
+            {
+              "id": "page.home.presence.visiting.chlo-marchand",
+              "label": "Chloé Marchand",
+              "email": "chloe@example.com",
+              "date": "26/09/2024"
+            },
+            {
+              "id": "page.home.presence.visiting.pierre-fontaine",
+              "label": "Pierre Fontaine",
+              "email": "pierre@example.com",
+              "date": "27/09/2024"
+            },
+            {
+              "id": "page.home.presence.visiting.claire-perrot",
+              "label": "Claire Perrot",
+              "email": "claire@example.com",
+              "date": "28/09/2024"
+            },
+            {
+              "id": "page.home.presence.visiting.lucas-pelletier",
+              "label": "Lucas Pelletier",
+              "email": "lucas@example.com",
+              "date": "29/09/2024"
+            }
+          ]
+        },
+        {
+          "id": "page.home.presence.traveling",
+          "label": "En déplacement",
+          "type": "component",
+          "componentRef": "PresenceList",
+          "columns": [
+            "Nom",
+            "Email"
+          ],
+          "items": [
+            {
+              "id": "page.home.presence.traveling.marc-petit",
+              "label": "Marc Petit",
+              "email": "marc@example.com"
+            },
+            {
+              "id": "page.home.presence.traveling.s-bastien-robert",
+              "label": "Sébastien Robert",
+              "email": "sebastien@example.com"
+            },
+            {
+              "id": "page.home.presence.traveling.caroline-andr",
+              "label": "Caroline André",
+              "email": "caroline@example.com"
+            },
+            {
+              "id": "page.home.presence.traveling.philippe-blanc",
+              "label": "Philippe Blanc",
+              "email": "philippe@example.com"
+            },
+            {
+              "id": "page.home.presence.traveling.sandrine-roche",
+              "label": "Sandrine Roche",
+              "email": "sandrine@example.com"
+            }
+          ]
+        },
+        {
+          "id": "page.home.presence.planned",
+          "label": "Déplacements prévus",
+          "type": "component",
+          "componentRef": "PresenceList",
+          "columns": [
+            "Nom",
+            "Email",
+            "Date"
+          ],
+          "items": [
+            {
+              "id": "page.home.presence.planned.anne-grand",
+              "label": "Anne Grand",
+              "email": "anne@example.com",
+              "date": "25/09/2024"
+            },
+            {
+              "id": "page.home.presence.planned.louis-renard",
+              "label": "Louis Renard",
+              "email": "louis@example.com",
+              "date": "26/09/2024"
+            },
+            {
+              "id": "page.home.presence.planned.m-lanie-vincent",
+              "label": "Mélanie Vincent",
+              "email": "melanie@example.com",
+              "date": "27/09/2024"
+            }
+          ]
+        },
+        {
+          "id": "page.home.links.useful",
+          "label": "Sites utiles",
+          "type": "component",
+          "componentRef": "LinksCard",
+          "items": [
+            {
+              "id": "page.home.links.useful.cse-gl-nat",
+              "label": "CSE Glénat"
+            },
+            {
+              "id": "page.home.links.useful.assistance-informatique",
+              "label": "Assistance informatique"
+            },
+            {
+              "id": "page.home.links.useful.support-informatique-android",
+              "label": "Support informatique Android"
+            },
+            {
+              "id": "page.home.links.useful.notilus-notes-de-frais",
+              "label": "Notilus - Notes de frais",
+              "badge": "New"
+            },
+            {
+              "id": "page.home.links.useful.plateforme-de-formation",
+              "label": "Plateforme de formation"
+            },
+            {
+              "id": "page.home.links.useful.pages-jaunes",
+              "label": "Pages jaunes"
+            },
+            {
+              "id": "page.home.links.useful.sncf",
+              "label": "SNCF"
+            },
+            {
+              "id": "page.home.links.useful.horaires-tgv",
+              "label": "Horaires TGV"
+            },
+            {
+              "id": "page.home.links.useful.base-marques-site-inpi",
+              "label": "Base marques - Site INPI"
+            },
+            {
+              "id": "page.home.links.useful.site-electre",
+              "label": "Site Electre"
+            },
+            {
+              "id": "page.home.links.useful.gl-nat",
+              "label": "Glénat"
+            },
+            {
+              "id": "page.home.links.useful.le-couvent-sainte-c-cile",
+              "label": "Le couvent Sainte-Cécile"
+            }
+          ]
+        },
+        {
+          "id": "page.home.links.company-life",
+          "label": "Vie de l'entreprise",
+          "type": "component",
+          "componentRef": "LinksCard",
+          "items": [
+            {
+              "id": "page.home.links.company-life.op-rations-informatiques-en-cours",
+              "label": "opérations informatiques en cours",
+              "badge": "74",
+              "badgeColor": "bg-primary",
+              "highlight": true
+            },
+            {
+              "id": "page.home.links.company-life.gl-natmatin",
+              "label": "Glénat'Matin"
+            },
+            {
+              "id": "page.home.links.company-life.film-institutionnel",
+              "label": "Film institutionnel"
+            },
+            {
+              "id": "page.home.links.company-life.sainte-c-cile",
+              "label": "Sainte-Cécile"
+            },
+            {
+              "id": "page.home.links.company-life.la-boite-id-e",
+              "label": "La boite à idée"
+            },
+            {
+              "id": "page.home.links.company-life.audience-internet-par-mois",
+              "label": "Audience internet par mois"
+            },
+            {
+              "id": "page.home.links.company-life.audience-internet-par-jour",
+              "label": "Audience internet par jour"
+            },
+            {
+              "id": "page.home.links.company-life.audience-internet-par-historique",
+              "label": "Audience internet par historique"
+            },
+            {
+              "id": "page.home.links.company-life.abonnement-aux-newsletter",
+              "label": "Abonnement aux newsletter"
+            }
+          ]
+        },
+        {
+          "id": "page.home.links.sharepoint",
+          "label": "Sites SharePoint",
+          "type": "component",
+          "componentRef": "LinksCard",
+          "items": [
+            {
+              "id": "page.home.links.sharepoint.accueil-office-365",
+              "label": "Accueil office 365"
+            },
+            {
+              "id": "page.home.links.sharepoint.achat-equipe",
+              "label": "ACHAT Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.adv-equipe",
+              "label": "ADV Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.cessions-de-droits-equipe",
+              "label": "CESSIONS-DE-DROITS Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.comite-direction",
+              "label": "COMITE-DIRECTION"
+            },
+            {
+              "id": "page.home.links.sharepoint.commercial-titeuf",
+              "label": "COMMERCIAL Titeuf"
+            },
+            {
+              "id": "page.home.links.sharepoint.commerciale-equipe",
+              "label": "COMMERCIALE Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.comptabilite-equipe",
+              "label": "COMPTABILITE Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.contr-le-gestion-equipe",
+              "label": "CONTRÔLE-GESTION Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.direction-generale",
+              "label": "DIRECTION-GENERALE"
+            },
+            {
+              "id": "page.home.links.sharepoint.droits-auteur-equipe",
+              "label": "DROITS-AUTEUR Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.edito-bd-equipe",
+              "label": "EDITO-BD Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.edito-jeunesse-equipe",
+              "label": "EDITO-JEUNESSE Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.edito-livres-equipe",
+              "label": "EDITO-LIVRES Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.edito-livres-sous-licences-equipe",
+              "label": "EDITO-LIVRES-SOUS-LICENCES Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.edito-manga-equipe",
+              "label": "EDITO-MANGA Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.edito-manga-interne",
+              "label": "EDITO-MANGA Interne"
+            },
+            {
+              "id": "page.home.links.sharepoint.edito-mangas-partenaires",
+              "label": "EDITO-MANGAS Partenaires"
+            },
+            {
+              "id": "page.home.links.sharepoint.evenementiel-equipe",
+              "label": "EVENEMENTIEL Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.fabricants-equipe",
+              "label": "FABRICANTS Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.galerie-equipe",
+              "label": "GALERIE Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.informatique-equipe",
+              "label": "INFORMATIQUE Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.jeux-equipe",
+              "label": "JEUX Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.lectures-equipe",
+              "label": "LECTURES Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.licences-equipe",
+              "label": "LICENCES Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.marketing-equipe",
+              "label": "MARKETING Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.marketing-digital-equipe",
+              "label": "MARKETING-DIGITAL Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.mcde-equipe",
+              "label": "MCDE Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.partenariats-equipe",
+              "label": "PARTENARIATS Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.pedagogie-equipe",
+              "label": "PEDAGOGIE Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.projet-chemin-fer",
+              "label": "PROJET Chemin-Fer"
+            },
+            {
+              "id": "page.home.links.sharepoint.projet-compta",
+              "label": "PROJET Compta"
+            },
+            {
+              "id": "page.home.links.sharepoint.projet-navision-da",
+              "label": "PROJET Navision-DA"
+            },
+            {
+              "id": "page.home.links.sharepoint.projet-navision-ed",
+              "label": "PROJET Navision-ED"
+            },
+            {
+              "id": "page.home.links.sharepoint.projet-navision-edi",
+              "label": "PROJET Navision-EDI"
+            },
+            {
+              "id": "page.home.links.sharepoint.projet-navision-fournisseurs",
+              "label": "PROJET Navision-Fournisseurs"
+            },
+            {
+              "id": "page.home.links.sharepoint.projet-signature-mail",
+              "label": "PROJET Signature Mail"
+            },
+            {
+              "id": "page.home.links.sharepoint.projet-travail-colle",
+              "label": "PROJET TRAVAIL Colle"
+            },
+            {
+              "id": "page.home.links.sharepoint.ressources-humaines-equipe",
+              "label": "RESSOURCES-HUMAINES Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.rse-equipe",
+              "label": "RSE Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.support-bureautique",
+              "label": "SUPPORT Bureautique"
+            },
+            {
+              "id": "page.home.links.sharepoint.support-it",
+              "label": "Support IT"
+            },
+            {
+              "id": "page.home.links.sharepoint.support-rh",
+              "label": "Support RH"
+            },
+            {
+              "id": "page.home.links.sharepoint.support-technique",
+              "label": "SUPPORT TECHNIQUE"
+            },
+            {
+              "id": "page.home.links.sharepoint.support-template",
+              "label": "SUPPORT Template"
+            },
+            {
+              "id": "page.home.links.sharepoint.support-signal-tique",
+              "label": "Support Signalétique"
+            },
+            {
+              "id": "page.home.links.sharepoint.technique-equipe",
+              "label": "TECHNIQUE Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.ventes-equipe",
+              "label": "VENTES Equipe"
+            },
+            {
+              "id": "page.home.links.sharepoint.ventes-developpement-equipe",
+              "label": "VENTES-DEVELOPPEMENT Equipe"
+            }
+          ]
+        }
+      ]
+    },
+    "emploi": {
+      "id": "page.emploi",
+      "title": "Emploi",
+      "url": "/emploi",
+      "elements": [
+        {
+          "id": "page.emploi.breadcrumb",
+          "label": "Fil d'ariane Emploi",
+          "type": "breadcrumb",
+          "items": [
+            "Accueil",
+            "Emploi"
+          ]
+        },
+        {
+          "id": "page.emploi.job-offers",
+          "label": "Liste offres",
+          "type": "collection",
+          "componentRef": "JobOffer",
+          "items": [
+            {
+              "id": "page.emploi.offer.charg-e-de-d-veloppement-commercial-f-h",
+              "title": "Le Groupe Glénat recherche pour son service éditorial livres, un·e chargé·e de développement commercial (F/H).",
+              "subtitle": "Chargé·e de développement commercial (F/H)",
+              "jobInfo": [
+                {
+                  "id": "page.emploi.offer.charg-e-de-d-veloppement-commercial-f-h.info.localisation",
+                  "label": "Localisation",
+                  "text": "Grenoble"
+                },
+                {
+                  "id": "page.emploi.offer.charg-e-de-d-veloppement-commercial-f-h.info.contrat",
+                  "label": "Contrat",
+                  "text": "CDI",
+                  "sub": "dès que possible"
+                },
+                {
+                  "id": "page.emploi.offer.charg-e-de-d-veloppement-commercial-f-h.info.contact",
+                  "label": "Contact",
+                  "text": "Contact",
+                  "sub": "Anais Grillet"
+                },
+                {
+                  "id": "page.emploi.offer.charg-e-de-d-veloppement-commercial-f-h.info.publication",
+                  "label": "Publication",
+                  "text": "Annonce du :",
+                  "sub": "25/07/2025"
+                },
+                {
+                  "id": "page.emploi.offer.charg-e-de-d-veloppement-commercial-f-h.info.r-mun-ration",
+                  "label": "Rémunération",
+                  "text": "Rémunération",
+                  "sub": "A définir selon le profil."
+                }
+              ],
+              "sections": {
+                "mission": [
+                  {
+                    "id": "page.emploi.offer.charg-e-de-d-veloppement-commercial-f-h.mission.1",
+                    "text": "Assurer la régie publicitaire de L’Alpe, Ski Français, des ouvrages pratiques et de tout nouveau titre ou guide ;"
+                  },
+                  {
+                    "id": "page.emploi.offer.charg-e-de-d-veloppement-commercial-f-h.mission.2",
+                    "text": "Animer et développer le portefeuille d’abonnés de la revue L’Alpe ;"
+                  },
+                  {
+                    "id": "page.emploi.offer.charg-e-de-d-veloppement-commercial-f-h.mission.3",
+                    "text": "Développer les partenariats et coordonner les projets d’édition déléguée (magazines stations, territoires, guides, livres, BD, etc.) ;"
+                  },
+                  {
+                    "id": "page.emploi.offer.charg-e-de-d-veloppement-commercial-f-h.mission.4",
+                    "text": "Concourir à tous les projets permettant de développer le CA de la branche d’activités."
+                  }
+                ],
+                "profil": [
+                  {
+                    "id": "page.emploi.offer.charg-e-de-d-veloppement-commercial-f-h.profil.1",
+                    "text": "De formation supérieure (bac+5) dans le domaine commercial ou marketing, vous justifiez d’une première expérience professionnelle réussie dans les secteurs de l’édition ou du tourisme."
+                  },
+                  {
+                    "id": "page.emploi.offer.charg-e-de-d-veloppement-commercial-f-h.profil.2",
+                    "text": "Vous bénéficiez d’une bonne connaissance des entreprises locales, du secteur de la montagne et avez envie de développer une activité et un chiffre d’affaires."
+                  },
+                  {
+                    "id": "page.emploi.offer.charg-e-de-d-veloppement-commercial-f-h.profil.3",
+                    "text": "Reconnu·e pour votre aisance relationnelle et votre excellente présentation, vous savez faire preuve de rigueur et d’autonomie."
+                  }
+                ],
+                "avantages": [
+                  {
+                    "id": "page.emploi.offer.charg-e-de-d-veloppement-commercial-f-h.avantage.1",
+                    "text": "13ème mois, participation et intéressement, mutuelle, titre-restaurant, télétravail partiel possible à partir de 6 mois d'ancienneté."
+                  }
+                ]
+              }
+            },
+            {
+              "id": "page.emploi.offer.diteur-rice-junior-f-h",
+              "title": "Le Groupe Glénat recherche pour son service éditorial BD, un·e éditeur.rice junior (F/H).",
+              "subtitle": "Éditeur.rice junior (F/H)",
+              "jobInfo": [
+                {
+                  "id": "page.emploi.offer.diteur-rice-junior-f-h.info.localisation",
+                  "label": "Localisation",
+                  "text": "Boulogne-Billancourt (92)"
+                },
+                {
+                  "id": "page.emploi.offer.diteur-rice-junior-f-h.info.contrat",
+                  "label": "Contrat",
+                  "text": "CDD",
+                  "sub": "03/11/2025–14/03/2026"
+                },
+                {
+                  "id": "page.emploi.offer.diteur-rice-junior-f-h.info.contact",
+                  "label": "Contact",
+                  "text": "Contact",
+                  "sub": "Marine Mazet"
+                },
+                {
+                  "id": "page.emploi.offer.diteur-rice-junior-f-h.info.publication",
+                  "label": "Publication",
+                  "text": "Annonce du :",
+                  "sub": "31/07/2025"
+                },
+                {
+                  "id": "page.emploi.offer.diteur-rice-junior-f-h.info.r-mun-ration",
+                  "label": "Rémunération",
+                  "text": "Rémunération",
+                  "sub": "À définir selon profil"
+                }
+              ],
+              "sections": {
+                "mission": [
+                  {
+                    "id": "page.emploi.offer.diteur-rice-junior-f-h.mission.1",
+                    "text": "Conception éditoriale de projets en adaptation et en création, sélection des manuscrits, suivi de réalisation des planches, des plannings, validation des couvertures ;"
+                  },
+                  {
+                    "id": "page.emploi.offer.diteur-rice-junior-f-h.mission.2",
+                    "text": "Élaboration des plans d’ouvrages, suivi de la mise en page, relecture, corrections jusqu’au BAT ;"
+                  },
+                  {
+                    "id": "page.emploi.offer.diteur-rice-junior-f-h.mission.3",
+                    "text": "Coordination des prestataires : studio, maquettistes, agences photo, photographes, correcteurs, packageurs, partenaires ;"
+                  },
+                  {
+                    "id": "page.emploi.offer.diteur-rice-junior-f-h.mission.4",
+                    "text": "Suivi de fabrication : mise à jour du planning, vérification et corrections, suivi de la maquette ;"
+                  },
+                  {
+                    "id": "page.emploi.offer.diteur-rice-junior-f-h.mission.5",
+                    "text": "Rédaction des introductions, quatrième de couvertures, argumentaires ;"
+                  },
+                  {
+                    "id": "page.emploi.offer.diteur-rice-junior-f-h.mission.6",
+                    "text": "Suivi relationnel des auteurs ; demande de règlements auteurs dans le cadre du suivi budgétaire ;"
+                  },
+                  {
+                    "id": "page.emploi.offer.diteur-rice-junior-f-h.mission.7",
+                    "text": "Collaboration avec l’ensemble des services internes concernés (commercial, marketing, digital, presse…) ;"
+                  },
+                  {
+                    "id": "page.emploi.offer.diteur-rice-junior-f-h.mission.8",
+                    "text": "Présentation des ouvrages lors des réunions commerciales ;"
+                  },
+                  {
+                    "id": "page.emploi.offer.diteur-rice-junior-f-h.mission.9",
+                    "text": "Participation aux salons du livre et divers évènements du Groupe Glénat."
+                  }
+                ],
+                "profil": [
+                  {
+                    "id": "page.emploi.offer.diteur-rice-junior-f-h.profil.1",
+                    "text": "Formation métiers du livre/édition (minimum bac+4) avec une expérience de 3 ans requise dans le domaine de l’édition, idéalement de l’édition BD ;"
+                  },
+                  {
+                    "id": "page.emploi.offer.diteur-rice-junior-f-h.profil.2",
+                    "text": "Bonne connaissance des codes typographiques et de l’ensemble de la chaîne du livre ;"
+                  },
+                  {
+                    "id": "page.emploi.offer.diteur-rice-junior-f-h.profil.3",
+                    "text": "Maîtrise orthographique et syntaxe ;"
+                  },
+                  {
+                    "id": "page.emploi.offer.diteur-rice-junior-f-h.profil.4",
+                    "text": "Adaptabilité, sens du contact, rigueur, capacité d’organisation, fiabilité, autonomie ;"
+                  },
+                  {
+                    "id": "page.emploi.offer.diteur-rice-junior-f-h.profil.5",
+                    "text": "Maîtrise de l’outil informatique en particulier Word, Excel, Powerpoint."
+                  }
+                ],
+                "avantages": [
+                  {
+                    "id": "page.emploi.offer.diteur-rice-junior-f-h.avantage.1",
+                    "text": "13ᵉ mois, participation et intéressement, titre-restaurant, mutuelle."
+                  }
+                ],
+                "resume": [
+                  {
+                    "id": "page.emploi.offer.diteur-rice-junior-f-h.resume.1",
+                    "text": "Dans le cadre d’un remplacement de congé maternité, nous recherchons un·e éditeur.rice junior (F/H) pour le catalogue BD. Merci d'adresser votre candidature (CV + lettre de motivation) à Marine Mazet."
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "servicesInformatique": {
+      "id": "page.services.informatique",
+      "title": "Services Informatique",
+      "url": "/services",
+      "elements": [
+        {
+          "id": "page.services.informatique.breadcrumb",
+          "label": "Fil d'ariane Services",
+          "type": "breadcrumb",
+          "items": [
+            "Accueil",
+            "Services",
+            "Informatique"
+          ]
+        },
+        {
+          "id": "page.services.informatique.header",
+          "label": "En-tête Services",
+          "type": "section",
+          "children": [
+            {
+              "id": "page.services.informatique.title",
+              "label": "Titre Services",
+              "type": "text"
+            },
+            {
+              "id": "page.services.informatique.search",
+              "label": "Recherche Services",
+              "type": "input"
+            },
+            {
+              "id": "page.services.informatique.metric.interventions",
+              "label": "Compteur interventions",
+              "type": "text"
+            },
+            {
+              "id": "page.services.informatique.action.new-request",
+              "label": "Bouton Nouvelle demande",
+              "type": "button"
+            }
+          ]
+        },
+        {
+          "id": "page.services.informatique.quick-access",
+          "label": "Accès rapides Services",
+          "type": "component",
+          "componentRef": "QuickAccess",
+          "items": [
+            {
+              "id": "page.services.informatique.quick-access.informatique",
+              "label": "Informatique",
+              "href": "/services"
+            },
+            {
+              "id": "page.services.informatique.quick-access.production",
+              "label": "Production",
+              "href": "/services/production"
+            }
+          ]
+        },
+        {
+          "id": "page.services.informatique.cards",
+          "label": "Cartes thématiques",
+          "type": "collection",
+          "componentRef": "LinksCard",
+          "items": [
+            {
+              "id": "page.services.informatique.card.g-n-ral",
+              "title": "Général",
+              "links": [
+                {
+                  "id": "page.services.informatique.card.g-n-ral.1",
+                  "label": "Documentations, notices, procédures",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.informatique.card.g-n-ral.2",
+                  "label": "Informatique / charte informatique",
+                  "type": "text"
+                },
+                {
+                  "id": "page.services.informatique.card.g-n-ral.3",
+                  "label": "Charte informatique",
+                  "type": "link"
+                }
+              ]
+            },
+            {
+              "id": "page.services.informatique.card.mat-riel-r-seaux-et-acc-s-internet",
+              "title": "Matériel, réseaux et accès internet",
+              "links": [
+                {
+                  "id": "page.services.informatique.card.mat-riel-r-seaux-et-acc-s-internet.1",
+                  "label": "Formulaire de demande",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.informatique.card.mat-riel-r-seaux-et-acc-s-internet.2",
+                  "label": "Informatique / charte informatique",
+                  "type": "text"
+                },
+                {
+                  "id": "page.services.informatique.card.mat-riel-r-seaux-et-acc-s-internet.3",
+                  "label": "Demande investissement",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.mat-riel-r-seaux-et-acc-s-internet.4",
+                  "label": "Demande interventions",
+                  "type": "link"
+                }
+              ]
+            },
+            {
+              "id": "page.services.informatique.card.site-internet-et-intranet",
+              "title": "Site internet et intranet",
+              "links": [
+                {
+                  "id": "page.services.informatique.card.site-internet-et-intranet.1",
+                  "label": "Contact utile",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.informatique.card.site-internet-et-intranet.2",
+                  "label": "Matthieu Nicolas",
+                  "type": "text"
+                },
+                {
+                  "id": "page.services.informatique.card.site-internet-et-intranet.3",
+                  "label": "Documentations, notices, procédures",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.informatique.card.site-internet-et-intranet.4",
+                  "label": "Informatique/internet",
+                  "type": "text"
+                },
+                {
+                  "id": "page.services.informatique.card.site-internet-et-intranet.5",
+                  "label": "Site internet - mentions obligatoires",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.site-internet-et-intranet.6",
+                  "label": "Mailnblack - connexion compte Office 365",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.site-internet-et-intranet.7",
+                  "label": "Formulaire de demande",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.informatique.card.site-internet-et-intranet.8",
+                  "label": "Demande d'interventions informatique",
+                  "type": "link"
+                }
+              ]
+            },
+            {
+              "id": "page.services.informatique.card.nautilus",
+              "title": "Nautilus",
+              "links": [
+                {
+                  "id": "page.services.informatique.card.nautilus.1",
+                  "label": "Contact utiles",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.informatique.card.nautilus.2",
+                  "label": "Catherine Jullin",
+                  "type": "text"
+                },
+                {
+                  "id": "page.services.informatique.card.nautilus.3",
+                  "label": "Documentations, notices, procédures",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.informatique.card.nautilus.4",
+                  "label": "Procédures internes / note de frais",
+                  "type": "text"
+                },
+                {
+                  "id": "page.services.informatique.card.nautilus.5",
+                  "label": "Procédure de commandes voyages",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.nautilus.6",
+                  "label": "Horaires TGV 2025",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.nautilus.7",
+                  "label": "Manuel utilisateurs Notilus",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.nautilus.8",
+                  "label": "Place de déplacement multimodal",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.nautilus.9",
+                  "label": "Note de demande déplacement professionnel",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.nautilus.10",
+                  "label": "Notilus 2022 - Manuel utilisateurs",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.nautilus.11",
+                  "label": "Notilus 2022 - procédures simplifiée",
+                  "type": "link"
+                }
+              ]
+            },
+            {
+              "id": "page.services.informatique.card.mobilit-s",
+              "title": "Mobilités",
+              "links": [
+                {
+                  "id": "page.services.informatique.card.mobilit-s.1",
+                  "label": "Documentations, notices, procédures",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.informatique.card.mobilit-s.2",
+                  "label": "Informatique / mobilités",
+                  "type": "text"
+                },
+                {
+                  "id": "page.services.informatique.card.mobilit-s.3",
+                  "label": "Comment désactiver le mode push de son iPhone",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.mobilit-s.4",
+                  "label": "Les sites internets glénat sur mobile",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.mobilit-s.5",
+                  "label": "Recevoir une alerte glénat'matin sur son iPhone",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.mobilit-s.6",
+                  "label": "Formulaire de demande",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.informatique.card.mobilit-s.7",
+                  "label": "Demande d'interventions informatique",
+                  "type": "link"
+                }
+              ]
+            },
+            {
+              "id": "page.services.informatique.card.bureautique",
+              "title": "Bureautique",
+              "links": [
+                {
+                  "id": "page.services.informatique.card.bureautique.1",
+                  "label": "Documentations, notices, procédures",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.informatique.card.bureautique.2",
+                  "label": "Informatique / Charte informatique",
+                  "type": "text"
+                },
+                {
+                  "id": "page.services.informatique.card.bureautique.3",
+                  "label": "Se connecter aux calendriers partagés",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.bureautique.4",
+                  "label": "Documentation Glénat'Fée",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.bureautique.5",
+                  "label": "Réservation salle de reunion",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.bureautique.6",
+                  "label": "Gestion absence via OWA",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.bureautique.7",
+                  "label": "Publipostage",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.bureautique.8",
+                  "label": "Outlook 2011 mac Calendrier  partagé",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.bureautique.9",
+                  "label": "Office 365 OWA Calendrier partagé",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.bureautique.10",
+                  "label": "Présentation de intranet",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.bureautique.11",
+                  "label": "Présentation du réseau Informatique",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.bureautique.12",
+                  "label": "Howto - Visio - Réservation d’une salle",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.bureautique.13",
+                  "label": "Demande de disponibilité dans outlook",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.bureautique.14",
+                  "label": "Procédures internes / note de frais",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.informatique.card.bureautique.15",
+                  "label": "Manuel utilisateurs Notilus",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.bureautique.16",
+                  "label": "Plan de déplacements multimodal",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.bureautique.17",
+                  "label": "Note demande de déplacement",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.informatique.card.bureautique.18",
+                  "label": "Conditions relatives aux frais",
+                  "type": "link"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "servicesProduction": {
+      "id": "page.services.production",
+      "title": "Services Production",
+      "url": "/services/production",
+      "elements": [
+        {
+          "id": "page.services.production.breadcrumb",
+          "label": "Fil d'ariane Production",
+          "type": "breadcrumb",
+          "items": [
+            "Accueil",
+            "Services",
+            "Production"
+          ]
+        },
+        {
+          "id": "page.services.production.header",
+          "label": "En-tête Services Production",
+          "type": "section",
+          "children": [
+            {
+              "id": "page.services.production.title",
+              "label": "Titre Services",
+              "type": "text"
+            },
+            {
+              "id": "page.services.production.search",
+              "label": "Recherche Services",
+              "type": "input"
+            },
+            {
+              "id": "page.services.production.metric.interventions",
+              "label": "Compteur interventions",
+              "type": "text"
+            },
+            {
+              "id": "page.services.production.action.new-request",
+              "label": "Bouton Nouvelle demande",
+              "type": "button"
+            }
+          ]
+        },
+        {
+          "id": "page.services.production.quick-access",
+          "label": "Accès rapides Production",
+          "type": "component",
+          "componentRef": "QuickAccess",
+          "items": [
+            {
+              "id": "page.services.production.quick-access.informatique",
+              "label": "Informatique",
+              "href": "/services"
+            },
+            {
+              "id": "page.services.production.quick-access.production",
+              "label": "Production",
+              "href": "/services/production"
+            }
+          ]
+        },
+        {
+          "id": "page.services.production.cards",
+          "label": "Cartes thématiques Production",
+          "type": "collection",
+          "componentRef": "LinksCard",
+          "items": [
+            {
+              "id": "page.services.production.card.achats",
+              "title": "Achats",
+              "links": [
+                {
+                  "id": "page.services.production.card.achats.1",
+                  "label": "Contacts utiles",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.production.card.achats.2",
+                  "label": "Isabelle Follier",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.achats.3",
+                  "label": "Nicolas Rouher",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.achats.4",
+                  "label": "Formulaires de demande",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.production.card.achats.5",
+                  "label": "Demande de devis de fabrication",
+                  "type": "link"
+                }
+              ]
+            },
+            {
+              "id": "page.services.production.card.atelier",
+              "title": "Atelier",
+              "links": [
+                {
+                  "id": "page.services.production.card.atelier.1",
+                  "label": "Contacts utiles",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.production.card.atelier.2",
+                  "label": "Damien Bonis",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.atelier.3",
+                  "label": "Sabine Gisolo",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.atelier.4",
+                  "label": "Documentations, notices, procédures",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.production.card.atelier.5",
+                  "label": "Production / lexique",
+                  "type": "text"
+                },
+                {
+                  "id": "page.services.production.card.atelier.6",
+                  "label": "Lexique technique prépresse, imprimerie v1",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.atelier.7",
+                  "label": "Lexique Fabrication Français-Anglais v1",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.atelier.8",
+                  "label": "Cahier des charges Lettrage - GLP",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.atelier.9",
+                  "label": "Cahier des charges Word - Maquette Livre",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.atelier.10",
+                  "label": "Gestion des profils ICC_interne Glénat",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.atelier.11",
+                  "label": "Réglages des profils ICC_Auteurs-Dessinateurs-Coloristes",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.atelier.12",
+                  "label": "Cahier des charges Exterieur PDF - GLP",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.atelier.13",
+                  "label": "Cahier des charges extérieur NATIFS 2020",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.atelier.14",
+                  "label": "Fin de prise en charge des polices Postscript",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.atelier.15",
+                  "label": "Formulaires de demande",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.production.card.atelier.16",
+                  "label": "Demande de PDF",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.atelier.17",
+                  "label": "Demande d'image",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.atelier.18",
+                  "label": "Demande de Natif (Xpress/Indesign)",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.atelier.19",
+                  "label": "Demande de flipbook",
+                  "type": "link"
+                }
+              ]
+            },
+            {
+              "id": "page.services.production.card.mac",
+              "title": "Mac",
+              "links": [
+                {
+                  "id": "page.services.production.card.mac.1",
+                  "label": "Contacts utiles",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.production.card.mac.2",
+                  "label": "Damien Bonis",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.mac.3",
+                  "label": "Documentations, notices, procédures",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.production.card.mac.4",
+                  "label": "Production / Mac",
+                  "type": "text"
+                },
+                {
+                  "id": "page.services.production.card.mac.5",
+                  "label": "Centre de gestion des logiciels-utilisateurs Mac",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.mac.6",
+                  "label": "Formulaires de demande",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.production.card.mac.7",
+                  "label": "Demande d'interventions informatique",
+                  "type": "link"
+                }
+              ]
+            },
+            {
+              "id": "page.services.production.card.knowbox",
+              "title": "Knowbox",
+              "links": [
+                {
+                  "id": "page.services.production.card.knowbox.1",
+                  "label": "Contacts utiles",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.production.card.knowbox.2",
+                  "label": "Aurélie Demard",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.knowbox.3",
+                  "label": "Sabine Gisolo",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.knowbox.4",
+                  "label": "Documentations, notices, procédures",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.production.card.knowbox.5",
+                  "label": "Production/knowbox",
+                  "type": "text"
+                },
+                {
+                  "id": "page.services.production.card.knowbox.6",
+                  "label": "Word formate preview",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.knowbox.7",
+                  "label": "Procédures des fiches argus - preview livre",
+                  "type": "link"
+                }
+              ]
+            },
+            {
+              "id": "page.services.production.card.maestro",
+              "title": "Maestro",
+              "links": [
+                {
+                  "id": "page.services.production.card.maestro.1",
+                  "label": "Contacts utiles",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.production.card.maestro.2",
+                  "label": "Julien Baleria",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.maestro.3",
+                  "label": "Aurélie Demard",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.maestro.4",
+                  "label": "Documentations, notices, procédures",
+                  "type": "header"
+                },
+                {
+                  "id": "page.services.production.card.maestro.5",
+                  "label": "Production / maestro",
+                  "type": "text"
+                },
+                {
+                  "id": "page.services.production.card.maestro.6",
+                  "label": "Notice Maestro - Utilisateur consultation",
+                  "type": "link"
+                },
+                {
+                  "id": "page.services.production.card.maestro.7",
+                  "label": "Notice Maestro - Actions utilisateurs",
+                  "type": "link"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "catalogueEditions": {
+      "id": "page.catalogue.editions",
+      "title": "Catalogue - Accueil",
+      "url": "/catalogue",
+      "elements": [
+        {
+          "id": "page.catalogue.editions.breadcrumb",
+          "label": "Fil d'ariane Catalogue",
+          "type": "breadcrumb",
+          "items": [
+            "Accueil",
+            "Catalogue",
+            "Accueil"
+          ]
+        },
+        {
+          "id": "page.catalogue.editions.header",
+          "label": "En-tête Catalogue",
+          "type": "section",
+          "children": [
+            {
+              "id": "page.catalogue.editions.title",
+              "label": "Titre Catalogue",
+              "type": "text"
+            },
+            {
+              "id": "page.catalogue.editions.search",
+              "label": "Recherche Catalogue",
+              "type": "input"
+            }
+          ]
+        },
+        {
+          "id": "page.catalogue.editions.quick-access",
+          "label": "Accès rapides Catalogue",
+          "type": "component",
+          "componentRef": "QuickAccess",
+          "items": [
+            {
+              "id": "page.catalogue.editions.quick-access.prochaines-offices",
+              "label": "Prochaines offices",
+              "href": "/catalogue/offices"
+            },
+            {
+              "id": "page.catalogue.editions.quick-access.derni-res-nouveaut-s",
+              "label": "Dernières nouveautés",
+              "href": "/catalogue/nouveautes"
+            },
+            {
+              "id": "page.catalogue.editions.quick-access.ditions",
+              "label": "Éditions",
+              "href": "/catalogue"
+            },
+            {
+              "id": "page.catalogue.editions.quick-access.les-auteurs",
+              "label": "Les auteurs"
+            },
+            {
+              "id": "page.catalogue.editions.quick-access.tout-le-catalogue",
+              "label": "Tout le catalogue",
+              "href": "/catalogue/all"
+            },
+            {
+              "id": "page.catalogue.editions.quick-access.t-l-charger-le-catalogue",
+              "label": "Télécharger le catalogue"
+            },
+            {
+              "id": "page.catalogue.editions.quick-access.top-des-commandes",
+              "label": "Top des commandes"
+            },
+            {
+              "id": "page.catalogue.editions.quick-access.couverture-para-tre",
+              "label": "Couverture à paraître",
+              "href": "/catalogue/couverture-a-paraitre"
+            },
+            {
+              "id": "page.catalogue.editions.quick-access.information-renseigner",
+              "label": "Information à renseigner"
+            },
+            {
+              "id": "page.catalogue.editions.quick-access.plus-de-stock",
+              "label": "Plus de stock"
+            }
+          ]
+        },
+        {
+          "id": "page.catalogue.editions.grid",
+          "label": "Grille des éditions",
+          "type": "collection",
+          "componentRef": "EditionCard",
+          "items": [
+            {
+              "id": "page.catalogue.editions.adonis",
+              "title": "Adonis"
+            },
+            {
+              "id": "page.catalogue.editions.blanche",
+              "title": "Blanche"
+            },
+            {
+              "id": "page.catalogue.editions.comix-buro",
+              "title": "Comix Buro"
+            },
+            {
+              "id": "page.catalogue.editions.disney",
+              "title": "Disney"
+            },
+            {
+              "id": "page.catalogue.editions.ditions-licences",
+              "title": "Éditions licences"
+            },
+            {
+              "id": "page.catalogue.editions.cheval-magazine",
+              "title": "Cheval Magazine"
+            },
+            {
+              "id": "page.catalogue.editions.gl-nat-bd",
+              "title": "Glénat BD"
+            },
+            {
+              "id": "page.catalogue.editions.gl-nat-jeunesse",
+              "title": "Glénat Jeunesse"
+            },
+            {
+              "id": "page.catalogue.editions.gl-nat-manga",
+              "title": "Glénat Manga"
+            },
+            {
+              "id": "page.catalogue.editions.hugo",
+              "title": "Hugo"
+            },
+            {
+              "id": "page.catalogue.editions.livres-diffus-s",
+              "title": "Livres diffusés"
+            },
+            {
+              "id": "page.catalogue.editions.rando-ditions",
+              "title": "Rando éditions"
+            },
+            {
+              "id": "page.catalogue.editions.gl-nat-livres",
+              "title": "Glénat Livres"
+            },
+            {
+              "id": "page.catalogue.editions.vent-douest",
+              "title": "Vent d'Ouest"
+            }
+          ]
+        }
+      ]
+    },
+    "catalogueAll": {
+      "id": "page.catalogue.all",
+      "title": "Catalogue - Tout le catalogue",
+      "url": "/catalogue/all",
+      "elements": [
+        {
+          "id": "page.catalogue.all.breadcrumb",
+          "label": "Fil d'ariane Catalogue All",
+          "type": "breadcrumb",
+          "items": [
+            "Accueil",
+            "Catalogue",
+            "Tout le catalogue"
+          ]
+        },
+        {
+          "id": "page.catalogue.all.header",
+          "label": "En-tête Catalogue All",
+          "type": "section",
+          "children": [
+            {
+              "id": "page.catalogue.all.title",
+              "label": "Titre Catalogue",
+              "type": "text"
+            },
+            {
+              "id": "page.catalogue.all.search",
+              "label": "Recherche Catalogue",
+              "type": "input"
+            },
+            {
+              "id": "page.catalogue.all.filters",
+              "label": "Filtres rapides",
+              "type": "buttons",
+              "items": [
+                {
+                  "id": "page.catalogue.all.filters.toutes",
+                  "label": "Toutes"
+                },
+                {
+                  "id": "page.catalogue.all.filters.bd",
+                  "label": "BD"
+                },
+                {
+                  "id": "page.catalogue.all.filters.manga",
+                  "label": "Manga"
+                },
+                {
+                  "id": "page.catalogue.all.filters.jeunesse",
+                  "label": "Jeunesse"
+                },
+                {
+                  "id": "page.catalogue.all.filters.d-couverte",
+                  "label": "Découverte"
+                },
+                {
+                  "id": "page.catalogue.all.filters.livres",
+                  "label": "Livres"
+                },
+                {
+                  "id": "page.catalogue.all.filters.voyage",
+                  "label": "Voyage"
+                },
+                {
+                  "id": "page.catalogue.all.filters.montagne",
+                  "label": "Montagne"
+                }
+              ]
+            },
+            {
+              "id": "page.catalogue.all.advanced-filters",
+              "label": "Panneau filtres avancés",
+              "type": "component",
+              "componentRef": "BookFilters"
+            }
+          ]
+        },
+        {
+          "id": "page.catalogue.all.grid",
+          "label": "Grille livres catalogue",
+          "type": "collection",
+          "componentRef": "BookCard",
+          "items": [
+            {
+              "id": "book.9782380711102",
+              "ean": "9782380711102",
+              "title": "One Piece - Tome 110",
+              "authors": "E. Oda",
+              "publisher": "Glénat Manga",
+              "priceHT": "7.49",
+              "stock": 86,
+              "ribbon": "NOUVEAUTÉ"
+            },
+            {
+              "id": "book.9782344059707",
+              "ean": "9782344059707",
+              "title": "Naya Pika - Tome 03",
+              "authors": "Rabat · Rodi · Aneko",
+              "publisher": "Glénat Jeunesse",
+              "priceHT": "10.95",
+              "stock": 42,
+              "ribbon": null
+            },
+            {
+              "id": "book.9782344059905",
+              "ean": "9782344059905",
+              "title": "Jules Matrat - Tome 03",
+              "authors": "Corbeyran · Horne",
+              "publisher": "Glénat BD",
+              "priceHT": "17.90",
+              "stock": 58,
+              "ribbon": "À paraître"
+            },
+            {
+              "id": "book.9782344059974",
+              "ean": "9782344059974",
+              "title": "Paul Watson - Le combat d'une vie",
+              "authors": "Paul Watson",
+              "publisher": "Glénat Livres",
+              "priceHT": "22.00",
+              "stock": 12,
+              "ribbon": "NOUVEAUTÉ"
+            },
+            {
+              "id": "book.9782344059936",
+              "ean": "9782344059936",
+              "title": "Alva Odyssée",
+              "authors": "Alva",
+              "publisher": "Glénat Livres",
+              "priceHT": "19.95",
+              "stock": 18,
+              "ribbon": "PROVISOIRE"
+            },
+            {
+              "id": "book.9791026400134",
+              "ean": "9791026400134",
+              "title": "La couleur des émotions - Un livre tout animé",
+              "authors": "Anna Llenas",
+              "publisher": "Glénat Jeunesse",
+              "priceHT": "20.76",
+              "stock": 14574,
+              "ribbon": null
+            },
+            {
+              "id": "book.9782344069080",
+              "ean": "9782344069080",
+              "title": "Contro Natura - Sang bleu",
+              "authors": "M.Andolfo · I.Bigarella",
+              "publisher": "Glénat BD",
+              "priceHT": "18.96",
+              "stock": 3373,
+              "ribbon": "nouveauté"
+            },
+            {
+              "id": "book.9782344066379",
+              "ean": "9782344066379",
+              "title": "Shangri-la Frontier - Tome 17",
+              "authors": "Katarina · R.Fuji",
+              "publisher": "Glénat Manga",
+              "priceHT": "6.82",
+              "stock": 6292,
+              "ribbon": "nouveauté"
+            },
+            {
+              "id": "book.9782344051733",
+              "ean": "9782344051733",
+              "title": "Brume - Tome 01",
+              "authors": "J.Pélissier · C.Hinder",
+              "publisher": "Glénat BD",
+              "priceHT": "11.85",
+              "stock": 24479,
+              "ribbon": null
+            },
+            {
+              "id": "book.9782344057049",
+              "ean": "9782344057049",
+              "title": "Les bandelettes de Momie Molette",
+              "authors": "Loïc Clément · Julien Arnal",
+              "publisher": "Glénat Jeunesse",
+              "priceHT": "11.85",
+              "stock": 1952,
+              "ribbon": null
+            },
+            {
+              "id": "book.9782723484223",
+              "ean": "9782723484223",
+              "title": "One Piece - Green",
+              "authors": "E. Oda",
+              "publisher": "Glénat Manga",
+              "priceHT": "7.90",
+              "stock": 420,
+              "ribbon": "CLASSIQUE"
+            },
+            {
+              "id": "book.9782723484230",
+              "ean": "9782723484230",
+              "title": "One Piece - Blue Deep",
+              "authors": "E. Oda",
+              "publisher": "Glénat Manga",
+              "priceHT": "7.90",
+              "stock": 380,
+              "ribbon": null
+            },
+            {
+              "id": "book.9782723484247",
+              "ean": "9782723484247",
+              "title": "One Piece - Yellow",
+              "authors": "E. Oda",
+              "publisher": "Glénat Manga",
+              "priceHT": "7.90",
+              "stock": 255,
+              "ribbon": null
+            },
+            {
+              "id": "book.9782723484216",
+              "ean": "9782723484216",
+              "title": "One Piece - Blue",
+              "authors": "E. Oda",
+              "publisher": "Glénat Manga",
+              "priceHT": "7.90",
+              "stock": 310,
+              "ribbon": null
+            },
+            {
+              "id": "book.9782723484209",
+              "ean": "9782723484209",
+              "title": "One Piece - Red",
+              "authors": "E. Oda",
+              "publisher": "Glénat Manga",
+              "priceHT": "7.90",
+              "stock": 295,
+              "ribbon": null
+            }
+          ]
+        }
+      ]
+    },
+    "catalogueKiosque": {
+      "id": "page.catalogue.kiosque",
+      "title": "Catalogue - Kiosque",
+      "url": "/catalogue/kiosque",
+      "elements": [
+        {
+          "id": "page.catalogue.kiosque.breadcrumb",
+          "label": "Fil d'ariane Catalogue Kiosque",
+          "type": "breadcrumb",
+          "items": [
+            "Accueil",
+            "Catalogue",
+            "Kiosque"
+          ]
+        },
+        {
+          "id": "page.catalogue.kiosque.header",
+          "label": "En-tête Kiosque",
+          "type": "section",
+          "children": [
+            {
+              "id": "page.catalogue.kiosque.title",
+              "label": "Titre Catalogue",
+              "type": "text"
+            },
+            {
+              "id": "page.catalogue.kiosque.search",
+              "label": "Recherche Catalogue",
+              "type": "input"
+            },
+            {
+              "id": "page.catalogue.kiosque.filter.chip.toutes",
+              "label": "Filtre Toutes",
+              "type": "button"
+            },
+            {
+              "id": "page.catalogue.kiosque.sort.field",
+              "label": "Menu tri (champ)",
+              "type": "dropdown"
+            },
+            {
+              "id": "page.catalogue.kiosque.sort.direction",
+              "label": "Bouton ordre tri",
+              "type": "button"
+            },
+            {
+              "id": "page.catalogue.kiosque.publishers",
+              "label": "Filtres éditeurs",
+              "type": "checkbox-list",
+              "items": [
+                {
+                  "id": "page.catalogue.kiosque.publisher.hugo",
+                  "label": "Hugo"
+                },
+                {
+                  "id": "page.catalogue.kiosque.publisher.comix-buro",
+                  "label": "Comix Buro"
+                },
+                {
+                  "id": "page.catalogue.kiosque.publisher.disney",
+                  "label": "Disney"
+                },
+                {
+                  "id": "page.catalogue.kiosque.publisher.ditions-licences",
+                  "label": "Éditions Licences"
+                },
+                {
+                  "id": "page.catalogue.kiosque.publisher.gl-nat-bd",
+                  "label": "Glénat bd"
+                },
+                {
+                  "id": "page.catalogue.kiosque.publisher.gl-nat-jeunesse",
+                  "label": "Glénat Jeunesse"
+                },
+                {
+                  "id": "page.catalogue.kiosque.publisher.gl-nat-livres",
+                  "label": "Glénat Livres"
+                },
+                {
+                  "id": "page.catalogue.kiosque.publisher.gl-nat-manga",
+                  "label": "Glénat Manga"
+                },
+                {
+                  "id": "page.catalogue.kiosque.publisher.rando-editions",
+                  "label": "Rando Editions"
+                },
+                {
+                  "id": "page.catalogue.kiosque.publisher.vents-douest",
+                  "label": "Vents d'Ouest"
+                },
+                {
+                  "id": "page.catalogue.kiosque.publisher.livres-diffus-s",
+                  "label": "Livres diffusés"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "page.catalogue.kiosque.groups",
+          "label": "Groupes kiosque",
+          "type": "collection",
+          "componentRef": "BookCard",
+          "groups": [
+            {
+              "id": "page.catalogue.kiosque.office.25501",
+              "label": "Office 25501 : 05/09/2025",
+              "shipping": "Envoi Chronolivre mardi 02/09/2025 à 18h55",
+              "books": [
+                {
+                  "id": "book.9782380711102",
+                  "ean": "9782380711102",
+                  "title": "One Piece - Tome 110",
+                  "authors": "E. Oda",
+                  "publisher": "Glénat Manga",
+                  "priceHT": "7.49",
+                  "stock": 86,
+                  "ribbon": "NOUVEAUTÉ"
+                },
+                {
+                  "id": "book.9782344059707",
+                  "ean": "9782344059707",
+                  "title": "Naya Pika - Tome 03",
+                  "authors": "Rabat · Rodi · Aneko",
+                  "publisher": "Glénat Jeunesse",
+                  "priceHT": "10.95",
+                  "stock": 42,
+                  "ribbon": null
+                },
+                {
+                  "id": "book.9782344059905",
+                  "ean": "9782344059905",
+                  "title": "Jules Matrat - Tome 03",
+                  "authors": "Corbeyran · Horne",
+                  "publisher": "Glénat BD",
+                  "priceHT": "17.90",
+                  "stock": 58,
+                  "ribbon": "À paraître"
+                }
+              ]
+            },
+            {
+              "id": "page.catalogue.kiosque.office.25502",
+              "label": "Office 25502 : 15/09/2025",
+              "shipping": "Envoi Chronolivre mardi 09/09/2025 à 18h55",
+              "books": [
+                {
+                  "id": "book.9782344059974",
+                  "ean": "9782344059974",
+                  "title": "Paul Watson - Le combat d'une vie",
+                  "authors": "Paul Watson",
+                  "publisher": "Glénat Livres",
+                  "priceHT": "22.00",
+                  "stock": 12,
+                  "ribbon": "NOUVEAUTÉ"
+                },
+                {
+                  "id": "book.9782344059936",
+                  "ean": "9782344059936",
+                  "title": "Alva Odyssée",
+                  "authors": "Alva",
+                  "publisher": "Glénat Livres",
+                  "priceHT": "19.95",
+                  "stock": 18,
+                  "ribbon": "PROVISOIRE"
+                },
+                {
+                  "id": "book.9791026400134",
+                  "ean": "9791026400134",
+                  "title": "La couleur des émotions - Un livre tout animé",
+                  "authors": "Anna Llenas",
+                  "publisher": "Glénat Jeunesse",
+                  "priceHT": "20.76",
+                  "stock": 14574,
+                  "ribbon": null
+                }
+              ]
+            },
+            {
+              "id": "page.catalogue.kiosque.office.25503",
+              "label": "Office 25503 : 25/09/2025",
+              "shipping": "Envoi Chronolivre mardi 23/09/2025 à 18h55",
+              "books": [
+                {
+                  "id": "book.9782344069080",
+                  "ean": "9782344069080",
+                  "title": "Contro Natura - Sang bleu",
+                  "authors": "M.Andolfo · I.Bigarella",
+                  "publisher": "Glénat BD",
+                  "priceHT": "18.96",
+                  "stock": 3373,
+                  "ribbon": "nouveauté"
+                },
+                {
+                  "id": "book.9782344066379",
+                  "ean": "9782344066379",
+                  "title": "Shangri-la Frontier - Tome 17",
+                  "authors": "Katarina · R.Fuji",
+                  "publisher": "Glénat Manga",
+                  "priceHT": "6.82",
+                  "stock": 6292,
+                  "ribbon": "nouveauté"
+                },
+                {
+                  "id": "book.9782344051733",
+                  "ean": "9782344051733",
+                  "title": "Brume - Tome 01",
+                  "authors": "J.Pélissier · C.Hinder",
+                  "publisher": "Glénat BD",
+                  "priceHT": "11.85",
+                  "stock": 24479,
+                  "ribbon": null
+                },
+                {
+                  "id": "book.9782344057049",
+                  "ean": "9782344057049",
+                  "title": "Les bandelettes de Momie Molette",
+                  "authors": "Loïc Clément · Julien Arnal",
+                  "publisher": "Glénat Jeunesse",
+                  "priceHT": "11.85",
+                  "stock": 1952,
+                  "ribbon": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "catalogueOffices": {
+      "id": "page.catalogue.offices",
+      "title": "Catalogue - Prochaines offices",
+      "url": "/catalogue/offices",
+      "elements": [
+        {
+          "id": "page.catalogue.offices.breadcrumb",
+          "label": "Fil d'ariane Catalogue Offices",
+          "type": "breadcrumb",
+          "items": [
+            "Accueil",
+            "Catalogue",
+            "Prochaines offices"
+          ]
+        },
+        {
+          "id": "page.catalogue.offices.header",
+          "label": "En-tête Offices",
+          "type": "section",
+          "children": [
+            {
+              "id": "page.catalogue.offices.title",
+              "label": "Titre Catalogue",
+              "type": "text"
+            },
+            {
+              "id": "page.catalogue.offices.search",
+              "label": "Recherche Catalogue",
+              "type": "input"
+            },
+            {
+              "id": "page.catalogue.offices.filter.toutes",
+              "label": "Filtre Toutes",
+              "type": "button"
+            },
+            {
+              "id": "page.catalogue.offices.sort.date",
+              "label": "Bouton tri date",
+              "type": "button"
+            },
+            {
+              "id": "page.catalogue.offices.publishers",
+              "label": "Filtres éditeurs",
+              "type": "checkbox-list",
+              "items": [
+                {
+                  "id": "page.catalogue.offices.publisher.hugo",
+                  "label": "Hugo"
+                },
+                {
+                  "id": "page.catalogue.offices.publisher.comix-buro",
+                  "label": "Comix Buro"
+                },
+                {
+                  "id": "page.catalogue.offices.publisher.disney",
+                  "label": "Disney"
+                },
+                {
+                  "id": "page.catalogue.offices.publisher.ditions-licences",
+                  "label": "Éditions Licences"
+                },
+                {
+                  "id": "page.catalogue.offices.publisher.gl-nat-bd",
+                  "label": "Glénat bd"
+                },
+                {
+                  "id": "page.catalogue.offices.publisher.gl-nat-jeunesse",
+                  "label": "Glénat Jeunesse"
+                },
+                {
+                  "id": "page.catalogue.offices.publisher.gl-nat-livres",
+                  "label": "Glénat Livres"
+                },
+                {
+                  "id": "page.catalogue.offices.publisher.gl-nat-manga",
+                  "label": "Glénat Manga"
+                },
+                {
+                  "id": "page.catalogue.offices.publisher.rando-editions",
+                  "label": "Rando Editions"
+                },
+                {
+                  "id": "page.catalogue.offices.publisher.vents-douest",
+                  "label": "Vents d'Ouest"
+                },
+                {
+                  "id": "page.catalogue.offices.publisher.livres-diffus-s",
+                  "label": "Livres diffusés"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "page.catalogue.offices.groups",
+          "label": "Groupes offices",
+          "type": "collection",
+          "componentRef": "BookCard",
+          "groups": [
+            {
+              "id": "page.catalogue.offices.office.25503",
+              "label": "Office 25503 : 22/01/2025",
+              "shipping": "Envoi Chronolivre mardi 07/01/2025 à 18h55",
+              "books": [
+                {
+                  "id": "book.9782380711102",
+                  "ean": "9782380711102",
+                  "title": "One Piece - Tome 110",
+                  "authors": "E. Oda",
+                  "publisher": "Glénat Manga",
+                  "priceHT": "7.49",
+                  "stock": 86,
+                  "ribbon": "NOUVEAUTÉ"
+                },
+                {
+                  "id": "book.9782344059707",
+                  "ean": "9782344059707",
+                  "title": "Naya Pika - Tome 03",
+                  "authors": "Rabat · Rodi · Aneko",
+                  "publisher": "Glénat Jeunesse",
+                  "priceHT": "10.95",
+                  "stock": 42,
+                  "ribbon": null
+                },
+                {
+                  "id": "book.9782344059905",
+                  "ean": "9782344059905",
+                  "title": "Jules Matrat - Tome 03",
+                  "authors": "Corbeyran · Horne",
+                  "publisher": "Glénat BD",
+                  "priceHT": "17.90",
+                  "stock": 58,
+                  "ribbon": "À paraître"
+                }
+              ]
+            },
+            {
+              "id": "page.catalogue.offices.office.25504",
+              "label": "Office 25504 : 05/02/2025",
+              "shipping": "Envoi Chronolivre mardi 21/01/2025 à 18h55",
+              "books": [
+                {
+                  "id": "book.9782344059974",
+                  "ean": "9782344059974",
+                  "title": "Paul Watson - Le combat d'une vie",
+                  "authors": "Paul Watson",
+                  "publisher": "Glénat Livres",
+                  "priceHT": "22.00",
+                  "stock": 12,
+                  "ribbon": "NOUVEAUTÉ"
+                },
+                {
+                  "id": "book.9782344059936",
+                  "ean": "9782344059936",
+                  "title": "Alva Odyssée",
+                  "authors": "Alva",
+                  "publisher": "Glénat Livres",
+                  "priceHT": "19.95",
+                  "stock": 18,
+                  "ribbon": "PROVISOIRE"
+                },
+                {
+                  "id": "book.9791026400134",
+                  "ean": "9791026400134",
+                  "title": "La couleur des émotions - Un livre tout animé",
+                  "authors": "Anna Llenas",
+                  "publisher": "Glénat Jeunesse",
+                  "priceHT": "20.76",
+                  "stock": 14574,
+                  "ribbon": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "catalogueNouveautes": {
+      "id": "page.catalogue.nouveautes",
+      "title": "Catalogue - Dernières nouveautés",
+      "url": "/catalogue/nouveautes",
+      "elements": [
+        {
+          "id": "page.catalogue.nouveautes.breadcrumb",
+          "label": "Fil d'ariane Catalogue Nouveautés",
+          "type": "breadcrumb",
+          "items": [
+            "Accueil",
+            "Catalogue",
+            "Dernières nouveautés"
+          ]
+        },
+        {
+          "id": "page.catalogue.nouveautes.header",
+          "label": "En-tête Nouveautés",
+          "type": "section",
+          "children": [
+            {
+              "id": "page.catalogue.nouveautes.title",
+              "label": "Titre Catalogue",
+              "type": "text"
+            },
+            {
+              "id": "page.catalogue.nouveautes.search",
+              "label": "Recherche Catalogue",
+              "type": "input"
+            },
+            {
+              "id": "page.catalogue.nouveautes.filter.toutes",
+              "label": "Filtre Toutes",
+              "type": "button"
+            },
+            {
+              "id": "page.catalogue.nouveautes.sort.date",
+              "label": "Bouton tri date",
+              "type": "button"
+            },
+            {
+              "id": "page.catalogue.nouveautes.publishers",
+              "label": "Filtres éditeurs",
+              "type": "checkbox-list",
+              "items": [
+                {
+                  "id": "page.catalogue.nouveautes.publisher.hugo",
+                  "label": "Hugo"
+                },
+                {
+                  "id": "page.catalogue.nouveautes.publisher.comix-buro",
+                  "label": "Comix Buro"
+                },
+                {
+                  "id": "page.catalogue.nouveautes.publisher.disney",
+                  "label": "Disney"
+                },
+                {
+                  "id": "page.catalogue.nouveautes.publisher.ditions-licences",
+                  "label": "Éditions Licences"
+                },
+                {
+                  "id": "page.catalogue.nouveautes.publisher.gl-nat-bd",
+                  "label": "Glénat bd"
+                },
+                {
+                  "id": "page.catalogue.nouveautes.publisher.gl-nat-jeunesse",
+                  "label": "Glénat Jeunesse"
+                },
+                {
+                  "id": "page.catalogue.nouveautes.publisher.gl-nat-livres",
+                  "label": "Glénat Livres"
+                },
+                {
+                  "id": "page.catalogue.nouveautes.publisher.gl-nat-manga",
+                  "label": "Glénat Manga"
+                },
+                {
+                  "id": "page.catalogue.nouveautes.publisher.rando-editions",
+                  "label": "Rando Editions"
+                },
+                {
+                  "id": "page.catalogue.nouveautes.publisher.vents-douest",
+                  "label": "Vents d'Ouest"
+                },
+                {
+                  "id": "page.catalogue.nouveautes.publisher.livres-diffus-s",
+                  "label": "Livres diffusés"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "page.catalogue.nouveautes.groups",
+          "label": "Groupes nouveautés",
+          "type": "collection",
+          "componentRef": "BookCard",
+          "groups": [
+            {
+              "id": "page.catalogue.nouveautes.release.22-01-2025",
+              "label": "Date de sortie : 22/01/2025",
+              "books": [
+                {
+                  "id": "book.9782380711102",
+                  "ean": "9782380711102",
+                  "title": "One Piece - Tome 110",
+                  "authors": "E. Oda",
+                  "publisher": "Glénat Manga",
+                  "priceHT": "7.49",
+                  "stock": 86,
+                  "ribbon": "NOUVEAUTÉ"
+                },
+                {
+                  "id": "book.9782344059707",
+                  "ean": "9782344059707",
+                  "title": "Naya Pika - Tome 03",
+                  "authors": "Rabat · Rodi · Aneko",
+                  "publisher": "Glénat Jeunesse",
+                  "priceHT": "10.95",
+                  "stock": 42,
+                  "ribbon": null
+                },
+                {
+                  "id": "book.9782344059905",
+                  "ean": "9782344059905",
+                  "title": "Jules Matrat - Tome 03",
+                  "authors": "Corbeyran · Horne",
+                  "publisher": "Glénat BD",
+                  "priceHT": "17.90",
+                  "stock": 58,
+                  "ribbon": "À paraître"
+                }
+              ]
+            },
+            {
+              "id": "page.catalogue.nouveautes.release.05-06-2024",
+              "label": "Date de sortie : 05/06/2024",
+              "books": [
+                {
+                  "id": "book.9782344059974",
+                  "ean": "9782344059974",
+                  "title": "Paul Watson - Le combat d'une vie",
+                  "authors": "Paul Watson",
+                  "publisher": "Glénat Livres",
+                  "priceHT": "22.00",
+                  "stock": 12,
+                  "ribbon": "NOUVEAUTÉ"
+                },
+                {
+                  "id": "book.9782344059936",
+                  "ean": "9782344059936",
+                  "title": "Alva Odyssée",
+                  "authors": "Alva",
+                  "publisher": "Glénat Livres",
+                  "priceHT": "19.95",
+                  "stock": 18,
+                  "ribbon": "PROVISOIRE"
+                },
+                {
+                  "id": "book.9791026400134",
+                  "ean": "9791026400134",
+                  "title": "La couleur des émotions - Un livre tout animé",
+                  "authors": "Anna Llenas",
+                  "publisher": "Glénat Jeunesse",
+                  "priceHT": "20.76",
+                  "stock": 14574,
+                  "ribbon": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "catalogueCouvertureAParaitre": {
+      "id": "page.catalogue.couverture",
+      "title": "Catalogue - Couverture à paraître",
+      "url": "/catalogue/couverture-a-paraitre",
+      "elements": [
+        {
+          "id": "page.catalogue.couverture.breadcrumb",
+          "label": "Fil d'ariane Catalogue Couverture",
+          "type": "breadcrumb",
+          "items": [
+            "Accueil",
+            "Catalogue",
+            "Couverture à paraître"
+          ]
+        },
+        {
+          "id": "page.catalogue.couverture.header",
+          "label": "En-tête Couverture",
+          "type": "section",
+          "children": [
+            {
+              "id": "page.catalogue.couverture.title",
+              "label": "Titre Catalogue",
+              "type": "text"
+            },
+            {
+              "id": "page.catalogue.couverture.search",
+              "label": "Recherche Catalogue",
+              "type": "input"
+            }
+          ]
+        },
+        {
+          "id": "page.catalogue.couverture.cards",
+          "label": "Cartes couvertures",
+          "type": "collection",
+          "items": [
+            {
+              "id": "page.catalogue.couverture.ean.9782344062814",
+              "label": "EAN 9782344062814"
+            },
+            {
+              "id": "page.catalogue.couverture.ean.9782344065822",
+              "label": "EAN 9782344065822"
+            },
+            {
+              "id": "page.catalogue.couverture.ean.9782344068380",
+              "label": "EAN 9782344068380"
+            },
+            {
+              "id": "page.catalogue.couverture.ean.9782344062661",
+              "label": "EAN 9782344062661"
+            },
+            {
+              "id": "page.catalogue.couverture.ean.9782344069080",
+              "label": "EAN 9782344069080"
+            },
+            {
+              "id": "page.catalogue.couverture.ean.9782344051733",
+              "label": "EAN 9782344051733"
+            },
+            {
+              "id": "page.catalogue.couverture.ean.9782344060797",
+              "label": "EAN 9782344060797"
+            },
+            {
+              "id": "page.catalogue.couverture.ean.9782344068489",
+              "label": "EAN 9782344068489"
+            },
+            {
+              "id": "page.catalogue.couverture.ean.9782344065327",
+              "label": "EAN 9782344065327"
+            }
+          ]
+        }
+      ]
+    },
+    "catalogueBookDetails": {
+      "id": "page.catalogue.book",
+      "title": "Catalogue - Fiche livre",
+      "url": "/catalogue/book",
+      "elements": [
+        {
+          "id": "page.catalogue.book.breadcrumb",
+          "label": "Fil d'ariane Fiche livre",
+          "type": "breadcrumb",
+          "items": [
+            "Accueil",
+            "Catalogue",
+            "Fiche livre dyn."
+          ]
+        },
+        {
+          "id": "page.catalogue.book.hero",
+          "label": "Bloc couverture et infos",
+          "type": "section",
+          "children": [
+            {
+              "id": "page.catalogue.book.hero.cover",
+              "label": "Carte couverture principale",
+              "type": "card",
+              "children": [
+                {
+                  "id": "page.catalogue.book.hero.cover.image",
+                  "label": "Visuel couverture",
+                  "type": "image"
+                },
+                {
+                  "id": "page.catalogue.book.hero.cover.availability",
+                  "label": "Disponible",
+                  "type": "text"
+                },
+                {
+                  "id": "page.catalogue.book.hero.cover.price.ttc",
+                  "label": "Prix TTC 7.90 €",
+                  "type": "text"
+                },
+                {
+                  "id": "page.catalogue.book.hero.cover.price.ht",
+                  "label": "Prix HT 7.49 €",
+                  "type": "text"
+                },
+                {
+                  "id": "page.catalogue.book.hero.cover.action.add-to-cart",
+                  "label": "Bouton Ajouter au panier",
+                  "type": "button"
+                },
+                {
+                  "id": "page.catalogue.book.hero.cover.details.ean",
+                  "label": "EAN 9782380711102",
+                  "type": "text"
+                },
+                {
+                  "id": "page.catalogue.book.hero.cover.details.publication",
+                  "label": "Date de parution 01/02/2025",
+                  "type": "text"
+                },
+                {
+                  "id": "page.catalogue.book.hero.cover.details.stock",
+                  "label": "Stock 86 ex",
+                  "type": "text"
+                }
+              ]
+            },
+            {
+              "id": "page.catalogue.book.hero.info",
+              "label": "Carte informations éditoriales",
+              "type": "card",
+              "children": [
+                {
+                  "id": "page.catalogue.book.hero.info.title",
+                  "label": "One Piece - Tome 110",
+                  "type": "text"
+                },
+                {
+                  "id": "page.catalogue.book.hero.info.contributors",
+                  "label": "Contributeurs",
+                  "type": "list",
+                  "items": [
+                    {
+                      "id": "page.catalogue.book.hero.info.contributor.eiichiro-oda",
+                      "label": "Eiichiro Oda (Auteur)"
+                    }
+                  ]
+                },
+                {
+                  "id": "page.catalogue.book.hero.info.badges",
+                  "label": "Badges",
+                  "type": "tags",
+                  "items": [
+                    {
+                      "id": "page.catalogue.book.hero.info.badge.shonen-jump",
+                      "label": "Shonen Jump"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.badge.fiche-personnage",
+                      "label": "Fiche personnage"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.badge.best-seller",
+                      "label": "Best-seller"
+                    }
+                  ]
+                },
+                {
+                  "id": "page.catalogue.book.hero.info.recommended-age",
+                  "label": "DÈS 10 AN(S)",
+                  "type": "tag"
+                },
+                {
+                  "id": "page.catalogue.book.hero.info.actions",
+                  "label": "Menu impression/partage",
+                  "type": "dropdown",
+                  "items": [
+                    {
+                      "id": "page.catalogue.book.hero.info.actions.print",
+                      "label": "Imprimer la fiche"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.actions.download",
+                      "label": "Télécharger en PDF"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.actions.share",
+                      "label": "Partager la fiche"
+                    }
+                  ]
+                },
+                {
+                  "id": "page.catalogue.book.hero.info.categories",
+                  "label": "Catégories",
+                  "type": "tags",
+                  "items": [
+                    {
+                      "id": "page.catalogue.book.hero.info.category.gl-nat-manga",
+                      "label": "Glénat Manga"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.category.shonen",
+                      "label": "Shonen"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.category.aventure",
+                      "label": "Aventure"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.category.action",
+                      "label": "Action"
+                    }
+                  ]
+                },
+                {
+                  "id": "page.catalogue.book.hero.info.metadata",
+                  "label": "Métadonnées détaillées",
+                  "type": "definition-list",
+                  "items": [
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.marque-ditoriale",
+                      "label": "Marque éditoriale",
+                      "value": "Glénat Manga"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.cat-gorie-s",
+                      "label": "Catégorie(s)",
+                      "value": "One Piece, Aventure"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.s-rie",
+                      "label": "Série",
+                      "value": "One Piece Data Book"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.collection",
+                      "label": "Collection",
+                      "value": "Shonen"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.mot-s-cl",
+                      "label": "Mot(s) clé",
+                      "value": "guide book, humour, aventure, action"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.libell-de-tomaison",
+                      "label": "Libellé de tomaison",
+                      "value": "Green"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.nombre-de-pages",
+                      "label": "Nombre de pages",
+                      "value": "394 pages"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.diteur-dorigine",
+                      "label": "Éditeur d'origine",
+                      "value": "Shueisha"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.bc",
+                      "label": "BC",
+                      "value": "business central · descriptif technique · suivi fabrication"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.ean",
+                      "label": "EAN",
+                      "value": "9782380711102"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.isbn",
+                      "label": "ISBN",
+                      "value": "978-2-38071-110-2"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.format",
+                      "label": "Format",
+                      "value": "130 x 180 mm"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.pagination",
+                      "label": "Pagination",
+                      "value": "394 pages"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.dimensions",
+                      "label": "Dimensions",
+                      "value": "13,0 x 18,0 cm"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.poids",
+                      "label": "Poids",
+                      "value": "320 g"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.date-de-parution",
+                      "label": "Date de parution",
+                      "value": "01/02/2025"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.date-de-disponibilit",
+                      "label": "Date de disponibilité",
+                      "value": "22/01/2025"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.distributeur",
+                      "label": "Distributeur",
+                      "value": "Glénat"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.hachette",
+                      "label": "Hachette",
+                      "value": "4124558"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.fa-onnage",
+                      "label": "Façonnage",
+                      "value": "Souple"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.stock",
+                      "label": "Stock",
+                      "value": "86 ex"
+                    },
+                    {
+                      "id": "page.catalogue.book.hero.info.metadata.presse",
+                      "label": "Presse",
+                      "value": "Pages à publier"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "page.catalogue.book.tabs",
+          "label": "Onglets de contenu",
+          "type": "tabs",
+          "tabs": [
+            {
+              "id": "page.catalogue.book.tabs.resume",
+              "label": "Résumé",
+              "content": "L’intervention de l’équipage des géants apporte une lueur d’espoir à Luffy et ses amis dans leur tentative de s’évader de l’île futuriste, mais c’était sans compter l’arrivée des cinq doyens venus leur barrer le chemin ! Pendant ce temps, le monde entier frémit à l’écoute du message de Végapunk dont la diffusion vient tout juste de débuter… Les aventures de Luffy à la poursuite du One Piece continuent !"
+            },
+            {
+              "id": "page.catalogue.book.tabs.auteur",
+              "label": "Auteur",
+              "content": "Eiichiro Oda est né le 1er janvier 1975 à Kumamoto (Japon). Dès l’âge de 4 ans, il veut devenir mangaka. En 1992, alors qu’il est encore au lycée, il est récompensé lors du 44e concours Tezuka pour Wanted!. Après avoir été assistant auprès de divers auteurs comme Nobuhiro Watsuki (l’auteur de Kenshin le vagabond), c’est en 1997 qu’Eiichiro Oda publie le premier chapitre de One Piece dans le magazine Weekly Shônen Jump. Grâce aux personnages attachants, aux scènes d’action dynamiques et au scénario émouvant qui la caractérisent, la série fait l’unanimité auprès d’un large public.\n\nEn décembre 2014, One Piece est entré dans le livre des records comme la série dessinée par un seul auteur la plus imprimée au monde (320 866 000 exemplaires). Et, en 2021, ce sont plus de 490 millions de mangas One Piece qui ont déjà été imprimés à travers le monde, chaque nouveau volume étant distribué au Japon à plus de 3 millions d’exemplaires.\n\nSes déclinaisons en série TV, jeux vidéo ou films sont tout aussi populaires que la série originale. One Piece jouit également d’un succès international."
+            },
+            {
+              "id": "page.catalogue.book.tabs.lire",
+              "label": "Lire",
+              "content": "Aucune donnée disponible"
+            },
+            {
+              "id": "page.catalogue.book.tabs.internet",
+              "label": "Internet",
+              "content": "Aucune donnée disponible"
+            }
+          ]
+        },
+        {
+          "id": "page.catalogue.book.recommendations",
+          "label": "Onglets recommandations",
+          "type": "tabs",
+          "tabs": [
+            {
+              "id": "page.catalogue.book.recommendations.deja-paru",
+              "label": "Déjà paru",
+              "books": [
+                {
+                  "id": "book.9782723484223",
+                  "ean": "9782723484223",
+                  "title": "One Piece - Green",
+                  "authors": "E. Oda",
+                  "publisher": "Glénat Manga",
+                  "priceHT": "7.90",
+                  "stock": 420,
+                  "ribbon": "CLASSIQUE"
+                },
+                {
+                  "id": "book.9782723484230",
+                  "ean": "9782723484230",
+                  "title": "One Piece - Blue Deep",
+                  "authors": "E. Oda",
+                  "publisher": "Glénat Manga",
+                  "priceHT": "7.90",
+                  "stock": 380,
+                  "ribbon": null
+                },
+                {
+                  "id": "book.9782723484247",
+                  "ean": "9782723484247",
+                  "title": "One Piece - Yellow",
+                  "authors": "E. Oda",
+                  "publisher": "Glénat Manga",
+                  "priceHT": "7.90",
+                  "stock": 255,
+                  "ribbon": null
+                },
+                {
+                  "id": "book.9782723484216",
+                  "ean": "9782723484216",
+                  "title": "One Piece - Blue",
+                  "authors": "E. Oda",
+                  "publisher": "Glénat Manga",
+                  "priceHT": "7.90",
+                  "stock": 310,
+                  "ribbon": null
+                },
+                {
+                  "id": "book.9782723484209",
+                  "ean": "9782723484209",
+                  "title": "One Piece - Red",
+                  "authors": "E. Oda",
+                  "publisher": "Glénat Manga",
+                  "priceHT": "7.90",
+                  "stock": 295,
+                  "ribbon": null
+                }
+              ]
+            },
+            {
+              "id": "page.catalogue.book.recommendations.a-paraitre",
+              "label": "À paraître"
+            },
+            {
+              "id": "page.catalogue.book.recommendations.meme-collection",
+              "label": "Même collection"
+            },
+            {
+              "id": "page.catalogue.book.recommendations.meme-theme",
+              "label": "Même thème"
+            },
+            {
+              "id": "page.catalogue.book.recommendations.meme-serie",
+              "label": "Même série"
+            },
+            {
+              "id": "page.catalogue.book.recommendations.meme-auteur",
+              "label": "Même auteur"
+            }
+          ]
+        }
+      ]
+    },
+    "administration": {
+      "id": "page.administration",
+      "title": "Administration des accès",
+      "url": "/administration",
+      "elements": [
+        {
+          "id": "page.administration.header",
+          "label": "En-tête module",
+          "type": "section",
+          "children": [
+            {
+              "id": "page.administration.header.title",
+              "label": "Titre module",
+              "type": "text"
+            },
+            {
+              "id": "page.administration.header.description",
+              "label": "Description module",
+              "type": "text"
+            }
+          ]
+        },
+        {
+          "id": "page.administration.stats",
+          "label": "Cartes indicateurs",
+          "type": "collection",
+          "items": [
+            {
+              "id": "page.administration.stats.users",
+              "label": "Utilisateurs"
+            },
+            {
+              "id": "page.administration.stats.groups",
+              "label": "Groupes métiers"
+            },
+            {
+              "id": "page.administration.stats.admin-access",
+              "label": "Accès administration"
+            },
+            {
+              "id": "page.administration.stats.last-update",
+              "label": "Dernière mise à jour"
+            }
+          ]
+        },
+        {
+          "id": "page.administration.user-list",
+          "label": "Panneau utilisateurs",
+          "type": "component",
+          "componentRef": "UserListPanel",
+          "children": [
+            {
+              "id": "page.administration.user-list.search",
+              "label": "Recherche utilisateur",
+              "type": "input"
+            },
+            {
+              "id": "page.administration.user-list.toggle-inactive",
+              "label": "Bascule inactifs",
+              "type": "toggle"
+            },
+            {
+              "id": "page.administration.user-list.groups",
+              "label": "Groupes affichés",
+              "type": "list",
+              "items": [
+                {
+                  "id": "page.administration.user-list.group.editions-glenat",
+                  "label": "Éditions Glénat"
+                },
+                {
+                  "id": "page.administration.user-list.group.ged",
+                  "label": "GED"
+                },
+                {
+                  "id": "page.administration.user-list.group.glenat-prod",
+                  "label": "Glénat Prod"
+                },
+                {
+                  "id": "page.administration.user-list.group.prestataire-externes",
+                  "label": "Prestataire externes"
+                },
+                {
+                  "id": "page.administration.user-list.group.glenat-diffusion",
+                  "label": "Glénat diffusion"
+                },
+                {
+                  "id": "page.administration.user-list.group.hugo-digital",
+                  "label": "Hugo digital"
+                },
+                {
+                  "id": "page.administration.user-list.group.hugo-publishing",
+                  "label": "Hugo publishing"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "page.administration.access-editor",
+          "label": "Éditeur d'accès",
+          "type": "component",
+          "componentRef": "UserAccessEditor",
+          "children": [
+            {
+              "id": "page.administration.access-editor.groups",
+              "label": "Sélection groupes",
+              "type": "list",
+              "items": [
+                {
+                  "id": "page.administration.access-editor.group.editions-glenat",
+                  "label": "Éditions Glénat"
+                },
+                {
+                  "id": "page.administration.access-editor.group.ged",
+                  "label": "GED"
+                },
+                {
+                  "id": "page.administration.access-editor.group.glenat-prod",
+                  "label": "Glénat Prod"
+                },
+                {
+                  "id": "page.administration.access-editor.group.prestataire-externes",
+                  "label": "Prestataire externes"
+                },
+                {
+                  "id": "page.administration.access-editor.group.glenat-diffusion",
+                  "label": "Glénat diffusion"
+                },
+                {
+                  "id": "page.administration.access-editor.group.hugo-digital",
+                  "label": "Hugo digital"
+                },
+                {
+                  "id": "page.administration.access-editor.group.hugo-publishing",
+                  "label": "Hugo publishing"
+                }
+              ]
+            },
+            {
+              "id": "page.administration.access-editor.permissions",
+              "label": "Permissions disponibles",
+              "type": "list",
+              "items": [
+                {
+                  "id": "page.administration.access-editor.permission.home",
+                  "label": "Accueil"
+                },
+                {
+                  "id": "page.administration.access-editor.permission.qui",
+                  "label": "Qui fait quoi"
+                },
+                {
+                  "id": "page.administration.access-editor.permission.catalogue",
+                  "label": "Catalogue"
+                },
+                {
+                  "id": "page.administration.access-editor.permission.doc",
+                  "label": "Glénat'Doc"
+                },
+                {
+                  "id": "page.administration.access-editor.permission.fee",
+                  "label": "Glénat'Fée"
+                },
+                {
+                  "id": "page.administration.access-editor.permission.agenda",
+                  "label": "Agenda"
+                },
+                {
+                  "id": "page.administration.access-editor.permission.planning",
+                  "label": "Planning"
+                },
+                {
+                  "id": "page.administration.access-editor.permission.contrats",
+                  "label": "Contrats"
+                },
+                {
+                  "id": "page.administration.access-editor.permission.rh",
+                  "label": "Ressources humaines"
+                },
+                {
+                  "id": "page.administration.access-editor.permission.temps",
+                  "label": "Saisie des temps"
+                },
+                {
+                  "id": "page.administration.access-editor.permission.atelier",
+                  "label": "Travaux atelier"
+                },
+                {
+                  "id": "page.administration.access-editor.permission.espace",
+                  "label": "Mon espace"
+                },
+                {
+                  "id": "page.administration.access-editor.permission.emploi",
+                  "label": "Emploi"
+                },
+                {
+                  "id": "page.administration.access-editor.permission.annonces",
+                  "label": "Petites annonces"
+                },
+                {
+                  "id": "page.administration.access-editor.permission.services",
+                  "label": "Services"
+                },
+                {
+                  "id": "page.administration.access-editor.permission.administration",
+                  "label": "Administration"
+                }
+              ]
+            },
+            {
+              "id": "page.administration.access-editor.actions.reset",
+              "label": "Bouton Réinitialiser",
+              "type": "button"
+            },
+            {
+              "id": "page.administration.access-editor.actions.save",
+              "label": "Bouton Enregistrer",
+              "type": "button"
+            }
+          ]
+        },
+        {
+          "id": "page.administration.audit-log",
+          "label": "Historique des actions",
+          "type": "timeline",
+          "items": [
+            {
+              "id": "page.administration.audit-log.log-0001",
+              "label": "Initialisation des accès – ajout des groupes de base.",
+              "actor": "Admin Glénat",
+              "target": "user-003",
+              "timestamp": "il y a 3 jours",
+              "addedGroups": [
+                "editions-glenat",
+                "glenat-prod"
+              ]
+            },
+            {
+              "id": "page.administration.audit-log.log-0002",
+              "label": "Ajout d’une exception pour la saisie des temps.",
+              "actor": "Admin Glénat",
+              "target": "user-012",
+              "timestamp": "il y a 2 jours",
+              "addedOverrides": [
+                "temps"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
