@@ -481,15 +481,138 @@ export async function fetchCatalogueBooks(): Promise<CatalogueBook[]> {
   return Promise.resolve(data);
 }
 
+type ReleasesApiResponse =
+  | ReleasesApiRecord[]
+  | { data?: ReleasesApiRecord[]; result?: ReleasesApiRecord[]; items?: ReleasesApiRecord[] };
+
+interface ReleasesApiRecord {
+  date?: string;
+  releaseDate?: string;
+  release_date?: string;
+  bookEans?: string[];
+  book_eans?: string[];
+  books?: Array<{
+    ean?: string;
+  }>;
+}
+
+const RELEASES_ENDPOINT = '/api/catalogue/releases/latest';
+
+const resolveReleasesApiUrl = (): string => {
+  const baseUrl = import.meta.env.VITE_CATALOGUE_API_URL ?? import.meta.env.VITE_API_URL;
+
+  if (!baseUrl) {
+    return RELEASES_ENDPOINT;
+  }
+
+  return `${baseUrl.replace(/\/$/, '')}${RELEASES_ENDPOINT}`;
+};
+
+const extractReleaseRecords = (payload: ReleasesApiResponse): ReleasesApiRecord[] => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (Array.isArray(payload?.data)) {
+    return payload.data;
+  }
+
+  if (Array.isArray(payload?.result)) {
+    return payload.result;
+  }
+
+  if (Array.isArray(payload?.items)) {
+    return payload.items;
+  }
+
+  return [];
+};
+
+const mapReleaseRecord = (record: ReleasesApiRecord): CatalogueReleaseGroup | null => {
+  const rawDate = record.date ?? record.releaseDate ?? record.release_date;
+
+  if (!rawDate && !record.bookEans && !record.book_eans && !Array.isArray(record.books)) {
+    return null;
+  }
+
+  const normalizedDate = normalizeDateFromApi(rawDate);
+  const releaseMatch = catalogueDb.releases.find(release => {
+    if (!rawDate) {
+      return release.date === normalizedDate;
+    }
+
+    return release.date === rawDate || release.date === normalizedDate;
+  });
+
+  const eansFromRecord = [
+    ...(record.bookEans ?? []),
+    ...(record.book_eans ?? []),
+    ...(Array.isArray(record.books)
+      ? record.books
+          .map(book => book?.ean)
+          .filter((ean): ean is string => typeof ean === 'string' && ean.trim().length > 0)
+      : []),
+  ];
+
+  const eans = Array.from(
+    new Set([
+      ...eansFromRecord,
+      ...(releaseMatch?.bookEans ?? []),
+    ]),
+  );
+
+  const books = eans
+    .map(ean => {
+      try {
+        return cloneBook(ean);
+      } catch (error) {
+        console.warn(`[catalogueApi] Livre introuvable pour l'EAN ${ean} (release ${rawDate ?? 'inconnue'})`, error);
+        return null;
+      }
+    })
+    .filter((book): book is CatalogueBook => book !== null);
+
+  return {
+    date: normalizedDate || releaseMatch?.date || rawDate || 'Date non communiquée',
+    books,
+  };
+};
+
+const fetchReleasesFromApi = async (): Promise<CatalogueReleaseGroup[]> => {
+  const response = await fetch(resolveReleasesApiUrl(), {
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erreur API nouveautés (${response.status}) ${response.statusText}`);
+  }
+
+  const payload = (await response.json()) as ReleasesApiResponse;
+  const records = extractReleaseRecords(payload);
+
+  return records
+    .map(mapReleaseRecord)
+    .filter((group): group is CatalogueReleaseGroup => group !== null);
+};
+
 export async function fetchCatalogueReleases(): Promise<CatalogueReleaseGroup[]> {
   const endpoint = 'fetchCatalogueReleases';
   logRequest(endpoint);
-  const data = catalogueDb.releases.map(release => ({
+
+  try {
+    const apiData = await fetchReleasesFromApi();
+    logResponse(endpoint, apiData);
+    return apiData;
+  } catch (error) {
+    console.error('[catalogueApi] Impossible de récupérer les nouveautés via API', error);
+  }
+
+  const fallback = catalogueDb.releases.map(release => ({
     date: release.date,
     books: release.bookEans.map(cloneBook),
   }));
-  logResponse(endpoint, data);
-  return Promise.resolve(data);
+  logResponse(`${endpoint}:fallback`, fallback);
+  return fallback;
 }
 
 type OfficesApiResponse =
