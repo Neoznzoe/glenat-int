@@ -1,0 +1,11 @@
+# Définition minimaliste pour exécuter l'image construite depuis la pipeline.
+services:
+  app:
+    # Tag injecté par Azure Pipelines via la variable BUILD_BUILDID.
+    image: myregistry.azurecr.io/mon-app:${BUILD_BUILDID:-latest}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    # Force le mode production dans l'application servie.
+    environment:
+      NODE_ENV: production
