@@ -6,6 +6,6 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-    # Force le mode production dans l'application servie.
+    # Par défaut le conteneur tourne en production ; override via une variable d'environnement .env.
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${NODE_ENV:-production}

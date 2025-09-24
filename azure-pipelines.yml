@@ -1,3 +1,22 @@
+# Paramètres pour cibler différents environnements (prod, recette, dev, etc.).
+parameters:
+- name: deploymentTarget
+  displayName: "Nom de l'environnement Azure DevOps"
+  type: string
+  default: production
+  values:
+    - production
+    - recette
+    - dev
+- name: nodeEnvironment
+  displayName: "Valeur passée à NODE_ENV dans le conteneur"
+  type: string
+  default: production
+  values:
+    - production
+    - recette
+    - development
+
 # Déclenche automatiquement la pipeline lorsque la branche main est mise à jour.
 trigger:
   branches:
@@ -11,6 +30,7 @@ pool:
 variables:
   imageName: mon-app
   registry: myregistry.azurecr.io
+  nodeEnv: ${{ parameters.nodeEnvironment }}
 
 stages:
 - stage: Build
@@ -44,7 +64,7 @@ stages:
   jobs:
   - deployment: DeployToServer
     displayName: 'Run container on self-hosted server'
-    environment: 'production'
+    environment: '${{ parameters.deploymentTarget }}'
     strategy:
       runOnce:
         deploy:
@@ -60,5 +80,6 @@ stages:
               docker pull $(registry)/$(imageName):$(Build.BuildId)
               docker stop mon-app || true
               docker rm mon-app || true
-              docker run -d --name mon-app -p 80:80 $(registry)/$(imageName):$(Build.BuildId)
+              docker run -d --name mon-app -p 80:80 -e NODE_ENV=$(nodeEnv) $(registry)/$(imageName):$(Build.BuildId)
             displayName: 'Deploy container'
+            # Le script ci-dessus relaie la valeur NODE_ENV choisie dans les paramètres.

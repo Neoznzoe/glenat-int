@@ -95,9 +95,18 @@ Ce guide décrit toutes les actions à réaliser dans Azure (Portail Azure et Az
   2. Script bash :
      - `docker pull` de l'image taggée.
      - Arrêt et suppression du conteneur `mon-app` existant (adapter le nom).
-     - `docker run` en détaché sur le port 80.
+     - `docker run` en détaché sur le port 80 avec la variable `NODE_ENV` passée en paramètre.
 
 > Adaptez le nom du conteneur, les ports, variables d'environnement ou volumes selon votre application. Pour `docker-compose`, remplacez le script par `docker compose pull && docker compose up -d`.
+
+### 4.1 Gérer plusieurs environnements (production, recette, dev)
+
+- Les paramètres `deploymentTarget` et `nodeEnvironment` définis en tête du fichier vous permettent de re-déployer la même pipeline sur des cibles différentes :
+  - `deploymentTarget` correspond au nom de l'environnement Azure DevOps (ex. `production`, `recette`, `dev`).
+  - `nodeEnvironment` correspond à la valeur injectée dans `NODE_ENV` à l'exécution du conteneur (valeurs usuelles : `production`, `recette`, `development`).
+- Lors de la création/la planification d'un run, vous pouvez modifier ces paramètres pour pointer vers un autre serveur ou une autre configuration.
+- Si vous utilisez `docker compose`, créez un fichier `.env` par environnement (`NODE_ENV=production`, `NODE_ENV=recette`, `NODE_ENV=development`) ou des fichiers `docker-compose.override.yml` dédiés.
+- Côté application Node.js, assurez-vous que les comportements souhaités sont bien associés à ces trois valeurs (`production`, `recette`, `development`).
 
 ## 5. Tester et valider
 
