@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
-import { fetchCatalogueReleases, type CatalogueReleaseGroup } from '@/lib/catalogue';
+import { fetchCatalogueReleases, type CatalogueReleaseGroup } from '@/api/catalogue';
 
 export function Nouveautes() {
   const publishers = [

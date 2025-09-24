@@ -21,26 +21,21 @@ function SearchModule({ title, placeholder }: { title: string; placeholder?: str
   );
 }
 
-// Predefined names per weekday to avoid external calls
-const namesByWeekday: Record<string, string[]> = {
-  lundi: ['Gabin', 'Agathe'],
-  mardi: ['Bernard', 'Brigitte'],
-  mercredi: ['Camille', 'Céline'],
-  jeudi: ['Denis', 'Diane'],
-  vendredi: ['Eric', 'Emma'],
-  samedi: ['Fanny', 'Florian'],
-  dimanche: ['Gabriel', 'Gaëlle'],
-};
+export interface ActualitesCardProps {
+  newArrivals: string[];
+  saintNamesByWeekday: Record<string, string[]>;
+}
 
-export function ActualitesCard() {
+export function ActualitesCard({
+  newArrivals,
+  saintNamesByWeekday,
+}: ActualitesCardProps) {
   const saintNames = useMemo(() => {
     const weekday = new Date()
       .toLocaleDateString('fr-FR', { weekday: 'long' })
       .toLowerCase();
-    return namesByWeekday[weekday] || [];
-  }, []);
-
-  const newArrivals = ['Alice Martin', 'Bob Dupont', 'Charles Durand'];
+    return saintNamesByWeekday[weekday] || [];
+  }, [saintNamesByWeekday]);
 
   return (
     <Card className="lg:col-span-2 overflow-hidden">

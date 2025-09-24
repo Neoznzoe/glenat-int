@@ -4,12 +4,12 @@ import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { Toaster } from '@/components/ui/sonner';
 import AppRoutes, { LAZY_ROUTE_PRELOADERS, ROUTES_CONFIG } from './routes';
-import { jobOffers } from '@/data/jobOffers';
+import { fetchJobOffers } from '@/api/jobs';
 import { SecureRoutingProvider } from './lib/secureRouting';
 
 function App() {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
-  const jobCount = jobOffers.length;
+  const [jobCount, setJobCount] = useState(0);
 
   useEffect(() => {
     LAZY_ROUTE_PRELOADERS.forEach((preload) => {
@@ -17,6 +17,24 @@ function App() {
         // Ignorer les erreurs de préchargement pour ne pas perturber l'expérience utilisateur
       });
     });
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    fetchJobOffers()
+      .then((offers) => {
+        if (active) {
+          setJobCount(offers.length);
+        }
+      })
+      .catch((error) => {
+        console.error('Impossible de compter les offres emploi', error);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (

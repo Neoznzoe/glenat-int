@@ -13,7 +13,7 @@ import CatalogueLayout from './CatalogueLayout';
 import EditionCard from '@/components/EditionCard';
 import { useEffect, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
-import { fetchCatalogueEditions, type CatalogueEdition } from '@/lib/catalogue';
+import { fetchCatalogueEditions, type CatalogueEdition } from '@/api/catalogue';
 
 export function Catalogue() {
   const [editions, setEditions] = useState<CatalogueEdition[] | null>(null);

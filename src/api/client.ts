@@ -1,11 +1,4 @@
-import {
-  type AuditLogEntry,
-  type PermissionOverride,
-  type UpdateUserAccessPayload,
-  type UserAccount,
-} from './mockDb';
-import { type GroupDefinition, type PermissionDefinition } from './access-control';
-import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
+import { encryptUrlPayload, isUrlEncryptionConfigured } from '@/lib/urlEncryption';
 
 async function withEncryptedUrl(
   input: RequestInfo | URL,
@@ -74,9 +67,10 @@ async function withEncryptedUrl(
   return { input: `/secure/${token}`, init };
 }
 
-async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
+export async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
   const encrypted = await withEncryptedUrl(input, init);
   const response = await fetch(encrypted.input, encrypted.init);
+
   if (!response.ok) {
     let detail = response.statusText;
     try {
@@ -89,41 +83,28 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Pro
     }
     throw new Error(detail || 'Requête échouée');
   }
+
   return (await response.json()) as T;
 }
 
-export async function fetchUsers(): Promise<UserAccount[]> {
-  return requestJson<UserAccount[]>('/api/admin/users');
+export async function getJson<T>(input: RequestInfo | URL, init?: RequestInit) {
+  return requestJson<T>(input, init);
 }
 
-export async function fetchGroups(): Promise<GroupDefinition[]> {
-  return requestJson<GroupDefinition[]>('/api/admin/groups');
-}
+export async function mutateJson<TResponse, TBody>(
+  input: RequestInfo | URL,
+  body: TBody,
+  init?: RequestInit,
+) {
+  const headers = new Headers(init?.headers);
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
 
-export async function fetchPermissions(): Promise<PermissionDefinition[]> {
-  return requestJson<PermissionDefinition[]>('/api/admin/permissions');
-}
-
-export async function fetchAuditLog(limit = 25): Promise<AuditLogEntry[]> {
-  const params = new URLSearchParams({ limit: String(limit) });
-  return requestJson<AuditLogEntry[]>(`/api/admin/audit-log?${params.toString()}`);
-}
-
-export async function fetchCurrentUser(): Promise<UserAccount> {
-  return requestJson<UserAccount>('/api/admin/current-user');
-}
-
-export async function persistUserAccess(
-  payload: UpdateUserAccessPayload,
-): Promise<UserAccount> {
-  const { userId, ...body } = payload;
-  return requestJson<UserAccount>(`/api/admin/users/${encodeURIComponent(userId)}/access`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+  return requestJson<TResponse>(input, {
+    ...init,
+    method: init?.method ?? 'POST',
+    headers,
     body: JSON.stringify(body),
   });
 }
-
-export type { UserAccount, PermissionOverride, AuditLogEntry, UpdateUserAccessPayload };

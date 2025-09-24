@@ -578,3 +578,100 @@ export async function fetchCatalogueRelatedBooks(
     return Promise.resolve([]);
   }
 }
+
+interface CatalogueCoverApiResponse {
+  success?: boolean;
+  message?: string;
+  result?: {
+    ean?: string;
+    imageBase64?: string;
+  };
+}
+
+export interface CatalogueCover {
+  ean: string;
+  imageBase64: string;
+  message?: string;
+}
+
+const CATALOGUE_COVER_ENDPOINT_DEV = '/extranet/couverture';
+const CATALOGUE_COVER_ENDPOINT_PROD =
+  'https://api-recette.groupe-glenat.com/Api/v1.0/Extranet/couverture';
+
+function resolveCatalogueCoverEndpoint(): string {
+  return import.meta.env.DEV
+    ? CATALOGUE_COVER_ENDPOINT_DEV
+    : CATALOGUE_COVER_ENDPOINT_PROD;
+}
+
+export async function fetchCatalogueCover(
+  ean: string,
+  options?: { signal?: AbortSignal },
+): Promise<CatalogueCover> {
+  const endpoint = `fetchCatalogueCover:${ean}`;
+  logRequest(endpoint);
+
+  const response = await fetch(
+    `${resolveCatalogueCoverEndpoint()}?ean=${encodeURIComponent(ean)}`,
+    {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: options?.signal,
+    },
+  );
+
+  if (!response.ok) {
+    logResponse(endpoint, { status: response.status });
+    throw new Error(`Erreur API (${response.status}) ${response.statusText}`);
+  }
+
+  const data = (await response.json()) as CatalogueCoverApiResponse;
+  const success = data?.success ?? false;
+  const imageBase64 = data?.result?.imageBase64;
+
+  if (success && imageBase64) {
+    const result: CatalogueCover = {
+      ean,
+      imageBase64,
+      message: data?.message,
+    };
+    logResponse(endpoint, { status: 'success' });
+    return result;
+  }
+
+  const message = data?.message ?? "Réponse inattendue de l'API couverture";
+  logResponse(endpoint, { status: 'error', message });
+  throw new Error(message);
+}
+
+export type CatalogueCoverStatus =
+  | ({ status: 'success' } & CatalogueCover)
+  | { status: 'error'; ean: string; message: string };
+
+export async function fetchCatalogueCovers(
+  eans: string[],
+  options?: { signal?: AbortSignal },
+): Promise<CatalogueCoverStatus[]> {
+  return Promise.all(
+    eans.map(async (ean) => {
+      try {
+        const cover = await fetchCatalogueCover(ean, options);
+        return { status: 'success', ...cover } satisfies CatalogueCoverStatus;
+      } catch (error) {
+        if (
+          options?.signal?.aborted ||
+          (error instanceof DOMException && error.name === 'AbortError') ||
+          (error instanceof Error && error.name === 'AbortError')
+        ) {
+          throw error;
+        }
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Erreur inconnue lors de la récupération';
+        return { status: 'error', ean, message } satisfies CatalogueCoverStatus;
+      }
+    }),
+  );
+}
