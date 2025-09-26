@@ -20,12 +20,14 @@ import {
   ArrowUpWideNarrow,
 } from 'lucide-react';
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { SecureLink } from '@/components/routing/SecureLink';
 import { fetchCatalogueOffices, type CatalogueOfficeGroup } from '@/lib/catalogue';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export function Offices() {
+  const location = useLocation();
   const publishers = [
     'Hugo',
     'Comix Buro',
@@ -51,6 +53,7 @@ export function Offices() {
 
     setIsLoading(true);
     setError(null);
+    setOffices(null);
 
     fetchCatalogueOffices()
       .then(data => {
@@ -58,6 +61,7 @@ export function Offices() {
           return;
         }
 
+        console.log('[Offices] données reçues', data);
         setOffices(data);
       })
       .catch(fetchError => {
@@ -82,7 +86,7 @@ export function Offices() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [location.key]);
 
   const toggleSortDirection = () =>
     setSortDirection(prev => (prev === 'desc' ? 'asc' : 'desc'));

@@ -496,10 +496,6 @@ const CATALOGUE_OFFICES_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
   : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
 
-const COVERAGE_ENDPOINT_BASE = import.meta.env.DEV
-  ? '/extranet/couverture'
-  : 'https://api-recette.groupe-glenat.com/Api/v1.0/Extranet/couverture';
-
 const NEXT_OFFICES_SQL_QUERY = `;WITH next_offices AS (
     SELECT TOP (4)
            office,
@@ -536,18 +532,6 @@ interface DatabaseApiResponse {
   rows?: unknown;
   [key: string]: unknown;
 }
-
-interface CouvertureApiResponse {
-  success?: boolean;
-  message?: string;
-  result?: {
-    ean?: string;
-    imageBase64?: string;
-    image?: string;
-  };
-}
-
-const coverageCache = new Map<string, Promise<string | null>>();
 
 const ensureString = (value: unknown): string | undefined => {
   if (typeof value === 'string') {
@@ -752,55 +736,6 @@ const extractShippingMessage = (record: RawCatalogueOfficeRecord): string | unde
   return undefined;
 };
 
-const fetchCoverageForEan = async (ean: string): Promise<string | null> => {
-  const normalized = ean.trim();
-  if (!normalized) {
-    return null;
-  }
-
-  const existing = coverageCache.get(normalized);
-  if (existing) {
-    return existing;
-  }
-
-  const promise = (async () => {
-    try {
-      const response = await fetch(`${COVERAGE_ENDPOINT_BASE}?ean=${encodeURIComponent(normalized)}`, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status} ${response.statusText}`);
-      }
-
-      const data = (await response.json()) as CouvertureApiResponse;
-
-      if (data.success === false) {
-        throw new Error(data.message ?? 'Réponse négative de l\'API couverture');
-      }
-
-      const image = data.result?.imageBase64 ?? data.result?.image;
-      if (typeof image === 'string') {
-        const trimmed = image.trim();
-        if (trimmed) {
-          return trimmed.startsWith('data:') ? trimmed : `data:image/jpeg;base64,${trimmed}`;
-        }
-      }
-
-      return null;
-    } catch (error) {
-      console.warn(`[catalogueApi] Impossible de récupérer la couverture ${normalized}`, error);
-      return null;
-    }
-  })();
-
-  coverageCache.set(normalized, promise);
-  return promise;
-};
-
 const normalizeBookFromRecord = async (
   record: RawCatalogueOfficeRecord,
 ): Promise<CatalogueBook | null> => {
@@ -831,7 +766,7 @@ const normalizeBookFromRecord = async (
     getField(record, 'stock', 'stockdispo', 'qtestock', 'quantitestock', 'stocklibrairie'),
   ) ?? 0;
   const tome = ensureString(getField(record, 'tome', 'numero', 'numtome', 'tome_libelle'));
-  const cover = (await fetchCoverageForEan(ean)) ?? FALLBACK_COVER_DATA_URL;
+  const cover = FALLBACK_COVER_DATA_URL;
 
   return {
     cover,
