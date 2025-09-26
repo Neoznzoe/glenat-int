@@ -19,9 +19,11 @@ import {
   ArrowDownWideNarrow,
   ArrowUpWideNarrow,
 } from 'lucide-react';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
 import { fetchCatalogueOffices, type CatalogueOfficeGroup } from '@/lib/catalogue';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export function Offices() {
   const publishers = [
@@ -41,18 +43,40 @@ export function Offices() {
   const [selectedPublishers, setSelectedPublishers] = useState<string[]>([]);
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
   const [offices, setOffices] = useState<CatalogueOfficeGroup[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isActive = true;
 
+    setIsLoading(true);
+    setError(null);
+
     fetchCatalogueOffices()
       .then(data => {
-        if (isActive) {
-          setOffices(data);
+        if (!isActive) {
+          return;
         }
+
+        setOffices(data);
       })
-      .catch(error => {
-        console.error('Impossible de récupérer les offices', error);
+      .catch(fetchError => {
+        console.error('Impossible de récupérer les offices', fetchError);
+        if (!isActive) {
+          return;
+        }
+
+        setOffices([]);
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "Impossible de charger les prochaines offices",
+        );
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoading(false);
+        }
       });
 
     return () => {
@@ -76,13 +100,29 @@ export function Offices() {
     return new Date(year, month - 1, day);
   };
 
-  const sortedOffices = offices
-    ? [...offices].sort((a, b) => {
-        const dateA = parseDate(a.date).getTime();
-        const dateB = parseDate(b.date).getTime();
-        return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
-      })
-    : [];
+  const filteredOffices = useMemo(() => {
+    if (!offices) {
+      return [] as CatalogueOfficeGroup[];
+    }
+
+    if (selectedPublishers.length === 0) {
+      return offices;
+    }
+
+    return offices.filter(group =>
+      group.books.some(book => selectedPublishers.includes(book.publisher)),
+    );
+  }, [offices, selectedPublishers]);
+
+  const sortedOffices = useMemo(() => {
+    return [...filteredOffices].sort((a, b) => {
+      const dateA = parseDate(a.date).getTime();
+      const dateB = parseDate(b.date).getTime();
+      return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+    });
+  }, [filteredOffices, sortDirection]);
+
+  const shouldDisplaySkeletons = isLoading && !sortedOffices.length;
 
   return (
     <div className="p-6 space-y-6">
@@ -155,6 +195,40 @@ export function Offices() {
         <CardContent className="p-6">
           <CatalogueLayout active="Prochaines offices">
             <h3 className="mb-4 font-semibold text-xl">Prochaines offices</h3>
+            {shouldDisplaySkeletons && (
+              <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <Card key={index} className="flex flex-col overflow-hidden min-w-[230px]">
+                    <div className="relative flex items-center justify-center p-2 bg-muted/40">
+                      <Skeleton className="h-48 w-full" />
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-4 w-2/3" />
+                      <Skeleton className="h-4 w-1/3" />
+                      <Skeleton className="h-9 w-28" />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+            {!isLoading && error && (
+              <Alert variant="destructive" className="max-w-3xl">
+                <AlertTitle>Impossible de charger les offices</AlertTitle>
+                <AlertDescription>
+                  {error}
+                </AlertDescription>
+              </Alert>
+            )}
+            {!isLoading && !error && sortedOffices.length === 0 && (
+              <Alert className="max-w-3xl">
+                <AlertTitle>Aucune office disponible</AlertTitle>
+                <AlertDescription>
+                  Revenez plus tard pour découvrir les prochaines mises en vente.
+                </AlertDescription>
+              </Alert>
+            )}
             {sortedOffices.length > 0 && (
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
                 {sortedOffices.map(group => (
