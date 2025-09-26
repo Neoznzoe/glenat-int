@@ -29,7 +29,7 @@ import { useDecryptedLocation } from '@/lib/secureRouting';
 import { SecureNavLink } from '@/components/routing/SecureLink';
 
 interface SidebarProps {
-  jobCount: number;
+  jobCount?: number;
   onExpandChange?: (expanded: boolean) => void;
 }
 
@@ -223,7 +223,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
                       >
                         {item.label}
                       </span>
-                      {item.badge ? (
+                      {item.badge !== undefined ? (
                         <span className="absolute -top-[5px] -right-[5px] bg-white text-primary text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                           {item.badge}
                         </span>
