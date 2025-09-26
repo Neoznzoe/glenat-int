@@ -1,29 +1,30 @@
-import path from 'path';
-import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+// vite.config.js
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
+    alias: { '@': path.resolve(__dirname, './src') },
   },
   server: {
     proxy: {
-      // Proxy de dev pour contourner CORS sur l'API Extranet
-      '/extranet': {
+      // proxy DEV pour l’API Intranet
+      '/intranet': {
         target: 'https://api-recette.groupe-glenat.com',
         changeOrigin: true,
         secure: false,
-        rewrite: (p) => p.replace(/^\/extranet/, '/Api/v1.0/Extranet'),
+        rewrite: p => p.replace(/^\/intranet/, '/Api/v1.0/Intranet'),
       },
     },
   },
-  optimizeDeps: {
-    exclude: ['lucide-react'],
+  optimizeDeps: { exclude: ['lucide-react'] },
+  css: { transformer: 'postcss' },
+  build: {
+    outDir: '.',
+    assetsDir: 'public/assets',
+    emptyOutDir: false,
+    rollupOptions: { output: {} },
   },
-  css: {
-    transformer: 'postcss',
-  },
-});
+})

@@ -15,6 +15,10 @@ import {
 } from '@azure/msal-browser';
 import { useMsal } from '@azure/msal-react';
 import { loginRequest } from '@/lib/msal';
+import {
+  lookupInternalUserByEmail,
+  type DatabaseUserLookupResponse,
+} from '@/lib/internalUserLookup';
 
 interface UserProfile {
   id: string;
@@ -26,6 +30,7 @@ interface UserProfile {
   officeLocation?: string;
   userPrincipalName?: string;
   photoUrl?: string;
+  internalUser?: DatabaseUserLookupResponse | null;
 }
 
 interface AuthContextValue {
@@ -145,7 +150,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const profile = await fetchUserProfile(instance, activeAccount);
-        setUser(profile);
+                let internalUser: DatabaseUserLookupResponse | null = null;
+        const email = profile.mail ?? profile.userPrincipalName;
+
+        if (email) {
+          try {
+            internalUser = await lookupInternalUserByEmail(email);
+          } catch (syncError) {
+            console.error(
+              "Impossible de synchroniser l'utilisateur interne :",
+              syncError,
+            );
+          }
+        }
+
+        setUser({ ...profile, internalUser });
         setError(null);
       } catch (authError) {
         if (authError instanceof InteractionRequiredAuthError) {

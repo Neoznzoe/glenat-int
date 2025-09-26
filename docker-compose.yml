@@ -5,7 +5,7 @@ services:
     image: myregistry.azurecr.io/mon-app:${BUILD_BUILDID:-latest}
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "80:83"
     # Par défaut le conteneur tourne en production ; override via une variable d'environnement .env.
     environment:
       NODE_ENV: ${NODE_ENV:-production}
