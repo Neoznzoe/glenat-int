@@ -496,6 +496,10 @@ const CATALOGUE_OFFICES_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
   : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
 
+const CATALOGUE_COVERAGE_ENDPOINT_BASE = import.meta.env.DEV
+  ? '/extranet/couverture'
+  : 'https://api-recette.groupe-glenat.com/Api/v1.0/Extranet/couverture';
+
 const NEXT_OFFICES_SQL_QUERY = `;WITH next_offices AS (
     SELECT TOP (4)
            office,
@@ -519,6 +523,58 @@ const FALLBACK_COVER_DATA_URL =
   encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300" preserveAspectRatio="xMidYMid meet"><rect width="200" height="300" fill="#f4f4f5"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#a1a1aa">Couverture indisponible</text></svg>',
   );
+
+type CoverApiResponse = {
+  success?: boolean;
+  message?: string;
+  result?: {
+    ean?: string;
+    imageBase64?: string;
+  };
+};
+
+const coverCache = new Map<string, Promise<string | null>>();
+
+const fetchCover = async (ean: string): Promise<string | null> => {
+  if (!ean) {
+    return null;
+  }
+
+  const existing = coverCache.get(ean);
+  if (existing) {
+    return existing;
+  }
+
+  const promise = (async () => {
+    try {
+      const response = await fetch(`${CATALOGUE_COVERAGE_ENDPOINT_BASE}?ean=${encodeURIComponent(ean)}`, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+      }
+
+      const data = (await response.json()) as CoverApiResponse;
+      const imageBase64 = data?.result?.imageBase64;
+
+      if (data?.success && imageBase64) {
+        console.log('[catalogueApi] Couverture reçue', ean, data);
+        return imageBase64;
+      }
+
+      const errorMessage = data?.message ?? "Réponse inattendue de l'API couverture";
+      throw new Error(errorMessage);
+    } catch (error) {
+      console.error(`[catalogueApi] Impossible de récupérer la couverture ${ean}`, error);
+      return null;
+    }
+  })();
+
+  coverCache.set(ean, promise);
+  return promise;
+};
 
 type RawCatalogueOfficeRecord = Record<string, unknown>;
 
@@ -766,7 +822,7 @@ const normalizeBookFromRecord = async (
     getField(record, 'stock', 'stockdispo', 'qtestock', 'quantitestock', 'stocklibrairie'),
   ) ?? 0;
   const tome = ensureString(getField(record, 'tome', 'numero', 'numtome', 'tome_libelle'));
-  const cover = FALLBACK_COVER_DATA_URL;
+  const cover = (await fetchCover(ean)) ?? FALLBACK_COVER_DATA_URL;
 
   return {
     cover,
