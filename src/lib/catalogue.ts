@@ -549,14 +549,6 @@ interface CouvertureApiResponse {
 
 const coverageCache = new Map<string, Promise<string | null>>();
 
-const getStaticOffices = (): CatalogueOfficeGroup[] =>
-  catalogueDb.offices.map(office => ({
-    office: office.office,
-    date: office.date,
-    shipping: office.shipping,
-    books: office.bookEans.map(cloneBook),
-  }));
-
 const ensureString = (value: unknown): string | undefined => {
   if (typeof value === 'string') {
     const trimmed = value.trim();
@@ -962,9 +954,7 @@ export async function fetchCatalogueOffices(): Promise<CatalogueOfficeGroup[]> {
     return groups;
   } catch (error) {
     console.error('[catalogueApi] Impossible de récupérer les prochaines offices', error);
-    const fallback = getStaticOffices();
-    logResponse(`${endpoint}:fallback`, fallback);
-    return fallback;
+    throw error;
   }
 }
 
