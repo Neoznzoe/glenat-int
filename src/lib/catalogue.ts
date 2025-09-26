@@ -494,7 +494,7 @@ export async function fetchCatalogueReleases(): Promise<CatalogueReleaseGroup[]>
 
 const CATALOGUE_OFFICES_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
-  : 'https://api-recette.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
+  : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
 
 const COVERAGE_ENDPOINT_BASE = import.meta.env.DEV
   ? '/extranet/couverture'
