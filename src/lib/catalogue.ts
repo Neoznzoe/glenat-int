@@ -496,12 +496,43 @@ const CATALOGUE_OFFICES_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
   : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
 
-const CATALOGUE_COVERAGE_ENDPOINTS = import.meta.env.DEV
-  ? ['/extranet/couverture']
-  : [
-      '/extranet/couverture',
-      'https://api-recette.groupe-glenat.com/Api/v1.0/Extranet/couverture',
-    ];
+const parseEndpointList = (value: unknown): string[] => {
+  if (typeof value !== 'string') {
+    return [];
+  }
+
+  return value
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+};
+
+const resolveCoverageEndpoints = (): string[] => {
+  const overrides = parseEndpointList(import.meta.env.VITE_CATALOGUE_COVER_ENDPOINT);
+  if (overrides.length > 0) {
+    return overrides;
+  }
+
+  if (import.meta.env.DEV) {
+    return ['/extranet/couverture'];
+  }
+
+  const endpoints = new Set<string>();
+
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname.toLowerCase();
+
+    if (hostname.includes('intranet')) {
+      endpoints.add('https://api-dev.groupe-glenat.com/Api/v1.0/Extranet/couverture');
+    }
+  }
+
+  endpoints.add('https://api-recette.groupe-glenat.com/Api/v1.0/Extranet/couverture');
+
+  return Array.from(endpoints);
+};
+
+const CATALOGUE_COVERAGE_ENDPOINTS = resolveCoverageEndpoints();
 
 const NEXT_OFFICES_SQL_QUERY = `;WITH next_offices AS (
     SELECT TOP (4)
@@ -545,6 +576,24 @@ const coverCache = new Map<string, Promise<string | null>>();
 
 let lastCoverFetch: Promise<unknown> = Promise.resolve();
 
+const normaliseCoverDataUrl = (value: string | undefined): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.startsWith('data:')) {
+    return trimmed;
+  }
+
+  return `data:image/jpeg;base64,${trimmed}`;
+};
+
 const fetchCover = async (ean: string): Promise<string | null> => {
   if (!ean) {
     return null;
@@ -573,7 +622,7 @@ const fetchCover = async (ean: string): Promise<string | null> => {
         }
 
         const data = (await response.json()) as CoverApiResponse;
-        const imageBase64 = data?.result?.imageBase64;
+        const imageBase64 = normaliseCoverDataUrl(data?.result?.imageBase64);
 
         if (data?.success && imageBase64) {
           console.log('[catalogueApi] Couverture reçue', ean, { endpoint, message: data?.message });
