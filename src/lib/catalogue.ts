@@ -576,6 +576,50 @@ const coverCache = new Map<string, Promise<string | null>>();
 
 let lastCoverFetch: Promise<unknown> = Promise.resolve();
 
+const shouldIncludeCredentials = (endpoint: string): boolean => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  try {
+    const base = window.location.origin ?? 'https://groupe-glenat.com';
+    const url = new URL(endpoint, base);
+
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return false;
+    }
+
+    const hostname = url.hostname.toLowerCase();
+    const currentHost = window.location.hostname.toLowerCase();
+
+    if (hostname === currentHost) {
+      return true;
+    }
+
+    if (hostname.includes('api-dev.groupe-glenat.com')) {
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.warn('[catalogueApi] Impossible de déterminer le domaine pour la couverture', endpoint, error);
+    return false;
+  }
+};
+
+const buildCoverRequestInit = (endpoint: string): RequestInit => {
+  const init: RequestInit = {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  };
+
+  if (shouldIncludeCredentials(endpoint)) {
+    init.credentials = 'include';
+  }
+
+  return init;
+};
+
 const normaliseCoverDataUrl = (value: string | undefined): string | null => {
   if (!value) {
     return null;
@@ -612,10 +656,7 @@ const fetchCover = async (ean: string): Promise<string | null> => {
       const url = `${endpoint}${endpoint.includes('?') ? '&' : '?'}ean=${encodeURIComponent(ean)}`;
 
       try {
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: { Accept: 'application/json' },
-        });
+        const response = await fetch(url, buildCoverRequestInit(endpoint));
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status} ${response.statusText}`);
