@@ -572,7 +572,8 @@ const wait = (ms: number) =>
     setTimeout(resolve, ms);
   });
 
-const coverCache = new Map<string, Promise<string | null>>();
+const coverCache = new Map<string, string>();
+const pendingCoverRequests = new Map<string, Promise<string | null>>();
 
 let lastCoverFetch: Promise<unknown> = Promise.resolve();
 
@@ -643,13 +644,19 @@ const fetchCover = async (ean: string): Promise<string | null> => {
     return null;
   }
 
-  const existing = coverCache.get(ean);
-  if (existing) {
-    return existing;
+  const cachedCover = coverCache.get(ean);
+  if (cachedCover) {
+    return cachedCover;
   }
 
-  const promise = (async () => {
-    await lastCoverFetch.catch(() => {});
+  const pendingRequest = pendingCoverRequests.get(ean);
+  if (pendingRequest) {
+    return pendingRequest;
+  }
+
+  const previousFetch = lastCoverFetch;
+  const request = (async () => {
+    await previousFetch.catch(() => {});
     await wait(3);
 
     for (const endpoint of CATALOGUE_COVERAGE_ENDPOINTS) {
@@ -667,6 +674,7 @@ const fetchCover = async (ean: string): Promise<string | null> => {
 
         if (data?.success && imageBase64) {
           console.log('[catalogueApi] Couverture reçue', ean, { endpoint, message: data?.message });
+          coverCache.set(ean, imageBase64);
           return imageBase64;
         }
 
@@ -680,13 +688,18 @@ const fetchCover = async (ean: string): Promise<string | null> => {
     return null;
   })();
 
-  coverCache.set(ean, promise);
-  lastCoverFetch = promise.then(
+  pendingCoverRequests.set(ean, request);
+
+  lastCoverFetch = request.then(
     () => undefined,
     () => undefined,
   );
 
-  return promise;
+  request.finally(() => {
+    pendingCoverRequests.delete(ean);
+  });
+
+  return request;
 };
 
 type RawCatalogueOfficeRecord = Record<string, unknown>;
