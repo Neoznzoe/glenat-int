@@ -466,6 +466,14 @@ export interface CatalogueOfficeGroup {
   books: CatalogueBook[];
 }
 
+export interface HydrateCatalogueOfficeGroupsOptions {
+  onCoverProgress?: (groups: CatalogueOfficeGroup[]) => void;
+}
+
+export interface FetchCatalogueOfficesOptions extends HydrateCatalogueOfficeGroupsOptions {
+  hydrateCovers?: boolean;
+}
+
 export interface CatalogueKiosqueGroup {
   office: string;
   date: string;
@@ -1075,46 +1083,75 @@ const buildCatalogueOfficeGroups = async (
   return groups.filter((group): group is CatalogueOfficeGroup => group !== null);
 };
 
-const hydrateGroupsWithCovers = async (
+export async function hydrateCatalogueOfficeGroupsWithCovers(
   groups: CatalogueOfficeGroup[],
-): Promise<CatalogueOfficeGroup[]> => {
-  const coverResults = new Map<string, string | null>();
-  const hydratedGroups: CatalogueOfficeGroup[] = [];
+  options: HydrateCatalogueOfficeGroupsOptions = {},
+): Promise<CatalogueOfficeGroup[]> {
+  const { onCoverProgress } = options;
+  const coverCache = new Map<string, Promise<string | null>>();
+  const resultGroups = groups.map(group => ({
+    ...group,
+    books: group.books.map(book => ({ ...book })),
+  }));
 
-  for (const group of groups) {
-    const hydratedBooks: CatalogueBook[] = [];
-    let hasChange = false;
+  let hasProgress = false;
 
-    for (const book of group.books) {
-      const ean = book.ean;
-
-      if (!ean) {
-        hydratedBooks.push(book);
-        continue;
-      }
-
-      let cover = coverResults.get(ean);
-
-      if (cover === undefined) {
-        cover = await fetchCover(ean);
-        coverResults.set(ean, cover);
-      }
-
-      if (cover && book.cover !== cover) {
-        hydratedBooks.push({ ...book, cover });
-        hasChange = true;
-      } else {
-        hydratedBooks.push(book);
-      }
+  const emitProgress = () => {
+    if (!onCoverProgress) {
+      return;
     }
 
-    hydratedGroups.push(hasChange ? { ...group, books: hydratedBooks } : group);
+    hasProgress = true;
+    const snapshot = resultGroups.map(group => ({
+      ...group,
+      books: group.books.map(book => ({ ...book })),
+    }));
+    onCoverProgress(snapshot);
+  };
+
+  for (const group of resultGroups) {
+    await Promise.all(
+      group.books.map(async (book, bookIndex) => {
+        const ean = book.ean;
+
+        if (!ean) {
+          return;
+        }
+
+        let coverPromise = coverCache.get(ean);
+
+        if (!coverPromise) {
+          coverPromise = fetchCover(ean).catch(error => {
+            console.warn(
+              `[catalogueApi] Impossible de recuperer la couverture pour ${ean}`,
+              error,
+            );
+            return null;
+          });
+          coverCache.set(ean, coverPromise);
+        }
+
+        const cover = await coverPromise;
+
+        if (cover && cover !== book.cover) {
+          group.books[bookIndex] = { ...book, cover };
+          emitProgress();
+        }
+      }),
+    );
   }
 
-  return hydratedGroups;
-};
+  if (onCoverProgress && !hasProgress) {
+    emitProgress();
+  }
 
-export async function fetchCatalogueOffices(): Promise<CatalogueOfficeGroup[]> {
+  return resultGroups;
+}
+
+export async function fetchCatalogueOffices(
+  options: FetchCatalogueOfficesOptions = {},
+): Promise<CatalogueOfficeGroup[]> {
+  const { hydrateCovers = true, onCoverProgress } = options;
   const endpoint = 'fetchCatalogueOffices';
   logRequest(endpoint);
 
@@ -1136,21 +1173,35 @@ export async function fetchCatalogueOffices(): Promise<CatalogueOfficeGroup[]> {
     const records = extractDatabaseRows(payload);
 
     if (!records.length) {
-      throw new Error('La base de données n\'a retourné aucun résultat');
+      throw new Error("La base de donnees n'a retourne aucun resultat");
     }
 
     const groups = await buildCatalogueOfficeGroups(records);
 
     if (!groups.length) {
-      throw new Error('Impossible de construire les offices à partir des données reçues');
+      throw new Error('Impossible de construire les offices a partir des donnees recues');
     }
 
-    const hydratedGroups = await hydrateGroupsWithCovers(groups);
+    if (!hydrateCovers) {
+      logResponse(endpoint, groups);
+
+      if (onCoverProgress) {
+        void hydrateCatalogueOfficeGroupsWithCovers(groups, { onCoverProgress }).catch(error => {
+          console.warn('[catalogueApi] Hydratation des couvertures interrompue', error);
+        });
+      }
+
+      return groups;
+    }
+
+    const hydratedGroups = await hydrateCatalogueOfficeGroupsWithCovers(groups, {
+      onCoverProgress,
+    });
 
     logResponse(endpoint, hydratedGroups);
     return hydratedGroups;
   } catch (error) {
-    console.error('[catalogueApi] Impossible de récupérer les prochaines offices', error);
+    console.error('[catalogueApi] Impossible de recuperer les prochaines offices', error);
     throw error;
   }
 }
@@ -1234,3 +1285,4 @@ export async function fetchCatalogueRelatedBooks(
     return Promise.resolve([]);
   }
 }
+

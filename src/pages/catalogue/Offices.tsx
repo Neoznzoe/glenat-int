@@ -25,6 +25,37 @@ import { SecureLink } from '@/components/routing/SecureLink';
 import { fetchCatalogueOffices, type CatalogueOfficeGroup } from '@/lib/catalogue';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+const SKELETON_GROUP_COUNT = 2;
+const SKELETON_BOOKS_PER_GROUP = 5;
+
+const BookCardSkeleton = () => (
+  <Card className="flex flex-col overflow-hidden min-w-[230px]">
+    <div className="relative flex items-center justify-center p-2 bg-muted/40">
+      <Skeleton className="h-48 w-full rounded-md" />
+    </div>
+    <div className="p-4 space-y-3">
+      <Skeleton className="h-5 w-3/4" />
+      <Skeleton className="h-4 w-1/2" />
+      <Skeleton className="h-4 w-2/3" />
+      <Skeleton className="h-4 w-1/3" />
+      <Skeleton className="h-9 w-28" />
+    </div>
+  </Card>
+);
+
+const OfficeGroupSkeleton = () => (
+  <Fragment>
+    <Card className="col-span-full w-fit min-w-[280px] bg-background">
+      <CardHeader className="py-2 space-y-2">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-4 w-40" />
+      </CardHeader>
+    </Card>
+    {Array.from({ length: SKELETON_BOOKS_PER_GROUP }).map((_, index) => (
+      <BookCardSkeleton key={index} />
+    ))}
+  </Fragment>
+);
 
 export function Offices() {
   const location = useLocation();
@@ -198,23 +229,13 @@ export function Offices() {
         <CardContent className="p-6">
           <CatalogueLayout active="Prochaines offices">
             <h3 className="mb-4 font-semibold text-xl">Prochaines offices</h3>
-            {shouldDisplaySkeletons && (
+                        {shouldDisplaySkeletons && (
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <Card key={index} className="flex flex-col overflow-hidden min-w-[230px]">
-                    <div className="relative flex items-center justify-center p-2 bg-muted/40">
-                      <Skeleton className="h-48 w-full" />
-                    </div>
-                    <div className="p-4 space-y-3">
-                      <Skeleton className="h-5 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
-                      <Skeleton className="h-4 w-2/3" />
-                      <Skeleton className="h-4 w-1/3" />
-                      <Skeleton className="h-9 w-28" />
-                    </div>
-                  </Card>
+                {Array.from({ length: SKELETON_GROUP_COUNT }).map((_, groupIndex) => (
+                  <OfficeGroupSkeleton key={groupIndex} />
                 ))}
               </div>
+            )}              </div>
             )}
             {!isLoading && error && (
               <Alert variant="destructive" className="max-w-3xl">
@@ -259,3 +280,4 @@ export function Offices() {
 }
 
 export default Offices;
+
