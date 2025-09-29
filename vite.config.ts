@@ -17,6 +17,13 @@ export default defineConfig({
         secure: false,
         rewrite: p => p.replace(/^\/intranet/, '/Api/v1.0/Intranet'),
       },
+      // proxy DEV pour l’API Extranet (couvertures)
+      '/extranet': {
+        target: 'https://api-recette.groupe-glenat.com',
+        changeOrigin: true,
+        secure: false,
+        rewrite: p => p.replace(/^\/extranet/, '/Api/v1.0/Extranet'),
+      },
     },
   },
   optimizeDeps: { exclude: ['lucide-react'] },

@@ -496,9 +496,12 @@ const CATALOGUE_OFFICES_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
   : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
 
-const CATALOGUE_COVERAGE_ENDPOINT_BASE = import.meta.env.DEV
-  ? '/extranet/couverture'
-  : 'https://api-recette.groupe-glenat.com/Api/v1.0/Extranet/couverture';
+const CATALOGUE_COVERAGE_ENDPOINTS = import.meta.env.DEV
+  ? ['/extranet/couverture']
+  : [
+      '/extranet/couverture',
+      'https://api-recette.groupe-glenat.com/Api/v1.0/Extranet/couverture',
+    ];
 
 const NEXT_OFFICES_SQL_QUERY = `;WITH next_offices AS (
     SELECT TOP (4)
@@ -533,7 +536,14 @@ type CoverApiResponse = {
   };
 };
 
+const wait = (ms: number) =>
+  new Promise<void>(resolve => {
+    setTimeout(resolve, ms);
+  });
+
 const coverCache = new Map<string, Promise<string | null>>();
+
+let lastCoverFetch: Promise<unknown> = Promise.resolve();
 
 const fetchCover = async (ean: string): Promise<string | null> => {
   if (!ean) {
@@ -546,33 +556,46 @@ const fetchCover = async (ean: string): Promise<string | null> => {
   }
 
   const promise = (async () => {
-    try {
-      const response = await fetch(`${CATALOGUE_COVERAGE_ENDPOINT_BASE}?ean=${encodeURIComponent(ean)}`, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-      });
+    await lastCoverFetch.catch(() => {});
+    await wait(3);
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    for (const endpoint of CATALOGUE_COVERAGE_ENDPOINTS) {
+      const url = `${endpoint}${endpoint.includes('?') ? '&' : '?'}ean=${encodeURIComponent(ean)}`;
+
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status} ${response.statusText}`);
+        }
+
+        const data = (await response.json()) as CoverApiResponse;
+        const imageBase64 = data?.result?.imageBase64;
+
+        if (data?.success && imageBase64) {
+          console.log('[catalogueApi] Couverture reçue', ean, { endpoint, message: data?.message });
+          return imageBase64;
+        }
+
+        const errorMessage = data?.message ?? "Réponse inattendue de l'API couverture";
+        throw new Error(errorMessage);
+      } catch (error) {
+        console.error(`[catalogueApi] Impossible de récupérer la couverture ${ean} via ${endpoint}`, error);
       }
-
-      const data = (await response.json()) as CoverApiResponse;
-      const imageBase64 = data?.result?.imageBase64;
-
-      if (data?.success && imageBase64) {
-        console.log('[catalogueApi] Couverture reçue', ean, data);
-        return imageBase64;
-      }
-
-      const errorMessage = data?.message ?? "Réponse inattendue de l'API couverture";
-      throw new Error(errorMessage);
-    } catch (error) {
-      console.error(`[catalogueApi] Impossible de récupérer la couverture ${ean}`, error);
-      return null;
     }
+
+    return null;
   })();
 
   coverCache.set(ean, promise);
+  lastCoverFetch = promise.then(
+    () => undefined,
+    () => undefined,
+  );
+
   return promise;
 };
 
@@ -849,10 +872,8 @@ const normalizeBookFromRecord = async (
   const stock = ensureNumber(
     getField(record, 'stock', 'stockdispo', 'qtestock', 'quantitestock', 'stocklibrairie'),
   ) ?? 0;
-  const cover = (await fetchCover(ean)) ?? FALLBACK_COVER_DATA_URL;
-
   return {
-    cover,
+    cover: FALLBACK_COVER_DATA_URL,
     title,
     ean,
     authors,
@@ -972,6 +993,12 @@ export async function fetchCatalogueOffices(): Promise<CatalogueOfficeGroup[]> {
     console.error('[catalogueApi] Impossible de récupérer les prochaines offices', error);
     throw error;
   }
+}
+
+export const FALLBACK_CATALOGUE_COVER = FALLBACK_COVER_DATA_URL;
+
+export async function fetchCatalogueCover(ean: string): Promise<string | null> {
+  return fetchCover(ean);
 }
 
 export async function fetchCatalogueKiosques(): Promise<CatalogueKiosqueGroup[]> {

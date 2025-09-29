@@ -19,10 +19,14 @@ import {
   ArrowDownWideNarrow,
   ArrowUpWideNarrow,
 } from 'lucide-react';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { SecureLink } from '@/components/routing/SecureLink';
-import { fetchCatalogueOffices, type CatalogueOfficeGroup } from '@/lib/catalogue';
+import {
+  fetchCatalogueCover,
+  fetchCatalogueOffices,
+  type CatalogueOfficeGroup,
+} from '@/lib/catalogue';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -47,6 +51,7 @@ export function Offices() {
   const [offices, setOffices] = useState<CatalogueOfficeGroup[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const requestedCoversRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let isActive = true;
@@ -54,6 +59,7 @@ export function Offices() {
     setIsLoading(true);
     setError(null);
     setOffices(null);
+    requestedCoversRef.current.clear();
 
     fetchCatalogueOffices()
       .then(data => {
@@ -87,6 +93,79 @@ export function Offices() {
       isActive = false;
     };
   }, [location.key]);
+
+  useEffect(() => {
+    if (!offices || offices.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const updateCover = (ean: string, cover: string) => {
+      setOffices(prev => {
+        if (!prev) {
+          return prev;
+        }
+
+        let hasChanged = false;
+
+        const next = prev.map(group => {
+          let groupChanged = false;
+
+          const books = group.books.map(book => {
+            if (book.ean !== ean) {
+              return book;
+            }
+
+            if (book.cover === cover) {
+              return book;
+            }
+
+            groupChanged = true;
+            hasChanged = true;
+            return { ...book, cover };
+          });
+
+          return groupChanged ? { ...group, books } : group;
+        });
+
+        return hasChanged ? next : prev;
+      });
+    };
+
+    const run = async () => {
+      for (const group of offices) {
+        for (const book of group.books) {
+          const ean = book.ean;
+          if (!ean) {
+            continue;
+          }
+
+          if (requestedCoversRef.current.has(ean)) {
+            continue;
+          }
+
+          requestedCoversRef.current.add(ean);
+
+          const cover = await fetchCatalogueCover(ean);
+
+          if (cancelled) {
+            return;
+          }
+
+          if (cover) {
+            updateCover(ean, cover);
+          }
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [offices]);
 
   const toggleSortDirection = () =>
     setSortDirection(prev => (prev === 'desc' ? 'asc' : 'desc'));
