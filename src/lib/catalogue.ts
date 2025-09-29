@@ -636,7 +636,11 @@ const parseDateInput = (value: unknown): Date | null => {
       return new Date(Number(year), Number(month) - 1, Number(day));
     }
 
-    const timestamp = Date.parse(trimmed);
+    const normalized = /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}(:\d{2}(\.\d+)?)?)/.test(trimmed)
+      ? trimmed.replace(' ', 'T')
+      : trimmed;
+
+    const timestamp = Date.parse(normalized);
     if (!Number.isNaN(timestamp)) {
       return new Date(timestamp);
     }
@@ -657,14 +661,23 @@ const parseDateInput = (value: unknown): Date | null => {
 
 const formatDisplayDate = (value: unknown): string | undefined => {
   const date = parseDateInput(value);
-  if (!date) {
-    return undefined;
+  if (date) {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear());
+    return `${day}/${month}/${year}`;
   }
 
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = String(date.getFullYear());
-  return `${day}/${month}/${year}`;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      return `${day}/${month}/${year}`;
+    }
+  }
+
+  return undefined;
 };
 
 const formatPrice = (value: unknown): string => {
