@@ -493,7 +493,7 @@ export async function fetchCatalogueReleases(): Promise<CatalogueReleaseGroup[]>
 }
 
 const CATALOGUE_OFFICES_ENDPOINT = import.meta.env.DEV
-  ? '/intranet/call-database'
+  ? '/intranet/callDatabase'
   : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
 
 const parseEndpointList = (value: unknown): string[] => {

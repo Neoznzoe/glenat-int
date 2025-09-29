@@ -1,5 +1,5 @@
 const JOB_OFFERS_ENDPOINT = import.meta.env.DEV
-  ? '/intranet/call-database'
+  ? '/intranet/callDatabase'
   : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
 
 const JOB_OFFERS_QUERY = 'SELECT * FROM offres_emploi WHERE publiee = 1;';

@@ -1,5 +1,5 @@
 const INTERNAL_USER_ENDPOINT = import.meta.env.DEV
-  ? '/intranet/call-database'
+  ? '/intranet/callDatabase'
   : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
 
 export interface DatabaseUserLookupResponse {

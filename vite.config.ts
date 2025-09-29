@@ -12,7 +12,7 @@ export default defineConfig({
     proxy: {
       // proxy DEV pour l’API Intranet
       '/intranet': {
-        target: 'https://api-recette.groupe-glenat.com',
+        target: 'https://api-dev.groupe-glenat.com',
         changeOrigin: true,
         secure: false,
         rewrite: p => p.replace(/^\/intranet/, '/Api/v1.0/Intranet'),
