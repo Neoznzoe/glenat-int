@@ -1046,6 +1046,45 @@ const buildCatalogueOfficeGroups = async (
   return groups.filter((group): group is CatalogueOfficeGroup => group !== null);
 };
 
+const hydrateGroupsWithCovers = async (
+  groups: CatalogueOfficeGroup[],
+): Promise<CatalogueOfficeGroup[]> => {
+  const coverResults = new Map<string, string | null>();
+  const hydratedGroups: CatalogueOfficeGroup[] = [];
+
+  for (const group of groups) {
+    const hydratedBooks: CatalogueBook[] = [];
+    let hasChange = false;
+
+    for (const book of group.books) {
+      const ean = book.ean;
+
+      if (!ean) {
+        hydratedBooks.push(book);
+        continue;
+      }
+
+      let cover = coverResults.get(ean);
+
+      if (cover === undefined) {
+        cover = await fetchCover(ean);
+        coverResults.set(ean, cover);
+      }
+
+      if (cover && book.cover !== cover) {
+        hydratedBooks.push({ ...book, cover });
+        hasChange = true;
+      } else {
+        hydratedBooks.push(book);
+      }
+    }
+
+    hydratedGroups.push(hasChange ? { ...group, books: hydratedBooks } : group);
+  }
+
+  return hydratedGroups;
+};
+
 export async function fetchCatalogueOffices(): Promise<CatalogueOfficeGroup[]> {
   const endpoint = 'fetchCatalogueOffices';
   logRequest(endpoint);
@@ -1077,8 +1116,10 @@ export async function fetchCatalogueOffices(): Promise<CatalogueOfficeGroup[]> {
       throw new Error('Impossible de construire les offices à partir des données reçues');
     }
 
-    logResponse(endpoint, groups);
-    return groups;
+    const hydratedGroups = await hydrateGroupsWithCovers(groups);
+
+    logResponse(endpoint, hydratedGroups);
+    return hydratedGroups;
   } catch (error) {
     console.error('[catalogueApi] Impossible de récupérer les prochaines offices', error);
     throw error;
