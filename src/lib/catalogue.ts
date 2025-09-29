@@ -572,6 +572,9 @@ const wait = (ms: number) =>
     setTimeout(resolve, ms);
   });
 
+const COVER_FETCH_RETRY_ATTEMPTS = 3;
+const COVER_FETCH_RETRY_DELAY_MS = 150;
+
 const coverCache = new Map<string, string>();
 const pendingCoverRequests = new Map<string, Promise<string | null>>();
 
@@ -659,29 +662,42 @@ const fetchCover = async (ean: string): Promise<string | null> => {
     await previousFetch.catch(() => {});
     await wait(3);
 
-    for (const endpoint of CATALOGUE_COVERAGE_ENDPOINTS) {
-      const url = `${endpoint}${endpoint.includes('?') ? '&' : '?'}ean=${encodeURIComponent(ean)}`;
+    for (let attempt = 0; attempt < COVER_FETCH_RETRY_ATTEMPTS; attempt += 1) {
+      for (const endpoint of CATALOGUE_COVERAGE_ENDPOINTS) {
+        const url = `${endpoint}${endpoint.includes('?') ? '&' : '?'}ean=${encodeURIComponent(ean)}`;
 
-      try {
-        const response = await fetch(url, buildCoverRequestInit(endpoint));
+        try {
+          const response = await fetch(url, buildCoverRequestInit(endpoint));
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status} ${response.statusText}`);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status} ${response.statusText}`);
+          }
+
+          const data = (await response.json()) as CoverApiResponse;
+          const imageBase64 = normaliseCoverDataUrl(data?.result?.imageBase64);
+
+          if (data?.success && imageBase64) {
+            console.log('[catalogueApi] Couverture reçue', ean, {
+              endpoint,
+              message: data?.message,
+              attempt,
+            });
+            coverCache.set(ean, imageBase64);
+            return imageBase64;
+          }
+
+          const errorMessage = data?.message ?? "Réponse inattendue de l'API couverture";
+          throw new Error(errorMessage);
+        } catch (error) {
+          console.error(
+            `[catalogueApi] Impossible de récupérer la couverture ${ean} via ${endpoint} (tentative ${attempt + 1})`,
+            error,
+          );
         }
+      }
 
-        const data = (await response.json()) as CoverApiResponse;
-        const imageBase64 = normaliseCoverDataUrl(data?.result?.imageBase64);
-
-        if (data?.success && imageBase64) {
-          console.log('[catalogueApi] Couverture reçue', ean, { endpoint, message: data?.message });
-          coverCache.set(ean, imageBase64);
-          return imageBase64;
-        }
-
-        const errorMessage = data?.message ?? "Réponse inattendue de l'API couverture";
-        throw new Error(errorMessage);
-      } catch (error) {
-        console.error(`[catalogueApi] Impossible de récupérer la couverture ${ean} via ${endpoint}`, error);
+      if (attempt < COVER_FETCH_RETRY_ATTEMPTS - 1) {
+        await wait(COVER_FETCH_RETRY_DELAY_MS);
       }
     }
 
