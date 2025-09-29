@@ -636,6 +636,21 @@ const parseDateInput = (value: unknown): Date | null => {
       return new Date(Number(year), Number(month) - 1, Number(day));
     }
 
+    const isoCompactFormat = trimmed.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (isoCompactFormat) {
+      const [, year, month, day] = isoCompactFormat;
+      return new Date(Number(year), Number(month) - 1, Number(day));
+    }
+
+    const serializedDate = trimmed.match(/\/Date\((\d+)\)\//);
+    if (serializedDate) {
+      const [, timestamp] = serializedDate;
+      const parsed = Number.parseInt(timestamp, 10);
+      if (Number.isFinite(parsed)) {
+        return new Date(parsed);
+      }
+    }
+
     const normalized = /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}(:\d{2}(\.\d+)?)?)/.test(trimmed)
       ? trimmed.replace(' ', 'T')
       : trimmed;
@@ -834,7 +849,6 @@ const normalizeBookFromRecord = async (
   const stock = ensureNumber(
     getField(record, 'stock', 'stockdispo', 'qtestock', 'quantitestock', 'stocklibrairie'),
   ) ?? 0;
-  const tome = ensureString(getField(record, 'tome', 'numero', 'numtome', 'tome_libelle'));
   const cover = (await fetchCover(ean)) ?? FALLBACK_COVER_DATA_URL;
 
   return {
@@ -848,8 +862,6 @@ const normalizeBookFromRecord = async (
     stock,
     color: getColorFromPublisher(publisher),
     ribbonText: 'À paraître',
-    infoLabel: tome ? 'Tome' : undefined,
-    infoValue: tome,
   };
 };
 
