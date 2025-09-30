@@ -22,9 +22,6 @@ import {
 import { useState, useEffect, useMemo } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoG from '../assets/logos/glenat/glenat_G.svg';
-import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
-import { computeEffectivePermissions } from '@/lib/mockDb';
-import type { PermissionKey } from '@/lib/access-control';
 import { useDecryptedLocation } from '@/lib/secureRouting';
 import { SecureNavLink } from '@/components/routing/SecureLink';
 
@@ -42,131 +39,33 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   useEffect(() => {
     onExpandChange?.(isExpanded);
   }, [isExpanded, onExpandChange]);
-
-  const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
-  const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
-
-  const accessiblePermissions = useMemo(() => {
-    if (!currentUser) {
-      return new Set<PermissionKey>();
-    }
-    return new Set(computeEffectivePermissions(currentUser, groups));
-  }, [currentUser, groups]);
-
-  const menuItems: Array<{
-    id: string;
-    icon: typeof Home;
-    label: string;
-    path: string;
-    permission: PermissionKey;
-    badge?: number;
-  }> = [
-    { id: 'home', icon: Home, label: 'Accueil', path: '/', permission: 'home' },
-    {
-      id: 'qui',
-      icon: UserRoundSearch,
-      label: 'Qui fait quoi',
-      path: '/qui',
-      permission: 'qui',
-    },
-    {
-      id: 'catalogue',
-      icon: LibraryBig,
-      label: 'Catalogue',
-      path: '/catalogue/offices',
-      permission: 'catalogue',
-    },
-    {
-      id: 'kiosque',
-      icon: Store,
-      label: 'Kiosque',
-      path: '/catalogue/kiosque',
-      permission: 'catalogue',
-    },
-    { id: 'doc', icon: Files, label: "Glénat'Doc", path: '/doc', permission: 'doc' },
-    { id: 'fee', icon: Users, label: "Glénat'Fée", path: '/fee', permission: 'fee' },
-    { id: 'agenda', icon: Calendar, label: 'Agenda', path: '/agenda', permission: 'agenda' },
-    {
-      id: 'planning',
-      icon: CalendarDays,
-      label: 'Planning',
-      path: '/planning',
-      permission: 'planning',
-    },
-    {
-      id: 'contrats',
-      icon: Signature,
-      label: 'Contrats',
-      path: '/contrats',
-      permission: 'contrats',
-    },
-    { id: 'rh', icon: PersonStanding, label: 'Ressources humaines', path: '/rh', permission: 'rh' },
-    {
-      id: 'temps',
-      icon: CalendarClock,
-      label: 'Saisie des temps',
-      path: '/temps',
-      permission: 'temps',
-    },
-    {
-      id: 'atelier',
-      icon: Hammer,
-      label: 'Travaux atelier',
-      path: '/atelier',
-      permission: 'atelier',
-    },
-    {
-      id: 'espace',
-      icon: SquareUserRound,
-      label: 'Mon espace',
-      path: '/espace',
-      permission: 'espace',
-    },
-    {
-      id: 'emploi',
-      icon: BriefcaseBusiness,
-      label: 'Emploi',
-      path: '/emploi',
-      permission: 'emploi',
-      badge: jobCount,
-    },
-    {
-      id: 'annonces',
-      icon: Newspaper,
-      label: 'Petites annonces',
-      path: '/annonces',
-      permission: 'annonces',
-    },
-    { id: 'services', icon: Info, label: 'Services', path: '/services', permission: 'services' },
-    {
-      id: 'administration',
-      icon: Settings,
-      label: 'Administration',
-      path: '/administration',
-      permission: 'administration',
-    },
-  ];
-
-  const showAllMenus = loadingCurrentUser || loadingGroups || !currentUser;
-
-  const userCanAccess = (permission: PermissionKey) => {
-    if (showAllMenus) {
-      return true;
-    }
-    if (currentUser?.isSuperAdmin) {
-      return true;
-    }
-    return accessiblePermissions.has(permission);
-  };
-
   const location = useDecryptedLocation();
 
-  const mainMenuItems = menuItems.filter(
-    (item) => item.id !== 'administration' && userCanAccess(item.permission),
+  const menuItems = useMemo(
+    () => [
+      { id: 'home', icon: Home, label: 'Accueil', path: '/' },
+      { id: 'qui', icon: UserRoundSearch, label: 'Qui fait quoi', path: '/qui' },
+      { id: 'catalogue', icon: LibraryBig, label: 'Catalogue', path: '/catalogue/offices' },
+      { id: 'kiosque', icon: Store, label: 'Kiosque', path: '/catalogue/kiosque' },
+      { id: 'doc', icon: Files, label: "Glénat'Doc", path: '/doc' },
+      { id: 'fee', icon: Users, label: "Glénat'Fée", path: '/fee' },
+      { id: 'agenda', icon: Calendar, label: 'Agenda', path: '/agenda' },
+      { id: 'planning', icon: CalendarDays, label: 'Planning', path: '/planning' },
+      { id: 'contrats', icon: Signature, label: 'Contrats', path: '/contrats' },
+      { id: 'rh', icon: PersonStanding, label: 'Ressources humaines', path: '/rh' },
+      { id: 'temps', icon: CalendarClock, label: 'Saisie des temps', path: '/temps' },
+      { id: 'atelier', icon: Hammer, label: 'Travaux atelier', path: '/atelier' },
+      { id: 'espace', icon: SquareUserRound, label: 'Mon espace', path: '/espace' },
+      { id: 'emploi', icon: BriefcaseBusiness, label: 'Emploi', path: '/emploi', badge: jobCount },
+      { id: 'annonces', icon: Newspaper, label: 'Petites annonces', path: '/annonces' },
+      { id: 'services', icon: Info, label: 'Services', path: '/services' },
+      { id: 'administration', icon: Settings, label: 'Administration', path: '/administration' },
+    ],
+    [jobCount],
   );
-  const adminMenuItems = menuItems.filter(
-    (item) => item.id === 'administration' && userCanAccess(item.permission),
-  );
+
+  const mainMenuItems = menuItems.filter((item) => item.id !== 'administration');
+  const adminMenuItems = menuItems.filter((item) => item.id === 'administration');
 
   return (
     <div
@@ -201,37 +100,37 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
         <nav className="p-2">
           <ul className="space-y-1">
             {mainMenuItems.map((item) => {
-                const isActive = item.path === '/'
-                  ? location.pathname === '/'
-                  : location.pathname.startsWith(item.path);
-                return (
-                  <li key={item.id}>
-                    <SecureNavLink
-                      to={item.path}
-                      className={`relative flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
-                        isActive
-                          ? 'bg-white/20 text-white'
-                          : 'text-red-100 hover:bg-white/10 hover:text-white'
-                      } ${isExpanded ? 'space-x-3' : 'justify-center'}`}
-                      title={!isExpanded ? item.label : ''}
+              const isActive = item.path === '/'
+                ? location.pathname === '/'
+                : location.pathname.startsWith(item.path);
+              return (
+                <li key={item.id}>
+                  <SecureNavLink
+                    to={item.path}
+                    className={`relative flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
+                      isActive
+                        ? 'bg-white/20 text-white'
+                        : 'text-red-100 hover:bg-white/10 hover:text-white'
+                    } ${isExpanded ? 'space-x-3' : 'justify-center'}`}
+                    title={!isExpanded ? item.label : ''}
+                  >
+                    <item.icon className="h-5 w-5 flex-shrink-0" />
+                    <span
+                      className={`font-medium transition-all duration-300 whitespace-nowrap ${
+                        isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
+                      }`}
                     >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
-                      <span
-                        className={`font-medium transition-all duration-300 whitespace-nowrap ${
-                          isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
-                        }`}
-                      >
-                        {item.label}
+                      {item.label}
+                    </span>
+                    {item.badge !== undefined ? (
+                      <span className="absolute -top-[5px] -right-[5px] bg-white text-primary text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                        {item.badge}
                       </span>
-                      {item.badge !== undefined ? (
-                        <span className="absolute -top-[5px] -right-[5px] bg-white text-primary text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                          {item.badge}
-                        </span>
-                      ) : null}
-                    </SecureNavLink>
-                  </li>
-                );
-              })}
+                    ) : null}
+                  </SecureNavLink>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 
@@ -239,32 +138,32 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
         <nav className="p-2">
           <ul>
             {adminMenuItems.map((item) => {
-                const isActive = item.path === '/'
-                  ? location.pathname === '/'
-                  : location.pathname.startsWith(item.path);
-                return (
-                  <li key={item.id}>
-                    <SecureNavLink
-                      to={item.path}
-                      className={`flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
-                        isActive
-                          ? 'bg-white/20 text-white'
-                          : 'text-red-100 hover:bg-white/10 hover:text-white'
-                      } ${isExpanded ? 'space-x-3' : 'justify-center'}`}
-                      title={!isExpanded ? item.label : ''}
+              const isActive = item.path === '/'
+                ? location.pathname === '/'
+                : location.pathname.startsWith(item.path);
+              return (
+                <li key={item.id}>
+                  <SecureNavLink
+                    to={item.path}
+                    className={`flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
+                      isActive
+                        ? 'bg-white/20 text-white'
+                        : 'text-red-100 hover:bg-white/10 hover:text-white'
+                    } ${isExpanded ? 'space-x-3' : 'justify-center'}`}
+                    title={!isExpanded ? item.label : ''}
+                  >
+                    <item.icon className="h-5 w-5 flex-shrink-0" />
+                    <span
+                      className={`font-medium transition-all duration-300 whitespace-nowrap ${
+                        isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
+                      }`}
                     >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
-                      <span
-                        className={`font-medium transition-all duration-300 whitespace-nowrap ${
-                          isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
-                        }`}
-                      >
-                        {item.label}
-                      </span>
-                    </SecureNavLink>
-                  </li>
-                );
-              })}
+                      {item.label}
+                    </span>
+                  </SecureNavLink>
+                </li>
+              );
+            })}
           </ul>
         </nav>
       </div>
