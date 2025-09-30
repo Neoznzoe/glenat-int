@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { computeEffectivePermissions, type UserAccount } from '@/lib/mockDb';
+import { computeEffectivePermissions, type UserAccount } from '@/lib/adminAccess';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { GroupDefinition } from '@/lib/access-control';
@@ -77,6 +77,24 @@ export function UserListPanel({
               {filteredUsers.map((user) => {
                 const isSelected = user.id === selectedUserId;
                 const accessCount = computeEffectivePermissions(user, groups).length;
+                const jobInfoParts = [user.jobTitle, user.department].filter(
+                  (value): value is string => Boolean(value && value.trim()),
+                );
+                const jobInfo = jobInfoParts.length
+                  ? jobInfoParts.join(' · ')
+                  : 'Informations indisponibles';
+                const lastConnectionDate = user.lastConnection
+                  ? new Date(user.lastConnection)
+                  : null;
+                const hasValidLastConnection =
+                  lastConnectionDate instanceof Date &&
+                  !Number.isNaN(lastConnectionDate.getTime());
+                const lastConnectionLabel = hasValidLastConnection
+                  ? formatDistanceToNow(lastConnectionDate, {
+                      locale: fr,
+                      addSuffix: true,
+                    })
+                  : 'Jamais connecté';
 
                 return (
                   <TableRow
@@ -89,9 +107,7 @@ export function UserListPanel({
                       <div className="flex flex-col">
                         <span className="font-medium">{user.displayName}</span>
                         <span className="text-xs text-muted-foreground">{user.email}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {user.jobTitle} · {user.department}
-                        </span>
+                        <span className="text-xs text-muted-foreground">{jobInfo}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -114,10 +130,7 @@ export function UserListPanel({
                       </div>
                     </TableCell>
                     <TableCell className="text-right text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(user.lastConnection), {
-                        locale: fr,
-                        addSuffix: true,
-                      })}
+                      {lastConnectionLabel}
                       <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
                         {accessCount} accès
                       </div>

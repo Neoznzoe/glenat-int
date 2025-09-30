@@ -1,5 +1,5 @@
-import type { PermissionOverride } from '@/lib/mockDb';
-import type { PermissionOverrideMode } from '@/lib/mockDb';
+import type { PermissionOverride } from '@/lib/adminAccess';
+import type { PermissionOverrideMode } from '@/lib/adminAccess';
 
 export type PermissionSelectValue = 'inherit' | PermissionOverrideMode;
 

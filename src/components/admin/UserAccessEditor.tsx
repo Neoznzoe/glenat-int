@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { PermissionDefinition, GroupDefinition, PermissionKey } from '@/lib/access-control';
-import type { PermissionEvaluation, UserAccount } from '@/lib/mockDb';
+import type { PermissionEvaluation, UserAccount } from '@/lib/adminAccess';
 import type { DraftAccessState, PermissionSelectValue } from './access-types';
 
 const PERMISSION_SELECT_OPTIONS: Array<{
@@ -103,6 +103,15 @@ export function UserAccessEditor({
   onSave,
 }: UserAccessEditorProps) {
   const groupMap = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
+  const jobDetails = useMemo(() => {
+    if (!user) {
+      return '';
+    }
+    const parts = [user.jobTitle, user.department].filter(
+      (value): value is string => Boolean(value && value.trim()),
+    );
+    return parts.join(' — ');
+  }, [user]);
 
   return (
     <Card className="flex flex-col">
@@ -112,7 +121,7 @@ export function UserAccessEditor({
             <CardTitle>{user ? user.displayName : 'Sélectionnez un utilisateur'}</CardTitle>
             <CardDescription>
               {user
-                ? `${user.jobTitle} — ${user.department}`
+                ? jobDetails || 'Informations professionnelles indisponibles'
                 : 'Choisissez une personne dans la liste pour afficher ses droits.'}
             </CardDescription>
           </div>

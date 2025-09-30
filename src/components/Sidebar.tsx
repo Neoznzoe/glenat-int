@@ -23,7 +23,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoG from '../assets/logos/glenat/glenat_G.svg';
 import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
-import { computeEffectivePermissions } from '@/lib/mockDb';
+import { computeEffectivePermissions } from '@/lib/adminAccess';
 import type { PermissionKey } from '@/lib/access-control';
 import { useDecryptedLocation } from '@/lib/secureRouting';
 import { SecureNavLink } from '@/components/routing/SecureLink';

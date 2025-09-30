@@ -9,7 +9,7 @@ import {
   type PermissionOverride,
   type UserAccount,
 } from '@/hooks/useAdminData';
-import { computeEffectivePermissions, evaluatePermission } from '@/lib/mockDb';
+import { computeEffectivePermissions, evaluatePermission } from '@/lib/adminAccess';
 import {
   PERMISSION_DEFINITIONS,
   type GroupDefinition,
@@ -74,7 +74,9 @@ export function Administration() {
       return candidates;
     }
     return candidates.filter((user) => {
-      const haystack = `${user.displayName} ${user.email} ${user.department}`.toLowerCase();
+      const haystack = `${user.displayName} ${user.email ?? ''} ${user.department ?? ''} ${
+        user.jobTitle ?? ''
+      }`.toLowerCase();
       return haystack.includes(lowerSearch);
     });
   }, [users, lowerSearch, showOnlyInactive]);
