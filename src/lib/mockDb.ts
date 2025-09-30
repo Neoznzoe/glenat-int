@@ -83,6 +83,9 @@ interface DatabaseSchema {
   groups: GroupDefinition[];
   permissions: PermissionDefinition[];
   auditLog: AuditLogEntry[];
+  userGroups: SqlUserGroupRecord[];
+  userPermissions: SqlUserPermissionRecord[];
+  pages: PageDefinition[];
 }
 
 export interface UpdateUserAccessPayload {
@@ -92,8 +95,244 @@ export interface UpdateUserAccessPayload {
   actorId?: string;
 }
 
+interface SqlUserRecord {
+  userId: number;
+  firstName: string;
+  lastName: string;
+  username: string;
+  password: string | null;
+  email: string;
+  photoSd: string | null;
+  preferedLanguage: string;
+  preferedTheme: string;
+}
+
+interface SqlUserGroupRecord {
+  userId: number;
+  groupId: string;
+}
+
+interface SqlUserPermissionRecord {
+  permissionId: number;
+  userId: number;
+  permissionType: 'page' | 'module';
+  pageId?: number | null;
+  permissionKey?: PermissionKey;
+  canView: boolean;
+}
+
+export interface PageDefinition {
+  id: number;
+  name: string;
+  metaTitle: string;
+  metaDescription: string;
+  isPublished: boolean;
+  publishedAt: string | null;
+  needUserConnected: boolean;
+  componentKey: string;
+}
+
+const SQL_USERS: SqlUserRecord[] = [
+  {
+    userId: 1,
+    firstName: 'Nicolas',
+    lastName: 'MERCIER',
+    username: 'nicolas',
+    password: null,
+    email: 'nicolas.mercier@glenat.com',
+    photoSd: 'default/UserImage.png',
+    preferedLanguage: 'fr',
+    preferedTheme: 'light',
+  },
+  {
+    userId: 2,
+    firstName: 'Stéphane',
+    lastName: 'CHERMETTE',
+    username: 'stephane',
+    password: null,
+    email: 'stephane.chermette@glenat.com',
+    photoSd: 'default/UserImage.png',
+    preferedLanguage: 'fr',
+    preferedTheme: 'light',
+  },
+  {
+    userId: 3,
+    firstName: 'Mathilde',
+    lastName: 'NICOLAS',
+    username: 'mathilde',
+    password: null,
+    email: 'mathilde.nicolas@glenat.com',
+    photoSd: 'default/UserImage.png',
+    preferedLanguage: 'fr',
+    preferedTheme: 'light',
+  },
+  {
+    userId: 4,
+    firstName: 'Valentin',
+    lastName: 'OGAN',
+    username: 'valentin',
+    password: null,
+    email: 'valentin.ogan@glenat.com',
+    photoSd: 'default/UserImage.png',
+    preferedLanguage: 'fr',
+    preferedTheme: 'light',
+  },
+  {
+    userId: 5,
+    firstName: 'Damien',
+    lastName: 'BONIS',
+    username: 'damien',
+    password: null,
+    email: 'damien.bonis@glenat.com',
+    photoSd: 'default/UserImage.png',
+    preferedLanguage: 'fr',
+    preferedTheme: 'light',
+  },
+  {
+    userId: 6,
+    firstName: 'Victor',
+    lastName: 'BESSON',
+    username: 'victor',
+    password: null,
+    email: 'victor.besson@glenat.com',
+    photoSd: 'default/UserImage.png',
+    preferedLanguage: 'fr',
+    preferedTheme: 'light',
+  },
+];
+
+const SQL_USER_PROFILE_DETAILS: Record<
+  number,
+  { jobTitle: string; department: string; location: string; phoneNumber: string }
+> = {
+  1: {
+    jobTitle: 'Responsable communication',
+    department: 'Communication',
+    location: 'Grenoble',
+    phoneNumber: '+33 4 76 00 00 01',
+  },
+  2: {
+    jobTitle: 'Directeur financier',
+    department: 'Finance',
+    location: 'Grenoble',
+    phoneNumber: '+33 4 76 00 00 02',
+  },
+  3: {
+    jobTitle: 'Coordinatrice RH',
+    department: 'Ressources humaines',
+    location: 'Grenoble',
+    phoneNumber: '+33 4 76 00 00 03',
+  },
+  4: {
+    jobTitle: 'Chef de projet digital',
+    department: 'Digital',
+    location: 'Paris',
+    phoneNumber: '+33 1 42 00 00 04',
+  },
+  5: {
+    jobTitle: 'Responsable production',
+    department: 'Production',
+    location: 'Grenoble',
+    phoneNumber: '+33 4 76 00 00 05',
+  },
+  6: {
+    jobTitle: 'Chargé de mission',
+    department: 'Atelier',
+    location: 'Grenoble',
+    phoneNumber: '+33 4 76 00 00 06',
+  },
+};
+
+const SQL_USER_GROUPS: SqlUserGroupRecord[] = [
+  { userId: 1, groupId: 'editions-glenat' },
+  { userId: 2, groupId: 'ged' },
+  { userId: 3, groupId: 'hugo-digital' },
+  { userId: 4, groupId: 'glenat-prod' },
+  { userId: 5, groupId: 'glenat-prod' },
+  { userId: 6, groupId: 'glenat-prod' },
+  { userId: 6, groupId: 'glenat-diffusion' },
+];
+
+const SQL_USER_PERMISSIONS: SqlUserPermissionRecord[] = [
+  // Page level permissions
+  { permissionId: 1, userId: 1, permissionType: 'page', pageId: 1, canView: true },
+  { permissionId: 2, userId: 1, permissionType: 'page', pageId: 2, canView: true },
+  { permissionId: 3, userId: 2, permissionType: 'page', pageId: 1, canView: true },
+  { permissionId: 4, userId: 2, permissionType: 'page', pageId: 2, canView: true },
+  { permissionId: 5, userId: 3, permissionType: 'page', pageId: 1, canView: true },
+  { permissionId: 6, userId: 3, permissionType: 'page', pageId: 2, canView: true },
+  { permissionId: 7, userId: 4, permissionType: 'page', pageId: 1, canView: true },
+  { permissionId: 8, userId: 4, permissionType: 'page', pageId: 2, canView: true },
+  { permissionId: 9, userId: 5, permissionType: 'page', pageId: 1, canView: true },
+  { permissionId: 10, userId: 5, permissionType: 'page', pageId: 2, canView: true },
+  { permissionId: 11, userId: 6, permissionType: 'page', pageId: 1, canView: true },
+  { permissionId: 12, userId: 6, permissionType: 'page', pageId: 2, canView: true },
+  // Module level permissions and overrides
+  { permissionId: 101, userId: 1, permissionType: 'module', permissionKey: 'administration', canView: true },
+  { permissionId: 102, userId: 2, permissionType: 'module', permissionKey: 'contrats', canView: true },
+  { permissionId: 103, userId: 3, permissionType: 'module', permissionKey: 'rh', canView: true },
+  { permissionId: 104, userId: 4, permissionType: 'module', permissionKey: 'temps', canView: true },
+  { permissionId: 105, userId: 5, permissionType: 'module', permissionKey: 'atelier', canView: true },
+  { permissionId: 106, userId: 6, permissionType: 'module', permissionKey: 'administration', canView: true },
+  { permissionId: 107, userId: 6, permissionType: 'module', permissionKey: 'catalogue', canView: true },
+  { permissionId: 108, userId: 6, permissionType: 'module', permissionKey: 'contrats', canView: false },
+  { permissionId: 109, userId: 6, permissionType: 'module', permissionKey: 'rh', canView: false },
+  { permissionId: 110, userId: 6, permissionType: 'module', permissionKey: 'temps', canView: false },
+  { permissionId: 111, userId: 6, permissionType: 'module', permissionKey: 'atelier', canView: false },
+];
+
+const SQL_PAGES: PageDefinition[] = [
+  {
+    id: 1,
+    name: 'home.tsx',
+    componentKey: 'home',
+    metaTitle: 'Accueil',
+    metaDescription: "Page d'accueil de l'intranet Glénat.",
+    isPublished: true,
+    publishedAt: new Date('2024-01-08T09:00:00Z').toISOString(),
+    needUserConnected: true,
+  },
+  {
+    id: 2,
+    name: 'office.tsx',
+    componentKey: 'office',
+    metaTitle: 'Prochaines offices',
+    metaDescription: 'Accès aux prochaines offices du catalogue.',
+    isPublished: true,
+    publishedAt: new Date('2024-01-08T09:15:00Z').toISOString(),
+    needUserConnected: true,
+  },
+];
+
+const DEFAULT_CURRENT_USER_EMAIL = 'victor.besson@glenat.com';
+
+function formatUserAccountId(sqlUserId: number): string {
+  return `user-${String(sqlUserId).padStart(3, '0')}`;
+}
+
+function parseUserAccountId(userId: string): number | null {
+  const match = userId.match(/^user-(\d{3})$/);
+  if (!match) {
+    return null;
+  }
+  const parsed = Number.parseInt(match[1] ?? '', 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeLastName(value: string): string {
+  if (!value) {
+    return value;
+  }
+  return value
+    .toLowerCase()
+    .split(/[-\s]/u)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
 const STORAGE_KEY = 'glenat-admin-database-v1';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 let inMemoryDb: DatabaseSchema | null = null;
 
 function deepClone<T>(value: T): T {
@@ -128,368 +367,158 @@ function generateGuid(index: number): string {
   return `00000000-0000-4000-8000-${base.padStart(12, '0')}`;
 }
 
-const FIRST_NAMES = [
-  'Alice',
-  'Benoît',
-  'Chloé',
-  'David',
-  'Emma',
-  'Fanny',
-  'Gaël',
-  'Hugo',
-  'Inès',
-  'Jules',
-  'Katia',
-  'Léon',
-  'Maya',
-  'Nina',
-  'Olivier',
-  'Paul',
-  'Quentin',
-  'Romy',
-  'Simon',
-  'Théo',
-  'Ulysse',
-  'Valentine',
-  'William',
-  'Xavier',
-  'Yasmine',
-  'Zoé',
-];
-
-const LAST_NAMES = [
-  'Armand',
-  'Barbier',
-  'Carrel',
-  'Duhamel',
-  'Ernault',
-  'Foucher',
-  'Giraud',
-  'Hamel',
-  'Imbert',
-  'Jacquet',
-  'Kerouac',
-  'Lafitte',
-  'Monnier',
-  'Noirot',
-  'Ozenne',
-  'Picard',
-  'Quenot',
-  'Roussel',
-  'Saurin',
-  'Taillet',
-  'Urbain',
-  'Vigier',
-  'Weiss',
-  'Xénard',
-  'Yvernault',
-  'Zola',
-];
-
-const JOB_TITLES = [
-  'Chargé·e de communication',
-  'Responsable éditorial',
-  'Chef de projet digital',
-  'Assistant·e RH',
-  'Contrôleur de gestion',
-  'Graphiste',
-  'Technicien atelier',
-  'Gestionnaire de production',
-  'Commercial diffusion',
-  'Chef de produit',
-];
-
-const DEPARTMENTS = [
-  'Communication',
-  'Éditorial',
-  'Digital',
-  'Ressources humaines',
-  'Finance',
-  'Studio graphique',
-  'Atelier',
-  'Production',
-  'Diffusion',
-  'Marketing',
-];
-
-const LOCATIONS = [
-  'Grenoble',
-  'Paris',
-  'Lyon',
-  'Bordeaux',
-  'Toulouse',
-  'Nantes',
-  'Lille',
-];
-
-const PHONE_PREFIXES = ['01', '02', '03', '04', '05', '09'];
-
-function pickFrom<T>(list: T[], index: number): T {
-  const normalizedIndex = ((index % list.length) + list.length) % list.length;
-  return list[normalizedIndex];
-}
-
-function shouldRepairDisplayName(displayName: string): boolean {
-  if (!displayName) {
-    return true;
-  }
-  const trimmed = displayName.trim();
-  if (!trimmed) {
-    return true;
-  }
-  const normalizedTrimmed = trimmed.toLowerCase();
-  return normalizedTrimmed.includes('undefined');
-}
-
-function shouldRepairEmail(email: string): boolean {
-  if (!email) {
-    return true;
-  }
-  const normalized = email.trim().toLowerCase();
-  return !normalized || normalized.includes('undefined');
-}
-
-function parseUserIndex(userId: string, fallback: number): number {
-  const match = userId.match(/^user-(\d{1,})$/);
-  if (!match) {
-    return fallback;
-  }
-  const parsed = Number.parseInt(match[1] ?? '', 10);
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function repairUser(user: UserAccount, index: number): UserAccount {
-  const normalizedLastNameRaw = typeof user.lastName === 'string' ? user.lastName.trim() : '';
-  const normalizedLastName =
-    normalizedLastNameRaw && normalizedLastNameRaw.toLowerCase() !== 'undefined'
-      ? normalizedLastNameRaw
-      : '';
-  if (normalizedLastName) {
-    const repaired: UserAccount = {
-      ...user,
-      lastName: normalizedLastName,
-    };
-
-    if (shouldRepairDisplayName(user.displayName)) {
-      repaired.displayName = `${user.firstName} ${normalizedLastName}`;
+function getJobDetails(sqlUserId: number) {
+  return (
+    SQL_USER_PROFILE_DETAILS[sqlUserId] ?? {
+      jobTitle: 'Collaborateur',
+      department: 'Général',
+      location: 'Grenoble',
+      phoneNumber: '+33 4 76 00 00 00',
     }
+  );
+}
 
-    if (shouldRepairEmail(user.email)) {
-      const regeneratedEmail = createEmail(user.firstName, normalizedLastName);
-      repaired.email = regeneratedEmail;
-      repaired.azureUpn = regeneratedEmail;
-    } else if (shouldRepairEmail(user.azureUpn)) {
-      repaired.azureUpn = user.email;
-    }
+function buildUserAccount(
+  row: SqlUserRecord,
+  groups: GroupDefinition[],
+  userGroups: SqlUserGroupRecord[],
+  userPermissions: SqlUserPermissionRecord[],
+  index: number,
+): UserAccount {
+  const jobDetails = getJobDetails(row.userId);
+  const normalizedLastName = normalizeLastName(row.lastName);
+  const displayName = `${row.firstName} ${normalizedLastName}`;
+  const accountGroups = userGroups
+    .filter((relation) => relation.userId === row.userId)
+    .map((relation) => relation.groupId)
+    .filter((groupId) => groups.some((group) => group.id === groupId));
 
-    return repaired;
-  }
+  const overrides: PermissionOverride[] = userPermissions
+    .filter(
+      (permission) =>
+        permission.userId === row.userId &&
+        permission.permissionType === 'module' &&
+        permission.permissionKey,
+    )
+    .map((permission) => ({
+      key: permission.permissionKey!,
+      mode: permission.canView ? 'allow' : 'deny',
+    }));
 
-  const fallbackIndex = parseUserIndex(user.id, index);
-  const regeneratedLastName = pickFrom(LAST_NAMES, fallbackIndex);
-  const regeneratedEmail = createEmail(user.firstName, regeneratedLastName);
+  const now = Date.now();
+  const createdAt = new Date(now - (index + 5) * 86_400_000).toISOString();
+  const updatedAt = new Date(now - (index + 1) * 43_200_000).toISOString();
+  const lastConnection = new Date(now - (index + 1) * 21_600_000).toISOString();
 
-  return {
-    ...user,
-    lastName: regeneratedLastName,
-    displayName: `${user.firstName} ${regeneratedLastName}`,
-    email: regeneratedEmail,
-    azureUpn: regeneratedEmail,
+  const account: UserAccount = {
+    id: formatUserAccountId(row.userId),
+    firstName: row.firstName,
+    lastName: normalizedLastName,
+    displayName,
+    email: row.email,
+    azureOid: generateGuid(row.userId),
+    azureUpn: row.email,
+    jobTitle: jobDetails.jobTitle,
+    department: jobDetails.department,
+    location: jobDetails.location,
+    phoneNumber: jobDetails.phoneNumber,
+    status: 'active',
+    lastConnection,
+    createdAt,
+    updatedAt,
+    groups: accountGroups,
+    permissionOverrides: overrides,
   };
+
+  if (row.userId == 1) {
+    account.isSuperAdmin = true;
+  }
+
+  return account;
+}
+
+function createUsersFromSql(
+  groups: GroupDefinition[],
+  userGroups: SqlUserGroupRecord[],
+  userPermissions: SqlUserPermissionRecord[],
+): UserAccount[] {
+  return SQL_USERS.map((row, index) =>
+    buildUserAccount(row, groups, userGroups, userPermissions, index),
+  );
 }
 
 function sanitizeDatabase(db: DatabaseSchema): DatabaseSchema {
-  // First, repair obviously broken fields
-  let sanitizedUsers = db.users.map((user, index) => repairUser(user, index));
-
-  // Then, ensure uniqueness of display names (first + last) to avoid duplicates
-  const seen = new Set<string>();
-  sanitizedUsers = sanitizedUsers.map((user, index) => {
-    const first = user.firstName;
-    const normalizeLast = (ln: string) => (ln ?? '').trim();
-    const last = normalizeLast(user.lastName);
-    const makeKey = (fn: string, ln: string) => `${fn} ${ln}`.trim();
-
-    const key = makeKey(first, last);
-    if (last && !seen.has(key)) {
-      seen.add(key);
-      return user;
-    }
-
-    // Try to find a different last name that makes the combination unique
-    for (let attempt = 0; attempt < LAST_NAMES.length; attempt += 1) {
-      const candidateLast = pickFrom(LAST_NAMES, index + attempt);
-      const candidateKey = makeKey(first, candidateLast);
-      if (!seen.has(candidateKey)) {
-        seen.add(candidateKey);
-        const email = createEmail(first, candidateLast);
-        return {
-          ...user,
-          lastName: candidateLast,
-          displayName: `${first} ${candidateLast}`,
-          email,
-          azureUpn: email,
-        };
-      }
-    }
-
-    // Fallback: accept as is (should be rare)
-    seen.add(key);
-    return user;
-  });
-
+  const sanitizedUsers = db.users.map((user) => ({
+    ...user,
+    groups: Array.from(new Set(user.groups)),
+    permissionOverrides: sanitizeOverrides(user.permissionOverrides),
+  }));
   return {
     ...db,
     users: sanitizedUsers,
+    userGroups: Array.isArray(db.userGroups) ? db.userGroups : [],
+    userPermissions: Array.isArray(db.userPermissions) ? db.userPermissions : [],
+    pages: Array.isArray(db.pages) ? db.pages : [],
   };
-}
-
-function createEmail(firstName: string, lastName: string): string {
-  const normalized = `${firstName}.${lastName}`
-    .toLowerCase()
-    .replace(/[^a-z.]/g, '-')
-    .replace(/-+/g, '-');
-  return `${normalized}@glenat.fr`;
-}
-
-function createUsers(groups: GroupDefinition[], count = 120): UserAccount[] {
-  const users: UserAccount[] = [];
-  const now = Date.now();
-
-  const superAdmin: UserAccount = {
-    id: 'user-000',
-    firstName: 'Admin',
-    lastName: 'Glenat',
-    displayName: 'Admin Glénat',
-    email: 'admin@glenat.fr',
-    azureOid: generateGuid(0),
-    azureUpn: 'admin@glenat.fr',
-    jobTitle: 'Responsable intranet',
-    department: 'DSI',
-    location: 'Grenoble',
-    phoneNumber: '+33 4 76 00 00 00',
-    status: 'active',
-    lastConnection: new Date(now - 86_400_000).toISOString(),
-    createdAt: new Date(now - 45 * 86_400_000).toISOString(),
-    updatedAt: new Date(now - 86_400_000).toISOString(),
-    groups: groups.map((group) => group.id),
-    permissionOverrides: [],
-    isSuperAdmin: true,
-  };
-
-  users.push(superAdmin);
-
-  for (let index = 1; index <= count; index += 1) {
-    // Ensure unique display names by enumerating combinations of
-    // FIRST_NAMES x LAST_NAMES deterministically before repeating.
-    const zeroBased = index - 1;
-    const lastIndex = zeroBased % LAST_NAMES.length;
-    const firstIndex = Math.floor(zeroBased / LAST_NAMES.length);
-
-    const firstName = pickFrom(FIRST_NAMES, firstIndex);
-    const lastName = pickFrom(LAST_NAMES, lastIndex);
-    const displayName = `${firstName} ${lastName}`;
-    const email = createEmail(firstName, lastName);
-    const azureOid = generateGuid(index);
-    const azureUpn = email;
-    const jobTitle = pickFrom(JOB_TITLES, index + 3);
-    const department = pickFrom(DEPARTMENTS, index + 5);
-    const location = pickFrom(LOCATIONS, index + 7);
-    const phonePrefix = pickFrom(PHONE_PREFIXES, index + 11);
-    const phoneNumber = `+33 ${phonePrefix} ${String(10 + (index % 80)).padStart(2, '0')} ${String(
-      10 + ((index * 3) % 80),
-    ).padStart(2, '0')} ${String(10 + ((index * 7) % 80)).padStart(2, '0')} ${String(
-      10 + ((index * 5) % 80),
-    ).padStart(2, '0')}`;
-    const createdAt = new Date(now - (index + 10) * 86_400_000).toISOString();
-    const updatedAt = new Date(now - (index % 12) * 86_400_000).toISOString();
-    const lastConnection = new Date(now - (index % 20) * 43_200_000).toISOString();
-
-    const groupSelection = new Set<string>();
-    groupSelection.add(pickFrom(groups, index).id);
-    if (index % 4 === 0) {
-      groupSelection.add(pickFrom(groups, index + 2).id);
-    }
-    if (index % 11 === 0) {
-      groupSelection.add(pickFrom(groups, index + 5).id);
-    }
-
-    const overrides: PermissionOverride[] = [];
-    if (index % 6 === 0) {
-      overrides.push({ key: 'temps', mode: 'allow' });
-    }
-    if (index % 5 === 0) {
-      overrides.push({ key: 'atelier', mode: 'deny' });
-    }
-    if (index % 7 === 0) {
-      overrides.push({ key: 'administration', mode: 'allow' });
-    }
-    if (index % 9 === 0) {
-      overrides.push({ key: 'annonces', mode: 'deny' });
-    }
-
-    const status: 'active' | 'inactive' = index % 23 === 0 ? 'inactive' : 'active';
-
-    users.push({
-      id: `user-${String(index).padStart(3, '0')}`,
-      firstName,
-      lastName,
-      displayName,
-      email,
-      azureOid,
-      azureUpn,
-      jobTitle,
-      department,
-      location,
-      phoneNumber,
-      status,
-      lastConnection,
-      createdAt,
-      updatedAt,
-      groups: Array.from(groupSelection),
-      permissionOverrides: overrides,
-    });
-  }
-
-  return users;
 }
 
 function createSeedDatabase(): DatabaseSchema {
   const groups = GROUP_DEFINITIONS.map((group) => ({ ...group }));
   const permissions = PERMISSION_DEFINITIONS.map((permission) => ({ ...permission }));
-  const users = createUsers(groups, 110);
+  const userGroups = SQL_USER_GROUPS.map((relation) => ({ ...relation }));
+  const userPermissions = SQL_USER_PERMISSIONS.map((permission) => ({ ...permission }));
+  const pages = SQL_PAGES.map((page) => ({ ...page }));
+
+  const users = createUsersFromSql(groups, userGroups, userPermissions);
+  const currentUser =
+    users.find((user) => user.email.toLowerCase() === DEFAULT_CURRENT_USER_EMAIL) ?? users[0];
+
+  const actor = users.find((user) => user.isSuperAdmin) ?? currentUser;
 
   return {
     version: DB_VERSION,
     createdAt: new Date().toISOString(),
-    currentUserId: 'user-000',
+    currentUserId: currentUser?.id ?? users[0]?.id ?? '',
     users,
     groups,
     permissions,
+    userGroups,
+    userPermissions,
+    pages,
     auditLog: [
       {
         id: 'log-0001',
-        userId: 'user-003',
-        actorId: 'user-000',
-        actorName: 'Admin Glénat',
-        message: 'Initialisation des accès – ajout des groupes de base.',
+        userId: currentUser?.id ?? formatUserAccountId(6),
+        actorId: actor?.id ?? currentUser?.id ?? formatUserAccountId(6),
+        actorName: actor?.displayName ?? 'Système',
+        message: 'Synchronisation initiale des groupes depuis la base SQL.',
         timestamp: new Date(Date.now() - 3 * 86_400_000).toISOString(),
         groupChanges: {
-          added: ['editions-glenat', 'glenat-prod'],
+          added: SQL_USER_GROUPS.filter((relation) => relation.userId === 6).map(
+            (relation) => relation.groupId,
+          ),
           removed: [],
         },
       },
       {
         id: 'log-0002',
-        userId: 'user-012',
-        actorId: 'user-000',
-        actorName: 'Admin Glénat',
-        message: 'Ajout d’une exception pour la saisie des temps.',
+        userId: formatUserAccountId(6),
+        actorId: actor?.id ?? currentUser?.id ?? formatUserAccountId(6),
+        actorName: actor?.displayName ?? 'Système',
+        message: 'Application des droits personnalisés pour Victor Besson.',
         timestamp: new Date(Date.now() - 2 * 86_400_000).toISOString(),
         overrideChanges: {
-          added: [{ key: 'temps', mode: 'allow' }],
+          added: [
+            { key: 'administration', mode: 'allow' as const },
+            { key: 'catalogue', mode: 'allow' as const },
+          ],
           removed: [],
-          changed: [],
+          changed: [
+            { key: 'contrats', from: 'allow' as const, to: 'deny' as const },
+            { key: 'rh', from: 'allow' as const, to: 'deny' as const },
+            { key: 'temps', from: 'allow' as const, to: 'deny' as const },
+            { key: 'atelier', from: 'allow' as const, to: 'deny' as const },
+          ],
         },
       },
     ],
@@ -563,6 +592,48 @@ export async function listAuditLog(limit = 25): Promise<AuditLogEntry[]> {
     .sort((left, right) => right.timestamp.localeCompare(left.timestamp))
     .slice(0, limit);
   return simulateLatency(entries);
+}
+
+function resolveAccessiblePages(db: DatabaseSchema, userId: string | null): PageDefinition[] {
+  const sqlId = userId ? parseUserAccountId(userId) : null;
+  const overrides = new Map<number, boolean>();
+
+  if (sqlId) {
+    for (const permission of db.userPermissions) {
+      if (permission.userId !== sqlId || permission.permissionType !== 'page') {
+        continue;
+      }
+      if (typeof permission.pageId !== 'number') {
+        continue;
+      }
+      overrides.set(permission.pageId, permission.canView);
+    }
+  }
+
+  return db.pages.filter((page) => {
+    const explicit = overrides.get(page.id);
+    if (explicit === false) {
+      return false;
+    }
+    if (explicit === true) {
+      return page.isPublished;
+    }
+    if (!page.needUserConnected) {
+      return page.isPublished;
+    }
+    return page.isPublished && Boolean(userId);
+  });
+}
+
+export async function listAccessiblePagesForCurrentUser(): Promise<PageDefinition[]> {
+  const db = readDatabase();
+  const pages = resolveAccessiblePages(db, db.currentUserId);
+  return simulateLatency(pages.map((page) => ({ ...page })));
+}
+
+export async function listAllPages(): Promise<PageDefinition[]> {
+  const db = readDatabase();
+  return simulateLatency(db.pages.map((page) => ({ ...page })));
 }
 
 export async function getUserById(userId: string): Promise<UserAccount | undefined> {

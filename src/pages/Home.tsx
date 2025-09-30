@@ -8,6 +8,7 @@ import { PresenceList } from '@/components/PresenceList';
 import { LinksCard } from '@/components/LinksCard';
 import type { LinkItem } from '@/components/LinksCard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PageAccessGuard } from '@/components/PageAccessGuard';
 
 const asset = (p: string) => new URL(p, import.meta.url).href;
 
@@ -578,9 +579,9 @@ export function Home() {
     };
   }, []);
 
-  if (!isReady) {
-    return <HomeSkeleton />;
-  }
-
-  return <HomeContent />;
+  return (
+    <PageAccessGuard pageKey="home" loadingFallback={<HomeSkeleton />}>
+      {isReady ? <HomeContent /> : <HomeSkeleton />}
+    </PageAccessGuard>
+  );
 }

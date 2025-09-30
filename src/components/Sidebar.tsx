@@ -27,6 +27,7 @@ import { computeEffectivePermissions } from '@/lib/mockDb';
 import type { PermissionKey } from '@/lib/access-control';
 import { useDecryptedLocation } from '@/lib/secureRouting';
 import { SecureNavLink } from '@/components/routing/SecureLink';
+import { useAccessiblePages } from '@/hooks/usePageAccess';
 
 interface SidebarProps {
   jobCount?: number;
@@ -45,6 +46,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
 
   const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
   const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
+  const { data: accessiblePages = [], isLoading: loadingPages } = useAccessiblePages();
 
   const accessiblePermissions = useMemo(() => {
     if (!currentUser) {
@@ -53,6 +55,15 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     return new Set(computeEffectivePermissions(currentUser, groups));
   }, [currentUser, groups]);
 
+  const accessiblePageKeys = useMemo(() => {
+    const keys = new Set<string>();
+    accessiblePages.forEach((page) => {
+      keys.add(page.componentKey.trim().toLowerCase());
+      keys.add(page.name.replace(/\.tsx?$/i, '').toLowerCase());
+    });
+    return keys;
+  }, [accessiblePages]);
+
   const menuItems: Array<{
     id: string;
     icon: typeof Home;
@@ -60,8 +71,9 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     path: string;
     permission: PermissionKey;
     badge?: number;
+    pageKey?: string;
   }> = [
-    { id: 'home', icon: Home, label: 'Accueil', path: '/', permission: 'home' },
+    { id: 'home', icon: Home, label: 'Accueil', path: '/', permission: 'home', pageKey: 'home' },
     {
       id: 'qui',
       icon: UserRoundSearch,
@@ -75,14 +87,9 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       label: 'Catalogue',
       path: '/catalogue/offices',
       permission: 'catalogue',
+      pageKey: 'office',
     },
-    {
-      id: 'kiosque',
-      icon: Store,
-      label: 'Kiosque',
-      path: '/catalogue/kiosque',
-      permission: 'catalogue',
-    },
+    { id: 'kiosque', icon: Store, label: 'Kiosque', path: '/catalogue/kiosque', permission: 'catalogue' },
     { id: 'doc', icon: Files, label: "Glénat'Doc", path: '/doc', permission: 'doc' },
     { id: 'fee', icon: Users, label: "Glénat'Fée", path: '/fee', permission: 'fee' },
     { id: 'agenda', icon: Calendar, label: 'Agenda', path: '/agenda', permission: 'agenda' },
@@ -147,25 +154,31 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     },
   ];
 
-  const showAllMenus = loadingCurrentUser || loadingGroups || !currentUser;
+  const showAllMenus = loadingCurrentUser || loadingGroups || loadingPages || !currentUser;
 
-  const userCanAccess = (permission: PermissionKey) => {
+  const userCanAccess = (permission: PermissionKey, pageKey?: string) => {
     if (showAllMenus) {
       return true;
     }
     if (currentUser?.isSuperAdmin) {
       return true;
     }
-    return accessiblePermissions.has(permission);
+    if (!accessiblePermissions.has(permission)) {
+      return false;
+    }
+    if (!pageKey) {
+      return true;
+    }
+    return accessiblePageKeys.has(pageKey.trim().toLowerCase());
   };
 
   const location = useDecryptedLocation();
 
-  const mainMenuItems = menuItems.filter(
-    (item) => item.id !== 'administration' && userCanAccess(item.permission),
+  const mainMenuItems = menuItems.filter((item) =>
+    item.id !== 'administration' && userCanAccess(item.permission, item.pageKey),
   );
-  const adminMenuItems = menuItems.filter(
-    (item) => item.id === 'administration' && userCanAccess(item.permission),
+  const adminMenuItems = menuItems.filter((item) =>
+    item.id === 'administration' && userCanAccess(item.permission, item.pageKey),
   );
 
   return (

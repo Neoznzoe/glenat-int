@@ -74,7 +74,10 @@ async function withEncryptedUrl(
   return { input: `/secure/${token}`, init };
 }
 
-async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
+export async function requestJson<T>(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<T> {
   const encrypted = await withEncryptedUrl(input, init);
   const response = await fetch(encrypted.input, encrypted.init);
   if (!response.ok) {

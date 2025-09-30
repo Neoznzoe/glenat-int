@@ -6,10 +6,12 @@ import {
   listAuditLog,
   getCurrentUser,
   updateUserAccess,
+  listAccessiblePagesForCurrentUser,
   type PermissionOverride,
   type UserAccount,
   type AuditLogEntry,
   type UpdateUserAccessPayload,
+  type PageDefinition,
 } from './mockDb';
 import { type GroupDefinition, type PermissionDefinition } from './access-control';
 import { decryptUrlToken, isUrlEncryptionConfigured } from './urlEncryption';
@@ -61,6 +63,11 @@ async function handleAdminRequest(request: Request): Promise<Response | undefine
     if (pathname === '/api/admin/current-user' && method === 'GET') {
       const user = await getCurrentUser();
       return jsonResponse<UserAccount>(user);
+    }
+
+    if (pathname === '/api/access/pages' && method === 'GET') {
+      const pages = await listAccessiblePagesForCurrentUser();
+      return jsonResponse<PageDefinition[]>(pages);
     }
 
     if (pathname === '/api/admin/audit-log' && method === 'GET') {

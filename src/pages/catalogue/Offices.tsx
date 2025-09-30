@@ -22,6 +22,7 @@ import {
 import { Fragment, useEffect, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
 import { fetchCatalogueOffices, type CatalogueOfficeGroup } from '@/lib/catalogue';
+import { PageAccessGuard } from '@/components/PageAccessGuard';
 
 export function Offices() {
   const publishers = [
@@ -84,15 +85,26 @@ export function Offices() {
       })
     : [];
 
+  const loadingFallback = (
+    <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center">
+      <span
+        aria-hidden="true"
+        className="inline-flex h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent"
+      />
+      <span className="sr-only">Chargement des droits…</span>
+    </div>
+  );
+
   return (
-    <div className="p-6 space-y-6">
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <SecureLink to="/">Accueil</SecureLink>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
+    <PageAccessGuard pageKey="office" loadingFallback={loadingFallback}>
+      <div className="p-6 space-y-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <SecureLink to="/">Accueil</SecureLink>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
@@ -177,7 +189,8 @@ export function Offices() {
           </CatalogueLayout>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </PageAccessGuard>
   );
 }
 
