@@ -6,7 +6,7 @@ import App from './App.tsx';
 import './index.css';
 import { ThemeProvider } from './components/ThemeProvider';
 import { store } from './store';
-import { BrowserRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom';
 import { queryClient } from './lib/queryClient';
 import { MsalProvider } from '@azure/msal-react';
 import { msalInstance } from './lib/msal';
@@ -21,9 +21,9 @@ async function bootstrap() {
           <Provider store={store}>
             <QueryClientProvider client={queryClient}>
               <ThemeProvider>
-                <BrowserRouter>
+                <HashRouter>
                   <App />
-                </BrowserRouter>
+                </HashRouter>
               </ThemeProvider>
             </QueryClientProvider>
           </Provider>
