@@ -1,36 +1,17 @@
 import QuickAccess, { QuickAccessItem } from '@/components/QuickAccess';
-import {
-  BookOpen,
-  Building,
-  CalendarDays,
-  Download,
-  Image,
-  Info,
-  PackageX,
-  Sparkles,
-  TrendingUp,
-  UserPen,
-} from 'lucide-react';
+import { BookOpen, Building, CalendarDays, Sparkles } from 'lucide-react';
 import { ReactNode } from 'react';
 
 const quickLinks: QuickAccessItem[] = [
   { label: 'Prochaines offices', icon: CalendarDays, href: '/catalogue/offices' },
-  { label: 'Dernières nouveautés', icon: Sparkles, href: '/catalogue/nouveautes' },
-  { label: 'Éditions', icon: Building, href: '/catalogue' },
-  { label: 'Les auteurs', icon: UserPen },
-  { label: 'Tout le catalogue', icon: BookOpen, href: '/catalogue/all' },
-
-  { label: 'Télécharger le catalogue', icon: Download },
-  // { label: 'Kiosque', icon: Store, href: '/catalogue/kiosque' },
-  { label: 'Top des commandes', icon: TrendingUp },//???//
-  { label: 'Couverture à paraître', icon: Image, href: '/catalogue/couverture-a-paraitre' },
-  { label: 'Information à renseigner', icon: Info },
-  { label: 'Plus de stock', icon: PackageX },//??//
+  { label: 'Dernières nouveautés', icon: Sparkles },
+  { label: 'Éditions', icon: Building },
+  { label: 'Tout le catalogue', icon: BookOpen },
 ];
 
 interface CatalogueLayoutProps {
   children: ReactNode;
-  active: string;
+  active?: string;
 }
 
 export function CatalogueLayout({ children, active }: CatalogueLayoutProps) {
