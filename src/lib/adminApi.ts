@@ -7,9 +7,9 @@ import {
 import { type GroupDefinition, type PermissionDefinition } from './access-control';
 import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
 
-const ADMIN_DATABASE_ENDPOINT = import.meta.env.DEV
-  ? '/intranet/call-database'
-  : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
+const ADMIN_DATABASE_ENDPOINT =
+  import.meta.env.VITE_ADMIN_DATABASE_ENDPOINT ??
+  'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
 
 const ADMIN_USERS_QUERY = 'SELECT * FROM [users];';
 const ADMIN_MODULES_QUERY = 'SELECT * FROM [modules];';
