@@ -37,6 +37,17 @@ export function GroupManager({ groups, users, memberships, isLoading }: GroupMan
   const [newGroupName, setNewGroupName] = useState('');
   const [activeGroupPopover, setActiveGroupPopover] = useState<string | null>(null);
 
+  const normalizeName = (value: string) =>
+    value
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+
+  const normalizedExistingNames = useMemo(() => {
+    return new Set(groups.map((group) => normalizeName(group.name)));
+  }, [groups]);
+
   const createGroupMutation = useCreateGroup({
     onSuccess: () => {
       setIsCreateOpen(false);
@@ -79,6 +90,13 @@ export function GroupManager({ groups, users, memberships, isLoading }: GroupMan
     if (!trimmed) {
       toast.error('Nom du groupe requis', {
         description: 'Veuillez indiquer un nom avant de créer le groupe.',
+      });
+      return;
+    }
+    const normalizedName = normalizeName(trimmed);
+    if (normalizedExistingNames.has(normalizedName)) {
+      toast.error('Nom déjà utilisé', {
+        description: 'Un groupe avec ce nom existe déjà.',
       });
       return;
     }

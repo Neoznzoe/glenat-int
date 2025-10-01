@@ -925,9 +925,23 @@ export async function createGroup(name: string): Promise<void> {
     throw new Error('Le nom du groupe est requis.');
   }
 
+  const escapedName = escapeSqlLiteral(trimmed);
+
+  const existing = await runDatabaseQuery(
+    `SET NOCOUNT ON;
+SELECT TOP (1) [groupId]
+FROM [userGroups]
+WHERE LOWER(LTRIM(RTRIM([groupName]))) = LOWER(N'${escapedName}');`,
+    'vérification des groupes',
+  );
+
+  if (existing.length) {
+    throw new Error('Un groupe avec ce nom existe déjà.');
+  }
+
   const query = `SET NOCOUNT ON;
-INSERT INTO [userGroups] ([groupName]) VALUES (N'${escapeSqlLiteral(trimmed)}');
-SELECT CAST(SCOPE_IDENTITY() AS INT) AS [groupId], N'${escapeSqlLiteral(trimmed)}' AS [groupName];`;
+INSERT INTO [userGroups] ([groupName]) VALUES (N'${escapedName}');
+SELECT CAST(SCOPE_IDENTITY() AS INT) AS [groupId], N'${escapedName}' AS [groupName];`;
 
   const inserted = await runDatabaseQuery(query, 'création du groupe');
   if (!inserted.length) {
