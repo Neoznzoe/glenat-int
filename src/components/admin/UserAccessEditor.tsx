@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -11,6 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PermissionDefinition, GroupDefinition, PermissionKey } from '@/lib/access-control';
 import type { PermissionEvaluation, UserAccount } from '@/lib/mockDb';
@@ -110,17 +111,56 @@ export function UserAccessEditor({
     const parts = [user.jobTitle, user.department]
       .map((value) => (value ? value.trim() : ''))
       .filter((value) => Boolean(value));
-    if (!parts.length && user.username) {
-      parts.push(`Identifiant : ${user.username}`);
-    }
-    if (!parts.length && user.preferredLanguage) {
-      parts.push(`Langue : ${user.preferredLanguage}`);
+      if (!parts.length && user.username) {
+        parts.push(`Identifiant : ${user.username}`);
+      }
+      if (!parts.length && user.preferredLanguage) {
+        parts.push(`Langue : ${user.preferredLanguage}`);
     }
     if (!parts.length && user.email) {
       parts.push(user.email);
     }
     return parts.length ? parts.join(' — ') : 'Aucune information complémentaire disponible';
   }, [user]);
+
+  const permissionSections = useMemo(
+    () => {
+      const modules: PermissionEvaluationRow[] = [];
+      const pagesByParent = new Map<PermissionKey | undefined, PermissionEvaluationRow[]>();
+
+      for (const row of permissionEvaluations) {
+        const isPage = row.definition.type === 'page' || Boolean(row.definition.parentKey);
+        if (isPage) {
+          const parentKey = row.definition.parentKey ?? undefined;
+          if (!pagesByParent.has(parentKey)) {
+            pagesByParent.set(parentKey, []);
+          }
+          pagesByParent.get(parentKey)!.push(row);
+          continue;
+        }
+        modules.push(row);
+      }
+
+      const sections = modules.map((moduleRow) => {
+        const pageRows = pagesByParent.get(moduleRow.definition.key) ?? [];
+        pagesByParent.delete(moduleRow.definition.key);
+        const sortedPages = [...pageRows].sort((left, right) =>
+          left.definition.label.localeCompare(right.definition.label, 'fr', { sensitivity: 'base' }),
+        );
+        return { module: moduleRow, pages: sortedPages };
+      });
+
+      const remainingPages = Array.from(pagesByParent.values()).flat();
+      for (const pageRow of remainingPages) {
+        sections.push({ module: pageRow, pages: [] });
+      }
+
+      return sections;
+    },
+    [permissionEvaluations],
+  );
+
+  const isDecisionDisabled = isSuperAdmin || isLoading;
 
   return (
     <Card className="flex flex-col">
@@ -202,31 +242,53 @@ export function UserAccessEditor({
                   {effectivePermissionSet.size} accès actifs pour ce profil
                 </div>
               </div>
-              <div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Permission</TableHead>
-                      <TableHead>Origine</TableHead>
-                      <TableHead className="w-40">Décision</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {permissionEvaluations.map(({ definition, evaluation }) => {
-                      const selectValue = getPermissionSelectValue(draft.permissionOverrides, definition.key);
-                      const effective = effectivePermissionSet.has(definition.key);
-                      const tone = effective ? 'text-emerald-600' : 'text-muted-foreground';
-                      const inheritedFrom = evaluation.inheritedFrom
-                        .map((groupId) => groupMap.get(groupId)?.name ?? groupId)
-                        .filter(Boolean);
+              <div className="space-y-3">
+                {permissionSections.length === 0 && (
+                  <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                    Aucune permission disponible pour cette personne.
+                  </div>
+                )}
+                {permissionSections.map(({ module, pages }) => {
+                  const { definition, evaluation } = module;
+                  const selectValue = getPermissionSelectValue(
+                    draft.permissionOverrides,
+                    definition.key,
+                  );
+                  const effective = effectivePermissionSet.has(definition.key);
+                  const tone = effective ? 'text-emerald-600' : 'text-muted-foreground';
+                  const inheritedFrom = evaluation.inheritedFrom
+                    .map((groupId) => groupMap.get(groupId)?.name ?? groupId)
+                    .filter(Boolean);
+                  const hasPages = pages.length > 0 && definition.type !== 'page';
 
-                      return (
-                        <TableRow key={definition.key}>
-                          <TableCell>
-                            <div className="font-medium">{definition.label}</div>
-                            <div className="text-xs text-muted-foreground">{definition.description}</div>
-                          </TableCell>
-                          <TableCell>
+                  return (
+                    <Collapsible
+                      key={definition.key}
+                      className="overflow-hidden rounded-lg border bg-background"
+                    >
+                      <div className="flex flex-col">
+                        <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="flex flex-1 items-start gap-3">
+                            {hasPages ? (
+                              <CollapsibleTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="mt-1 rounded-md border border-transparent p-1 text-muted-foreground transition-colors hover:text-foreground data-[state=open]:bg-muted/80"
+                                >
+                                  <ChevronRight className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-90" />
+                                </button>
+                              </CollapsibleTrigger>
+                            ) : (
+                              <span className="mt-2 h-4 w-4 flex-shrink-0" />
+                            )}
+                            <div className="flex-1 space-y-1">
+                              <div className={cn('font-medium', tone)}>{definition.label}</div>
+                              {definition.description && (
+                                <div className="text-xs text-muted-foreground">{definition.description}</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-start gap-2 text-left sm:items-end sm:text-right">
                             <div className="text-xs text-muted-foreground">
                               {describePermissionOrigin(
                                 evaluation.origin,
@@ -234,21 +296,19 @@ export function UserAccessEditor({
                                 evaluation.basePermission,
                               )}
                             </div>
-                          </TableCell>
-                          <TableCell>
                             <Select
                               value={selectValue}
                               onValueChange={(value: PermissionSelectValue) =>
                                 onPermissionChange(definition.key, value)
                               }
-                              disabled={isSuperAdmin || isLoading}
+                              disabled={isDecisionDisabled}
                             >
                               <SelectTrigger
                                 className={cn('capitalize', selectValue !== 'inherit' && tone)}
                               >
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent align="end">
                                 {PERMISSION_SELECT_OPTIONS.map((option) => (
                                   <SelectItem
                                     key={option.value}
@@ -263,12 +323,88 @@ export function UserAccessEditor({
                                 ))}
                               </SelectContent>
                             </Select>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                          </div>
+                        </div>
+                        {hasPages && (
+                          <CollapsibleContent>
+                            <div className="space-y-2 border-t bg-muted/40 px-4 py-3">
+                              {pages.map(({ definition: pageDefinition, evaluation: pageEvaluation }) => {
+                                const pageSelectValue = getPermissionSelectValue(
+                                  draft.permissionOverrides,
+                                  pageDefinition.key,
+                                );
+                                const pageEffective = effectivePermissionSet.has(pageDefinition.key);
+                                const pageTone = pageEffective
+                                  ? 'text-emerald-600'
+                                  : 'text-muted-foreground';
+                                const pageInheritedFrom = pageEvaluation.inheritedFrom
+                                  .map((groupId) => groupMap.get(groupId)?.name ?? groupId)
+                                  .filter(Boolean);
+
+                                return (
+                                  <div
+                                    key={pageDefinition.key}
+                                    className="rounded-md border bg-background/80 p-3 shadow-sm"
+                                  >
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                      <div className="space-y-1">
+                                        <div className={cn('text-sm font-medium', pageTone)}>
+                                          {pageDefinition.label}
+                                        </div>
+                                        {pageDefinition.description && (
+                                          <div className="text-xs text-muted-foreground">
+                                            {pageDefinition.description}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <Select
+                                        value={pageSelectValue}
+                                        onValueChange={(value: PermissionSelectValue) =>
+                                          onPermissionChange(pageDefinition.key, value)
+                                        }
+                                        disabled={isDecisionDisabled}
+                                      >
+                                        <SelectTrigger
+                                          className={cn(
+                                            'w-full capitalize sm:w-36',
+                                            pageSelectValue !== 'inherit' && pageTone,
+                                          )}
+                                        >
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent align="end">
+                                          {PERMISSION_SELECT_OPTIONS.map((option) => (
+                                            <SelectItem
+                                              key={option.value}
+                                              value={option.value}
+                                              className="text-sm"
+                                            >
+                                              <div className="font-medium">{option.label}</div>
+                                              <div className="text-xs text-muted-foreground">
+                                                {option.description}
+                                              </div>
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {describePermissionOrigin(
+                                        pageEvaluation.origin,
+                                        pageInheritedFrom,
+                                        pageEvaluation.basePermission,
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </CollapsibleContent>
+                        )}
+                      </div>
+                    </Collapsible>
+                  );
+                })}
               </div>
             </section>
 
