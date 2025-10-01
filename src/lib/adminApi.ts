@@ -160,7 +160,7 @@ function extractDatabaseRecords(payload: unknown): RawDatabaseRecord[] {
 
     if (Array.isArray(current)) {
       const records = current.filter(
-        (item): item is RawDatabaseUserRecord => item !== null && typeof item === 'object' && !Array.isArray(item),
+        (item): item is RawDatabaseRecord => item !== null && typeof item === 'object' && !Array.isArray(item),
       );
       if (records.length) {
         return records;
