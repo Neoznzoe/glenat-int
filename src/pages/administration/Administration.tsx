@@ -6,6 +6,7 @@ import {
   useAuditLog,
   useCurrentUser,
   useUpdateUserAccess,
+  useAdminGroupMembers,
   type PermissionOverride,
   type UserAccount,
 } from '@/hooks/useAdminData';
@@ -23,6 +24,7 @@ import {
   type PermissionEvaluationRow,
 } from '@/components/admin/UserAccessEditor';
 import { type DraftAccessState, type PermissionSelectValue } from '@/components/admin/access-types';
+import { GroupManager } from '@/components/admin/GroupManager';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -57,6 +59,7 @@ function mapGroupIdToName(groups: GroupDefinition[], ids: string[]) {
 export function Administration() {
   const { data: users = [], isLoading: loadingUsers } = useAdminUsers();
   const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
+  const { data: groupMembers = [], isLoading: loadingGroupMembers } = useAdminGroupMembers();
   const { data: permissions = [], isLoading: loadingPermissions } = usePermissionDefinitions();
   const { data: auditLog = [] } = useAuditLog(12);
   const { data: currentUser } = useCurrentUser();
@@ -334,6 +337,13 @@ export function Administration() {
           onSave={handleSave}
         />
       </div>
+
+      <GroupManager
+        groups={groups}
+        users={users}
+        memberships={groupMembers}
+        isLoading={loadingGroups || loadingGroupMembers || loadingUsers}
+      />
 
       <Card>
         <CardHeader>

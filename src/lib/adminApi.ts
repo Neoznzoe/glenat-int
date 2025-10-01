@@ -15,6 +15,9 @@ const ADMIN_USERS_QUERY = 'SELECT * FROM [users];';
 const ADMIN_MODULES_QUERY = 'SELECT * FROM [modules];';
 const ADMIN_PAGES_QUERY = 'SELECT * FROM [pages];';
 const ADMIN_MODULE_PAGES_QUERY = 'SELECT * FROM [modulesPages];';
+const ADMIN_GROUPS_QUERY = 'SELECT * FROM [userGroups];';
+const ADMIN_GROUP_PERMISSIONS_QUERY = 'SELECT * FROM [groupPermissions];';
+const ADMIN_GROUP_MEMBERS_QUERY = 'SELECT * FROM [userGroupMembers];';
 
 interface DatabaseQueryResponse {
   success?: boolean;
@@ -35,6 +38,33 @@ interface ModuleAssociation {
   moduleId: string;
   pageId: string;
   defaultPage: boolean;
+}
+
+const GROUP_ACCENT_COLORS = [
+  'bg-rose-500/10 text-rose-600 border-rose-200',
+  'bg-sky-500/10 text-sky-600 border-sky-200',
+  'bg-amber-500/10 text-amber-600 border-amber-200',
+  'bg-slate-500/10 text-slate-600 border-slate-200',
+  'bg-emerald-500/10 text-emerald-600 border-emerald-200',
+  'bg-purple-500/10 text-purple-600 border-purple-200',
+  'bg-blue-500/10 text-blue-600 border-blue-200',
+  'bg-orange-500/10 text-orange-600 border-orange-200',
+  'bg-cyan-500/10 text-cyan-600 border-cyan-200',
+  'bg-pink-500/10 text-pink-600 border-pink-200',
+];
+
+function hashString(value: string): number {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index);
+    hash |= 0;
+  }
+  return hash;
+}
+
+function assignAccentColor(id: string, index: number): string {
+  const paletteIndex = Math.abs(hashString(id || `group-${index + 1}`)) % GROUP_ACCENT_COLORS.length;
+  return GROUP_ACCENT_COLORS[paletteIndex];
 }
 
 function getValue(record: RawDatabaseUserRecord, keys: string[]): unknown {
@@ -133,6 +163,31 @@ function normalizeKey(value: string | undefined, fallback: string): string {
   return fallback;
 }
 
+function toBoolean(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) {
+      return undefined;
+    }
+    return value !== 0;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return undefined;
+    }
+    if (['true', '1', 'yes', 'oui'].includes(normalized)) {
+      return true;
+    }
+    if (['false', '0', 'no', 'non'].includes(normalized)) {
+      return false;
+    }
+  }
+  return undefined;
+}
+
 function humanizeLabel(value: string): string {
   const spaced = value
     .replace(/[_-]+/g, ' ')
@@ -195,6 +250,18 @@ function extractDatabaseRecords(payload: unknown): RawDatabaseUserRecord[] {
   }
 
   return [];
+}
+
+function escapeSqlLiteral(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
+function ensureNumericId(value: string, context: string): number {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`Identifiant ${context} invalide.`);
+  }
+  return parsed;
 }
 
 async function runDatabaseQuery(query: string, context: string): Promise<RawDatabaseUserRecord[]> {
@@ -480,6 +547,133 @@ function normalizeModulePageRecord(record: RawDatabaseUserRecord): ModuleAssocia
   return { moduleId, pageId, defaultPage };
 }
 
+export interface GroupMember {
+  groupId: string;
+  userId: string;
+}
+
+function normalizeGroupRecord(
+  record: RawDatabaseUserRecord,
+  index: number,
+  permissions: Map<string, Set<string>>,
+): GroupDefinition {
+  const groupIdValue = getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID', 'id']);
+  const numericId = toNumber(groupIdValue);
+  const id =
+    toNonEmptyString(groupIdValue) ??
+    (numericId !== undefined ? numericId.toString() : `group-${index + 1}`);
+  const name =
+    toNonEmptyString(getValue(record, ['groupName', 'GroupName', 'name', 'Name'])) ??
+    `Groupe ${index + 1}`;
+  const description =
+    toNonEmptyString(getValue(record, ['description', 'Description', 'groupDescription'])) ?? '';
+  const defaultPermissions = Array.from(permissions.get(id) ?? []).sort();
+
+  return {
+    id,
+    name,
+    description,
+    defaultPermissions,
+    accentColor: assignAccentColor(id, index),
+  };
+}
+
+function normalizeGroupPermission(
+  record: RawDatabaseUserRecord,
+  moduleKeyById: Map<string, string>,
+  pageKeyById: Map<string, string>,
+  moduleKeyBySlug: Map<string, string>,
+  pageKeyBySlug: Map<string, string>,
+): { groupId: string; permissionKey: string } | null {
+  const groupIdValue = getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID']);
+  const numericGroupId = toNumber(groupIdValue);
+  const groupId =
+    toNonEmptyString(groupIdValue) ?? (numericGroupId !== undefined ? numericGroupId.toString() : undefined);
+  if (!groupId) {
+    return null;
+  }
+
+  const canViewValue = getValue(record, ['canView', 'CanView', 'view', 'View']);
+  const canView = toBoolean(canViewValue);
+  if (canView === false) {
+    return null;
+  }
+
+  const moduleIdValue = getValue(record, ['moduleId', 'ModuleId', 'moduleID', 'ModuleID']);
+  const pageIdValue = getValue(record, ['pageId', 'PageId', 'pageID', 'PageID']);
+  const elementIdValue = getValue(record, ['elementId', 'ElementId', 'elementID', 'ElementID']);
+  const permissionType = toNonEmptyString(
+    getValue(record, ['permissionType', 'PermissionType', 'type', 'Type']),
+  );
+
+  const moduleId =
+    toNonEmptyString(moduleIdValue) ??
+    (() => {
+      const numericModule = toNumber(moduleIdValue);
+      return numericModule !== undefined ? numericModule.toString() : undefined;
+    })();
+  const pageId =
+    toNonEmptyString(pageIdValue) ??
+    (() => {
+      const numericPage = toNumber(pageIdValue);
+      return numericPage !== undefined ? numericPage.toString() : undefined;
+    })();
+  const elementId =
+    toNonEmptyString(elementIdValue) ??
+    (() => {
+      const numericElement = toNumber(elementIdValue);
+      return numericElement !== undefined ? numericElement.toString() : undefined;
+    })();
+
+  let permissionKey: string | undefined;
+
+  if (pageId) {
+    permissionKey = pageKeyById.get(pageId);
+  }
+  if (!permissionKey && moduleId) {
+    permissionKey = moduleKeyById.get(moduleId);
+  }
+  if (!permissionKey && elementId) {
+    permissionKey = pageKeyById.get(elementId) ?? moduleKeyById.get(elementId);
+  }
+  if (!permissionKey && permissionType) {
+    const normalized = normalizeKey(permissionType, permissionType);
+    permissionKey =
+      moduleKeyById.get(normalized) ??
+      pageKeyById.get(normalized) ??
+      moduleKeyBySlug.get(normalized) ??
+      pageKeyBySlug.get(normalized) ??
+      normalized;
+  }
+
+  if (!permissionKey) {
+    return null;
+  }
+
+  return { groupId, permissionKey };
+}
+
+function normalizeGroupMemberRecord(
+  record: RawDatabaseUserRecord,
+): GroupMember | null {
+  const groupIdValue = getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID']);
+  const userIdValue = getValue(record, ['userId', 'UserId', 'userID', 'UserID']);
+  const numericGroupId = toNumber(groupIdValue);
+  const numericUserId = toNumber(userIdValue);
+  const groupId =
+    toNonEmptyString(groupIdValue) ??
+    (numericGroupId !== undefined ? numericGroupId.toString() : undefined);
+  const userId =
+    toNonEmptyString(userIdValue) ??
+    (numericUserId !== undefined ? numericUserId.toString() : undefined);
+
+  if (!groupId || !userId) {
+    return null;
+  }
+
+  return { groupId, userId };
+}
+
 async function withEncryptedUrl(
   input: RequestInfo | URL,
   init?: RequestInit,
@@ -579,7 +773,66 @@ export async function fetchUsers(): Promise<UserAccount[]> {
 }
 
 export async function fetchGroups(): Promise<GroupDefinition[]> {
-  return requestJson<GroupDefinition[]>('/api/admin/groups');
+  const [groupRecords, permissionRecords, moduleRecords, pageRecords] = await Promise.all([
+    runDatabaseQuery(ADMIN_GROUPS_QUERY, 'groupes'),
+    runDatabaseQuery(ADMIN_GROUP_PERMISSIONS_QUERY, 'permissions des groupes'),
+    runDatabaseQuery(ADMIN_MODULES_QUERY, 'modules'),
+    runDatabaseQuery(ADMIN_PAGES_QUERY, 'pages'),
+  ]);
+
+  const moduleDefinitions = moduleRecords.map((record, index) => normalizeModuleDefinition(record, index));
+  const pageDefinitions = pageRecords.map((record, index) => normalizePageDefinition(record, index));
+
+  const moduleKeyById = new Map<string, string>();
+  const moduleKeyBySlug = new Map<string, string>();
+  for (const definition of moduleDefinitions) {
+    const metadataId = definition.metadata?.id;
+    if (typeof metadataId === 'string') {
+      moduleKeyById.set(metadataId, definition.key);
+    }
+    const slug = definition.metadata?.slug;
+    if (typeof slug === 'string') {
+      moduleKeyBySlug.set(normalizeKey(slug, slug), definition.key);
+    }
+  }
+
+  const pageKeyById = new Map<string, string>();
+  const pageKeyBySlug = new Map<string, string>();
+  for (const definition of pageDefinitions) {
+    const metadataId = definition.metadata?.id;
+    if (typeof metadataId === 'string') {
+      pageKeyById.set(metadataId, definition.key);
+    }
+    const slug = definition.metadata?.slug;
+    if (typeof slug === 'string') {
+      pageKeyBySlug.set(normalizeKey(slug, slug), definition.key);
+    }
+  }
+
+  const permissionsByGroup = new Map<string, Set<string>>();
+  for (const record of permissionRecords) {
+    const normalized = normalizeGroupPermission(
+      record,
+      moduleKeyById,
+      pageKeyById,
+      moduleKeyBySlug,
+      pageKeyBySlug,
+    );
+    if (!normalized) {
+      continue;
+    }
+    const { groupId, permissionKey } = normalized;
+    if (!permissionsByGroup.has(groupId)) {
+      permissionsByGroup.set(groupId, new Set());
+    }
+    permissionsByGroup.get(groupId)!.add(permissionKey);
+  }
+
+  const groups = groupRecords.map((record, index) => normalizeGroupRecord(record, index, permissionsByGroup));
+
+  groups.sort((left, right) => left.name.localeCompare(right.name, 'fr', { sensitivity: 'base' }));
+
+  return groups;
 }
 
 export async function fetchPermissions(): Promise<PermissionDefinition[]> {
@@ -659,6 +912,46 @@ export async function fetchPermissions(): Promise<PermissionDefinition[]> {
   return [...modules, ...pagesWithParent];
 }
 
+export async function fetchGroupMembers(): Promise<GroupMember[]> {
+  const records = await runDatabaseQuery(ADMIN_GROUP_MEMBERS_QUERY, 'membres des groupes');
+  return records
+    .map((record) => normalizeGroupMemberRecord(record))
+    .filter((value): value is GroupMember => value !== null);
+}
+
+export async function createGroup(name: string): Promise<void> {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    throw new Error('Le nom du groupe est requis.');
+  }
+
+  const query = `DECLARE @Inserted TABLE ([groupId] INT, [groupName] NVARCHAR(255));
+INSERT INTO [userGroups] ([groupName])
+OUTPUT INSERTED.[groupId], INSERTED.[groupName] INTO @Inserted
+VALUES (N'${escapeSqlLiteral(trimmed)}');
+SELECT * FROM @Inserted;`;
+
+  const inserted = await runDatabaseQuery(query, 'création du groupe');
+  if (!inserted.length) {
+    throw new Error("La création du groupe n'a retourné aucun résultat.");
+  }
+}
+
+export async function addUserToGroup(payload: { userId: string; groupId: string }): Promise<void> {
+  const groupId = ensureNumericId(payload.groupId, 'groupe');
+  const userId = ensureNumericId(payload.userId, 'utilisateur');
+
+  const query = `IF NOT EXISTS (
+  SELECT 1 FROM [userGroupMembers] WHERE [userId] = ${userId} AND [groupId] = ${groupId}
+)
+BEGIN
+  INSERT INTO [userGroupMembers] ([userId], [groupId]) VALUES (${userId}, ${groupId});
+END;
+SELECT ${userId} AS [userId], ${groupId} AS [groupId];`;
+
+  await runDatabaseQuery(query, "ajout d'un utilisateur dans un groupe");
+}
+
 export async function fetchAuditLog(limit = 25): Promise<AuditLogEntry[]> {
   const params = new URLSearchParams({ limit: String(limit) });
   return requestJson<AuditLogEntry[]>(`/api/admin/audit-log?${params.toString()}`);
@@ -681,4 +974,4 @@ export async function persistUserAccess(
   });
 }
 
-export type { UserAccount, PermissionOverride, AuditLogEntry, UpdateUserAccessPayload };
+export type { UserAccount, PermissionOverride, AuditLogEntry, UpdateUserAccessPayload, GroupMember };
