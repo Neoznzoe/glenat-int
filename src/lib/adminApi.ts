@@ -446,9 +446,10 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Pro
 }
 
 export async function fetchUsers(): Promise<UserAccount[]> {
-  const [usersResult, membershipsResult] = await Promise.allSettled([
+  const [usersResult, membershipsResult, metadataResult] = await Promise.allSettled([
     sendDatabaseQuery(ADMIN_USERS_QUERY),
     sendDatabaseQuery(ADMIN_USER_GROUP_MEMBERS_QUERY),
+    requestJson<UserAccount[]>('/api/admin/users'),
   ]);
 
   if (usersResult.status !== 'fulfilled') {
@@ -462,6 +463,19 @@ export async function fetchUsers(): Promise<UserAccount[]> {
   if (membershipsResult.status === 'fulfilled') {
     memberships = extractRecords(membershipsResult.value);
   }
+
+  const metadata: UserAccount[] =
+    metadataResult.status === 'fulfilled' && Array.isArray(metadataResult.value)
+      ? metadataResult.value
+      : [];
+  const metadataById = new Map(metadata.map((entry) => [entry.id, entry]));
+  const metadataByAzureOid = new Map(
+    metadata
+      .filter((entry): entry is UserAccount & { azureOid: string } =>
+        typeof entry.azureOid === 'string' && entry.azureOid.length > 0,
+      )
+      .map((entry) => [entry.azureOid, entry]),
+  );
 
   const groupsByUser = new Map<string, string[]>();
   for (const entry of memberships) {
@@ -489,6 +503,20 @@ export async function fetchUsers(): Promise<UserAccount[]> {
     if (membership) {
       membership.sort((left, right) => Number(left) - Number(right));
       user.groups = membership;
+    }
+
+    const metadataMatch =
+      metadataById.get(user.id) ?? (user.azureOid ? metadataByAzureOid.get(user.azureOid) : undefined);
+    if (metadataMatch) {
+      if (Array.isArray(metadataMatch.permissionOverrides)) {
+        user.permissionOverrides = metadataMatch.permissionOverrides.map((override) => ({ ...override }));
+      }
+      if (typeof metadataMatch.isSuperAdmin === 'boolean') {
+        user.isSuperAdmin = metadataMatch.isSuperAdmin;
+      }
+      if (!user.email && metadataMatch.email) {
+        user.email = metadataMatch.email;
+      }
     }
     return user;
   });
@@ -583,13 +611,34 @@ export async function fetchCurrentUser(): Promise<UserAccount> {
 export async function persistUserAccess(
   payload: UpdateUserAccessPayload,
 ): Promise<UserAccount> {
-  const numericUserId = Number.parseInt(payload.userId, 10);
+  const { userId, ...body } = payload;
+  const updated = await requestJson<UserAccount>(`/api/admin/users/${encodeURIComponent(userId)}/access`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  const numericUserId = Number.parseInt(userId, 10);
   if (!Number.isFinite(numericUserId)) {
-    throw new Error("Identifiant d'utilisateur invalide");
+    return updated;
   }
 
   const statements: string[] = [`DELETE FROM [userGroupMembers] WHERE [userId] = ${numericUserId};`];
-  for (const groupId of payload.groups) {
+  const sourceGroups = (updated.groups?.length ? updated.groups : payload.groups) ?? [];
+  const normalizedGroups = sourceGroups
+    .map((groupId) => {
+      if (typeof groupId === 'number') {
+        return String(groupId);
+      }
+      if (typeof groupId === 'string') {
+        return groupId.trim();
+      }
+      return '';
+    })
+    .filter((value) => value.length > 0);
+  for (const groupId of normalizedGroups) {
     const numericGroupId = Number.parseInt(groupId, 10);
     if (!Number.isFinite(numericGroupId)) {
       continue;
@@ -599,17 +648,16 @@ export async function persistUserAccess(
     );
   }
 
-  await sendDatabaseQuery(statements.join('\n'));
-
-  const users = await fetchUsers();
-  const updated = users.find((candidate) => candidate.id === payload.userId);
-  if (!updated) {
-    throw new Error('Utilisateur mis à jour introuvable après synchronisation.');
+  if (statements.length > 1) {
+    await sendDatabaseQuery(statements.join('\n'));
+  } else {
+    await sendDatabaseQuery(statements[0]);
   }
 
-  updated.permissionOverrides = [...payload.permissionOverrides];
-
-  return updated;
+  return {
+    ...updated,
+    groups: normalizedGroups,
+  };
 }
 
 export async function createGroup(name: string): Promise<GroupDefinition> {
