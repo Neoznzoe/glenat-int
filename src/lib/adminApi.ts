@@ -925,11 +925,9 @@ export async function createGroup(name: string): Promise<void> {
     throw new Error('Le nom du groupe est requis.');
   }
 
-  const query = `DECLARE @Inserted TABLE ([groupId] INT, [groupName] NVARCHAR(255));
-INSERT INTO [userGroups] ([groupName])
-OUTPUT INSERTED.[groupId], INSERTED.[groupName] INTO @Inserted
-VALUES (N'${escapeSqlLiteral(trimmed)}');
-SELECT * FROM @Inserted;`;
+  const query = `SET NOCOUNT ON;
+INSERT INTO [userGroups] ([groupName]) VALUES (N'${escapeSqlLiteral(trimmed)}');
+SELECT CAST(SCOPE_IDENTITY() AS INT) AS [groupId], N'${escapeSqlLiteral(trimmed)}' AS [groupName];`;
 
   const inserted = await runDatabaseQuery(query, 'création du groupe');
   if (!inserted.length) {
