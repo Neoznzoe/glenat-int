@@ -103,6 +103,24 @@ export function UserAccessEditor({
   onSave,
 }: UserAccessEditorProps) {
   const groupMap = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
+  const headerDescription = useMemo(() => {
+    if (!user) {
+      return 'Choisissez une personne dans la liste pour afficher ses droits.';
+    }
+    const parts = [user.jobTitle, user.department]
+      .map((value) => (value ? value.trim() : ''))
+      .filter((value) => Boolean(value));
+    if (!parts.length && user.username) {
+      parts.push(`Identifiant : ${user.username}`);
+    }
+    if (!parts.length && user.preferredLanguage) {
+      parts.push(`Langue : ${user.preferredLanguage}`);
+    }
+    if (!parts.length && user.email) {
+      parts.push(user.email);
+    }
+    return parts.length ? parts.join(' — ') : 'Aucune information complémentaire disponible';
+  }, [user]);
 
   return (
     <Card className="flex flex-col">
@@ -110,11 +128,7 @@ export function UserAccessEditor({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <CardTitle>{user ? user.displayName : 'Sélectionnez un utilisateur'}</CardTitle>
-            <CardDescription>
-              {user
-                ? `${user.jobTitle} — ${user.department}`
-                : 'Choisissez une personne dans la liste pour afficher ses droits.'}
-            </CardDescription>
+            <CardDescription>{headerDescription}</CardDescription>
           </div>
           {user && (
             <div className="flex flex-wrap gap-2">

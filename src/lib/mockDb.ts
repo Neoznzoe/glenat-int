@@ -38,6 +38,7 @@ export interface UserAccount {
   lastName: string;
   displayName: string;
   email: string;
+  username?: string;
   azureOid: string;
   azureUpn: string;
   jobTitle: string;
@@ -51,6 +52,9 @@ export interface UserAccount {
   groups: string[];
   permissionOverrides: PermissionOverride[];
   isSuperAdmin?: boolean;
+  preferredLanguage?: string;
+  preferredTheme?: string;
+  photoUrl?: string;
 }
 
 export interface AuditLogEntry {

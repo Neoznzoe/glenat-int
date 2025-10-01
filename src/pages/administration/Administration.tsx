@@ -74,7 +74,17 @@ export function Administration() {
       return candidates;
     }
     return candidates.filter((user) => {
-      const haystack = `${user.displayName} ${user.email} ${user.department}`.toLowerCase();
+      const haystack = [
+        user.displayName,
+        user.email,
+        user.department,
+        user.jobTitle,
+        user.username,
+        user.preferredLanguage,
+      ]
+        .filter((value) => typeof value === 'string' && value.trim().length > 0)
+        .join(' ')
+        .toLowerCase();
       return haystack.includes(lowerSearch);
     });
   }, [users, lowerSearch, showOnlyInactive]);

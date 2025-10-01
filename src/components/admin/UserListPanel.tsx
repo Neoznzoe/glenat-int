@@ -77,6 +77,29 @@ export function UserListPanel({
               {filteredUsers.map((user) => {
                 const isSelected = user.id === selectedUserId;
                 const accessCount = computeEffectivePermissions(user, groups).length;
+                const detailsParts = [user.jobTitle, user.department]
+                  .map((value) => (value ? value.trim() : ''))
+                  .filter((value) => Boolean(value));
+                if (!detailsParts.length && user.username) {
+                  detailsParts.push(user.username);
+                }
+                if (!detailsParts.length && user.preferredLanguage) {
+                  detailsParts.push(`Langue : ${user.preferredLanguage}`);
+                }
+                const profileDetails = detailsParts.join(' · ') || 'Informations non renseignées';
+                const lastConnectionLabel = (() => {
+                  if (!user.lastConnection) {
+                    return '—';
+                  }
+                  const parsed = new Date(user.lastConnection);
+                  if (Number.isNaN(parsed.getTime())) {
+                    return '—';
+                  }
+                  return formatDistanceToNow(parsed, {
+                    locale: fr,
+                    addSuffix: true,
+                  });
+                })();
 
                 return (
                   <TableRow
@@ -89,9 +112,7 @@ export function UserListPanel({
                       <div className="flex flex-col">
                         <span className="font-medium">{user.displayName}</span>
                         <span className="text-xs text-muted-foreground">{user.email}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {user.jobTitle} · {user.department}
-                        </span>
+                        <span className="text-xs text-muted-foreground">{profileDetails}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -114,10 +135,7 @@ export function UserListPanel({
                       </div>
                     </TableCell>
                     <TableCell className="text-right text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(user.lastConnection), {
-                        locale: fr,
-                        addSuffix: true,
-                      })}
+                      {lastConnectionLabel}
                       <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
                         {accessCount} accès
                       </div>
