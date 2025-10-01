@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -11,10 +11,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { PermissionDefinition, GroupDefinition, PermissionKey } from '@/lib/access-control';
 import type { PermissionEvaluation, UserAccount } from '@/lib/mockDb';
 import type { DraftAccessState, PermissionSelectValue } from './access-types';
+import { useCreateGroup } from '@/hooks/useAdminData';
+import { toast } from 'sonner';
 
 const PERMISSION_SELECT_OPTIONS: Array<{
   value: PermissionSelectValue;
@@ -103,6 +116,9 @@ export function UserAccessEditor({
   onSave,
 }: UserAccessEditorProps) {
   const groupMap = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const createGroupMutation = useCreateGroup();
   const headerDescription = useMemo(() => {
     if (!user) {
       return 'Choisissez une personne dans la liste pour afficher ses droits.';
@@ -111,16 +127,34 @@ export function UserAccessEditor({
       .map((value) => (value ? value.trim() : ''))
       .filter((value) => Boolean(value));
     if (!parts.length && user.username) {
-      parts.push(`Identifiant : ${user.username}`);
+      parts.push(`Identifiant : ${user.username}`);
     }
     if (!parts.length && user.preferredLanguage) {
-      parts.push(`Langue : ${user.preferredLanguage}`);
+      parts.push(`Langue : ${user.preferredLanguage}`);
     }
     if (!parts.length && user.email) {
       parts.push(user.email);
     }
     return parts.length ? parts.join(' — ') : 'Aucune information complémentaire disponible';
   }, [user]);
+
+  const handleCreateGroup = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmed = newGroupName.trim();
+    if (!trimmed) {
+      toast.error('Le nom du groupe est requis.');
+      return;
+    }
+    try {
+      await createGroupMutation.mutateAsync(trimmed);
+      toast.success('Groupe ajouté', { description: `${trimmed} a été créé avec succès.` });
+      setIsCreateGroupOpen(false);
+      setNewGroupName('');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erreur inconnue';
+      toast.error("Impossible de créer le groupe", { description: message });
+    }
+  };
 
   return (
     <Card className="flex flex-col">
@@ -154,12 +188,58 @@ export function UserAccessEditor({
         {user && (
           <div className="space-y-8">
             <section className="space-y-3">
-              <div>
-                <h3 className="text-lg font-semibold">Groupes métiers</h3>
-                <p className="text-sm text-muted-foreground">
-                  Les groupes déterminent les accès partagés. Vous pouvez ajouter ou retirer un
-                  utilisateur d’un groupe pour modifier ses droits.
-                </p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-lg font-semibold">Groupes métiers</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Les groupes déterminent les accès partagés. Vous pouvez ajouter ou retirer un
+                    utilisateur d’un groupe pour modifier ses droits.
+                  </p>
+                </div>
+                <Dialog open={isCreateGroupOpen} onOpenChange={setIsCreateGroupOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline" disabled={isLoading}>
+                      Nouveau groupe
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <form className="space-y-6" onSubmit={handleCreateGroup}>
+                      <DialogHeader>
+                        <DialogTitle>Nouveau groupe</DialogTitle>
+                        <DialogDescription>
+                          Renseignez un nom de groupe. Il sera immédiatement disponible pour
+                          l’ensemble des utilisateurs.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-2">
+                        <Label htmlFor="new-group-name">Nom du groupe</Label>
+                        <Input
+                          id="new-group-name"
+                          value={newGroupName}
+                          onChange={(event) => setNewGroupName(event.target.value)}
+                          placeholder="Ex. Équipe Marketing"
+                          autoFocus
+                        />
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setIsCreateGroupOpen(false)}
+                          disabled={createGroupMutation.isPending}
+                        >
+                          Annuler
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={createGroupMutation.isPending || !newGroupName.trim()}
+                        >
+                          {createGroupMutation.isPending ? 'Création…' : 'Créer'}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </div>
               <div className="grid gap-3">
                 {groups.map((group) => {
@@ -188,6 +268,12 @@ export function UserAccessEditor({
                     </label>
                   );
                 })}
+                {!groups.length && (
+                  <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                    Aucun groupe n’est défini pour le moment. Créez un groupe pour commencer à
+                    organiser les accès.
+                  </div>
+                )}
               </div>
             </section>
 

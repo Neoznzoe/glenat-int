@@ -12,6 +12,26 @@ const ADMIN_DATABASE_ENDPOINT = import.meta.env.DEV
   : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
 
 const ADMIN_USERS_QUERY = 'SELECT * FROM [users];';
+const ADMIN_GROUPS_QUERY = 'SELECT [groupId], [groupName] FROM [userGroups];';
+const ADMIN_USER_GROUP_MEMBERS_QUERY = 'SELECT [userId], [groupId] FROM [userGroupMembers];';
+
+const GROUP_ACCENT_CLASSES = [
+  'bg-primary/10 text-primary border-primary/40',
+  'bg-sky-500/10 text-sky-600 border-sky-200',
+  'bg-emerald-500/10 text-emerald-600 border-emerald-200',
+  'bg-amber-500/10 text-amber-600 border-amber-200',
+  'bg-rose-500/10 text-rose-600 border-rose-200',
+  'bg-violet-500/10 text-violet-600 border-violet-200',
+];
+
+function computeGroupAccent(id: string, index: number): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i += 1) {
+    hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  }
+  const normalized = Math.abs(hash) + index;
+  return GROUP_ACCENT_CLASSES[normalized % GROUP_ACCENT_CLASSES.length];
+}
 
 interface DatabaseQueryResponse {
   success?: boolean;
@@ -27,6 +47,44 @@ interface DatabaseQueryResponse {
 }
 
 type RawDatabaseUserRecord = Record<string, unknown>;
+
+async function sendDatabaseQuery(query: string): Promise<DatabaseQueryResponse> {
+  let response: Response;
+  try {
+    response = await fetch(ADMIN_DATABASE_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query }),
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+    throw new Error(`Impossible de contacter la base de données : ${detail}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`Requête SQL échouée (${response.status}) ${response.statusText}`);
+  }
+
+  let payload: DatabaseQueryResponse;
+  try {
+    payload = (await response.json()) as DatabaseQueryResponse;
+  } catch {
+    throw new Error('Réponse inattendue lors de la récupération des données.');
+  }
+
+  if (payload.success === false) {
+    const detail = payload.message ?? "La récupération des données a échoué.";
+    throw new Error(detail);
+  }
+
+  return payload;
+}
+
+function extractRecords(payload: DatabaseQueryResponse): RawDatabaseUserRecord[] {
+  return extractDatabaseRecords(payload.result ?? payload.data ?? payload.rows ?? payload);
+}
 
 function getValue(record: RawDatabaseUserRecord, keys: string[]): unknown {
   for (const key of keys) {
@@ -376,40 +434,45 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Pro
 }
 
 export async function fetchUsers(): Promise<UserAccount[]> {
-  let response: Response;
-  try {
-    response = await fetch(ADMIN_DATABASE_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query: ADMIN_USERS_QUERY }),
-    });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
-    throw new Error(`Impossible de contacter la base utilisateurs : ${detail}`);
+  const [usersPayload, membershipPayload] = await Promise.all([
+    sendDatabaseQuery(ADMIN_USERS_QUERY),
+    sendDatabaseQuery(ADMIN_USER_GROUP_MEMBERS_QUERY),
+  ]);
+
+  const records = extractRecords(usersPayload);
+  const memberships = extractRecords(membershipPayload);
+
+  const groupsByUser = new Map<string, string[]>();
+  for (const entry of memberships) {
+    const numericUserId = toNumber(getValue(entry, ['userId', 'userID', 'UserId', 'UserID']));
+    const numericGroupId = toNumber(getValue(entry, ['groupId', 'groupID', 'GroupId', 'GroupID']));
+    if (numericUserId === undefined || numericGroupId === undefined) {
+      continue;
+    }
+    const userKey = String(numericUserId);
+    const groupKey = String(numericGroupId);
+    const current = groupsByUser.get(userKey) ?? [];
+    current.push(groupKey);
+    groupsByUser.set(userKey, current);
   }
 
-  if (!response.ok) {
-    throw new Error(`Requête utilisateur échouée (${response.status}) ${response.statusText}`);
-  }
-
-  let payload: DatabaseQueryResponse;
-  try {
-    payload = (await response.json()) as DatabaseQueryResponse;
-  } catch (error) {
-    throw new Error('Réponse inattendue lors de la récupération des utilisateurs.');
-  }
-
-  if (payload.success === false) {
-    const detail = payload.message ?? "La récupération des utilisateurs a échoué.";
-    throw new Error(detail);
-  }
-
-  const records = extractDatabaseRecords(payload.result ?? payload.data ?? payload.rows ?? payload);
   const fallbackTimestamp = '';
 
-  const users = records.map((record, index) => normalizeUserRecord(record, index, fallbackTimestamp));
+  const users = records.map((record, index) => {
+    const user = normalizeUserRecord(record, index, fallbackTimestamp);
+    const numericId =
+      toNumber(getValue(record, ['userId', 'userID', 'UserId', 'UserID', 'id', 'ID', 'Id'])) ??
+      (Number.isFinite(Number.parseInt(user.id, 10)) ? Number.parseInt(user.id, 10) : undefined);
+    const membershipKey = numericId !== undefined ? String(numericId) : user.id;
+    const membership = groupsByUser.get(membershipKey);
+    if (membership) {
+      membership.sort((left, right) => Number(left) - Number(right));
+      user.groups = membership;
+    } else {
+      user.groups = [];
+    }
+    return user;
+  });
 
   users.sort((left, right) =>
     left.displayName.localeCompare(right.displayName, 'fr', { sensitivity: 'base' }),
@@ -419,7 +482,32 @@ export async function fetchUsers(): Promise<UserAccount[]> {
 }
 
 export async function fetchGroups(): Promise<GroupDefinition[]> {
-  return requestJson<GroupDefinition[]>('/api/admin/groups');
+  const payload = await sendDatabaseQuery(ADMIN_GROUPS_QUERY);
+  const records = extractRecords(payload);
+
+  const groups = records.map((record, index): GroupDefinition => {
+    const numericId = toNumber(getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID']));
+    const idCandidate = toNonEmptyString(
+      getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID', 'id', 'Id']),
+    );
+    const name =
+      toNonEmptyString(getValue(record, ['groupName', 'GroupName', 'name', 'Name'])) ??
+      (idCandidate ?? 'Groupe sans nom');
+    const id = idCandidate ?? (numericId !== undefined ? String(numericId) : name.toLowerCase());
+    const accentColor = computeGroupAccent(id, index);
+
+    return {
+      id,
+      name,
+      description: "Groupe synchronisé depuis la base de données.",
+      defaultPermissions: [],
+      accentColor,
+    };
+  });
+
+  groups.sort((left, right) => left.name.localeCompare(right.name, 'fr', { sensitivity: 'base' }));
+
+  return groups;
 }
 
 export async function fetchPermissions(): Promise<PermissionDefinition[]> {
@@ -438,14 +526,66 @@ export async function fetchCurrentUser(): Promise<UserAccount> {
 export async function persistUserAccess(
   payload: UpdateUserAccessPayload,
 ): Promise<UserAccount> {
-  const { userId, ...body } = payload;
-  return requestJson<UserAccount>(`/api/admin/users/${encodeURIComponent(userId)}/access`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+  const numericUserId = Number.parseInt(payload.userId, 10);
+  if (!Number.isFinite(numericUserId)) {
+    throw new Error("Identifiant d'utilisateur invalide");
+  }
+
+  const statements: string[] = [`DELETE FROM [userGroupMembers] WHERE [userId] = ${numericUserId};`];
+  for (const groupId of payload.groups) {
+    const numericGroupId = Number.parseInt(groupId, 10);
+    if (!Number.isFinite(numericGroupId)) {
+      continue;
+    }
+    statements.push(
+      `INSERT INTO [userGroupMembers] ([userId], [groupId]) VALUES (${numericUserId}, ${numericGroupId});`,
+    );
+  }
+
+  await sendDatabaseQuery(statements.join('\n'));
+
+  const users = await fetchUsers();
+  const updated = users.find((candidate) => candidate.id === payload.userId);
+  if (!updated) {
+    throw new Error('Utilisateur mis à jour introuvable après synchronisation.');
+  }
+
+  updated.permissionOverrides = [...payload.permissionOverrides];
+
+  return updated;
+}
+
+export async function createGroup(name: string): Promise<GroupDefinition> {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    throw new Error('Le nom du groupe est requis.');
+  }
+
+  const escaped = trimmed.replace(/'/g, "''");
+  const query = `INSERT INTO [userGroups] ([groupName])
+OUTPUT inserted.groupId, inserted.groupName
+VALUES (N'${escaped}');`;
+
+  const payload = await sendDatabaseQuery(query);
+  const [record] = extractRecords(payload);
+  if (!record) {
+    throw new Error('Impossible de créer le groupe.');
+  }
+
+  const groups = await fetchGroups();
+  const createdId = toNonEmptyString(
+    getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID', 'id', 'Id']),
+  );
+  const found = createdId ? groups.find((group) => group.id === createdId) : undefined;
+  return (
+    found ?? {
+      id: createdId ?? trimmed.toLowerCase(),
+      name: trimmed,
+      description: "Groupe synchronisé depuis la base de données.",
+      defaultPermissions: [],
+      accentColor: computeGroupAccent(createdId ?? trimmed, 0),
+    }
+  );
 }
 
 export type { UserAccount, PermissionOverride, AuditLogEntry, UpdateUserAccessPayload };
