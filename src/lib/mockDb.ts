@@ -34,6 +34,7 @@ export interface PermissionEvaluation {
 
 export interface UserAccount {
   id: string;
+  databaseId?: number;
   firstName: string;
   lastName: string;
   displayName: string;

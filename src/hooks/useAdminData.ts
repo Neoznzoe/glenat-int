@@ -5,6 +5,7 @@ import {
   fetchAuditLog,
   fetchCurrentUser,
   persistUserAccess,
+  createGroup,
   type UpdateUserAccessPayload,
   type UserAccount,
   type PermissionOverride,
@@ -27,6 +28,18 @@ export function useAdminGroups() {
   return useQuery<GroupDefinition[]>({
     queryKey: GROUPS_QUERY_KEY,
     queryFn: fetchGroups,
+  });
+}
+
+export function useCreateGroup() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (name: string) => createGroup(name),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: GROUPS_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
+    },
   });
 }
 

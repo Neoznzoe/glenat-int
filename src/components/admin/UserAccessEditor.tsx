@@ -111,10 +111,10 @@ export function UserAccessEditor({
       .map((value) => (value ? value.trim() : ''))
       .filter((value) => Boolean(value));
     if (!parts.length && user.username) {
-      parts.push(`Identifiant : ${user.username}`);
+      parts.push(`Identifiant : ${user.username}`);
     }
     if (!parts.length && user.preferredLanguage) {
-      parts.push(`Langue : ${user.preferredLanguage}`);
+      parts.push(`Langue : ${user.preferredLanguage}`);
     }
     if (!parts.length && user.email) {
       parts.push(user.email);

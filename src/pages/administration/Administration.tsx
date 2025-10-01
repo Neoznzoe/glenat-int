@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   useAdminUsers,
   useAdminGroups,
+  useCreateGroup,
   usePermissionDefinitions,
   useAuditLog,
   useCurrentUser,
@@ -17,6 +18,10 @@ import {
   type PermissionKey,
 } from '@/lib/access-control';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { UserListPanel } from '@/components/admin/UserListPanel';
 import {
   UserAccessEditor,
@@ -57,6 +62,7 @@ function mapGroupIdToName(groups: GroupDefinition[], ids: string[]) {
 export function Administration() {
   const { data: users = [], isLoading: loadingUsers } = useAdminUsers();
   const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
+  const createGroupMutation = useCreateGroup();
   const { data: permissions = [], isLoading: loadingPermissions } = usePermissionDefinitions();
   const { data: auditLog = [] } = useAuditLog(12);
   const { data: currentUser } = useCurrentUser();
@@ -64,8 +70,10 @@ export function Administration() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [showOnlyInactive, setShowOnlyInactive] = useState(false);
   const [draft, setDraft] = useState<DraftAccessState>({ groups: [], permissionOverrides: [] });
+  const [newGroupName, setNewGroupName] = useState('');
 
   const updateUserMutation = useUpdateUserAccess({ actorId: currentUser?.id });
+  const isCreatingGroup = createGroupMutation.isPending;
 
   const lowerSearch = search.trim().toLowerCase();
   const filteredUsers = useMemo(() => {
@@ -182,6 +190,16 @@ export function Administration() {
     [permissionDefinitions],
   );
 
+  const groupMemberCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const user of users) {
+      for (const groupId of user.groups) {
+        counts.set(groupId, (counts.get(groupId) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [users]);
+
   const isSuperAdmin = previewUser?.isSuperAdmin ?? false;
   const groupsChanged = selectedUser
     ? !arraysAreEqual(draft.groups, selectedUser.groups)
@@ -229,6 +247,27 @@ export function Administration() {
       groups: [...selectedUser.groups],
       permissionOverrides: [...selectedUser.permissionOverrides],
     });
+  };
+
+  const handleCreateGroup = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const value = newGroupName.trim();
+    if (!value) {
+      toast.error('Nom manquant', {
+        description: 'Veuillez saisir un nom pour le nouveau groupe.',
+      });
+      return;
+    }
+    try {
+      await createGroupMutation.mutateAsync(value);
+      setNewGroupName('');
+      toast.success('Groupe créé', {
+        description: `Le groupe « ${value} » a été ajouté avec succès.`,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erreur inconnue';
+      toast.error('Impossible de créer le groupe', { description: message });
+    }
   };
 
   const handleSave = async () => {
@@ -305,6 +344,61 @@ export function Administration() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="space-y-2">
+          <CardTitle>Gestion des groupes</CardTitle>
+          <CardDescription>
+            Créez de nouveaux groupes métiers et visualisez leur nombre de membres en temps réel.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <form
+            onSubmit={handleCreateGroup}
+            className="flex flex-col gap-3 sm:flex-row sm:items-center"
+          >
+            <Input
+              value={newGroupName}
+              onChange={(event) => setNewGroupName(event.target.value)}
+              placeholder="Nom du groupe"
+              disabled={isCreatingGroup}
+            />
+            <Button type="submit" disabled={isCreatingGroup} className="sm:w-auto">
+              {isCreatingGroup ? 'Création…' : 'Créer le groupe'}
+            </Button>
+          </form>
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {groups.map((group) => {
+              const memberCount = groupMemberCounts.get(group.id) ?? 0;
+              return (
+                <div key={group.id} className="rounded-lg border p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">{group.name}</span>
+                        <Badge variant="outline" className={cn('text-xs border', group.accentColor)}>
+                          {group.defaultPermissions.length} accès
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{group.description}</p>
+                    </div>
+                    <Badge variant="secondary" className="shrink-0 text-xs">
+                      {memberCount} {memberCount > 1 ? 'membres' : 'membre'}
+                    </Badge>
+                  </div>
+                </div>
+              );
+            })}
+
+            {!groups.length && (
+              <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                Aucun groupe n’a encore été créé. Ajoutez-en un pour commencer à organiser les accès.
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 xl:grid-cols-[2fr_3fr]">
         <UserListPanel

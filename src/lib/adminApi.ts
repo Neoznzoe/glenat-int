@@ -4,7 +4,11 @@ import {
   type UpdateUserAccessPayload,
   type UserAccount,
 } from './mockDb';
-import { type GroupDefinition, type PermissionDefinition } from './access-control';
+import {
+  GROUP_DEFINITIONS,
+  type GroupDefinition,
+  type PermissionDefinition,
+} from './access-control';
 import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
 
 const ADMIN_DATABASE_ENDPOINT = import.meta.env.DEV
@@ -12,6 +16,27 @@ const ADMIN_DATABASE_ENDPOINT = import.meta.env.DEV
   : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
 
 const ADMIN_USERS_QUERY = 'SELECT * FROM [users];';
+const ADMIN_GROUPS_QUERY = 'SELECT [groupId], [groupName] FROM [userGroups];';
+const ADMIN_GROUP_MEMBERS_QUERY = 'SELECT [userId], [groupId] FROM [userGroupMembers];';
+const DEFAULT_GROUP_DESCRIPTION =
+  'Groupe métier personnalisé créé depuis l’interface d’administration.';
+
+const ACCENT_COLOR_CLASSES = [
+  'bg-slate-500/10 text-slate-600 border-slate-200',
+  'bg-rose-500/10 text-rose-600 border-rose-200',
+  'bg-sky-500/10 text-sky-600 border-sky-200',
+  'bg-amber-500/10 text-amber-600 border-amber-200',
+  'bg-emerald-500/10 text-emerald-600 border-emerald-200',
+  'bg-indigo-500/10 text-indigo-600 border-indigo-200',
+  'bg-violet-500/10 text-violet-600 border-violet-200',
+  'bg-orange-500/10 text-orange-600 border-orange-200',
+  'bg-lime-500/10 text-lime-600 border-lime-200',
+  'bg-cyan-500/10 text-cyan-600 border-cyan-200',
+];
+
+const STATIC_GROUP_DEFINITIONS_BY_NAME = new Map(
+  GROUP_DEFINITIONS.map((group) => [group.name.trim().toLowerCase(), group]),
+);
 
 interface DatabaseQueryResponse {
   success?: boolean;
@@ -26,9 +51,9 @@ interface DatabaseQueryResponse {
   [key: string]: unknown;
 }
 
-type RawDatabaseUserRecord = Record<string, unknown>;
+type RawDatabaseRecord = Record<string, unknown>;
 
-function getValue(record: RawDatabaseUserRecord, keys: string[]): unknown {
+function getValue(record: RawDatabaseRecord, keys: string[]): unknown {
   for (const key of keys) {
     if (key in record) {
       const value = record[key];
@@ -103,7 +128,23 @@ function normalizeGroups(value: unknown): string[] {
   return [];
 }
 
-function extractDatabaseRecords(payload: unknown): RawDatabaseUserRecord[] {
+function normalizeKey(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function escapeSqlLiteral(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
+function computeAccentColor(seed: string): string {
+  let hash = 0;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
+  }
+  return ACCENT_COLOR_CLASSES[hash % ACCENT_COLOR_CLASSES.length];
+}
+
+function extractDatabaseRecords(payload: unknown): RawDatabaseRecord[] {
   const visited = new Set<unknown>();
   const queue: unknown[] = [payload];
 
@@ -156,8 +197,96 @@ function extractDatabaseRecords(payload: unknown): RawDatabaseUserRecord[] {
   return [];
 }
 
+function normalizeGroupRecord(record: RawDatabaseRecord, index: number): GroupDefinition {
+  const numericId = toNumber(getValue(record, ['groupId', 'GroupId', 'id', 'ID']));
+  const idString =
+    toNonEmptyString(getValue(record, ['groupId', 'GroupId', 'id', 'ID'])) ??
+    (numericId !== undefined ? numericId.toString() : undefined);
+  const id = idString ?? `group-${index + 1}`;
+
+  const name =
+    toNonEmptyString(getValue(record, ['groupName', 'GroupName', 'name'])) ?? `Groupe ${id}`;
+  const normalizedName = normalizeKey(name);
+  const staticDefinition = name ? STATIC_GROUP_DEFINITIONS_BY_NAME.get(normalizedName) : undefined;
+
+  const description =
+    toNonEmptyString(getValue(record, ['groupDescription', 'description'])) ??
+    staticDefinition?.description ??
+    DEFAULT_GROUP_DESCRIPTION;
+
+  const accentColor = staticDefinition?.accentColor ?? computeAccentColor(id);
+  const defaultPermissions = staticDefinition?.defaultPermissions ?? [];
+
+  return { id, name, description, defaultPermissions, accentColor };
+}
+
+function normalizeGroupMembership(records: RawDatabaseRecord[]): Map<number, string[]> {
+  const membership = new Map<number, Set<string>>();
+
+  for (const record of records) {
+    const userId = toNumber(getValue(record, ['userId', 'UserId', 'user_id']));
+    const groupId = toNumber(getValue(record, ['groupId', 'GroupId', 'group_id']));
+
+    if (userId === undefined || groupId === undefined) {
+      continue;
+    }
+
+    if (!membership.has(userId)) {
+      membership.set(userId, new Set());
+    }
+
+    membership.get(userId)!.add(groupId.toString());
+  }
+
+  const result = new Map<number, string[]>();
+  for (const [userId, groups] of membership.entries()) {
+    result.set(userId, Array.from(groups).sort((left, right) => Number(left) - Number(right)));
+  }
+
+  return result;
+}
+
+async function sendDatabaseQuery(sql: string): Promise<DatabaseQueryResponse> {
+  let response: Response;
+  try {
+    response = await fetch(ADMIN_DATABASE_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query: sql }),
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+    throw new Error(`Impossible de contacter la base de données : ${detail}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`Requête SQL échouée (${response.status}) ${response.statusText}`);
+  }
+
+  let payload: DatabaseQueryResponse;
+  try {
+    payload = (await response.json()) as DatabaseQueryResponse;
+  } catch {
+    throw new Error('Réponse inattendue lors de l’exécution de la requête.');
+  }
+
+  if (payload.success === false) {
+    const detail = payload.message ?? 'La récupération des données a échoué.';
+    throw new Error(detail);
+  }
+
+  return payload;
+}
+
+async function runDatabaseQuery(sql: string): Promise<RawDatabaseRecord[]> {
+  const payload = await sendDatabaseQuery(sql);
+  return extractDatabaseRecords(payload.result ?? payload.data ?? payload.rows ?? payload);
+}
+
 function normalizeUserRecord(
-  record: RawDatabaseUserRecord,
+  record: RawDatabaseRecord,
   index: number,
   fallbackTimestamp: string,
 ): UserAccount {
@@ -254,6 +383,10 @@ function normalizeUserRecord(
     groups,
     permissionOverrides: [],
   };
+
+  if (numericId !== undefined) {
+    user.databaseId = numericId;
+  }
 
   const preferredLanguage = toNonEmptyString(
     getValue(record, ['preferedLanguage', 'preferredLanguage', 'language']),
@@ -376,40 +509,30 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Pro
 }
 
 export async function fetchUsers(): Promise<UserAccount[]> {
-  let response: Response;
-  try {
-    response = await fetch(ADMIN_DATABASE_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query: ADMIN_USERS_QUERY }),
-    });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
-    throw new Error(`Impossible de contacter la base utilisateurs : ${detail}`);
-  }
+  const [userRecords, membershipRecords] = await Promise.all([
+    runDatabaseQuery(ADMIN_USERS_QUERY),
+    runDatabaseQuery(ADMIN_GROUP_MEMBERS_QUERY),
+  ]);
 
-  if (!response.ok) {
-    throw new Error(`Requête utilisateur échouée (${response.status}) ${response.statusText}`);
-  }
-
-  let payload: DatabaseQueryResponse;
-  try {
-    payload = (await response.json()) as DatabaseQueryResponse;
-  } catch (error) {
-    throw new Error('Réponse inattendue lors de la récupération des utilisateurs.');
-  }
-
-  if (payload.success === false) {
-    const detail = payload.message ?? "La récupération des utilisateurs a échoué.";
-    throw new Error(detail);
-  }
-
-  const records = extractDatabaseRecords(payload.result ?? payload.data ?? payload.rows ?? payload);
+  const membershipByUserId = normalizeGroupMembership(membershipRecords);
   const fallbackTimestamp = '';
 
-  const users = records.map((record, index) => normalizeUserRecord(record, index, fallbackTimestamp));
+  const users = userRecords.map((record, index) => {
+    const user = normalizeUserRecord(record, index, fallbackTimestamp);
+    const numericId =
+      user.databaseId ??
+      toNumber(getValue(record, ['userId', 'userID', 'UserId', 'UserID', 'id', 'ID', 'Id']));
+
+    const groupIds =
+      (numericId !== undefined && membershipByUserId.get(numericId)) ??
+      membershipByUserId.get(Number.parseInt(user.id, 10));
+
+    if (groupIds) {
+      user.groups = [...groupIds];
+    }
+
+    return user;
+  });
 
   users.sort((left, right) =>
     left.displayName.localeCompare(right.displayName, 'fr', { sensitivity: 'base' }),
@@ -419,7 +542,34 @@ export async function fetchUsers(): Promise<UserAccount[]> {
 }
 
 export async function fetchGroups(): Promise<GroupDefinition[]> {
-  return requestJson<GroupDefinition[]>('/api/admin/groups');
+  const records = await runDatabaseQuery(ADMIN_GROUPS_QUERY);
+  const groups = records.map((record, index) => normalizeGroupRecord(record, index));
+
+  groups.sort((left, right) => left.name.localeCompare(right.name, 'fr', { sensitivity: 'base' }));
+
+  return groups;
+}
+
+export async function createGroup(name: string): Promise<GroupDefinition> {
+  const trimmedName = name.trim();
+  if (!trimmedName) {
+    throw new Error('Le nom du groupe est requis.');
+  }
+
+  const escapedName = escapeSqlLiteral(trimmedName);
+  const insertQuery = `
+    INSERT INTO [userGroups] ([groupName])
+    OUTPUT INSERTED.[groupId], INSERTED.[groupName]
+    VALUES ('${escapedName}');
+  `;
+
+  const records = await runDatabaseQuery(insertQuery);
+  if (!records.length) {
+    throw new Error('La création du groupe a échoué : aucune ligne retournée.');
+  }
+
+  const [record] = records;
+  return normalizeGroupRecord({ ...record, groupName: trimmedName }, 0);
 }
 
 export async function fetchPermissions(): Promise<PermissionDefinition[]> {
@@ -438,14 +588,53 @@ export async function fetchCurrentUser(): Promise<UserAccount> {
 export async function persistUserAccess(
   payload: UpdateUserAccessPayload,
 ): Promise<UserAccount> {
-  const { userId, ...body } = payload;
-  return requestJson<UserAccount>(`/api/admin/users/${encodeURIComponent(userId)}/access`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+  const numericUserId = Number.parseInt(payload.userId, 10);
+  if (!Number.isFinite(numericUserId)) {
+    throw new Error("Identifiant utilisateur invalide : impossible de synchroniser les groupes.");
+  }
+
+  const sanitizedGroupIds = Array.from(
+    new Set(
+      payload.groups
+        .map((groupId) => Number.parseInt(groupId, 10))
+        .filter((value) => Number.isFinite(value)),
+    ),
+  ) as number[];
+
+  const valuesClause = sanitizedGroupIds
+    .map((groupId) => `(${numericUserId}, ${groupId})`)
+    .join(',\n        ');
+
+  const statements = [
+    'BEGIN TRY',
+    '  BEGIN TRANSACTION;',
+    `    DELETE FROM [userGroupMembers] WHERE [userId] = ${numericUserId};`,
+    valuesClause ? `    INSERT INTO [userGroupMembers] ([userId], [groupId]) VALUES ${valuesClause};` : '',
+    '  COMMIT TRANSACTION;',
+    'END TRY',
+    'BEGIN CATCH',
+    '  IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;',
+    '  THROW;',
+    'END CATCH;',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  await sendDatabaseQuery(statements);
+
+  const users = await fetchUsers();
+  const updatedUser =
+    users.find((candidate) => candidate.databaseId === numericUserId) ??
+    users.find((candidate) => candidate.id === payload.userId);
+
+  if (!updatedUser) {
+    throw new Error('Utilisateur mis à jour introuvable après synchronisation.');
+  }
+
+  return {
+    ...updatedUser,
+    permissionOverrides: [...(payload.permissionOverrides ?? [])],
+  };
 }
 
 export type { UserAccount, PermissionOverride, AuditLogEntry, UpdateUserAccessPayload };
