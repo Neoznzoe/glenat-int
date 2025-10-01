@@ -4,7 +4,11 @@ import {
   type UpdateUserAccessPayload,
   type UserAccount,
 } from './mockDb';
-import { type GroupDefinition, type PermissionDefinition } from './access-control';
+import {
+  GROUP_DEFINITIONS,
+  type GroupDefinition,
+  type PermissionDefinition,
+} from './access-control';
 import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
 
 const ADMIN_DATABASE_ENDPOINT = import.meta.env.DEV
@@ -212,6 +216,14 @@ function extractDatabaseRecords(payload: unknown): RawDatabaseUserRecord[] {
   }
 
   return [];
+}
+
+function normalizeLabel(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .trim();
 }
 
 function normalizeUserRecord(
@@ -434,13 +446,22 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Pro
 }
 
 export async function fetchUsers(): Promise<UserAccount[]> {
-  const [usersPayload, membershipPayload] = await Promise.all([
+  const [usersResult, membershipsResult] = await Promise.allSettled([
     sendDatabaseQuery(ADMIN_USERS_QUERY),
     sendDatabaseQuery(ADMIN_USER_GROUP_MEMBERS_QUERY),
   ]);
 
-  const records = extractRecords(usersPayload);
-  const memberships = extractRecords(membershipPayload);
+  if (usersResult.status !== 'fulfilled') {
+    throw usersResult.reason instanceof Error
+      ? usersResult.reason
+      : new Error('La récupération des utilisateurs a échoué.');
+  }
+
+  const records = extractRecords(usersResult.value);
+  let memberships: RawDatabaseUserRecord[] = [];
+  if (membershipsResult.status === 'fulfilled') {
+    memberships = extractRecords(membershipsResult.value);
+  }
 
   const groupsByUser = new Map<string, string[]>();
   for (const entry of memberships) {
@@ -468,8 +489,6 @@ export async function fetchUsers(): Promise<UserAccount[]> {
     if (membership) {
       membership.sort((left, right) => Number(left) - Number(right));
       user.groups = membership;
-    } else {
-      user.groups = [];
     }
     return user;
   });
@@ -482,10 +501,33 @@ export async function fetchUsers(): Promise<UserAccount[]> {
 }
 
 export async function fetchGroups(): Promise<GroupDefinition[]> {
-  const payload = await sendDatabaseQuery(ADMIN_GROUPS_QUERY);
-  const records = extractRecords(payload);
+  const [databaseResult, metadataResult] = await Promise.allSettled([
+    sendDatabaseQuery(ADMIN_GROUPS_QUERY),
+    requestJson<GroupDefinition[]>('/api/admin/groups'),
+  ]);
 
-  const groups = records.map((record, index): GroupDefinition => {
+  const databaseRecords: RawDatabaseUserRecord[] =
+    databaseResult.status === 'fulfilled' ? extractRecords(databaseResult.value) : [];
+  const metadata: GroupDefinition[] =
+    metadataResult.status === 'fulfilled' && Array.isArray(metadataResult.value)
+      ? metadataResult.value
+      : [];
+
+  const metadataById = new Map(metadata.map((group) => [group.id, group]));
+  const metadataByName = new Map(
+    metadata.map((group) => [normalizeLabel(group.name), group]),
+  );
+  for (const group of GROUP_DEFINITIONS) {
+    if (!metadataById.has(group.id)) {
+      metadataById.set(group.id, group);
+    }
+    const normalized = normalizeLabel(group.name);
+    if (!metadataByName.has(normalized)) {
+      metadataByName.set(normalized, group);
+    }
+  }
+
+  const groups = databaseRecords.map((record, index): GroupDefinition => {
     const numericId = toNumber(getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID']));
     const idCandidate = toNonEmptyString(
       getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID', 'id', 'Id']),
@@ -494,16 +536,31 @@ export async function fetchGroups(): Promise<GroupDefinition[]> {
       toNonEmptyString(getValue(record, ['groupName', 'GroupName', 'name', 'Name'])) ??
       (idCandidate ?? 'Groupe sans nom');
     const id = idCandidate ?? (numericId !== undefined ? String(numericId) : name.toLowerCase());
-    const accentColor = computeGroupAccent(id, index);
+
+    const normalizedName = normalizeLabel(name);
+    const metadataMatch = metadataById.get(id) ?? metadataByName.get(normalizedName);
+    const accentColor = metadataMatch?.accentColor ?? computeGroupAccent(id, index);
 
     return {
       id,
       name,
-      description: "Groupe synchronisé depuis la base de données.",
-      defaultPermissions: [],
+      description:
+        metadataMatch?.description ??
+        "Groupe synchronisé depuis la base de données.",
+      defaultPermissions: metadataMatch?.defaultPermissions ?? [],
       accentColor,
     };
   });
+
+  if (!groups.length) {
+    const fallback = metadata.length ? metadata : GROUP_DEFINITIONS;
+    return fallback
+      .map((group, index) => ({
+        ...group,
+        accentColor: group.accentColor ?? computeGroupAccent(group.id, index),
+      }))
+      .sort((left, right) => left.name.localeCompare(right.name, 'fr', { sensitivity: 'base' }));
+  }
 
   groups.sort((left, right) => left.name.localeCompare(right.name, 'fr', { sensitivity: 'base' }));
 
