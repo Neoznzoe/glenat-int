@@ -84,7 +84,7 @@ export function UserListPanel({
                   detailsParts.push(user.username);
                 }
                 if (!detailsParts.length && user.preferredLanguage) {
-                  detailsParts.push(`Langue : ${user.preferredLanguage}`);
+                  detailsParts.push(`Langue : ${user.preferredLanguage}`);
                 }
                 const profileDetails = detailsParts.join(' · ') || 'Informations non renseignées';
                 const lastConnectionLabel = (() => {

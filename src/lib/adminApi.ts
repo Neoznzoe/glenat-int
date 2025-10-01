@@ -12,6 +12,9 @@ const ADMIN_DATABASE_ENDPOINT = import.meta.env.DEV
   : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
 
 const ADMIN_USERS_QUERY = 'SELECT * FROM [users];';
+const ADMIN_MODULES_QUERY = 'SELECT * FROM [modules];';
+const ADMIN_PAGES_QUERY = 'SELECT * FROM [pages];';
+const ADMIN_MODULE_PAGES_QUERY = 'SELECT * FROM [modulesPages];';
 
 interface DatabaseQueryResponse {
   success?: boolean;
@@ -27,6 +30,12 @@ interface DatabaseQueryResponse {
 }
 
 type RawDatabaseUserRecord = Record<string, unknown>;
+
+interface ModuleAssociation {
+  moduleId: string;
+  pageId: string;
+  defaultPage: boolean;
+}
 
 function getValue(record: RawDatabaseUserRecord, keys: string[]): unknown {
   for (const key of keys) {
@@ -103,6 +112,38 @@ function normalizeGroups(value: unknown): string[] {
   return [];
 }
 
+function normalizeKey(value: string | undefined, fallback: string): string {
+  const source = typeof value === 'string' ? value : '';
+  const normalized = source
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9:_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase();
+  if (normalized) {
+    return normalized;
+  }
+  if (fallback === value) {
+    return fallback;
+  }
+  if (fallback) {
+    return normalizeKey(fallback, fallback);
+  }
+  return fallback;
+}
+
+function humanizeLabel(value: string): string {
+  const spaced = value
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-zàâçéèêëîïôûùüÿñæœ])([A-ZÀÂÇÉÈÊËÎÏÔÛÙÜŸÑÆŒ])/g, '$1 $2');
+  const cleaned = spaced.replace(/\s+/g, ' ').trim();
+  if (!cleaned) {
+    return value;
+  }
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
+
 function extractDatabaseRecords(payload: unknown): RawDatabaseUserRecord[] {
   const visited = new Set<unknown>();
   const queue: unknown[] = [payload];
@@ -154,6 +195,40 @@ function extractDatabaseRecords(payload: unknown): RawDatabaseUserRecord[] {
   }
 
   return [];
+}
+
+async function runDatabaseQuery(query: string, context: string): Promise<RawDatabaseUserRecord[]> {
+  let response: Response;
+  try {
+    response = await fetch(ADMIN_DATABASE_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query }),
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+    throw new Error(`Impossible de contacter la base ${context} : ${detail}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`Requête ${context} échouée (${response.status}) ${response.statusText}`);
+  }
+
+  let payload: DatabaseQueryResponse;
+  try {
+    payload = (await response.json()) as DatabaseQueryResponse;
+  } catch {
+    throw new Error(`Réponse inattendue lors de la récupération des ${context}.`);
+  }
+
+  if (payload.success === false) {
+    const detail = payload.message ?? `La récupération des ${context} a échoué.`;
+    throw new Error(detail);
+  }
+
+  return extractDatabaseRecords(payload.result ?? payload.data ?? payload.rows ?? payload);
 }
 
 function normalizeUserRecord(
@@ -290,6 +365,121 @@ function normalizeUserRecord(
   return user;
 }
 
+function normalizeModuleDefinition(
+  record: RawDatabaseUserRecord,
+  index: number,
+): PermissionDefinition {
+  const idValue = getValue(record, ['id', 'ID', 'moduleId', 'ModuleId', 'moduleID', 'ModuleID']);
+  const numericId = toNumber(idValue);
+  const id =
+    toNonEmptyString(idValue) ??
+    (numericId !== undefined ? numericId.toString() : `module-${index + 1}`);
+  const slugSource =
+    toNonEmptyString(getValue(record, ['name', 'Name', 'slug', 'Slug'])) ?? id ?? `module-${index + 1}`;
+  const key = normalizeKey(slugSource, `module-${index + 1}`);
+  const labelSource =
+    toNonEmptyString(getValue(record, ['name', 'Name', 'label', 'Label'])) ??
+    toNonEmptyString(getValue(record, ['description', 'Description'])) ??
+    slugSource;
+  const label = humanizeLabel(labelSource);
+  const description =
+    toNonEmptyString(
+      getValue(record, ['supportMultilingual', 'SupportMultilingual', 'description', 'Description']),
+    ) ?? '';
+
+  const metadata: Record<string, unknown> = {
+    id,
+    slug: slugSource,
+  };
+
+  const isActiveValue = getValue(record, ['isActive', 'IsActive', 'active', 'Active']);
+  if (isActiveValue !== undefined) {
+    metadata.isActive = isActiveValue;
+  }
+  const versionValue = getValue(record, ['version', 'Version']);
+  if (versionValue !== undefined) {
+    metadata.version = versionValue;
+  }
+
+  return {
+    key,
+    label,
+    description,
+    category: 'Module',
+    type: 'module',
+    parentKey: null,
+    metadata,
+  };
+}
+
+function normalizePageDefinition(record: RawDatabaseUserRecord, index: number): PermissionDefinition {
+  const idValue = getValue(record, ['id', 'ID', 'pageId', 'PageId', 'pageID', 'PageID']);
+  const numericId = toNumber(idValue);
+  const id =
+    toNonEmptyString(idValue) ??
+    (numericId !== undefined ? numericId.toString() : `page-${index + 1}`);
+  const slugSource =
+    toNonEmptyString(getValue(record, ['name', 'Name', 'slug', 'Slug'])) ?? id ?? `page-${index + 1}`;
+  const key = `page:${normalizeKey(slugSource, `page-${index + 1}`)}`;
+  const labelSource =
+    toNonEmptyString(getValue(record, ['metaTitle', 'MetaTitle'])) ??
+    toNonEmptyString(getValue(record, ['name', 'Name'])) ??
+    slugSource;
+  const label = humanizeLabel(labelSource);
+  const description =
+    toNonEmptyString(getValue(record, ['metaDescription', 'MetaDescription'])) ?? '';
+
+  const metadata: Record<string, unknown> = {
+    id,
+    slug: slugSource,
+  };
+
+  const isPublishedValue = getValue(record, ['isPublished', 'IsPublished']);
+  if (isPublishedValue !== undefined) {
+    metadata.isPublished = isPublishedValue;
+  }
+  const needUserConnectedValue = getValue(record, ['needUserConnected', 'NeedUserConnected']);
+  if (needUserConnectedValue !== undefined) {
+    metadata.needUserConnected = needUserConnectedValue;
+  }
+
+  return {
+    key,
+    label,
+    description,
+    category: 'Page',
+    type: 'page',
+    parentKey: null,
+    metadata,
+  };
+}
+
+function normalizeModulePageRecord(record: RawDatabaseUserRecord): ModuleAssociation | null {
+  const moduleIdValue = getValue(record, ['moduleId', 'ModuleId', 'moduleID', 'ModuleID', 'module_id']);
+  const pageIdValue = getValue(record, ['pageId', 'PageId', 'pageID', 'PageID', 'page_id']);
+  const moduleNumeric = toNumber(moduleIdValue);
+  const pageNumeric = toNumber(pageIdValue);
+  const moduleId =
+    toNonEmptyString(moduleIdValue) ??
+    (moduleNumeric !== undefined ? moduleNumeric.toString() : undefined);
+  const pageId =
+    toNonEmptyString(pageIdValue) ??
+    (pageNumeric !== undefined ? pageNumeric.toString() : undefined);
+
+  if (!moduleId || !pageId) {
+    return null;
+  }
+
+  const defaultValue = getValue(record, ['defaultPage', 'DefaultPage', 'isDefault']);
+  const defaultPage =
+    defaultValue === true ||
+    defaultValue === 1 ||
+    defaultValue === '1' ||
+    (typeof defaultValue === 'string' && defaultValue.toLowerCase() === 'true');
+
+  return { moduleId, pageId, defaultPage };
+}
+
 async function withEncryptedUrl(
   input: RequestInfo | URL,
   init?: RequestInit,
@@ -376,37 +566,7 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Pro
 }
 
 export async function fetchUsers(): Promise<UserAccount[]> {
-  let response: Response;
-  try {
-    response = await fetch(ADMIN_DATABASE_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query: ADMIN_USERS_QUERY }),
-    });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
-    throw new Error(`Impossible de contacter la base utilisateurs : ${detail}`);
-  }
-
-  if (!response.ok) {
-    throw new Error(`Requête utilisateur échouée (${response.status}) ${response.statusText}`);
-  }
-
-  let payload: DatabaseQueryResponse;
-  try {
-    payload = (await response.json()) as DatabaseQueryResponse;
-  } catch (error) {
-    throw new Error('Réponse inattendue lors de la récupération des utilisateurs.');
-  }
-
-  if (payload.success === false) {
-    const detail = payload.message ?? "La récupération des utilisateurs a échoué.";
-    throw new Error(detail);
-  }
-
-  const records = extractDatabaseRecords(payload.result ?? payload.data ?? payload.rows ?? payload);
+  const records = await runDatabaseQuery(ADMIN_USERS_QUERY, 'utilisateurs');
   const fallbackTimestamp = '';
 
   const users = records.map((record, index) => normalizeUserRecord(record, index, fallbackTimestamp));
@@ -423,7 +583,80 @@ export async function fetchGroups(): Promise<GroupDefinition[]> {
 }
 
 export async function fetchPermissions(): Promise<PermissionDefinition[]> {
-  return requestJson<PermissionDefinition[]>('/api/admin/permissions');
+  const [moduleRecords, pageRecords, modulePageRecords] = await Promise.all([
+    runDatabaseQuery(ADMIN_MODULES_QUERY, 'modules'),
+    runDatabaseQuery(ADMIN_PAGES_QUERY, 'pages'),
+    runDatabaseQuery(ADMIN_MODULE_PAGES_QUERY, 'associations modules/pages'),
+  ]);
+
+  const modules = moduleRecords.map((record, index) => normalizeModuleDefinition(record, index));
+  const pages = pageRecords.map((record, index) => normalizePageDefinition(record, index));
+  const associations = modulePageRecords
+    .map((record) => normalizeModulePageRecord(record))
+    .filter((value): value is ModuleAssociation => Boolean(value));
+
+  const moduleById = new Map<string, PermissionDefinition>();
+  for (const moduleDefinition of modules) {
+    const metadataId = moduleDefinition.metadata?.id;
+    if (typeof metadataId === 'string') {
+      moduleById.set(metadataId, moduleDefinition);
+    }
+  }
+
+  const associationByPage = new Map<string, ModuleAssociation>();
+  for (const association of associations) {
+    const existing = associationByPage.get(association.pageId);
+    if (!existing || (!existing.defaultPage && association.defaultPage)) {
+      associationByPage.set(association.pageId, association);
+    }
+  }
+
+  const pagesWithParent = pages.map((pageDefinition) => {
+    const metadataId = pageDefinition.metadata?.id;
+    const pageId = typeof metadataId === 'string' ? metadataId : undefined;
+    if (!pageId) {
+      return pageDefinition;
+    }
+    const association = associationByPage.get(pageId);
+    if (!association) {
+      return pageDefinition;
+    }
+    const moduleDefinition = moduleById.get(association.moduleId);
+    if (!moduleDefinition) {
+      return pageDefinition;
+    }
+    return {
+      ...pageDefinition,
+      parentKey: moduleDefinition.key,
+      category: moduleDefinition.label,
+      metadata: {
+        ...(pageDefinition.metadata ?? {}),
+        moduleId: association.moduleId,
+        defaultPage: association.defaultPage,
+      },
+    };
+  });
+
+  const sortKey = (definition: PermissionDefinition): number => {
+    const rawId = definition.metadata?.id;
+    if (typeof rawId === 'string') {
+      const parsed = Number.parseInt(rawId, 10);
+      if (!Number.isNaN(parsed)) {
+        return parsed;
+      }
+    }
+    return Number.MAX_SAFE_INTEGER;
+  };
+
+  modules.sort((left, right) => {
+    const diff = sortKey(left) - sortKey(right);
+    if (diff !== 0) {
+      return diff;
+    }
+    return left.label.localeCompare(right.label, 'fr', { sensitivity: 'base' });
+  });
+
+  return [...modules, ...pagesWithParent];
 }
 
 export async function fetchAuditLog(limit = 25): Promise<AuditLogEntry[]> {

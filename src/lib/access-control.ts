@@ -1,26 +1,23 @@
-export type PermissionKey =
-  | 'home'
-  | 'qui'
-  | 'catalogue'
-  | 'doc'
-  | 'fee'
-  | 'agenda'
-  | 'planning'
-  | 'contrats'
-  | 'rh'
-  | 'temps'
-  | 'atelier'
-  | 'espace'
-  | 'emploi'
-  | 'annonces'
-  | 'services'
-  | 'administration';
+export type PermissionKey = string;
 
 export interface PermissionDefinition {
   key: PermissionKey;
   label: string;
   description: string;
-  category: string;
+  category?: string;
+  /**
+   * Indicates whether the definition represents an intranet module or an individual page.
+   * When omitted, the definition is treated as a top-level module for backwards compatibility.
+   */
+  type?: 'module' | 'page';
+  /**
+   * References the parent module permission key for page level permissions.
+   */
+  parentKey?: PermissionKey | null;
+  /**
+   * Extra data forwarded from the API (module/page identifiers, slugs, etc.).
+   */
+  metadata?: Record<string, unknown>;
 }
 
 export interface GroupDefinition {
@@ -37,96 +34,128 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     label: 'Accueil',
     description: "Accès à la page d'accueil de l'intranet.",
     category: 'Général',
+    type: 'module',
+    parentKey: null,
   },
   {
     key: 'qui',
     label: 'Qui fait quoi',
     description: 'Annuaire interne et organigrammes.',
     category: 'Général',
+    type: 'module',
+    parentKey: null,
   },
   {
     key: 'catalogue',
     label: 'Catalogue',
     description: 'Consultation des catalogues et publications.',
     category: 'Catalogue',
+    type: 'module',
+    parentKey: null,
   },
   {
     key: 'doc',
     label: "Glénat'Doc",
     description: 'Accès à la documentation interne et aux procédures.',
     category: 'Ressources',
+    type: 'module',
+    parentKey: null,
   },
   {
     key: 'fee',
     label: "Glénat'Fée",
     description: 'Accès aux outils bureautiques et formulaires internes.',
     category: 'Ressources',
+    type: 'module',
+    parentKey: null,
   },
   {
     key: 'agenda',
     label: 'Agenda',
     description: "Consultation de l'agenda des événements de l'entreprise.",
     category: 'Communication',
+    type: 'module',
+    parentKey: null,
   },
   {
     key: 'planning',
     label: 'Planning',
     description: 'Visualisation des plannings des équipes et projets.',
     category: 'Communication',
+    type: 'module',
+    parentKey: null,
   },
   {
     key: 'contrats',
     label: 'Contrats',
     description: 'Gestion et suivi des contrats.',
     category: 'RH',
+    type: 'module',
+    parentKey: null,
   },
   {
     key: 'rh',
     label: 'Ressources humaines',
     description: 'Informations et services liés aux ressources humaines.',
     category: 'RH',
+    type: 'module',
+    parentKey: null,
   },
   {
     key: 'temps',
     label: 'Saisie des temps',
     description: 'Saisie et validation des temps de production.',
     category: 'Production',
+    type: 'module',
+    parentKey: null,
   },
   {
     key: 'atelier',
     label: 'Travaux atelier',
     description: 'Accès aux suivis de travaux de l’atelier.',
     category: 'Production',
+    type: 'module',
+    parentKey: null,
   },
   {
     key: 'espace',
     label: 'Mon espace',
     description: 'Espace personnel de chaque collaborateur.',
     category: 'Général',
+    type: 'module',
+    parentKey: null,
   },
   {
     key: 'emploi',
     label: 'Emploi',
     description: 'Offres internes et mobilités.',
     category: 'RH',
+    type: 'module',
+    parentKey: null,
   },
   {
     key: 'annonces',
     label: 'Petites annonces',
     description: 'Publication et consultation des annonces internes.',
     category: 'Communication',
+    type: 'module',
+    parentKey: null,
   },
   {
     key: 'services',
     label: 'Services',
     description: 'Accès aux services transverses de support.',
     category: 'Support',
+    type: 'module',
+    parentKey: null,
   },
   {
     key: 'administration',
     label: 'Administration',
     description: "Outils d'administration de l'intranet.",
     category: 'Administration',
+    type: 'module',
+    parentKey: null,
   },
 ];
 
