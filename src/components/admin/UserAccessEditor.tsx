@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PermissionDefinition, GroupDefinition, PermissionKey } from '@/lib/access-control';
 import type { PermissionEvaluation, UserAccount } from '@/lib/mockDb';
@@ -61,7 +60,7 @@ function describePermissionOrigin(
   origin: PermissionEvaluation['origin'],
   inheritedFrom: string[],
   basePermission: boolean,
-) {
+): string | null {
   switch (origin) {
     case 'superadmin':
       return 'Super administrateur – accès permanent';
@@ -77,9 +76,7 @@ function describePermissionOrigin(
         : 'Hérité des règles par défaut';
     case 'none':
     default:
-      return inheritedFrom.length
-        ? 'Refusé (les groupes n’autorisent pas l’accès)'
-        : 'Aucun groupe ne fournit cet accès';
+      return inheritedFrom.length ? 'Refusé (les groupes n’autorisent pas l’accès)' : null;
   }
 }
 
@@ -207,23 +204,27 @@ export function UserAccessEditor({
                   return (
                     <label
                       key={group.id}
-                      className="flex items-start gap-3 rounded-lg border p-3"
+                      className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:gap-4"
                     >
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={(value) =>
-                          onToggleGroup(group.id, value === true || value === 'indeterminate')
-                        }
-                        disabled={isSuperAdmin || isLoading}
-                      />
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{group.name}</span>
-                          <Badge variant="outline" className={cn('text-xs border', group.accentColor)}>
-                            {group.defaultPermissions.length} accès
-                          </Badge>
+                      <div className="flex items-center gap-3 sm:flex-1">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(value) =>
+                            onToggleGroup(group.id, value === true || value === 'indeterminate')
+                          }
+                          disabled={isSuperAdmin || isLoading}
+                        />
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium">{group.name}</span>
+                            <Badge variant="outline" className={cn('text-xs border', group.accentColor)}>
+                              {group.defaultPermissions.length} accès
+                            </Badge>
+                          </div>
+                          {group.description && (
+                            <p className="text-sm text-muted-foreground">{group.description}</p>
+                          )}
                         </div>
-                        <p className="text-sm text-muted-foreground">{group.description}</p>
                       </div>
                     </label>
                   );
@@ -260,42 +261,50 @@ export function UserAccessEditor({
                     .map((groupId) => groupMap.get(groupId)?.name ?? groupId)
                     .filter(Boolean);
                   const hasPages = pages.length > 0 && definition.type !== 'page';
+                  const moduleOrigin = describePermissionOrigin(
+                    evaluation.origin,
+                    inheritedFrom,
+                    evaluation.basePermission,
+                  );
+                  const showModuleOrigin = Boolean(moduleOrigin);
+                  const pageCountLabel =
+                    pages.length > 0 ? `${pages.length} page${pages.length > 1 ? 's' : ''}` : '';
 
                   return (
                     <Collapsible
                       key={definition.key}
-                      className="overflow-hidden rounded-lg border bg-background"
+                      className="group overflow-hidden rounded-lg border bg-background"
                     >
                       <div className="flex flex-col">
                         <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="flex flex-1 items-start gap-3">
+                          <div className="flex-1 space-y-3">
                             {hasPages ? (
-                              <CollapsibleTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="mt-1 rounded-md border border-transparent p-1 text-muted-foreground transition-colors hover:text-foreground data-[state=open]:bg-muted/80"
-                                >
-                                  <ChevronRight className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-90" />
-                                </button>
-                              </CollapsibleTrigger>
+                              <div className="space-y-2">
+                                <CollapsibleTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="flex w-full items-center justify-between rounded-md border border-transparent bg-transparent p-2 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-muted/60"
+                                  >
+                                    <span className={cn('font-medium', tone)}>{definition.label}</span>
+                                    <span className="text-xs font-medium text-muted-foreground transition-colors data-[state=open]:text-primary">
+                                      {pageCountLabel}
+                                    </span>
+                                  </button>
+                                </CollapsibleTrigger>
+                                {showModuleOrigin && (
+                                  <div className="text-xs text-muted-foreground">{moduleOrigin}</div>
+                                )}
+                              </div>
                             ) : (
-                              <span className="mt-2 h-4 w-4 flex-shrink-0" />
+                              <div className="space-y-2 rounded-md p-2">
+                                <div className={cn('font-medium', tone)}>{definition.label}</div>
+                                {showModuleOrigin && (
+                                  <div className="text-xs text-muted-foreground">{moduleOrigin}</div>
+                                )}
+                              </div>
                             )}
-                            <div className="flex-1 space-y-1">
-                              <div className={cn('font-medium', tone)}>{definition.label}</div>
-                              {definition.description && (
-                                <div className="text-xs text-muted-foreground">{definition.description}</div>
-                              )}
-                            </div>
                           </div>
-                          <div className="flex flex-col items-start gap-2 text-left sm:items-end sm:text-right">
-                            <div className="text-xs text-muted-foreground">
-                              {describePermissionOrigin(
-                                evaluation.origin,
-                                inheritedFrom,
-                                evaluation.basePermission,
-                              )}
-                            </div>
+                          <div className="flex flex-wrap items-center gap-2 text-left sm:w-auto sm:justify-end sm:text-right">
                             <Select
                               value={selectValue}
                               onValueChange={(value: PermissionSelectValue) =>
@@ -327,7 +336,10 @@ export function UserAccessEditor({
                         </div>
                         {hasPages && (
                           <CollapsibleContent>
-                            <div className="space-y-2 border-t bg-muted/40 px-4 py-3">
+                            <div className="space-y-3 border-t bg-muted/40 px-4 py-3">
+                              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                Pages
+                              </div>
                               {pages.map(({ definition: pageDefinition, evaluation: pageEvaluation }) => {
                                 const pageSelectValue = getPermissionSelectValue(
                                   draft.permissionOverrides,
@@ -340,6 +352,12 @@ export function UserAccessEditor({
                                 const pageInheritedFrom = pageEvaluation.inheritedFrom
                                   .map((groupId) => groupMap.get(groupId)?.name ?? groupId)
                                   .filter(Boolean);
+                                const pageOrigin = describePermissionOrigin(
+                                  pageEvaluation.origin,
+                                  pageInheritedFrom,
+                                  pageEvaluation.basePermission,
+                                );
+                                const showPageOrigin = Boolean(pageOrigin);
 
                                 return (
                                   <div
@@ -351,50 +369,43 @@ export function UserAccessEditor({
                                         <div className={cn('text-sm font-medium', pageTone)}>
                                           {pageDefinition.label}
                                         </div>
-                                        {pageDefinition.description && (
-                                          <div className="text-xs text-muted-foreground">
-                                            {pageDefinition.description}
-                                          </div>
-                                        )}
                                       </div>
-                                      <Select
-                                        value={pageSelectValue}
-                                        onValueChange={(value: PermissionSelectValue) =>
-                                          onPermissionChange(pageDefinition.key, value)
-                                        }
-                                        disabled={isDecisionDisabled}
-                                      >
-                                        <SelectTrigger
-                                          className={cn(
-                                            'w-full capitalize sm:w-36',
-                                            pageSelectValue !== 'inherit' && pageTone,
-                                          )}
+                                      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                                        <Select
+                                          value={pageSelectValue}
+                                          onValueChange={(value: PermissionSelectValue) =>
+                                            onPermissionChange(pageDefinition.key, value)
+                                          }
+                                          disabled={isDecisionDisabled}
                                         >
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent align="end">
-                                          {PERMISSION_SELECT_OPTIONS.map((option) => (
-                                            <SelectItem
-                                              key={option.value}
-                                              value={option.value}
-                                              className="text-sm"
-                                            >
-                                              <div className="font-medium">{option.label}</div>
-                                              <div className="text-xs text-muted-foreground">
-                                                {option.description}
-                                              </div>
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
+                                          <SelectTrigger
+                                            className={cn(
+                                              'w-full capitalize sm:w-36',
+                                              pageSelectValue !== 'inherit' && pageTone,
+                                            )}
+                                          >
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent align="end">
+                                            {PERMISSION_SELECT_OPTIONS.map((option) => (
+                                              <SelectItem
+                                                key={option.value}
+                                                value={option.value}
+                                                className="text-sm"
+                                              >
+                                                <div className="font-medium">{option.label}</div>
+                                                <div className="text-xs text-muted-foreground">
+                                                  {option.description}
+                                                </div>
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
                                     </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {describePermissionOrigin(
-                                        pageEvaluation.origin,
-                                        pageInheritedFrom,
-                                        pageEvaluation.basePermission,
-                                      )}
-                                    </div>
+                                    {showPageOrigin && (
+                                      <div className="text-xs text-muted-foreground">{pageOrigin}</div>
+                                    )}
                                   </div>
                                 );
                               })}
