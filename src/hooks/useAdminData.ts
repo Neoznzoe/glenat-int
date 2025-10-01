@@ -110,7 +110,7 @@ export function useAddUserToGroup(options?: { onSuccess?: () => void }) {
   });
 }
 
-export type { UserAccount, PermissionOverride, AuditLogEntry };
+export type { UserAccount, PermissionOverride, AuditLogEntry, GroupMember };
 export {
   USERS_QUERY_KEY,
   GROUPS_QUERY_KEY,

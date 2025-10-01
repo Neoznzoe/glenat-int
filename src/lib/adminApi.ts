@@ -974,4 +974,4 @@ export async function persistUserAccess(
   });
 }
 
-export type { UserAccount, PermissionOverride, AuditLogEntry, UpdateUserAccessPayload, GroupMember };
+export type { UserAccount, PermissionOverride, AuditLogEntry, UpdateUserAccessPayload };
