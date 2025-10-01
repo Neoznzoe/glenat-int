@@ -378,7 +378,9 @@ function normalizeModuleDefinition(
     toNonEmptyString(getValue(record, ['name', 'Name', 'slug', 'Slug'])) ?? id ?? `module-${index + 1}`;
   const key = normalizeKey(slugSource, `module-${index + 1}`);
   const labelSource =
-    toNonEmptyString(getValue(record, ['description', 'Description', 'label', 'Label'])) ?? slugSource;
+    toNonEmptyString(getValue(record, ['name', 'Name', 'label', 'Label'])) ??
+    toNonEmptyString(getValue(record, ['description', 'Description'])) ??
+    slugSource;
   const label = humanizeLabel(labelSource);
   const description =
     toNonEmptyString(
