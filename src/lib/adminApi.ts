@@ -17,6 +17,7 @@ const ADMIN_PAGES_QUERY = 'SELECT * FROM [pages];';
 const ADMIN_MODULE_PAGES_QUERY = 'SELECT * FROM [modulesPages];';
 const ADMIN_GROUPS_QUERY = 'SELECT * FROM [userGroups];';
 const ADMIN_USER_GROUP_MEMBERS_QUERY = 'SELECT * FROM [userGroupMembers];';
+const ADMIN_USER_PERMISSIONS_QUERY = 'SELECT * FROM [userPermissions];';
 
 interface DatabaseQueryResponse {
   success?: boolean;
@@ -101,6 +102,28 @@ function toNumber(value: unknown): number | undefined {
     const parsed = Number.parseInt(trimmed, 10);
     if (!Number.isNaN(parsed)) {
       return parsed;
+    }
+  }
+  return undefined;
+}
+
+function toBoolean(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value !== 0;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return undefined;
+    }
+    if (['1', 'true', 'yes', 'oui', 'on', 'visible'].includes(normalized)) {
+      return true;
+    }
+    if (['0', 'false', 'no', 'non', 'off', 'invisible'].includes(normalized)) {
+      return false;
     }
   }
   return undefined;
@@ -269,6 +292,145 @@ function buildGroupMembershipMap(
   }
 
   return memberships;
+}
+
+interface ModulePermissionMappings {
+  moduleIdToKey: Map<number, string>;
+  keyToModuleId: Map<string, number>;
+}
+
+async function loadModulePermissionMappings(): Promise<ModulePermissionMappings> {
+  const moduleRecords = await runDatabaseQuery(ADMIN_MODULES_QUERY, 'modules');
+  const moduleIdToKey = new Map<number, string>();
+  const keyToModuleId = new Map<string, number>();
+
+  moduleRecords.forEach((record, index) => {
+    const definition = normalizeModuleDefinition(record, index);
+    const metadataId = definition.metadata?.id;
+    if (typeof metadataId !== 'string') {
+      return;
+    }
+    const moduleId = toDatabaseIntegerId(metadataId);
+    if (moduleId === null) {
+      return;
+    }
+    moduleIdToKey.set(moduleId, definition.key);
+    keyToModuleId.set(definition.key, moduleId);
+  });
+
+  return { moduleIdToKey, keyToModuleId };
+}
+
+function buildOverridesFromRecords(
+  records: RawDatabaseUserRecord[],
+  moduleIdToKey: Map<number, string>,
+): PermissionOverride[] {
+  const overridesByKey = new Map<string, PermissionOverride>();
+
+  for (const record of records) {
+    const moduleIdentifier = toRecordIdentifier(
+      getValue(record, ['moduleId', 'moduleID', 'ModuleId', 'ModuleID', 'module_id']),
+    );
+    const moduleId = moduleIdentifier ? toDatabaseIntegerId(moduleIdentifier) : null;
+    if (moduleId === null) {
+      continue;
+    }
+
+    const permissionKey = moduleIdToKey.get(moduleId);
+    if (!permissionKey) {
+      continue;
+    }
+
+    const canViewValue = getValue(
+      record,
+      ['canView', 'CanView', 'can_view', 'visible', 'Visible', 'isVisible'],
+    );
+    const canView = toBoolean(canViewValue);
+    if (canView === undefined) {
+      continue;
+    }
+
+    overridesByKey.set(permissionKey, {
+      key: permissionKey,
+      mode: canView ? 'allow' : 'deny',
+    });
+  }
+
+  const overrides = Array.from(overridesByKey.values());
+  overrides.sort((left, right) =>
+    left.key.localeCompare(right.key, 'fr', { sensitivity: 'base' }),
+  );
+
+  return overrides;
+}
+
+async function loadUserPermissionOverrides(): Promise<
+  Map<string, PermissionOverride[]>
+> {
+  const { moduleIdToKey } = await loadModulePermissionMappings();
+
+  if (moduleIdToKey.size === 0) {
+    return new Map();
+  }
+
+  const permissionRecords = await runDatabaseQuery(
+    ADMIN_USER_PERMISSIONS_QUERY,
+    'droits personnalisés',
+  );
+
+  const overridesByUser = new Map<string, Map<string, PermissionOverride>>();
+
+  for (const record of permissionRecords) {
+    const userId = toRecordIdentifier(
+      getValue(record, ['userId', 'UserId', 'userID', 'UserID', 'utilisateurId']),
+    );
+    if (!userId) {
+      continue;
+    }
+
+    const moduleIdentifier = toRecordIdentifier(
+      getValue(record, ['moduleId', 'moduleID', 'ModuleId', 'ModuleID', 'module_id']),
+    );
+    const moduleId = moduleIdentifier ? toDatabaseIntegerId(moduleIdentifier) : null;
+    if (moduleId === null) {
+      continue;
+    }
+
+    const permissionKey = moduleIdToKey.get(moduleId);
+    if (!permissionKey) {
+      continue;
+    }
+
+    const canViewValue = getValue(
+      record,
+      ['canView', 'CanView', 'can_view', 'visible', 'Visible', 'isVisible'],
+    );
+    const canView = toBoolean(canViewValue);
+    if (canView === undefined) {
+      continue;
+    }
+
+    if (!overridesByUser.has(userId)) {
+      overridesByUser.set(userId, new Map());
+    }
+
+    overridesByUser.get(userId)!.set(permissionKey, {
+      key: permissionKey,
+      mode: canView ? 'allow' : 'deny',
+    });
+  }
+
+  const hydrated = new Map<string, PermissionOverride[]>();
+
+  for (const [userId, overridesMap] of overridesByUser) {
+    const overrides = Array.from(overridesMap.values());
+    overrides.sort((left, right) =>
+      left.key.localeCompare(right.key, 'fr', { sensitivity: 'base' }),
+    );
+    hydrated.set(userId, overrides);
+  }
+
+  return hydrated;
 }
 
 function escapeSqlLiteral(value: string): string {
@@ -679,6 +841,13 @@ export async function fetchUsers(): Promise<UserAccount[]> {
     console.error('Impossible de récupérer les appartenances aux groupes.', error);
   }
 
+  let permissionOverridesByUser = new Map<string, PermissionOverride[]>();
+  try {
+    permissionOverridesByUser = await loadUserPermissionOverrides();
+  } catch (error) {
+    console.error('Impossible de récupérer les droits personnalisés.', error);
+  }
+
   const fallbackTimestamp = '';
 
   const users = userRecords.map((record, index) => {
@@ -686,6 +855,10 @@ export async function fetchUsers(): Promise<UserAccount[]> {
     const memberships = membershipsByUser.get(user.id);
     if (memberships) {
       user.groups = memberships;
+    }
+    const overrides = permissionOverridesByUser.get(user.id);
+    if (overrides) {
+      user.permissionOverrides = overrides.map((override) => ({ ...override }));
     }
     return user;
   });
@@ -820,7 +993,19 @@ export async function fetchAuditLog(limit = 25): Promise<AuditLogEntry[]> {
 }
 
 export async function fetchCurrentUser(): Promise<UserAccount> {
-  return requestJson<UserAccount>('/api/admin/current-user');
+  const user = await requestJson<UserAccount>('/api/admin/current-user');
+
+  try {
+    const permissionOverridesByUser = await loadUserPermissionOverrides();
+    const overrides = permissionOverridesByUser.get(user.id);
+    if (overrides) {
+      user.permissionOverrides = overrides.map((override) => ({ ...override }));
+    }
+  } catch (error) {
+    console.error('Impossible de récupérer les droits personnalisés.', error);
+  }
+
+  return user;
 }
 
 function toDatabaseIntegerId(value: string | undefined): number | null {
@@ -875,6 +1060,122 @@ async function syncUserGroupMemberships(userId: number, groupIds: number[]): Pro
   return uniqueApplied;
 }
 
+async function syncUserPermissionOverrides(
+  userId: number,
+  overrides: PermissionOverride[],
+): Promise<PermissionOverride[]> {
+  const { moduleIdToKey, keyToModuleId } = await loadModulePermissionMappings();
+
+  if (moduleIdToKey.size === 0) {
+    return [];
+  }
+
+  const existingRecords = await runDatabaseQuery(
+    `SET NOCOUNT ON;
+SELECT [moduleId], [canView]
+FROM [userPermissions]
+WHERE [userId] = ${userId};`,
+    'droits personnalisés de l’utilisateur',
+  );
+
+  const existingByModule = new Map<number, boolean>();
+  for (const record of existingRecords) {
+    const moduleIdentifier = toRecordIdentifier(
+      getValue(record, ['moduleId', 'moduleID', 'ModuleId', 'ModuleID', 'module_id']),
+    );
+    const moduleId = moduleIdentifier ? toDatabaseIntegerId(moduleIdentifier) : null;
+    if (moduleId === null) {
+      continue;
+    }
+
+    const canViewValue = getValue(
+      record,
+      ['canView', 'CanView', 'can_view', 'visible', 'Visible', 'isVisible'],
+    );
+    const canView = toBoolean(canViewValue);
+    if (canView === undefined) {
+      continue;
+    }
+
+    existingByModule.set(moduleId, canView);
+  }
+
+  const desiredByModule = new Map<number, boolean>();
+  for (const override of overrides) {
+    const moduleId = keyToModuleId.get(override.key);
+    if (moduleId === undefined) {
+      continue;
+    }
+    const canView = override.mode !== 'deny';
+    desiredByModule.set(moduleId, canView);
+  }
+
+  const deletes: number[] = [];
+  const updates: Array<{ moduleId: number; canView: boolean }> = [];
+  for (const [moduleId, canView] of existingByModule) {
+    if (!desiredByModule.has(moduleId)) {
+      deletes.push(moduleId);
+      continue;
+    }
+
+    const desiredCanView = desiredByModule.get(moduleId)!;
+    if (desiredCanView !== canView) {
+      updates.push({ moduleId, canView: desiredCanView });
+    }
+  }
+
+  const inserts: Array<{ moduleId: number; canView: boolean }> = [];
+  for (const [moduleId, canView] of desiredByModule) {
+    if (!existingByModule.has(moduleId)) {
+      inserts.push({ moduleId, canView });
+    }
+  }
+
+  if (deletes.length === 0 && updates.length === 0 && inserts.length === 0) {
+    return buildOverridesFromRecords(existingRecords, moduleIdToKey);
+  }
+
+  deletes.sort((left, right) => left - right);
+  updates.sort((left, right) => left.moduleId - right.moduleId);
+  inserts.sort((left, right) => left.moduleId - right.moduleId);
+
+  const statements = ['SET NOCOUNT ON;'];
+
+  if (deletes.length > 0) {
+    const deleteList = deletes.join(', ');
+    statements.push(
+      `DELETE FROM [userPermissions] WHERE [userId] = ${userId} AND [moduleId] IN (${deleteList});`,
+    );
+  }
+
+  for (const update of updates) {
+    statements.push(
+      `UPDATE [userPermissions] SET [canView] = ${update.canView ? 1 : 0}\n` +
+        `WHERE [userId] = ${userId} AND [moduleId] = ${update.moduleId};`,
+    );
+  }
+
+  if (inserts.length > 0) {
+    const values = inserts
+      .map(({ moduleId, canView }) => `(${userId}, ${moduleId}, ${canView ? 1 : 0})`)
+      .join(',\n');
+    statements.push(
+      `INSERT INTO [userPermissions] ([userId], [moduleId], [canView]) VALUES ${values};`,
+    );
+  }
+
+  statements.push(
+    `SELECT [moduleId], [canView] FROM [userPermissions] WHERE [userId] = ${userId} ORDER BY [moduleId];`,
+  );
+
+  const appliedRecords = await runDatabaseQuery(
+    statements.join('\n'),
+    'mise à jour des droits personnalisés',
+  );
+
+  return buildOverridesFromRecords(appliedRecords, moduleIdToKey);
+}
+
 export async function persistUserAccess(
   payload: UpdateUserAccessPayload,
 ): Promise<UserAccount> {
@@ -911,7 +1212,10 @@ WHERE [userId] = ${numericUserId};`,
 
   const updatedUser = normalizeUserRecord(userRecords[0], 0, '');
   updatedUser.groups = appliedGroupIds;
-  updatedUser.permissionOverrides = payload.permissionOverrides;
+  updatedUser.permissionOverrides = await syncUserPermissionOverrides(
+    numericUserId,
+    payload.permissionOverrides,
+  );
 
   return updatedUser;
 }
