@@ -44,7 +44,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   }, [isExpanded, onExpandChange]);
 
   const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
-  const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
+  const { data: groups = [] } = useAdminGroups();
 
   const accessiblePermissions = useMemo(() => {
     if (!currentUser) {
@@ -52,6 +52,8 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     }
     return new Set(computeEffectivePermissions(currentUser, groups));
   }, [currentUser, groups]);
+
+  const showSkeleton = loadingCurrentUser || !currentUser;
 
   const menuItems: Array<{
     id: string;
@@ -147,12 +149,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     },
   ];
 
-  const showAllMenus = loadingCurrentUser || loadingGroups || !currentUser;
-
   const userCanAccess = (permission: PermissionKey) => {
-    if (showAllMenus) {
-      return true;
-    }
     if (currentUser?.isSuperAdmin) {
       return true;
     }
@@ -161,12 +158,14 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
 
   const location = useDecryptedLocation();
 
-  const mainMenuItems = menuItems.filter(
-    (item) => item.id !== 'administration' && userCanAccess(item.permission),
-  );
-  const adminMenuItems = menuItems.filter(
-    (item) => item.id === 'administration' && userCanAccess(item.permission),
-  );
+  const mainMenuItems = currentUser
+    ? menuItems.filter(
+        (item) => item.id !== 'administration' && userCanAccess(item.permission),
+      )
+    : [];
+  const adminMenuItems = currentUser
+    ? menuItems.filter((item) => item.id === 'administration' && userCanAccess(item.permission))
+    : [];
 
   return (
     <div
@@ -197,76 +196,80 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
 
       {/* Contenu principal = menu du haut + administration séparée */}
       <div className="flex-1 min-h-0 flex flex-col justify-between">
-        {/* Menu principal */}
-        <nav className="p-2">
-          <ul className="space-y-1">
-            {mainMenuItems.map((item) => {
-                const isActive = item.path === '/'
-                  ? location.pathname === '/'
-                  : location.pathname.startsWith(item.path);
-                return (
-                  <li key={item.id}>
-                    <SecureNavLink
-                      to={item.path}
-                      className={`relative flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
-                        isActive
-                          ? 'bg-white/20 text-white'
-                          : 'text-red-100 hover:bg-white/10 hover:text-white'
-                      } ${isExpanded ? 'space-x-3' : 'justify-center'}`}
-                      title={!isExpanded ? item.label : ''}
-                    >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
-                      <span
-                        className={`font-medium transition-all duration-300 whitespace-nowrap ${
-                          isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
-                        }`}
+        {showSkeleton ? (
+          <SidebarSkeleton isExpanded={isExpanded} />
+        ) : (
+          <>
+            {/* Menu principal */}
+            <nav className="p-2">
+              <ul className="space-y-1">
+                {mainMenuItems.map((item) => {
+                  const isActive =
+                    item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path);
+                  return (
+                    <li key={item.id}>
+                      <SecureNavLink
+                        to={item.path}
+                        className={`relative flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : 'text-red-100 hover:bg-white/10 hover:text-white'
+                        } ${isExpanded ? 'space-x-3' : 'justify-center'}`}
+                        title={!isExpanded ? item.label : ''}
                       >
-                        {item.label}
-                      </span>
-                      {item.badge !== undefined ? (
-                        <span className="absolute -top-[5px] -right-[5px] bg-white text-primary text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                          {item.badge}
+                        <item.icon className="h-5 w-5 flex-shrink-0" />
+                        <span
+                          className={`font-medium transition-all duration-300 whitespace-nowrap ${
+                            isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
+                          }`}
+                        >
+                          {item.label}
                         </span>
-                      ) : null}
-                    </SecureNavLink>
-                  </li>
-                );
-              })}
-          </ul>
-        </nav>
+                        {item.badge !== undefined ? (
+                          <span className="absolute -top-[5px] -right-[5px] bg-white text-primary text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                            {item.badge}
+                          </span>
+                        ) : null}
+                      </SecureNavLink>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
 
-        {/* Bloc Administration */}
-        <nav className="p-2">
-          <ul>
-            {adminMenuItems.map((item) => {
-                const isActive = item.path === '/'
-                  ? location.pathname === '/'
-                  : location.pathname.startsWith(item.path);
-                return (
-                  <li key={item.id}>
-                    <SecureNavLink
-                      to={item.path}
-                      className={`flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
-                        isActive
-                          ? 'bg-white/20 text-white'
-                          : 'text-red-100 hover:bg-white/10 hover:text-white'
-                      } ${isExpanded ? 'space-x-3' : 'justify-center'}`}
-                      title={!isExpanded ? item.label : ''}
-                    >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
-                      <span
-                        className={`font-medium transition-all duration-300 whitespace-nowrap ${
-                          isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
-                        }`}
+            {/* Bloc Administration */}
+            <nav className="p-2">
+              <ul>
+                {adminMenuItems.map((item) => {
+                  const isActive =
+                    item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path);
+                  return (
+                    <li key={item.id}>
+                      <SecureNavLink
+                        to={item.path}
+                        className={`flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : 'text-red-100 hover:bg-white/10 hover:text-white'
+                        } ${isExpanded ? 'space-x-3' : 'justify-center'}`}
+                        title={!isExpanded ? item.label : ''}
                       >
-                        {item.label}
-                      </span>
-                    </SecureNavLink>
-                  </li>
-                );
-              })}
-          </ul>
-        </nav>
+                        <item.icon className="h-5 w-5 flex-shrink-0" />
+                        <span
+                          className={`font-medium transition-all duration-300 whitespace-nowrap ${
+                            isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
+                          }`}
+                        >
+                          {item.label}
+                        </span>
+                      </SecureNavLink>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          </>
+        )}
       </div>
 
       {/* Footer */}
@@ -278,5 +281,24 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+function SidebarSkeleton({ isExpanded }: { isExpanded: boolean }) {
+  const itemClass = `h-10 rounded-lg bg-white/10 ${isExpanded ? 'w-full' : 'w-10 mx-auto'} animate-pulse`;
+
+  return (
+    <>
+      <div className="p-2 space-y-2">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={`main-placeholder-${index}`} className={itemClass} />
+        ))}
+      </div>
+      <div className="p-2 space-y-2">
+        {Array.from({ length: 2 }).map((_, index) => (
+          <div key={`admin-placeholder-${index}`} className={itemClass} />
+        ))}
+      </div>
+    </>
   );
 }
