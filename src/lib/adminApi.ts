@@ -16,6 +16,7 @@ const ADMIN_MODULES_QUERY = 'SELECT * FROM [modules];';
 const ADMIN_PAGES_QUERY = 'SELECT * FROM [pages];';
 const ADMIN_MODULE_PAGES_QUERY = 'SELECT * FROM [modulesPages];';
 const ADMIN_GROUPS_QUERY = 'SELECT * FROM [userGroups];';
+const ADMIN_USER_GROUP_MEMBERS_QUERY = 'SELECT * FROM [userGroupMembers];';
 
 interface DatabaseQueryResponse {
   success?: boolean;
@@ -101,6 +102,18 @@ function toNumber(value: unknown): number | undefined {
     if (!Number.isNaN(parsed)) {
       return parsed;
     }
+  }
+  return undefined;
+}
+
+function toRecordIdentifier(value: unknown): string | undefined {
+  const stringValue = toNonEmptyString(value);
+  if (stringValue) {
+    return stringValue;
+  }
+  const numericValue = toNumber(value);
+  if (numericValue !== undefined) {
+    return numericValue.toString();
   }
   return undefined;
 }
@@ -223,6 +236,39 @@ function extractDatabaseRecords(payload: unknown): RawDatabaseUserRecord[] {
   }
 
   return [];
+}
+
+function buildGroupMembershipMap(
+  records: RawDatabaseUserRecord[],
+): Map<string, string[]> {
+  const memberships = new Map<string, string[]>();
+
+  for (const record of records) {
+    const userId = toRecordIdentifier(getValue(record, ['userId', 'UserId', 'userID', 'UserID']));
+    const groupId = toRecordIdentifier(
+      getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID']),
+    );
+
+    if (!userId || !groupId) {
+      continue;
+    }
+
+    if (!memberships.has(userId)) {
+      memberships.set(userId, []);
+    }
+
+    memberships.get(userId)!.push(groupId);
+  }
+
+  for (const [userId, groupIds] of memberships) {
+    const unique = Array.from(new Set(groupIds));
+    unique.sort((left, right) =>
+      left.localeCompare(right, 'fr', { sensitivity: 'base', numeric: true }),
+    );
+    memberships.set(userId, unique);
+  }
+
+  return memberships;
 }
 
 function escapeSqlLiteral(value: string): string {
@@ -620,10 +666,29 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Pro
 }
 
 export async function fetchUsers(): Promise<UserAccount[]> {
-  const records = await runDatabaseQuery(ADMIN_USERS_QUERY, 'utilisateurs');
+  const userRecords = await runDatabaseQuery(ADMIN_USERS_QUERY, 'utilisateurs');
+
+  let membershipsByUser = new Map<string, string[]>();
+  try {
+    const membershipRecords = await runDatabaseQuery(
+      ADMIN_USER_GROUP_MEMBERS_QUERY,
+      'membres des groupes utilisateurs',
+    );
+    membershipsByUser = buildGroupMembershipMap(membershipRecords);
+  } catch (error) {
+    console.error('Impossible de récupérer les appartenances aux groupes.', error);
+  }
+
   const fallbackTimestamp = '';
 
-  const users = records.map((record, index) => normalizeUserRecord(record, index, fallbackTimestamp));
+  const users = userRecords.map((record, index) => {
+    const user = normalizeUserRecord(record, index, fallbackTimestamp);
+    const memberships = membershipsByUser.get(user.id);
+    if (memberships) {
+      user.groups = memberships;
+    }
+    return user;
+  });
 
   users.sort((left, right) =>
     left.displayName.localeCompare(right.displayName, 'fr', { sensitivity: 'base' }),
@@ -758,17 +823,97 @@ export async function fetchCurrentUser(): Promise<UserAccount> {
   return requestJson<UserAccount>('/api/admin/current-user');
 }
 
+function toDatabaseIntegerId(value: string | undefined): number | null {
+  if (!value) {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!/^[0-9]+$/.test(trimmed)) {
+    return null;
+  }
+  const parsed = Number.parseInt(trimmed, 10);
+  if (!Number.isSafeInteger(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+
+async function syncUserGroupMemberships(userId: number, groupIds: number[]): Promise<string[]> {
+  const uniqueGroupIds = Array.from(new Set(groupIds));
+  uniqueGroupIds.sort((left, right) => left - right);
+
+  const statements = [
+    'SET NOCOUNT ON;',
+    `DELETE FROM [userGroupMembers] WHERE [userId] = ${userId};`,
+  ];
+
+  if (uniqueGroupIds.length > 0) {
+    const values = uniqueGroupIds.map((groupId) => `(${userId}, ${groupId})`).join(',\n');
+    statements.push(`INSERT INTO [userGroupMembers] ([userId], [groupId]) VALUES ${values};`);
+  }
+
+  statements.push(
+    `SELECT [groupId] FROM [userGroupMembers] WHERE [userId] = ${userId} ORDER BY [groupId];`,
+  );
+
+  const membershipRecords = await runDatabaseQuery(
+    statements.join('\n'),
+    'mise à jour des membres de groupe',
+  );
+
+  const appliedGroupIds = membershipRecords
+    .map((record) =>
+      toRecordIdentifier(getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID'])),
+    )
+    .filter((identifier): identifier is string => Boolean(identifier));
+
+  const uniqueApplied = Array.from(new Set(appliedGroupIds));
+  uniqueApplied.sort((left, right) =>
+    left.localeCompare(right, 'fr', { sensitivity: 'base', numeric: true }),
+  );
+
+  return uniqueApplied;
+}
+
 export async function persistUserAccess(
   payload: UpdateUserAccessPayload,
 ): Promise<UserAccount> {
-  const { userId, ...body } = payload;
-  return requestJson<UserAccount>(`/api/admin/users/${encodeURIComponent(userId)}/access`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+  const numericUserId = toDatabaseIntegerId(payload.userId);
+
+  if (numericUserId === null) {
+    const { userId, ...body } = payload;
+    return requestJson<UserAccount>(`/api/admin/users/${encodeURIComponent(userId)}/access`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  const numericGroupIds = payload.groups
+    .map((groupId) => toDatabaseIntegerId(groupId))
+    .filter((value): value is number => value !== null);
+
+  const appliedGroupIds = await syncUserGroupMemberships(numericUserId, numericGroupIds);
+
+  const userRecords = await runDatabaseQuery(
+    `SET NOCOUNT ON;
+SELECT TOP (1) *
+FROM [users]
+WHERE [userId] = ${numericUserId};`,
+    'récupération de l’utilisateur',
+  );
+
+  if (!userRecords.length) {
+    throw new Error("Impossible de récupérer l'utilisateur mis à jour.");
+  }
+
+  const updatedUser = normalizeUserRecord(userRecords[0], 0, '');
+  updatedUser.groups = appliedGroupIds;
+  updatedUser.permissionOverrides = payload.permissionOverrides;
+
+  return updatedUser;
 }
 
 export type { UserAccount, PermissionOverride, AuditLogEntry, UpdateUserAccessPayload };

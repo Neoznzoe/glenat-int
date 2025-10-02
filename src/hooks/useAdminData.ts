@@ -59,9 +59,26 @@ export function useUpdateUserAccess(options?: UpdateUserOptions) {
   return useMutation({
     mutationFn: (payload: Omit<UpdateUserAccessPayload, 'actorId'>) =>
       persistUserAccess({ ...payload, actorId: options?.actorId }),
-    onSuccess: async () => {
+    onSuccess: async (updatedUser) => {
+      queryClient.setQueryData<UserAccount[]>(USERS_QUERY_KEY, (users) => {
+        if (!users) {
+          return users;
+        }
+
+        let hasMatch = false;
+        const nextUsers = users.map((user) => {
+          if (user.id !== updatedUser.id) {
+            return user;
+          }
+
+          hasMatch = true;
+          return { ...user, ...updatedUser };
+        });
+
+        return hasMatch ? nextUsers : users;
+      });
+
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY }),
         queryClient.invalidateQueries({ queryKey: AUDIT_LOG_QUERY_KEY }),
         queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY }),
       ]);
