@@ -894,7 +894,7 @@ WHERE [userId] = ${numericUserId};`,
     ),
   ]);
 
-  let userRecord = userRecords[0];
+  let userRecord: RawDatabaseUserRecord | undefined = userRecords[0];
   let updatedMembershipRecords = membershipRecords;
 
   if (!userRecord) {
