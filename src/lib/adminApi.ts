@@ -852,8 +852,27 @@ async function syncUserGroupMemberships(userId: number, groupIds: number[]): Pro
     statements.push(`INSERT INTO [userGroupMembers] ([userId], [groupId]) VALUES ${values};`);
   }
 
-  await runDatabaseQuery(statements.join('\n'), 'mise à jour des membres de groupe');
-  return uniqueGroupIds.map((groupId) => groupId.toString());
+  statements.push(
+    `SELECT [groupId] FROM [userGroupMembers] WHERE [userId] = ${userId} ORDER BY [groupId];`,
+  );
+
+  const membershipRecords = await runDatabaseQuery(
+    statements.join('\n'),
+    'mise à jour des membres de groupe',
+  );
+
+  const appliedGroupIds = membershipRecords
+    .map((record) =>
+      toRecordIdentifier(getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID'])),
+    )
+    .filter((identifier): identifier is string => Boolean(identifier));
+
+  const uniqueApplied = Array.from(new Set(appliedGroupIds));
+  uniqueApplied.sort((left, right) =>
+    left.localeCompare(right, 'fr', { sensitivity: 'base', numeric: true }),
+  );
+
+  return uniqueApplied;
 }
 
 export async function persistUserAccess(
