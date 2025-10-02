@@ -666,12 +666,19 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Pro
 }
 
 export async function fetchUsers(): Promise<UserAccount[]> {
-  const [userRecords, membershipRecords] = await Promise.all([
-    runDatabaseQuery(ADMIN_USERS_QUERY, 'utilisateurs'),
-    runDatabaseQuery(ADMIN_USER_GROUP_MEMBERS_QUERY, 'membres des groupes utilisateurs'),
-  ]);
+  const userRecords = await runDatabaseQuery(ADMIN_USERS_QUERY, 'utilisateurs');
 
-  const membershipsByUser = buildGroupMembershipMap(membershipRecords);
+  let membershipsByUser = new Map<string, string[]>();
+  try {
+    const membershipRecords = await runDatabaseQuery(
+      ADMIN_USER_GROUP_MEMBERS_QUERY,
+      'membres des groupes utilisateurs',
+    );
+    membershipsByUser = buildGroupMembershipMap(membershipRecords);
+  } catch (error) {
+    console.error('Impossible de récupérer les appartenances aux groupes.', error);
+  }
+
   const fallbackTimestamp = '';
 
   const users = userRecords.map((record, index) => {
