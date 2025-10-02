@@ -17,7 +17,9 @@ const ADMIN_PAGES_QUERY = 'SELECT * FROM [pages];';
 const ADMIN_MODULE_PAGES_QUERY = 'SELECT * FROM [modulesPages];';
 const ADMIN_GROUPS_QUERY = 'SELECT * FROM [userGroups];';
 const ADMIN_USER_GROUP_MEMBERS_QUERY = 'SELECT * FROM [userGroupMembers];';
-const ADMIN_USER_PERMISSIONS_QUERY = 'SELECT * FROM [userPermissions];';
+const MODULE_PERMISSION_TYPE = 'MODULE';
+const ADMIN_USER_PERMISSIONS_QUERY =
+  `SELECT * FROM [userPermissions] WHERE [permissionType] = '${MODULE_PERMISSION_TYPE}';`;
 
 interface DatabaseQueryResponse {
   success?: boolean;
@@ -1074,7 +1076,7 @@ async function syncUserPermissionOverrides(
     `SET NOCOUNT ON;
 SELECT [moduleId], [canView]
 FROM [userPermissions]
-WHERE [userId] = ${userId};`,
+WHERE [userId] = ${userId} AND [permissionType] = '${MODULE_PERMISSION_TYPE}';`,
     'droits personnalisés de l’utilisateur',
   );
 
@@ -1144,28 +1146,35 @@ WHERE [userId] = ${userId};`,
   if (deletes.length > 0) {
     const deleteList = deletes.join(', ');
     statements.push(
-      `DELETE FROM [userPermissions] WHERE [userId] = ${userId} AND [moduleId] IN (${deleteList});`,
+      `DELETE FROM [userPermissions]\n` +
+        `WHERE [userId] = ${userId} AND [permissionType] = '${MODULE_PERMISSION_TYPE}' AND [moduleId] IN (${deleteList});`,
     );
   }
 
   for (const update of updates) {
     statements.push(
       `UPDATE [userPermissions] SET [canView] = ${update.canView ? 1 : 0}\n` +
-        `WHERE [userId] = ${userId} AND [moduleId] = ${update.moduleId};`,
+        `WHERE [userId] = ${userId} AND [permissionType] = '${MODULE_PERMISSION_TYPE}' AND [moduleId] = ${update.moduleId};`,
     );
   }
 
   if (inserts.length > 0) {
     const values = inserts
-      .map(({ moduleId, canView }) => `(${userId}, ${moduleId}, ${canView ? 1 : 0})`)
+      .map(
+        ({ moduleId, canView }) =>
+          `(${userId}, '${MODULE_PERMISSION_TYPE}', ${moduleId}, ${canView ? 1 : 0})`,
+      )
       .join(',\n');
     statements.push(
-      `INSERT INTO [userPermissions] ([userId], [moduleId], [canView]) VALUES ${values};`,
+      `INSERT INTO [userPermissions] ([userId], [permissionType], [moduleId], [canView]) VALUES ${values};`,
     );
   }
 
   statements.push(
-    `SELECT [moduleId], [canView] FROM [userPermissions] WHERE [userId] = ${userId} ORDER BY [moduleId];`,
+    `SELECT [moduleId], [canView]\n` +
+      `FROM [userPermissions]\n` +
+      `WHERE [userId] = ${userId} AND [permissionType] = '${MODULE_PERMISSION_TYPE}'\n` +
+      `ORDER BY [moduleId];`,
   );
 
   const appliedRecords = await runDatabaseQuery(
