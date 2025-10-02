@@ -18,8 +18,11 @@ const ADMIN_MODULE_PAGES_QUERY = 'SELECT * FROM [modulesPages];';
 const ADMIN_GROUPS_QUERY = 'SELECT * FROM [userGroups];';
 const ADMIN_USER_GROUP_MEMBERS_QUERY = 'SELECT * FROM [userGroupMembers];';
 const MODULE_PERMISSION_TYPE = 'MODULE';
+const MODULE_PERMISSION_FILTER =
+  "UPPER(LTRIM(RTRIM(ISNULL([permissionType], '')))) IN ('', 'MODULE')";
+const MODULE_PERMISSION_WHERE = `[moduleId] IS NOT NULL AND ${MODULE_PERMISSION_FILTER}`;
 const ADMIN_USER_PERMISSIONS_QUERY =
-  `SELECT * FROM [userPermissions] WHERE [permissionType] = '${MODULE_PERMISSION_TYPE}';`;
+  `SELECT * FROM [userPermissions] WHERE ${MODULE_PERMISSION_WHERE};`;
 
 interface DatabaseQueryResponse {
   success?: boolean;
@@ -440,15 +443,20 @@ function escapeSqlLiteral(value: string): string {
 }
 
 async function runDatabaseQuery(query: string, context: string): Promise<RawDatabaseUserRecord[]> {
+  const requestInit: RequestInit = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query }),
+    credentials: 'include',
+  };
+
+  const encrypted = await withEncryptedUrl(ADMIN_DATABASE_ENDPOINT, requestInit);
+
   let response: Response;
   try {
-    response = await fetch(ADMIN_DATABASE_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query }),
-    });
+    response = await fetch(encrypted.input, encrypted.init);
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
     throw new Error(`Impossible de contacter la base ${context} : ${detail}`);
@@ -1076,7 +1084,7 @@ async function syncUserPermissionOverrides(
     `SET NOCOUNT ON;
 SELECT [moduleId], [canView]
 FROM [userPermissions]
-WHERE [userId] = ${userId} AND [permissionType] = '${MODULE_PERMISSION_TYPE}';`,
+WHERE [userId] = ${userId} AND ${MODULE_PERMISSION_WHERE};`,
     'droits personnalisés de l’utilisateur',
   );
 
@@ -1133,28 +1141,33 @@ WHERE [userId] = ${userId} AND [permissionType] = '${MODULE_PERMISSION_TYPE}';`,
     }
   }
 
-  if (deletes.length === 0 && updates.length === 0 && inserts.length === 0) {
-    return buildOverridesFromRecords(existingRecords, moduleIdToKey);
-  }
-
   deletes.sort((left, right) => left - right);
   updates.sort((left, right) => left.moduleId - right.moduleId);
   inserts.sort((left, right) => left.moduleId - right.moduleId);
 
   const statements = ['SET NOCOUNT ON;'];
 
+  statements.push(
+    `UPDATE [userPermissions]\n` +
+      `SET [permissionType] = '${MODULE_PERMISSION_TYPE}'\n` +
+      `WHERE [userId] = ${userId}\n` +
+      `  AND [moduleId] IS NOT NULL\n` +
+      `  AND ${MODULE_PERMISSION_FILTER}\n` +
+      `  AND [permissionType] <> '${MODULE_PERMISSION_TYPE}';`,
+  );
+
   if (deletes.length > 0) {
     const deleteList = deletes.join(', ');
     statements.push(
       `DELETE FROM [userPermissions]\n` +
-        `WHERE [userId] = ${userId} AND [permissionType] = '${MODULE_PERMISSION_TYPE}' AND [moduleId] IN (${deleteList});`,
+        `WHERE [userId] = ${userId} AND ${MODULE_PERMISSION_WHERE} AND [moduleId] IN (${deleteList});`,
     );
   }
 
   for (const update of updates) {
     statements.push(
       `UPDATE [userPermissions] SET [canView] = ${update.canView ? 1 : 0}\n` +
-        `WHERE [userId] = ${userId} AND [permissionType] = '${MODULE_PERMISSION_TYPE}' AND [moduleId] = ${update.moduleId};`,
+        `WHERE [userId] = ${userId} AND ${MODULE_PERMISSION_WHERE} AND [moduleId] = ${update.moduleId};`,
     );
   }
 
@@ -1173,7 +1186,7 @@ WHERE [userId] = ${userId} AND [permissionType] = '${MODULE_PERMISSION_TYPE}';`,
   statements.push(
     `SELECT [moduleId], [canView]\n` +
       `FROM [userPermissions]\n` +
-      `WHERE [userId] = ${userId} AND [permissionType] = '${MODULE_PERMISSION_TYPE}'\n` +
+      `WHERE [userId] = ${userId} AND ${MODULE_PERMISSION_WHERE}\n` +
       `ORDER BY [moduleId];`,
   );
 
