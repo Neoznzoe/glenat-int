@@ -401,8 +401,26 @@ function normalizeUserRecord(
 function normalizeGroupMembership(
   record: RawDatabaseUserRecord,
 ): { userId: string; groupId: string } | null {
-  const userIdValue = getValue(record, ['userId', 'UserId', 'userID', 'UserID']);
-  const groupIdValue = getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID']);
+  const userIdValue = getValue(record, [
+    'userId',
+    'UserId',
+    'userID',
+    'UserID',
+    'idUser',
+    'IdUser',
+    'IDUser',
+    'IDUSER',
+  ]);
+  const groupIdValue = getValue(record, [
+    'groupId',
+    'GroupId',
+    'groupID',
+    'GroupID',
+    'idGroup',
+    'IdGroup',
+    'IDGroup',
+    'IDGROUP',
+  ]);
 
   const numericUserId = toNumber(userIdValue);
   const numericGroupId = toNumber(groupIdValue);
@@ -826,9 +844,9 @@ export async function persistUserAccess(
 
   const currentMembershipRecords = await runDatabaseQuery(
     `SET NOCOUNT ON;
-SELECT [userId], [groupId]
+SELECT [idUser] AS [userId], [idGroup] AS [groupId]
 FROM [userGroupMembers]
-WHERE [userId] = ${numericUserId};`,
+WHERE [idUser] = ${numericUserId};`,
     "groupes actuels de l'utilisateur",
   );
 
@@ -862,7 +880,7 @@ WHERE [userId] = ${numericUserId};`,
     const values = groupsToAdd.map((groupId) => `(${numericUserId}, ${groupId})`).join(',\n');
     await runDatabaseQuery(
       `SET NOCOUNT ON;
-INSERT INTO [userGroupMembers] ([userId], [groupId]) VALUES ${values};`,
+INSERT INTO [userGroupMembers] ([idUser], [idGroup]) VALUES ${values};`,
       "ajout des groupes de l'utilisateur",
     );
   }
@@ -871,7 +889,7 @@ INSERT INTO [userGroupMembers] ([userId], [groupId]) VALUES ${values};`,
     await runDatabaseQuery(
       `SET NOCOUNT ON;
 DELETE FROM [userGroupMembers]
-WHERE [userId] = ${numericUserId} AND [groupId] IN (${groupsToRemove.join(', ')});`,
+WHERE [idUser] = ${numericUserId} AND [idGroup] IN (${groupsToRemove.join(', ')});`,
       "suppression des groupes de l'utilisateur",
     );
   }
@@ -887,9 +905,9 @@ WHERE [userId] = ${numericUserId};`,
     ),
     runDatabaseQuery(
       `SET NOCOUNT ON;
-SELECT [userId], [groupId]
+SELECT [idUser] AS [userId], [idGroup] AS [groupId]
 FROM [userGroupMembers]
-WHERE [userId] = ${numericUserId};`,
+WHERE [idUser] = ${numericUserId};`,
       "groupes mis à jour de l'utilisateur",
     ),
   ]);
