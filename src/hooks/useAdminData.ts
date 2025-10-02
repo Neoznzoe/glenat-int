@@ -5,6 +5,7 @@ import {
   fetchAuditLog,
   fetchCurrentUser,
   persistUserAccess,
+  createGroup,
   type UpdateUserAccessPayload,
   type UserAccount,
   type PermissionOverride,
@@ -68,5 +69,25 @@ export function useUpdateUserAccess(options?: UpdateUserOptions) {
   });
 }
 
+export function useCreateGroup(options?: { onSuccess?: () => void }) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (name: string) => createGroup(name),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: GROUPS_QUERY_KEY }),
+      ]);
+      options?.onSuccess?.();
+    },
+  });
+}
+
 export type { UserAccount, PermissionOverride, AuditLogEntry };
-export { USERS_QUERY_KEY, GROUPS_QUERY_KEY, PERMISSIONS_QUERY_KEY, CURRENT_USER_QUERY_KEY, AUDIT_LOG_QUERY_KEY };
+export {
+  USERS_QUERY_KEY,
+  GROUPS_QUERY_KEY,
+  PERMISSIONS_QUERY_KEY,
+  CURRENT_USER_QUERY_KEY,
+  AUDIT_LOG_QUERY_KEY,
+};
