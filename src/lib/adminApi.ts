@@ -876,6 +876,8 @@ WHERE [userId] = ${numericUserId} AND [groupId] IN (${groupsToRemove.join(', ')}
     );
   }
 
+  const expectedId = payload.userId.trim();
+
   const [userRecords, membershipRecords] = await Promise.all([
     runDatabaseQuery(
       `SET NOCOUNT ON;
@@ -892,14 +894,58 @@ WHERE [userId] = ${numericUserId};`,
     ),
   ]);
 
-  if (!userRecords.length) {
+  let userRecord = userRecords[0];
+  let updatedMembershipRecords = membershipRecords;
+
+  if (!userRecord) {
+    const fallbackUsers = await runDatabaseQuery(ADMIN_USERS_QUERY, 'utilisateurs');
+    const expectedNumericId = numericUserId;
+
+    userRecord = fallbackUsers.find((record) => {
+      const value = getValue(record, ['userId', 'userID', 'UserId', 'UserID', 'id', 'ID', 'Id']);
+      const numericValue = toNumber(value);
+      const stringValue =
+        toNonEmptyString(value) ?? (numericValue !== undefined ? numericValue.toString() : undefined);
+
+      if (stringValue && expectedId && stringValue.trim() === expectedId) {
+        return true;
+      }
+      if (numericValue !== undefined && numericValue === expectedNumericId) {
+        return true;
+      }
+      return false;
+    });
+  }
+
+  if (!updatedMembershipRecords.length) {
+    const fallbackMemberships = await runDatabaseQuery(
+      ADMIN_GROUP_MEMBERS_QUERY,
+      "appartenances aux groupes",
+    );
+    updatedMembershipRecords = fallbackMemberships.filter((record) => {
+      const membership = normalizeGroupMembership(record);
+      if (!membership) {
+        return false;
+      }
+      if (membership.userId === expectedId) {
+        return true;
+      }
+      const parsed = Number.parseInt(membership.userId, 10);
+      if (Number.isFinite(parsed) && parsed === numericUserId) {
+        return true;
+      }
+      return false;
+    });
+  }
+
+  if (!userRecord) {
     throw new Error('Utilisateur introuvable après la mise à jour.');
   }
 
   const fallbackTimestamp = '';
-  const updatedUser = normalizeUserRecord(userRecords[0], 0, fallbackTimestamp);
+  const updatedUser = normalizeUserRecord(userRecord, 0, fallbackTimestamp);
 
-  const updatedGroupIds = membershipRecords
+  const updatedGroupIds = updatedMembershipRecords
     .map((record) => normalizeGroupMembership(record))
     .filter((membership): membership is { userId: string; groupId: string } => Boolean(membership))
     .map((membership) => membership.groupId);
