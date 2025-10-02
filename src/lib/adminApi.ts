@@ -16,6 +16,7 @@ const ADMIN_MODULES_QUERY = 'SELECT * FROM [modules];';
 const ADMIN_PAGES_QUERY = 'SELECT * FROM [pages];';
 const ADMIN_MODULE_PAGES_QUERY = 'SELECT * FROM [modulesPages];';
 const ADMIN_GROUPS_QUERY = 'SELECT * FROM [userGroups];';
+const ADMIN_GROUP_MEMBERS_QUERY = 'SELECT * FROM [userGroupMembers];';
 
 interface DatabaseQueryResponse {
   success?: boolean;
@@ -397,6 +398,29 @@ function normalizeUserRecord(
   return user;
 }
 
+function normalizeGroupMembership(
+  record: RawDatabaseUserRecord,
+): { userId: string; groupId: string } | null {
+  const userIdValue = getValue(record, ['userId', 'UserId', 'userID', 'UserID']);
+  const groupIdValue = getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID']);
+
+  const numericUserId = toNumber(userIdValue);
+  const numericGroupId = toNumber(groupIdValue);
+
+  const userId =
+    toNonEmptyString(userIdValue) ??
+    (numericUserId !== undefined ? numericUserId.toString() : undefined);
+  const groupId =
+    toNonEmptyString(groupIdValue) ??
+    (numericGroupId !== undefined ? numericGroupId.toString() : undefined);
+
+  if (!userId || !groupId) {
+    return null;
+  }
+
+  return { userId, groupId };
+}
+
 function normalizeModuleDefinition(
   record: RawDatabaseUserRecord,
   index: number,
@@ -620,10 +644,35 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Pro
 }
 
 export async function fetchUsers(): Promise<UserAccount[]> {
-  const records = await runDatabaseQuery(ADMIN_USERS_QUERY, 'utilisateurs');
+  const [userRecords, membershipRecords] = await Promise.all([
+    runDatabaseQuery(ADMIN_USERS_QUERY, 'utilisateurs'),
+    runDatabaseQuery(ADMIN_GROUP_MEMBERS_QUERY, 'appartenances aux groupes'),
+  ]);
+
+  const membershipsByUser = new Map<string, Set<string>>();
+  for (const record of membershipRecords) {
+    const membership = normalizeGroupMembership(record);
+    if (!membership) {
+      continue;
+    }
+    if (!membershipsByUser.has(membership.userId)) {
+      membershipsByUser.set(membership.userId, new Set<string>());
+    }
+    membershipsByUser.get(membership.userId)?.add(membership.groupId);
+  }
+
   const fallbackTimestamp = '';
 
-  const users = records.map((record, index) => normalizeUserRecord(record, index, fallbackTimestamp));
+  const users = userRecords.map((record, index) => {
+    const user = normalizeUserRecord(record, index, fallbackTimestamp);
+    const membership = membershipsByUser.get(user.id);
+    if (membership?.size) {
+      user.groups = Array.from(membership).sort((left, right) =>
+        left.localeCompare(right, 'fr', { numeric: true, sensitivity: 'base' }),
+      );
+    }
+    return user;
+  });
 
   users.sort((left, right) =>
     left.displayName.localeCompare(right.displayName, 'fr', { sensitivity: 'base' }),
@@ -761,14 +810,113 @@ export async function fetchCurrentUser(): Promise<UserAccount> {
 export async function persistUserAccess(
   payload: UpdateUserAccessPayload,
 ): Promise<UserAccount> {
-  const { userId, ...body } = payload;
-  return requestJson<UserAccount>(`/api/admin/users/${encodeURIComponent(userId)}/access`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+  const numericUserId = Number.parseInt(payload.userId, 10);
+  if (!Number.isFinite(numericUserId)) {
+    throw new Error("Identifiant d'utilisateur invalide.");
+  }
+
+  const desiredGroupIds = new Set<number>();
+  for (const groupId of payload.groups ?? []) {
+    const parsed = Number.parseInt(groupId, 10);
+    if (!Number.isFinite(parsed)) {
+      throw new Error(`Identifiant de groupe invalide : « ${groupId} ».`);
+    }
+    desiredGroupIds.add(parsed);
+  }
+
+  const currentMembershipRecords = await runDatabaseQuery(
+    `SET NOCOUNT ON;
+SELECT [userId], [groupId]
+FROM [userGroupMembers]
+WHERE [userId] = ${numericUserId};`,
+    "groupes actuels de l'utilisateur",
+  );
+
+  const currentGroupIds = new Set<number>();
+  for (const record of currentMembershipRecords) {
+    const membership = normalizeGroupMembership(record);
+    if (!membership) {
+      continue;
+    }
+    const parsed = Number.parseInt(membership.groupId, 10);
+    if (Number.isFinite(parsed)) {
+      currentGroupIds.add(parsed);
+    }
+  }
+
+  const groupsToAdd: number[] = [];
+  for (const groupId of desiredGroupIds) {
+    if (!currentGroupIds.has(groupId)) {
+      groupsToAdd.push(groupId);
+    }
+  }
+
+  const groupsToRemove: number[] = [];
+  for (const groupId of currentGroupIds) {
+    if (!desiredGroupIds.has(groupId)) {
+      groupsToRemove.push(groupId);
+    }
+  }
+
+  if (groupsToAdd.length) {
+    const values = groupsToAdd.map((groupId) => `(${numericUserId}, ${groupId})`).join(',\n');
+    await runDatabaseQuery(
+      `SET NOCOUNT ON;
+INSERT INTO [userGroupMembers] ([userId], [groupId]) VALUES ${values};`,
+      "ajout des groupes de l'utilisateur",
+    );
+  }
+
+  if (groupsToRemove.length) {
+    await runDatabaseQuery(
+      `SET NOCOUNT ON;
+DELETE FROM [userGroupMembers]
+WHERE [userId] = ${numericUserId} AND [groupId] IN (${groupsToRemove.join(', ')});`,
+      "suppression des groupes de l'utilisateur",
+    );
+  }
+
+  const [userRecords, membershipRecords] = await Promise.all([
+    runDatabaseQuery(
+      `SET NOCOUNT ON;
+SELECT * FROM [users]
+WHERE [userId] = ${numericUserId};`,
+      'utilisateur mis à jour',
+    ),
+    runDatabaseQuery(
+      `SET NOCOUNT ON;
+SELECT [userId], [groupId]
+FROM [userGroupMembers]
+WHERE [userId] = ${numericUserId};`,
+      "groupes mis à jour de l'utilisateur",
+    ),
+  ]);
+
+  if (!userRecords.length) {
+    throw new Error('Utilisateur introuvable après la mise à jour.');
+  }
+
+  const fallbackTimestamp = '';
+  const updatedUser = normalizeUserRecord(userRecords[0], 0, fallbackTimestamp);
+
+  const updatedGroupIds = membershipRecords
+    .map((record) => normalizeGroupMembership(record))
+    .filter((membership): membership is { userId: string; groupId: string } => Boolean(membership))
+    .map((membership) => membership.groupId);
+
+  if (updatedGroupIds.length) {
+    const uniqueGroups = Array.from(new Set(updatedGroupIds));
+    uniqueGroups.sort((left, right) =>
+      left.localeCompare(right, 'fr', { numeric: true, sensitivity: 'base' }),
+    );
+    updatedUser.groups = uniqueGroups;
+  } else {
+    updatedUser.groups = [];
+  }
+
+  updatedUser.permissionOverrides = payload.permissionOverrides;
+
+  return updatedUser;
 }
 
 export type { UserAccount, PermissionOverride, AuditLogEntry, UpdateUserAccessPayload };
