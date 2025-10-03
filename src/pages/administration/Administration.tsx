@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   useAdminUsers,
   useAdminGroups,
   usePermissionDefinitions,
   useAuditLog,
   useCurrentUser,
+  usePersistModuleOverride,
   useUpdateUserAccess,
   type PermissionOverride,
   type UserAccount,
@@ -23,7 +24,6 @@ import {
   type PermissionEvaluationRow,
 } from '@/components/admin/UserAccessEditor';
 import { type DraftAccessState, type PermissionSelectValue } from '@/components/admin/access-types';
-import { GroupManager } from '@/components/admin/GroupManager';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -50,6 +50,18 @@ function overridesAreEqual(left: PermissionOverride[], right: PermissionOverride
   return true;
 }
 
+function applyOverrideChange(
+  overrides: PermissionOverride[],
+  key: PermissionKey,
+  value: PermissionSelectValue,
+): PermissionOverride[] {
+  const filtered = overrides.filter((item) => item.key !== key);
+  if (value === 'inherit') {
+    return filtered;
+  }
+  return [...filtered, { key, mode: value }];
+}
+
 function mapGroupIdToName(groups: GroupDefinition[], ids: string[]) {
   const byId = new Map(groups.map((group) => [group.id, group.name]));
   return ids.map((id) => byId.get(id) ?? id);
@@ -65,8 +77,10 @@ export function Administration() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [showOnlyInactive, setShowOnlyInactive] = useState(false);
   const [draft, setDraft] = useState<DraftAccessState>({ groups: [], permissionOverrides: [] });
+  const selectedUserIdRef = useRef<string | null>(null);
 
   const updateUserMutation = useUpdateUserAccess({ actorId: currentUser?.id });
+  const moduleOverrideMutation = usePersistModuleOverride({ actorId: currentUser?.id });
 
   const lowerSearch = search.trim().toLowerCase();
   const filteredUsers = useMemo(() => {
@@ -123,6 +137,10 @@ export function Administration() {
       groups: [...selectedUser.groups],
       permissionOverrides: [...selectedUser.permissionOverrides],
     });
+  }, [selectedUser]);
+
+  useEffect(() => {
+    selectedUserIdRef.current = selectedUser?.id ?? null;
   }, [selectedUser]);
 
   const previewUser: UserAccount | null = useMemo(() => {
@@ -193,6 +211,7 @@ export function Administration() {
   const isDirty = groupsChanged || overridesChanged;
 
   const isLoading = loadingUsers || loadingGroups || loadingPermissions;
+  const isSaving = updateUserMutation.isPending || moduleOverrideMutation.isPending;
 
   const handleGroupToggle = (groupId: string, checked: boolean) => {
     setDraft((current) => {
@@ -209,17 +228,101 @@ export function Administration() {
     });
   };
 
-  const handlePermissionChange = (key: PermissionKey, value: PermissionSelectValue) => {
-    setDraft((current) => {
-      const overrides = current.permissionOverrides.filter((item) => item.key !== key);
-      if (value === 'inherit') {
-        return { ...current, permissionOverrides: overrides };
-      }
-      return {
-        ...current,
-        permissionOverrides: [...overrides, { key, mode: value }],
-      };
+  const handlePermissionChange = async (
+    definition: PermissionDefinition,
+    value: PermissionSelectValue,
+  ) => {
+    const targetUser = selectedUser;
+    const previousOverrides = draft.permissionOverrides;
+    const nextOverrides = applyOverrideChange(previousOverrides, definition.key, value);
+
+    setDraft((current) => ({
+      ...current,
+      permissionOverrides: applyOverrideChange(current.permissionOverrides, definition.key, value),
+    }));
+
+    if (!targetUser || definition.type !== 'module') {
+      return;
+    }
+
+    const targetUserId = targetUser.id;
+    const moduleOverridesToPersist = nextOverrides.filter((override) => {
+      const permission = permissionsByKey.get(override.key);
+      return permission?.type === 'module' && override.mode === 'deny';
     });
+
+    const overridesForPersistence = nextOverrides.filter((override) => {
+      const permission = permissionsByKey.get(override.key);
+      if (permission?.type === 'module') {
+        return override.mode === 'deny';
+      }
+      return true;
+    });
+
+    try {
+      const updatedUser = await moduleOverrideMutation.mutateAsync({
+        userId: targetUserId,
+        permissionKey: definition.key,
+        groups: [...targetUser.groups],
+        moduleOverrides: moduleOverridesToPersist,
+        allOverrides: overridesForPersistence,
+      });
+
+      if (selectedUserIdRef.current !== targetUserId) {
+        return;
+      }
+
+      const userDisplayName = targetUser.displayName ?? 'cet utilisateur';
+      const moduleStatusDescription =
+        value === 'deny'
+          ? `${definition.label} est désormais masqué pour ${userDisplayName}.`
+          : value === 'allow'
+            ? `${definition.label} est désormais autorisé explicitement pour ${userDisplayName}.`
+            : `${definition.label} suit désormais les droits des groupes pour ${userDisplayName}.`;
+
+      toast.success('Module mis à jour', { description: moduleStatusDescription });
+
+      const sanitizedModules = (updatedUser.permissionOverrides ?? []).filter((override) => {
+        const permission = permissionsByKey.get(override.key);
+        return permission?.type === 'module';
+      });
+
+      setDraft((current) => {
+        if (selectedUserIdRef.current !== targetUserId) {
+          return current;
+        }
+
+        if (!overridesAreEqual(current.permissionOverrides, nextOverrides)) {
+          return current;
+        }
+
+        const preservedNonModules = current.permissionOverrides.filter((override) => {
+          const permission = permissionsByKey.get(override.key);
+          return permission?.type !== 'module';
+        });
+
+        return {
+          ...current,
+          permissionOverrides: [...sanitizedModules, ...preservedNonModules],
+        };
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erreur inconnue';
+      toast.error("Impossible de mettre à jour le module", { description: message });
+
+      setDraft((current) => {
+        if (selectedUserIdRef.current !== targetUserId) {
+          return current;
+        }
+        if (!overridesAreEqual(current.permissionOverrides, nextOverrides)) {
+          return current;
+        }
+        return {
+          ...current,
+          permissionOverrides: previousOverrides,
+        };
+      });
+    }
   };
 
   const handleReset = () => {
@@ -326,7 +429,7 @@ export function Administration() {
           permissionEvaluations={permissionEvaluations}
           effectivePermissionSet={effectivePermissionSet}
           isDirty={isDirty}
-          isSaving={updateUserMutation.isPending}
+          isSaving={isSaving}
           isSuperAdmin={isSuperAdmin}
           isLoading={isLoading}
           onToggleGroup={handleGroupToggle}
@@ -335,8 +438,6 @@ export function Administration() {
           onSave={handleSave}
         />
       </div>
-
-      <GroupManager groups={groups} isLoading={loadingGroups || loadingUsers} />
 
       <Card>
         <CardHeader>
