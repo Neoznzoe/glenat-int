@@ -4,7 +4,12 @@ import {
   type UpdateUserAccessPayload,
   type UserAccount,
 } from './mockDb';
-import { type GroupDefinition, type PermissionDefinition } from './access-control';
+import {
+  type GroupDefinition,
+  type PermissionDefinition,
+  type PermissionKey,
+  PERMISSION_DEFINITIONS,
+} from './access-control';
 import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
 
 const ADMIN_DATABASE_ENDPOINT =
@@ -202,6 +207,111 @@ function normalizeKey(value: string | undefined, fallback: string): string {
   return fallback;
 }
 
+function registerPermissionLookupKey(
+  map: Map<string, PermissionKey>,
+  candidate: string | undefined,
+  target: PermissionKey,
+): void {
+  if (!candidate) {
+    return;
+  }
+
+  const lowered = candidate.toLowerCase();
+  if (lowered) {
+    map.set(lowered, target);
+    const compact = lowered.replace(/[^a-z0-9]/g, '');
+    if (compact) {
+      map.set(compact, target);
+    }
+  }
+}
+
+const PERMISSION_KEY_LOOKUP: Map<string, PermissionKey> = (() => {
+  const lookup = new Map<string, PermissionKey>();
+
+  for (const definition of PERMISSION_DEFINITIONS) {
+    registerPermissionLookupKey(lookup, definition.key, definition.key);
+    registerPermissionLookupKey(lookup, normalizeKey(definition.key, definition.key), definition.key);
+    registerPermissionLookupKey(
+      lookup,
+      normalizeKey(definition.label, definition.key),
+      definition.key,
+    );
+    registerPermissionLookupKey(
+      lookup,
+      normalizeKey(definition.label, definition.key).replace(/-/g, ''),
+      definition.key,
+    );
+    const slug = toNonEmptyString(definition.metadata?.slug);
+    if (slug) {
+      const normalizedSlug = normalizeKey(slug, slug);
+      registerPermissionLookupKey(lookup, normalizedSlug, definition.key);
+      registerPermissionLookupKey(lookup, normalizedSlug.replace(/-/g, ''), definition.key);
+    }
+  }
+
+  const aliasEntries: Array<[string, PermissionKey]> = [['kiosque', 'catalogue']];
+  for (const [alias, key] of aliasEntries) {
+    registerPermissionLookupKey(lookup, alias, key);
+    registerPermissionLookupKey(lookup, normalizeKey(alias, alias), key);
+  }
+
+  return lookup;
+})();
+
+function collectLookupCandidates(...values: Array<unknown>): string[] {
+  const candidates = new Set<string>();
+
+  for (const value of values) {
+    const raw = toNonEmptyString(value);
+    if (!raw) {
+      continue;
+    }
+
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    const lowered = trimmed.toLowerCase();
+    candidates.add(lowered);
+
+    const normalized = normalizeKey(trimmed, trimmed);
+    candidates.add(normalized);
+
+    const compact = normalized.replace(/-/g, '');
+    if (compact) {
+      candidates.add(compact);
+    }
+
+    const alphanumeric = lowered.replace(/[^a-z0-9]/g, '');
+    if (alphanumeric) {
+      candidates.add(alphanumeric);
+    }
+  }
+
+  return Array.from(candidates);
+}
+
+function resolveCanonicalModulePermissionKey(
+  definition: PermissionDefinition,
+): PermissionKey | null {
+  const candidates = collectLookupCandidates(
+    definition.key,
+    definition.label,
+    definition.metadata?.slug,
+  );
+
+  for (const candidate of candidates) {
+    const permission = PERMISSION_KEY_LOOKUP.get(candidate);
+    if (permission) {
+      return permission;
+    }
+  }
+
+  return null;
+}
+
 function humanizeLabel(value: string): string {
   const spaced = value
     .replace(/[_-]+/g, ' ')
@@ -311,6 +421,7 @@ async function loadModulePermissionMappings(): Promise<ModulePermissionMappings>
 
   moduleRecords.forEach((record, index) => {
     const definition = normalizeModuleDefinition(record, index);
+    const canonicalKey = resolveCanonicalModulePermissionKey(definition) ?? definition.key;
     const metadataId = definition.metadata?.id;
     if (typeof metadataId !== 'string') {
       return;
@@ -319,8 +430,8 @@ async function loadModulePermissionMappings(): Promise<ModulePermissionMappings>
     if (moduleId === null) {
       return;
     }
-    moduleIdToKey.set(moduleId, definition.key);
-    keyToModuleId.set(definition.key, moduleId);
+    moduleIdToKey.set(moduleId, canonicalKey);
+    keyToModuleId.set(canonicalKey, moduleId);
   });
 
   return { moduleIdToKey, keyToModuleId };
@@ -897,7 +1008,15 @@ export async function fetchPermissions(): Promise<PermissionDefinition[]> {
     runDatabaseQuery(ADMIN_MODULE_PAGES_QUERY, 'associations modules/pages'),
   ]);
 
-  const modules = moduleRecords.map((record, index) => normalizeModuleDefinition(record, index));
+  const modules = moduleRecords
+    .map((record, index) => normalizeModuleDefinition(record, index))
+    .map((definition) => {
+      const canonicalKey = resolveCanonicalModulePermissionKey(definition);
+      if (canonicalKey && canonicalKey !== definition.key) {
+        return { ...definition, key: canonicalKey };
+      }
+      return definition;
+    });
   const pages = pageRecords.map((record, index) => normalizePageDefinition(record, index));
   const associations = modulePageRecords
     .map((record) => normalizeModulePageRecord(record))
@@ -956,7 +1075,17 @@ export async function fetchPermissions(): Promise<PermissionDefinition[]> {
     return Number.MAX_SAFE_INTEGER;
   };
 
-  modules.sort((left, right) => {
+  const uniqueModules: PermissionDefinition[] = [];
+  const seenModuleKeys = new Set<string>();
+  for (const definition of modules) {
+    if (seenModuleKeys.has(definition.key)) {
+      continue;
+    }
+    seenModuleKeys.add(definition.key);
+    uniqueModules.push(definition);
+  }
+
+  uniqueModules.sort((left, right) => {
     const diff = sortKey(left) - sortKey(right);
     if (diff !== 0) {
       return diff;
@@ -964,7 +1093,7 @@ export async function fetchPermissions(): Promise<PermissionDefinition[]> {
     return left.label.localeCompare(right.label, 'fr', { sensitivity: 'base' });
   });
 
-  return [...modules, ...pagesWithParent];
+  return [...uniqueModules, ...pagesWithParent];
 }
 
 export async function createGroup(name: string): Promise<void> {
