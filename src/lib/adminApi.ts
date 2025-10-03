@@ -67,6 +67,11 @@ export interface UpdateModuleOverridePayload {
   actorId?: string;
 }
 
+export interface SetCurrentUserPayload {
+  userId: string;
+  permissionOverrides?: PermissionOverride[];
+}
+
 const GROUP_ACCENT_COLORS = [
   'bg-rose-500/10 text-rose-600 border-rose-200',
   'bg-sky-500/10 text-sky-600 border-sky-200',
@@ -1105,6 +1110,26 @@ SELECT CAST(SCOPE_IDENTITY() AS INT) AS [groupId], N'${escapedName}' AS [groupNa
 export async function fetchAuditLog(limit = 25): Promise<AuditLogEntry[]> {
   const params = new URLSearchParams({ limit: String(limit) });
   return requestJson<AuditLogEntry[]>(`/api/admin/audit-log?${params.toString()}`);
+}
+
+export async function setCurrentUserId(payload: SetCurrentUserPayload): Promise<UserAccount> {
+  const trimmedId = payload.userId.trim();
+  if (!trimmedId) {
+    throw new Error("L'identifiant utilisateur est requis.");
+  }
+
+  const sanitizedOverrides = sanitizePermissionOverrides(payload.permissionOverrides ?? []);
+
+  return requestJson<UserAccount>('/api/admin/current-user', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      userId: trimmedId,
+      permissionOverrides: sanitizedOverrides,
+    }),
+  });
 }
 
 export async function fetchCurrentUser(): Promise<UserAccount> {

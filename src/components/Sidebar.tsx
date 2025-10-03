@@ -53,6 +53,18 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     return new Set(computeEffectivePermissions(currentUser, groups));
   }, [currentUser, groups]);
 
+  const deniedPermissions = useMemo(() => {
+    if (!currentUser) {
+      return new Set<PermissionKey>();
+    }
+    const overrides = Array.isArray(currentUser.permissionOverrides)
+      ? currentUser.permissionOverrides
+      : [];
+    return new Set(
+      overrides.filter((override) => override.mode === 'deny').map((override) => override.key),
+    );
+  }, [currentUser]);
+
   const menuItems: Array<{
     id: string;
     icon: typeof Home;
@@ -150,6 +162,9 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const showAllMenus = loadingCurrentUser || loadingGroups || !currentUser;
 
   const userCanAccess = (permission: PermissionKey) => {
+    if (deniedPermissions.has(permission)) {
+      return false;
+    }
     if (showAllMenus) {
       return true;
     }

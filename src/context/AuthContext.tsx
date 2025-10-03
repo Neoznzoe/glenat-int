@@ -15,9 +15,12 @@ import {
 } from '@azure/msal-browser';
 import { useMsal } from '@azure/msal-react';
 import { loginRequest } from '@/lib/msal';
+import { useQueryClient } from '@tanstack/react-query';
+import { CURRENT_USER_QUERY_KEY } from '@/hooks/useAdminData';
+import { setCurrentUserId } from '@/lib/adminApi';
 import {
   lookupInternalUserByEmail,
-  type DatabaseUserLookupResponse,
+  type InternalUserLookupResult,
 } from '@/lib/internalUserLookup';
 
 interface UserProfile {
@@ -30,7 +33,7 @@ interface UserProfile {
   officeLocation?: string;
   userPrincipalName?: string;
   photoUrl?: string;
-  internalUser?: DatabaseUserLookupResponse | null;
+  internalUser?: InternalUserLookupResult | null;
 }
 
 interface AuthContextValue {
@@ -102,6 +105,7 @@ async function fetchUserProfile(instance: IPublicClientApplication, account: Acc
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { instance } = useMsal();
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -150,12 +154,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const profile = await fetchUserProfile(instance, activeAccount);
-                let internalUser: DatabaseUserLookupResponse | null = null;
+        let internalUser: InternalUserLookupResult | null = null;
         const email = profile.mail ?? profile.userPrincipalName;
 
         if (email) {
           try {
             internalUser = await lookupInternalUserByEmail(email);
+            const userId = internalUser?.user?.id;
+            if (userId) {
+              try {
+                const overridesToPersist = (internalUser?.permissionOverrides ?? []).filter(
+                  (override) => override.mode === 'deny',
+                );
+                await setCurrentUserId({
+                  userId,
+                  permissionOverrides: overridesToPersist,
+                });
+                await queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY });
+              } catch (syncError) {
+                console.error(
+                  "Impossible de synchroniser l'utilisateur courant côté administration :",
+                  syncError,
+                );
+              }
+            }
           } catch (syncError) {
             console.error(
               "Impossible de synchroniser l'utilisateur interne :",
@@ -179,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     void initializeAuth();
-  }, [instance]);
+  }, [instance, queryClient]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
