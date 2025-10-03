@@ -1340,7 +1340,14 @@ export async function persistModuleOverrideChange(
   }
 
   const updatedUser = normalizeUserRecord(userRecords[0], 0, '');
-  updatedUser.groups = await loadUserGroupIds(numericUserId);
+  let refreshedGroups: string[];
+  try {
+    refreshedGroups = await loadUserGroupIds(numericUserId);
+  } catch (error) {
+    console.warn('Failed to reload user groups after module override update.', { userId: payload.userId, error });
+    refreshedGroups = [...payload.groups];
+  }
+  updatedUser.groups = refreshedGroups;
   updatedUser.permissionOverrides = mergedOverrides;
 
   return updatedUser;
