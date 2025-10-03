@@ -273,6 +273,16 @@ export function Administration() {
         return;
       }
 
+      const userDisplayName = targetUser.displayName ?? 'cet utilisateur';
+      const moduleStatusDescription =
+        value === 'deny'
+          ? `${definition.label} est désormais masqué pour ${userDisplayName}.`
+          : value === 'allow'
+            ? `${definition.label} est désormais autorisé explicitement pour ${userDisplayName}.`
+            : `${definition.label} suit désormais les droits des groupes pour ${userDisplayName}.`;
+
+      toast.success('Module mis à jour', { description: moduleStatusDescription });
+
       const sanitizedModules = (updatedUser.permissionOverrides ?? []).filter((override) => {
         const permission = permissionsByKey.get(override.key);
         return permission?.type === 'module';
