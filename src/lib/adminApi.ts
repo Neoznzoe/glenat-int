@@ -4,7 +4,11 @@ import {
   type UpdateUserAccessPayload,
   type UserAccount,
 } from './mockDb';
-import { type GroupDefinition, type PermissionDefinition } from './access-control';
+import {
+  type GroupDefinition,
+  type PermissionDefinition,
+  type PermissionKey,
+} from './access-control';
 import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
 
 const ADMIN_DATABASE_ENDPOINT =
@@ -17,6 +21,7 @@ const ADMIN_PAGES_QUERY = 'SELECT * FROM [pages];';
 const ADMIN_MODULE_PAGES_QUERY = 'SELECT * FROM [modulesPages];';
 const ADMIN_GROUPS_QUERY = 'SELECT * FROM [userGroups];';
 const ADMIN_USER_GROUP_MEMBERS_QUERY = 'SELECT * FROM [userGroupMembers];';
+const ADMIN_USER_PERMISSIONS_QUERY = 'SELECT * FROM [userPermissions];';
 
 interface DatabaseQueryResponse {
   success?: boolean;
@@ -37,6 +42,11 @@ interface ModuleAssociation {
   moduleId: string;
   pageId: string;
   defaultPage: boolean;
+}
+
+interface ModulePermissionMaps {
+  moduleIdByKey: Map<PermissionKey, string>;
+  keyByModuleId: Map<string, PermissionKey>;
 }
 
 const GROUP_ACCENT_COLORS = [
@@ -138,6 +148,28 @@ function normalizeDateValue(value: unknown): string | null {
   return null;
 }
 
+function toOptionalBoolean(value: unknown): boolean | null {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'number') {
+    return value === 0 ? false : value === 1 ? true : null;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return null;
+    }
+    if (['1', 'true', 'oui', 'yes', 'on'].includes(normalized)) {
+      return true;
+    }
+    if (['0', 'false', 'non', 'no', 'off'].includes(normalized)) {
+      return false;
+    }
+  }
+  return null;
+}
+
 function normalizeGroups(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value
@@ -151,6 +183,36 @@ function normalizeGroups(value: unknown): string[] {
       .filter((part) => part.length > 0);
   }
   return [];
+}
+
+function sanitizePermissionOverrides(overrides: PermissionOverride[]): PermissionOverride[] {
+  if (!Array.isArray(overrides) || overrides.length === 0) {
+    return [];
+  }
+
+  const seen = new Set<PermissionKey>();
+  const sanitized: PermissionOverride[] = [];
+
+  for (let index = overrides.length - 1; index >= 0; index -= 1) {
+    const candidate = overrides[index];
+    if (!candidate || typeof candidate !== 'object') {
+      continue;
+    }
+    const { key, mode } = candidate;
+    if (typeof key !== 'string') {
+      continue;
+    }
+    if (mode !== 'allow' && mode !== 'deny') {
+      continue;
+    }
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    sanitized.unshift({ key, mode });
+  }
+
+  return sanitized;
 }
 
 function normalizeKey(value: string | undefined, fallback: string): string {
@@ -580,6 +642,147 @@ function normalizeGroupRecord(record: RawDatabaseUserRecord, index: number): Gro
   };
 }
 
+async function loadModulePermissionMaps(): Promise<ModulePermissionMaps> {
+  const moduleRecords = await runDatabaseQuery(ADMIN_MODULES_QUERY, 'modules');
+  const moduleIdByKey = new Map<PermissionKey, string>();
+  const keyByModuleId = new Map<string, PermissionKey>();
+
+  moduleRecords.forEach((record, index) => {
+    const definition = normalizeModuleDefinition(record, index);
+    const rawId = toRecordIdentifier(definition.metadata?.id);
+    if (!rawId) {
+      return;
+    }
+    if (!moduleIdByKey.has(definition.key)) {
+      moduleIdByKey.set(definition.key, rawId);
+    }
+    if (!keyByModuleId.has(rawId)) {
+      keyByModuleId.set(rawId, definition.key);
+    }
+  });
+
+  return { moduleIdByKey, keyByModuleId };
+}
+
+function buildModuleOverrideMap(
+  records: RawDatabaseUserRecord[],
+  keyByModuleId: Map<string, PermissionKey>,
+): Map<string, PermissionOverride[]> {
+  const overridesByUser = new Map<string, PermissionOverride[]>();
+
+  for (const record of records) {
+    const typeValue = toNonEmptyString(
+      getValue(record, ['permissionType', 'PermissionType', 'type', 'Type']),
+    );
+    if (!typeValue || typeValue.trim().toUpperCase() !== 'MODULE') {
+      continue;
+    }
+
+    const userId = toRecordIdentifier(getValue(record, ['userId', 'UserId', 'userID', 'UserID']));
+    const moduleId = toRecordIdentifier(
+      getValue(record, ['moduleId', 'ModuleId', 'moduleID', 'ModuleID']),
+    );
+    if (!userId || !moduleId) {
+      continue;
+    }
+
+    const permissionKey = keyByModuleId.get(moduleId);
+    if (!permissionKey) {
+      continue;
+    }
+
+    const canViewValue = getValue(record, ['canView', 'CanView', 'can_view', 'Can_View']);
+    const canView = toOptionalBoolean(canViewValue);
+    if (canView === null) {
+      continue;
+    }
+
+    const mode: PermissionOverride['mode'] = canView ? 'allow' : 'deny';
+    if (!overridesByUser.has(userId)) {
+      overridesByUser.set(userId, []);
+    }
+
+    const list = overridesByUser.get(userId)!;
+    const nextOverride: PermissionOverride = { key: permissionKey, mode };
+    const existingIndex = list.findIndex((entry) => entry.key === permissionKey);
+    if (existingIndex >= 0) {
+      list[existingIndex] = nextOverride;
+    } else {
+      list.push(nextOverride);
+    }
+  }
+
+  return overridesByUser;
+}
+
+function mergeModuleOverrides(
+  existing: PermissionOverride[] | undefined,
+  moduleOverrides: PermissionOverride[],
+  moduleIdByKey: Map<PermissionKey, string>,
+): PermissionOverride[] {
+  if (!moduleOverrides.length) {
+    return Array.isArray(existing) ? [...existing] : [];
+  }
+
+  const base = Array.isArray(existing) ? existing : [];
+  if (moduleIdByKey.size === 0) {
+    return [...base, ...moduleOverrides];
+  }
+
+  const nonModuleOverrides = base.filter((override) => !moduleIdByKey.has(override.key));
+  return [...nonModuleOverrides, ...moduleOverrides];
+}
+
+async function syncUserModuleOverrides(
+  userId: number,
+  overrides: PermissionOverride[],
+): Promise<void> {
+  const maps = await loadModulePermissionMaps();
+  const uniqueOverrides = new Map<PermissionKey, PermissionOverride['mode']>();
+
+  for (const override of overrides) {
+    if (!maps.moduleIdByKey.has(override.key)) {
+      continue;
+    }
+    uniqueOverrides.set(override.key, override.mode);
+  }
+
+  const statements = [
+    'SET NOCOUNT ON;',
+    `DELETE FROM [userPermissions] WHERE [userId] = ${userId} AND UPPER(LTRIM(RTRIM([permissionType]))) = 'MODULE';`,
+  ];
+
+  if (uniqueOverrides.size > 0) {
+    const values: string[] = [];
+    for (const [permissionKey, mode] of uniqueOverrides) {
+      const moduleIdValue = maps.moduleIdByKey.get(permissionKey);
+      if (!moduleIdValue) {
+        continue;
+      }
+      const numericModuleId = toDatabaseIntegerId(moduleIdValue);
+      if (numericModuleId === null) {
+        console.warn(
+          `Impossible de convertir l'identifiant du module « ${moduleIdValue} » pour la permission ${permissionKey}.`,
+        );
+        continue;
+      }
+      const canView = mode === 'allow' ? 1 : 0;
+      values.push(`(${userId}, 'MODULE', ${numericModuleId}, ${canView})`);
+    }
+
+    if (values.length > 0) {
+      statements.push(
+        `INSERT INTO [userPermissions] ([userId], [permissionType], [moduleId], [canView]) VALUES ${values.join(',\n')};`,
+      );
+    }
+  }
+
+  await runDatabaseQuery(
+    statements.join('\n'),
+    "mise à jour des permissions individuelles de l'utilisateur",
+  );
+}
+
 async function withEncryptedUrl(
   input: RequestInfo | URL,
   init?: RequestInit,
@@ -679,6 +882,22 @@ export async function fetchUsers(): Promise<UserAccount[]> {
     console.error('Impossible de récupérer les appartenances aux groupes.', error);
   }
 
+  let modulePermissionMaps: ModulePermissionMaps | null = null;
+  let moduleOverridesByUser = new Map<string, PermissionOverride[]>();
+  try {
+    const maps = await loadModulePermissionMaps();
+    modulePermissionMaps = maps;
+    const permissionRecords = await runDatabaseQuery(
+      ADMIN_USER_PERMISSIONS_QUERY,
+      "exceptions d'accès individuelles",
+    );
+    moduleOverridesByUser = buildModuleOverrideMap(permissionRecords, maps.keyByModuleId);
+  } catch (error) {
+    console.error("Impossible de récupérer les permissions individuelles des utilisateurs.", error);
+  }
+
+  const moduleIdByKey = modulePermissionMaps?.moduleIdByKey ?? new Map<PermissionKey, string>();
+
   const fallbackTimestamp = '';
 
   const users = userRecords.map((record, index) => {
@@ -687,6 +906,10 @@ export async function fetchUsers(): Promise<UserAccount[]> {
     if (memberships) {
       user.groups = memberships;
     }
+    const moduleOverrides = moduleOverridesByUser.get(user.id) ?? [];
+    user.permissionOverrides = sanitizePermissionOverrides(
+      mergeModuleOverrides(user.permissionOverrides, moduleOverrides, moduleIdByKey),
+    );
     return user;
   });
 
@@ -820,7 +1043,41 @@ export async function fetchAuditLog(limit = 25): Promise<AuditLogEntry[]> {
 }
 
 export async function fetchCurrentUser(): Promise<UserAccount> {
-  return requestJson<UserAccount>('/api/admin/current-user');
+  const user = await requestJson<UserAccount>('/api/admin/current-user');
+  let nextUser: UserAccount = {
+    ...user,
+    permissionOverrides: sanitizePermissionOverrides(user.permissionOverrides ?? []),
+  };
+
+  const numericUserId = toDatabaseIntegerId(user.id);
+  if (numericUserId === null) {
+    return nextUser;
+  }
+
+  try {
+    const maps = await loadModulePermissionMaps();
+    const permissionRecords = await runDatabaseQuery(
+      `SET NOCOUNT ON;\nSELECT *\nFROM [userPermissions]\nWHERE [userId] = ${numericUserId}\n  AND UPPER(LTRIM(RTRIM([permissionType]))) = 'MODULE';`,
+      "exceptions d'accès individuelles (utilisateur courant)",
+    );
+    const overridesByUser = buildModuleOverrideMap(permissionRecords, maps.keyByModuleId);
+    const moduleOverrides = overridesByUser.get(user.id) ?? [];
+    if (moduleOverrides.length > 0) {
+      nextUser = {
+        ...nextUser,
+        permissionOverrides: sanitizePermissionOverrides(
+          mergeModuleOverrides(nextUser.permissionOverrides, moduleOverrides, maps.moduleIdByKey),
+        ),
+      };
+    }
+  } catch (error) {
+    console.error(
+      "Impossible de récupérer les permissions individuelles pour l'utilisateur courant.",
+      error,
+    );
+  }
+
+  return nextUser;
 }
 
 function toDatabaseIntegerId(value: string | undefined): number | null {
@@ -878,6 +1135,7 @@ async function syncUserGroupMemberships(userId: number, groupIds: number[]): Pro
 export async function persistUserAccess(
   payload: UpdateUserAccessPayload,
 ): Promise<UserAccount> {
+  const sanitizedOverrides = sanitizePermissionOverrides(payload.permissionOverrides);
   const numericUserId = toDatabaseIntegerId(payload.userId);
 
   if (numericUserId === null) {
@@ -887,7 +1145,7 @@ export async function persistUserAccess(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, permissionOverrides: sanitizedOverrides }),
     });
   }
 
@@ -896,6 +1154,8 @@ export async function persistUserAccess(
     .filter((value): value is number => value !== null);
 
   const appliedGroupIds = await syncUserGroupMemberships(numericUserId, numericGroupIds);
+
+  await syncUserModuleOverrides(numericUserId, sanitizedOverrides);
 
   const userRecords = await runDatabaseQuery(
     `SET NOCOUNT ON;
@@ -911,7 +1171,7 @@ WHERE [userId] = ${numericUserId};`,
 
   const updatedUser = normalizeUserRecord(userRecords[0], 0, '');
   updatedUser.groups = appliedGroupIds;
-  updatedUser.permissionOverrides = payload.permissionOverrides;
+  updatedUser.permissionOverrides = sanitizedOverrides;
 
   return updatedUser;
 }
