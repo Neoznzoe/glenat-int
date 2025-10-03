@@ -250,7 +250,11 @@ const PERMISSION_KEY_LOOKUP: Map<string, PermissionKey> = (() => {
     }
   }
 
-  const aliasEntries: Array<[string, PermissionKey]> = [['kiosque', 'catalogue']];
+  const aliasEntries: Array<[string, PermissionKey]> = [
+    ['kiosque', 'catalogue'],
+    ['glenatdoc', 'doc'],
+    ['glénatdoc', 'doc'],
+  ];
   for (const [alias, key] of aliasEntries) {
     registerPermissionLookupKey(lookup, alias, key);
     registerPermissionLookupKey(lookup, normalizeKey(alias, alias), key);
