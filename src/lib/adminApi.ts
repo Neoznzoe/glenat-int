@@ -8,6 +8,7 @@ import {
   type GroupDefinition,
   type PermissionDefinition,
   type PermissionKey,
+  isPermissionKey,
 } from './access-control';
 import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
 
@@ -208,6 +209,41 @@ function normalizeGroups(value: unknown): string[] {
   return [];
 }
 
+function normalizeForComparison(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/gi, '')
+    .toLowerCase();
+}
+
+function resolvePermissionDefinitionKey(key: string): PermissionKey | null {
+  if (isPermissionKey(key)) {
+    return key;
+  }
+
+  const normalized = normalizeForComparison(key);
+  if (!normalized) {
+    return null;
+  }
+
+  for (const definition of PERMISSION_DEFINITIONS) {
+    const normalizedKey = normalizeForComparison(definition.key);
+    if (normalized === normalizedKey) {
+      return definition.key;
+    }
+
+    if (definition.label) {
+      const normalizedLabel = normalizeForComparison(definition.label);
+      if (normalized === normalizedLabel) {
+        return definition.key;
+      }
+    }
+  }
+
+  return null;
+}
+
 function sanitizePermissionOverrides(overrides: PermissionOverride[]): PermissionOverride[] {
   if (!Array.isArray(overrides) || overrides.length === 0) {
     return [];
@@ -228,11 +264,15 @@ function sanitizePermissionOverrides(overrides: PermissionOverride[]): Permissio
     if (mode !== 'allow' && mode !== 'deny') {
       continue;
     }
-    if (seen.has(key)) {
+    const resolvedKey = resolvePermissionDefinitionKey(key);
+    if (!resolvedKey) {
       continue;
     }
-    seen.add(key);
-    sanitized.unshift({ key, mode });
+    if (seen.has(resolvedKey)) {
+      continue;
+    }
+    seen.add(resolvedKey);
+    sanitized.unshift({ key: resolvedKey, mode });
   }
 
   return sanitized;
