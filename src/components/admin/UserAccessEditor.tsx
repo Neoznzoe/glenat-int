@@ -51,7 +51,7 @@ interface UserAccessEditorProps {
   isSuperAdmin: boolean;
   isLoading?: boolean;
   onToggleGroup: (groupId: string, checked: boolean) => void;
-  onPermissionChange: (key: PermissionKey, value: PermissionSelectValue) => void;
+  onPermissionChange: (definition: PermissionDefinition, value: PermissionSelectValue) => void;
   onReset: () => void;
   onSave: () => void;
 }
@@ -308,7 +308,7 @@ export function UserAccessEditor({
                             <Select
                               value={selectValue}
                               onValueChange={(value: PermissionSelectValue) =>
-                                onPermissionChange(definition.key, value)
+                                onPermissionChange(definition, value)
                               }
                               disabled={isDecisionDisabled}
                             >
@@ -374,7 +374,7 @@ export function UserAccessEditor({
                                         <Select
                                           value={pageSelectValue}
                                           onValueChange={(value: PermissionSelectValue) =>
-                                            onPermissionChange(pageDefinition.key, value)
+                                            onPermissionChange(pageDefinition, value)
                                           }
                                           disabled={isDecisionDisabled}
                                         >

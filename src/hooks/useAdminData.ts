@@ -53,7 +53,7 @@ interface UpdateUserOptions {
   actorId?: string;
 }
 
-export function useUpdateUserAccess(options?: UpdateUserOptions) {
+function useUserAccessMutation(options?: UpdateUserOptions) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -84,6 +84,14 @@ export function useUpdateUserAccess(options?: UpdateUserOptions) {
       ]);
     },
   });
+}
+
+export function useUpdateUserAccess(options?: UpdateUserOptions) {
+  return useUserAccessMutation(options);
+}
+
+export function usePersistModuleOverride(options?: UpdateUserOptions) {
+  return useUserAccessMutation(options);
 }
 
 export function useCreateGroup(options?: { onSuccess?: () => void }) {
