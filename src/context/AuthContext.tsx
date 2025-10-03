@@ -17,7 +17,7 @@ import { useMsal } from '@azure/msal-react';
 import { loginRequest } from '@/lib/msal';
 import { useQueryClient } from '@tanstack/react-query';
 import { CURRENT_USER_QUERY_KEY } from '@/hooks/useAdminData';
-import { setCurrentUserId } from '@/lib/adminApi';
+import { setCurrentUserId, type UserAccount } from '@/lib/adminApi';
 import {
   lookupInternalUserByEmail,
   type InternalUserLookupResult,
@@ -166,10 +166,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const overridesToPersist = (internalUser?.permissionOverrides ?? []).filter(
                   (override) => override.mode === 'deny',
                 );
-                await setCurrentUserId({
+                const updatedUser = await setCurrentUserId({
                   userId,
                   permissionOverrides: overridesToPersist,
                 });
+                queryClient.setQueryData<UserAccount>(CURRENT_USER_QUERY_KEY, (existing) =>
+                  existing ? { ...existing, ...updatedUser } : updatedUser,
+                );
                 await queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY });
               } catch (syncError) {
                 console.error(

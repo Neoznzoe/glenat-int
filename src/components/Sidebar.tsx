@@ -27,6 +27,7 @@ import { computeEffectivePermissions } from '@/lib/mockDb';
 import type { PermissionKey } from '@/lib/access-control';
 import { useDecryptedLocation } from '@/lib/secureRouting';
 import { SecureNavLink } from '@/components/routing/SecureLink';
+import { useAuth } from '@/context/AuthContext';
 
 interface SidebarProps {
   jobCount?: number;
@@ -43,27 +44,45 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     onExpandChange?.(isExpanded);
   }, [isExpanded, onExpandChange]);
 
+  const { user: authUser } = useAuth();
   const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
   const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
+
+  const deniedPermissionKeys = useMemo(() => {
+    const adminOverrides = Array.isArray(currentUser?.permissionOverrides)
+      ? currentUser.permissionOverrides
+      : [];
+    const intranetOverrides = Array.isArray(authUser?.internalUser?.permissionOverrides)
+      ? authUser.internalUser.permissionOverrides
+      : [];
+
+    const overrideSources = [...adminOverrides, ...intranetOverrides];
+
+    const denied = new Set<PermissionKey>();
+    for (const override of overrideSources) {
+      if (override?.mode === 'deny') {
+        denied.add(override.key);
+      }
+    }
+
+    return Array.from(denied).sort();
+  }, [authUser, currentUser]);
+
+  const deniedPermissions = useMemo(
+    () => new Set<PermissionKey>(deniedPermissionKeys),
+    [deniedPermissionKeys],
+  );
 
   const accessiblePermissions = useMemo(() => {
     if (!currentUser) {
       return new Set<PermissionKey>();
     }
-    return new Set(computeEffectivePermissions(currentUser, groups));
-  }, [currentUser, groups]);
-
-  const deniedPermissions = useMemo(() => {
-    if (!currentUser) {
-      return new Set<PermissionKey>();
+    const allowed = new Set(computeEffectivePermissions(currentUser, groups));
+    for (const key of deniedPermissionKeys) {
+      allowed.delete(key);
     }
-    const overrides = Array.isArray(currentUser.permissionOverrides)
-      ? currentUser.permissionOverrides
-      : [];
-    return new Set(
-      overrides.filter((override) => override.mode === 'deny').map((override) => override.key),
-    );
-  }, [currentUser]);
+    return allowed;
+  }, [currentUser, groups, deniedPermissionKeys]);
 
   const menuItems: Array<{
     id: string;
@@ -159,7 +178,8 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     },
   ];
 
-  const showAllMenus = loadingCurrentUser || loadingGroups || !currentUser;
+  const showAllMenus =
+    loadingCurrentUser || loadingGroups || (!currentUser && deniedPermissionKeys.length === 0);
 
   const userCanAccess = (permission: PermissionKey) => {
     if (deniedPermissions.has(permission)) {
