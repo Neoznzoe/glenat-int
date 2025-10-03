@@ -249,14 +249,24 @@ export function Administration() {
     const targetUserId = targetUser.id;
     const moduleOverridesToPersist = nextOverrides.filter((override) => {
       const permission = permissionsByKey.get(override.key);
-      return permission?.type === 'module';
+      return permission?.type === 'module' && override.mode === 'deny';
+    });
+
+    const overridesForPersistence = nextOverrides.filter((override) => {
+      const permission = permissionsByKey.get(override.key);
+      if (permission?.type === 'module') {
+        return override.mode === 'deny';
+      }
+      return true;
     });
 
     try {
       const updatedUser = await moduleOverrideMutation.mutateAsync({
         userId: targetUserId,
+        permissionKey: definition.key,
         groups: [...targetUser.groups],
-        permissionOverrides: moduleOverridesToPersist,
+        moduleOverrides: moduleOverridesToPersist,
+        allOverrides: overridesForPersistence,
       });
 
       if (selectedUserIdRef.current !== targetUserId) {

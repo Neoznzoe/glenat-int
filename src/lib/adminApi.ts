@@ -49,6 +49,24 @@ interface ModulePermissionMaps {
   keyByModuleId: Map<string, PermissionKey>;
 }
 
+export interface UpdateModuleOverridePayload {
+  userId: string;
+  permissionKey: PermissionKey;
+  /**
+   * Contains the module-level overrides after applying the latest change. Only
+   * permissions with a `deny` mode should be present in this list.
+   */
+  moduleOverrides: PermissionOverride[];
+  /**
+   * Full override list after the change. Module entries must only include
+   * explicit denies so the database mirrors the legacy behaviour where allows
+   * rely on inheritance.
+   */
+  allOverrides: PermissionOverride[];
+  groups: string[];
+  actorId?: string;
+}
+
 const GROUP_ACCENT_COLORS = [
   'bg-rose-500/10 text-rose-600 border-rose-200',
   'bg-sky-500/10 text-sky-600 border-sky-200',
@@ -783,6 +801,21 @@ async function syncUserModuleOverrides(
   );
 }
 
+async function loadUserGroupIds(userId: number): Promise<string[]> {
+  const membershipRecords = await runDatabaseQuery(
+    `SET NOCOUNT ON;\nSELECT [groupId]\nFROM [userGroupMembers]\nWHERE [userId] = ${userId}\nORDER BY [groupId];`,
+    'récupération des groupes de l’utilisateur',
+  );
+
+  const groupIds = membershipRecords
+    .map((record) =>
+      toRecordIdentifier(getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID'])),
+    )
+    .filter((identifier): identifier is string => Boolean(identifier));
+
+  return groupIds;
+}
+
 async function withEncryptedUrl(
   input: RequestInfo | URL,
   init?: RequestInit,
@@ -1176,4 +1209,98 @@ WHERE [userId] = ${numericUserId};`,
   return updatedUser;
 }
 
-export type { UserAccount, PermissionOverride, AuditLogEntry, UpdateUserAccessPayload };
+export async function persistModuleOverrideChange(
+  payload: UpdateModuleOverridePayload,
+): Promise<UserAccount> {
+  const sanitizedModuleOverrides = sanitizePermissionOverrides(payload.moduleOverrides);
+  const sanitizedAllOverrides = sanitizePermissionOverrides(payload.allOverrides);
+  const numericUserId = toDatabaseIntegerId(payload.userId);
+
+  if (numericUserId === null) {
+    return requestJson<UserAccount>(`/api/admin/users/${encodeURIComponent(payload.userId)}/access`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        groups: payload.groups,
+        permissionOverrides: sanitizedAllOverrides,
+        actorId: payload.actorId,
+      }),
+    });
+  }
+
+  const maps = await loadModulePermissionMaps();
+  const moduleIdValue = maps.moduleIdByKey.get(payload.permissionKey);
+  if (!moduleIdValue) {
+    throw new Error(
+      `Impossible d’identifier le module associé à la permission ${payload.permissionKey}.`,
+    );
+  }
+
+  const numericModuleId = toDatabaseIntegerId(moduleIdValue);
+  if (numericModuleId === null) {
+    throw new Error(
+      `Identifiant de module invalide pour la permission ${payload.permissionKey} (${moduleIdValue}).`,
+    );
+  }
+
+  const hasDenyOverride = sanitizedModuleOverrides.some(
+    (override) => override.key === payload.permissionKey && override.mode === 'deny',
+  );
+
+  const statements = [
+    'SET NOCOUNT ON;',
+    `DELETE FROM [userPermissions] WHERE [userId] = ${numericUserId} AND UPPER(LTRIM(RTRIM([permissionType]))) = 'MODULE' AND [moduleId] = ${numericModuleId};`,
+  ];
+
+  if (hasDenyOverride) {
+    statements.push(
+      `INSERT INTO [userPermissions] ([userId], [permissionType], [moduleId], [canView]) VALUES (${numericUserId}, 'MODULE', ${numericModuleId}, 0);`,
+    );
+  }
+
+  await runDatabaseQuery(
+    statements.join('\n'),
+    "mise à jour de l'exception de module de l'utilisateur",
+  );
+
+  const permissionRecords = await runDatabaseQuery(
+    `SET NOCOUNT ON;\nSELECT *\nFROM [userPermissions]\nWHERE [userId] = ${numericUserId}\n  AND UPPER(LTRIM(RTRIM([permissionType]))) = 'MODULE';`,
+    "lecture des permissions de module de l'utilisateur",
+  );
+
+  const overridesByUser = buildModuleOverrideMap(permissionRecords, maps.keyByModuleId);
+  const userKey = String(numericUserId);
+  const storedModuleOverrides = sanitizePermissionOverrides(overridesByUser.get(userKey) ?? []);
+
+  const nonModuleOverrides = sanitizedAllOverrides.filter(
+    (override) => !maps.moduleIdByKey.has(override.key),
+  );
+  const mergedOverrides = sanitizePermissionOverrides([
+    ...storedModuleOverrides,
+    ...nonModuleOverrides,
+  ]);
+
+  const userRecords = await runDatabaseQuery(
+    `SET NOCOUNT ON;\nSELECT TOP (1) *\nFROM [users]\nWHERE [userId] = ${numericUserId};`,
+    "récupération de l’utilisateur",
+  );
+
+  if (!userRecords.length) {
+    throw new Error("Impossible de récupérer l'utilisateur mis à jour.");
+  }
+
+  const updatedUser = normalizeUserRecord(userRecords[0], 0, '');
+  updatedUser.groups = await loadUserGroupIds(numericUserId);
+  updatedUser.permissionOverrides = mergedOverrides;
+
+  return updatedUser;
+}
+
+export type {
+  UserAccount,
+  PermissionOverride,
+  AuditLogEntry,
+  UpdateUserAccessPayload,
+};

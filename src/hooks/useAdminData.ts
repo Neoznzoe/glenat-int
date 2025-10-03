@@ -5,8 +5,10 @@ import {
   fetchAuditLog,
   fetchCurrentUser,
   persistUserAccess,
+  persistModuleOverrideChange,
   createGroup,
   type UpdateUserAccessPayload,
+  type UpdateModuleOverridePayload,
   type UserAccount,
   type PermissionOverride,
   type AuditLogEntry,
@@ -91,7 +93,36 @@ export function useUpdateUserAccess(options?: UpdateUserOptions) {
 }
 
 export function usePersistModuleOverride(options?: UpdateUserOptions) {
-  return useUserAccessMutation(options);
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: Omit<UpdateModuleOverridePayload, 'actorId'>) =>
+      persistModuleOverrideChange({ ...payload, actorId: options?.actorId }),
+    onSuccess: async (updatedUser) => {
+      queryClient.setQueryData<UserAccount[]>(USERS_QUERY_KEY, (users) => {
+        if (!users) {
+          return users;
+        }
+
+        let hasMatch = false;
+        const nextUsers = users.map((user) => {
+          if (user.id !== updatedUser.id) {
+            return user;
+          }
+
+          hasMatch = true;
+          return { ...user, ...updatedUser };
+        });
+
+        return hasMatch ? nextUsers : users;
+      });
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: AUDIT_LOG_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY }),
+      ]);
+    },
+  });
 }
 
 export function useCreateGroup(options?: { onSuccess?: () => void }) {
