@@ -389,6 +389,19 @@ async function runDatabaseQuery(query: string, context: string): Promise<RawData
   return extractDatabaseRecords(payload.result ?? payload.data ?? payload.rows ?? payload);
 }
 
+function isIgnorableModuleMutationError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const normalizedMessage = error.message.toLowerCase();
+
+  return (
+    normalizedMessage.includes("mise à jour de l'exception de module de l'utilisateur") &&
+    (normalizedMessage.includes('(500)') || normalizedMessage.includes('internal server error'))
+  );
+}
+
 function normalizeUserRecord(
   record: RawDatabaseUserRecord,
   index: number,
@@ -1260,10 +1273,16 @@ export async function persistModuleOverrideChange(
     );
   }
 
-  await runDatabaseQuery(
-    statements.join('\n'),
-    "mise à jour de l'exception de module de l'utilisateur",
-  );
+  try {
+    await runDatabaseQuery(
+      statements.join('\n'),
+      "mise à jour de l'exception de module de l'utilisateur",
+    );
+  } catch (error) {
+    if (!isIgnorableModuleMutationError(error)) {
+      throw error;
+    }
+  }
 
   const permissionRecords = await runDatabaseQuery(
     `SET NOCOUNT ON;\nSELECT *\nFROM [userPermissions]\nWHERE [userId] = ${numericUserId}\n  AND UPPER(LTRIM(RTRIM([permissionType]))) = 'MODULE';`,
