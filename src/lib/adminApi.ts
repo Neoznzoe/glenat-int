@@ -233,6 +233,25 @@ function sanitizePermissionOverrides(overrides: PermissionOverride[]): Permissio
   return sanitized;
 }
 
+type RawUserAccountResponse = Omit<UserAccount, 'groups' | 'permissionOverrides'> & {
+  groups?: unknown;
+  permissionOverrides?: unknown;
+};
+
+function sanitizeUserAccountResponse(user: RawUserAccountResponse): UserAccount {
+  const { groups: rawGroups, permissionOverrides: rawOverrides, ...rest } = user;
+  const groups = normalizeGroups(rawGroups);
+  const overrides = sanitizePermissionOverrides(
+    Array.isArray(rawOverrides) ? (rawOverrides as PermissionOverride[]) : [],
+  );
+
+  return {
+    ...(rest as Omit<UserAccount, 'groups' | 'permissionOverrides'>),
+    groups,
+    permissionOverrides: overrides,
+  };
+}
+
 function normalizeKey(value: string | undefined, fallback: string): string {
   const source = typeof value === 'string' ? value : '';
   const normalized = source
@@ -1089,13 +1108,11 @@ export async function fetchAuditLog(limit = 25): Promise<AuditLogEntry[]> {
 }
 
 export async function fetchCurrentUser(): Promise<UserAccount> {
-  const user = await requestJson<UserAccount>('/api/admin/current-user');
-  let nextUser: UserAccount = {
-    ...user,
-    permissionOverrides: sanitizePermissionOverrides(user.permissionOverrides ?? []),
-  };
+  const fetchedUser = await requestJson<UserAccount>('/api/admin/current-user');
+  const baseUser = sanitizeUserAccountResponse(fetchedUser);
+  let nextUser: UserAccount = { ...baseUser };
 
-  const numericUserId = toDatabaseIntegerId(user.id);
+  const numericUserId = toDatabaseIntegerId(baseUser.id);
   if (numericUserId === null) {
     return nextUser;
   }
@@ -1107,7 +1124,7 @@ export async function fetchCurrentUser(): Promise<UserAccount> {
       "exceptions d'accès individuelles (utilisateur courant)",
     );
     const overridesByUser = buildModuleOverrideMap(permissionRecords, maps.keyByModuleId);
-    const moduleOverrides = overridesByUser.get(user.id) ?? [];
+    const moduleOverrides = overridesByUser.get(baseUser.id) ?? [];
     if (moduleOverrides.length > 0) {
       nextUser = {
         ...nextUser,
@@ -1186,13 +1203,19 @@ export async function persistUserAccess(
 
   if (numericUserId === null) {
     const { userId, ...body } = payload;
-    return requestJson<UserAccount>(`/api/admin/users/${encodeURIComponent(userId)}/access`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
+    const updated = await requestJson<UserAccount>(
+      `/api/admin/users/${encodeURIComponent(userId)}/access`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ...body, permissionOverrides: sanitizedOverrides }),
       },
-      body: JSON.stringify({ ...body, permissionOverrides: sanitizedOverrides }),
-    });
+    );
+
+    const sanitized = sanitizeUserAccountResponse(updated);
+    return { ...sanitized, permissionOverrides: sanitizedOverrides };
   }
 
   const numericGroupIds = payload.groups
@@ -1230,17 +1253,23 @@ export async function persistModuleOverrideChange(
   const numericUserId = toDatabaseIntegerId(payload.userId);
 
   if (numericUserId === null) {
-    return requestJson<UserAccount>(`/api/admin/users/${encodeURIComponent(payload.userId)}/access`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
+    const updated = await requestJson<UserAccount>(
+      `/api/admin/users/${encodeURIComponent(payload.userId)}/access`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          groups: payload.groups,
+          permissionOverrides: sanitizedAllOverrides,
+          actorId: payload.actorId,
+        }),
       },
-      body: JSON.stringify({
-        groups: payload.groups,
-        permissionOverrides: sanitizedAllOverrides,
-        actorId: payload.actorId,
-      }),
-    });
+    );
+
+    const sanitized = sanitizeUserAccountResponse(updated);
+    return { ...sanitized, permissionOverrides: sanitizedAllOverrides };
   }
 
   const maps = await loadModulePermissionMaps();
