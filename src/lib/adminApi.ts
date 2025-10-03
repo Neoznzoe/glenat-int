@@ -26,8 +26,21 @@ const MODULE_PERMISSION_TYPE = 'MODULE';
 const MODULE_PERMISSION_FILTER =
   "UPPER(LTRIM(RTRIM(ISNULL([permissionType], '')))) IN ('', 'MODULE')";
 const MODULE_PERMISSION_WHERE = `[moduleId] IS NOT NULL AND ${MODULE_PERMISSION_FILTER}`;
-const ADMIN_USER_PERMISSIONS_QUERY =
-  `SELECT * FROM [userPermissions] WHERE ${MODULE_PERMISSION_WHERE};`;
+const ADMIN_USER_PERMISSIONS_QUERY = `
+SELECT
+  up.[userId],
+  up.[permissionType],
+  up.[moduleId],
+  up.[canView],
+  u.[azureUpn] AS [userAzureUpn],
+  u.[azureOid] AS [userAzureOid],
+  u.[userName] AS [userUserName],
+  u.[email] AS [userEmail]
+FROM [userPermissions] AS up
+LEFT JOIN [users] AS u ON up.[userId] = u.[userId]
+WHERE up.[moduleId] IS NOT NULL
+  AND UPPER(LTRIM(RTRIM(ISNULL(up.[permissionType], '')))) IN ('', '${MODULE_PERMISSION_TYPE}');
+`;
 
 interface DatabaseQueryResponse {
   success?: boolean;
@@ -297,6 +310,78 @@ function collectLookupCandidates(...values: Array<unknown>): string[] {
   return Array.from(candidates);
 }
 
+function normalizeUserLookupKey(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  if (/^[0-9]+$/.test(trimmed)) {
+    const normalizedDigits = trimmed.replace(/^0+/, '');
+    return normalizedDigits || '0';
+  }
+
+  return trimmed.toLowerCase();
+}
+
+function collectUserPermissionRecordIdentifiers(
+  record: RawDatabaseUserRecord,
+): string[] {
+  const identifiers = new Set<string>();
+
+  const userId = toRecordIdentifier(
+    getValue(record, ['userId', 'UserId', 'userID', 'UserID', 'user_id']),
+  );
+  const joinedUserId = toRecordIdentifier(getValue(record, ['userUserId', 'UserUserId']));
+  const azureUpn = toNonEmptyString(
+    getValue(record, ['userAzureUpn', 'azureUpn', 'AzureUpn', 'azure_upn']),
+  );
+  const azureOid = toNonEmptyString(
+    getValue(record, ['userAzureOid', 'azureOid', 'AzureOid', 'azure_oid']),
+  );
+  const email = toNonEmptyString(
+    getValue(record, ['userEmail', 'email', 'Email', 'user_email']),
+  );
+  const username = toNonEmptyString(
+    getValue(record, ['userUserName', 'userName', 'UserName', 'username']),
+  );
+
+  const rawIdentifiers = [userId, joinedUserId, azureUpn, azureOid, email, username];
+  for (const raw of rawIdentifiers) {
+    const normalized = normalizeUserLookupKey(raw ?? undefined);
+    if (normalized) {
+      identifiers.add(normalized);
+    }
+  }
+
+  return Array.from(identifiers);
+}
+
+function collectUserAccountLookupKeys(user: UserAccount): string[] {
+  const identifiers = new Set<string>();
+
+  const rawIdentifiers = [
+    user.id,
+    user.azureOid,
+    user.azureUpn,
+    user.email,
+    user.username,
+  ];
+
+  for (const raw of rawIdentifiers) {
+    const normalized = normalizeUserLookupKey(typeof raw === 'string' ? raw : undefined);
+    if (normalized) {
+      identifiers.add(normalized);
+    }
+  }
+
+  return Array.from(identifiers);
+}
+
 function resolveCanonicalModulePermissionKey(
   definition: PermissionDefinition,
 ): PermissionKey | null {
@@ -501,10 +586,8 @@ async function loadUserPermissionOverrides(): Promise<
   const overridesByUser = new Map<string, Map<string, PermissionOverride>>();
 
   for (const record of permissionRecords) {
-    const userId = toRecordIdentifier(
-      getValue(record, ['userId', 'UserId', 'userID', 'UserID', 'utilisateurId']),
-    );
-    if (!userId) {
+    const userIdentifiers = collectUserPermissionRecordIdentifiers(record);
+    if (!userIdentifiers.length) {
       continue;
     }
 
@@ -530,14 +613,16 @@ async function loadUserPermissionOverrides(): Promise<
       continue;
     }
 
-    if (!overridesByUser.has(userId)) {
-      overridesByUser.set(userId, new Map());
-    }
+    for (const identifier of userIdentifiers) {
+      if (!overridesByUser.has(identifier)) {
+        overridesByUser.set(identifier, new Map());
+      }
 
-    overridesByUser.get(userId)!.set(permissionKey, {
-      key: permissionKey,
-      mode: canView ? 'allow' : 'deny',
-    });
+      overridesByUser.get(identifier)!.set(permissionKey, {
+        key: permissionKey,
+        mode: canView ? 'allow' : 'deny',
+      });
+    }
   }
 
   const hydrated = new Map<string, PermissionOverride[]>();
@@ -981,9 +1066,13 @@ export async function fetchUsers(): Promise<UserAccount[]> {
     if (memberships) {
       user.groups = memberships;
     }
-    const overrides = permissionOverridesByUser.get(user.id);
-    if (overrides) {
-      user.permissionOverrides = overrides.map((override) => ({ ...override }));
+    const lookupKeys = collectUserAccountLookupKeys(user);
+    for (const key of lookupKeys) {
+      const overrides = permissionOverridesByUser.get(key);
+      if (overrides) {
+        user.permissionOverrides = overrides.map((override) => ({ ...override }));
+        break;
+      }
     }
     return user;
   });
@@ -1140,9 +1229,13 @@ export async function fetchCurrentUser(): Promise<UserAccount> {
 
   try {
     const permissionOverridesByUser = await loadUserPermissionOverrides();
-    const overrides = permissionOverridesByUser.get(user.id);
-    if (overrides) {
-      user.permissionOverrides = overrides.map((override) => ({ ...override }));
+    const lookupKeys = collectUserAccountLookupKeys(user);
+    for (const key of lookupKeys) {
+      const overrides = permissionOverridesByUser.get(key);
+      if (overrides) {
+        user.permissionOverrides = overrides.map((override) => ({ ...override }));
+        break;
+      }
     }
   } catch (error) {
     console.error('Impossible de récupérer les droits personnalisés.', error);

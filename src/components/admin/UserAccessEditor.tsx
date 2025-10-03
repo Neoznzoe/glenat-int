@@ -256,7 +256,7 @@ export function UserAccessEditor({
                     definition.key,
                   );
                   const effective = effectivePermissionSet.has(definition.key);
-                  const tone = effective ? 'text-emerald-600' : 'text-muted-foreground';
+                  const tone = effective ? 'text-foreground' : 'text-muted-foreground';
                   const inheritedFrom = evaluation.inheritedFrom
                     .map((groupId) => groupMap.get(groupId)?.name ?? groupId)
                     .filter(Boolean);
@@ -347,7 +347,7 @@ export function UserAccessEditor({
                                 );
                                 const pageEffective = effectivePermissionSet.has(pageDefinition.key);
                                 const pageTone = pageEffective
-                                  ? 'text-emerald-600'
+                                  ? 'text-foreground'
                                   : 'text-muted-foreground';
                                 const pageInheritedFrom = pageEvaluation.inheritedFrom
                                   .map((groupId) => groupMap.get(groupId)?.name ?? groupId)
