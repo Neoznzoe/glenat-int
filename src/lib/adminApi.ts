@@ -27,19 +27,16 @@ const MODULE_PERMISSION_FILTER =
   "UPPER(LTRIM(RTRIM(ISNULL([permissionType], '')))) IN ('', 'MODULE')";
 const MODULE_PERMISSION_WHERE = `[moduleId] IS NOT NULL AND ${MODULE_PERMISSION_FILTER}`;
 const ADMIN_USER_PERMISSIONS_QUERY = `
+SET NOCOUNT ON;
 SELECT
-  up.[userId],
-  up.[permissionType],
-  up.[moduleId],
-  up.[canView],
-  u.[azureUpn] AS [userAzureUpn],
-  u.[azureOid] AS [userAzureOid],
-  u.[userName] AS [userUserName],
-  u.[email] AS [userEmail]
-FROM [userPermissions] AS up
-LEFT JOIN [users] AS u ON up.[userId] = u.[userId]
-WHERE up.[moduleId] IS NOT NULL
-  AND UPPER(LTRIM(RTRIM(ISNULL(up.[permissionType], '')))) IN ('', '${MODULE_PERMISSION_TYPE}');
+  [permissionId],
+  [userId],
+  [permissionType],
+  [moduleId],
+  [canView],
+  [identifiant]
+FROM [userPermissions]
+WHERE ${MODULE_PERMISSION_WHERE};
 `;
 
 interface DatabaseQueryResponse {
@@ -328,39 +325,6 @@ function normalizeUserLookupKey(value: string | undefined): string | undefined {
   return trimmed.toLowerCase();
 }
 
-function collectUserPermissionRecordIdentifiers(
-  record: RawDatabaseUserRecord,
-): string[] {
-  const identifiers = new Set<string>();
-
-  const userId = toRecordIdentifier(
-    getValue(record, ['userId', 'UserId', 'userID', 'UserID', 'user_id']),
-  );
-  const joinedUserId = toRecordIdentifier(getValue(record, ['userUserId', 'UserUserId']));
-  const azureUpn = toNonEmptyString(
-    getValue(record, ['userAzureUpn', 'azureUpn', 'AzureUpn', 'azure_upn']),
-  );
-  const azureOid = toNonEmptyString(
-    getValue(record, ['userAzureOid', 'azureOid', 'AzureOid', 'azure_oid']),
-  );
-  const email = toNonEmptyString(
-    getValue(record, ['userEmail', 'email', 'Email', 'user_email']),
-  );
-  const username = toNonEmptyString(
-    getValue(record, ['userUserName', 'userName', 'UserName', 'username']),
-  );
-
-  const rawIdentifiers = [userId, joinedUserId, azureUpn, azureOid, email, username];
-  for (const raw of rawIdentifiers) {
-    const normalized = normalizeUserLookupKey(raw ?? undefined);
-    if (normalized) {
-      identifiers.add(normalized);
-    }
-  }
-
-  return Array.from(identifiers);
-}
-
 function collectUserAccountLookupKeys(user: UserAccount): string[] {
   const identifiers = new Set<string>();
 
@@ -380,6 +344,34 @@ function collectUserAccountLookupKeys(user: UserAccount): string[] {
   }
 
   return Array.from(identifiers);
+}
+
+function normalizeIdentifiantCandidate(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function resolveUserIdentifiant(
+  user: Pick<UserAccount, 'azureUpn' | 'email' | 'username' | 'azureOid'>,
+): string | null {
+  const candidates = [
+    normalizeIdentifiantCandidate(user.azureUpn),
+    normalizeIdentifiantCandidate(user.email),
+    normalizeIdentifiantCandidate(user.username),
+    normalizeIdentifiantCandidate(user.azureOid),
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate) {
+      return candidate;
+    }
+  }
+
+  return null;
 }
 
 function resolveCanonicalModulePermissionKey(
@@ -503,6 +495,46 @@ interface ModulePermissionMappings {
   keyToModuleId: Map<string, number>;
 }
 
+function buildUserLookupMapFromRecords(
+  userRecords: RawDatabaseUserRecord[],
+): Map<number, string[]> {
+  const lookup = new Map<number, string[]>();
+  const fallbackTimestamp = '';
+
+  userRecords.forEach((record, index) => {
+    const user = normalizeUserRecord(record, index, fallbackTimestamp);
+    const numericId = toDatabaseIntegerId(user.id);
+    if (numericId === null) {
+      return;
+    }
+
+    const keys = collectUserAccountLookupKeys(user);
+    if (!keys.length) {
+      const normalized = normalizeUserLookupKey(user.id);
+      if (normalized) {
+        keys.push(normalized);
+      }
+    }
+
+    if (keys.length) {
+      lookup.set(numericId, keys);
+    }
+  });
+
+  return lookup;
+}
+
+async function loadUserLookupMap(
+  userRecords?: RawDatabaseUserRecord[],
+): Promise<Map<number, string[]>> {
+  if (userRecords) {
+    return buildUserLookupMapFromRecords(userRecords);
+  }
+
+  const records = await runDatabaseQuery(ADMIN_USERS_QUERY, 'identifiants utilisateurs');
+  return buildUserLookupMapFromRecords(records);
+}
+
 async function loadModulePermissionMappings(): Promise<ModulePermissionMappings> {
   const moduleRecords = await runDatabaseQuery(ADMIN_MODULES_QUERY, 'modules');
   const moduleIdToKey = new Map<number, string>();
@@ -569,14 +601,20 @@ function buildOverridesFromRecords(
   return overrides;
 }
 
-async function loadUserPermissionOverrides(): Promise<
-  Map<string, PermissionOverride[]>
-> {
+interface LoadUserPermissionOverridesOptions {
+  userRecords?: RawDatabaseUserRecord[];
+}
+
+async function loadUserPermissionOverrides(
+  options?: LoadUserPermissionOverridesOptions,
+): Promise<Map<string, PermissionOverride[]>> {
   const { moduleIdToKey } = await loadModulePermissionMappings();
 
   if (moduleIdToKey.size === 0) {
     return new Map();
   }
+
+  const userLookupMap = await loadUserLookupMap(options?.userRecords);
 
   const permissionRecords = await runDatabaseQuery(
     ADMIN_USER_PERMISSIONS_QUERY,
@@ -586,11 +624,6 @@ async function loadUserPermissionOverrides(): Promise<
   const overridesByUser = new Map<string, Map<string, PermissionOverride>>();
 
   for (const record of permissionRecords) {
-    const userIdentifiers = collectUserPermissionRecordIdentifiers(record);
-    if (!userIdentifiers.length) {
-      continue;
-    }
-
     const moduleIdentifier = toRecordIdentifier(
       getValue(record, ['moduleId', 'moduleID', 'ModuleId', 'ModuleID', 'module_id']),
     );
@@ -613,7 +646,38 @@ async function loadUserPermissionOverrides(): Promise<
       continue;
     }
 
-    for (const identifier of userIdentifiers) {
+    const identifierSet = new Set<string>();
+    const userIdentifier = toRecordIdentifier(
+      getValue(record, ['userId', 'UserId', 'userID', 'UserID', 'user_id']),
+    );
+    const normalizedUserIdentifier = normalizeUserLookupKey(userIdentifier ?? undefined);
+    if (normalizedUserIdentifier) {
+      identifierSet.add(normalizedUserIdentifier);
+    }
+
+    const numericUserId = userIdentifier ? toDatabaseIntegerId(userIdentifier) : null;
+    if (numericUserId !== null) {
+      const lookupIdentifiers = userLookupMap.get(numericUserId);
+      if (lookupIdentifiers) {
+        for (const identifier of lookupIdentifiers) {
+          identifierSet.add(identifier);
+        }
+      }
+    }
+
+    const identifiantValue = toNonEmptyString(
+      getValue(record, ['identifiant', 'Identifiant', 'userIdentifiant']),
+    );
+    const normalizedIdentifiant = normalizeUserLookupKey(identifiantValue);
+    if (normalizedIdentifiant) {
+      identifierSet.add(normalizedIdentifiant);
+    }
+
+    if (identifierSet.size === 0) {
+      continue;
+    }
+
+    for (const identifier of identifierSet) {
       if (!overridesByUser.has(identifier)) {
         overridesByUser.set(identifier, new Map());
       }
@@ -627,12 +691,12 @@ async function loadUserPermissionOverrides(): Promise<
 
   const hydrated = new Map<string, PermissionOverride[]>();
 
-  for (const [userId, overridesMap] of overridesByUser) {
-    const overrides = Array.from(overridesMap.values());
+  for (const [identifier, overridesMap] of overridesByUser) {
+    const overrides = Array.from(overridesMap.values()).map((override) => ({ ...override }));
     overrides.sort((left, right) =>
       left.key.localeCompare(right.key, 'fr', { sensitivity: 'base' }),
     );
-    hydrated.set(userId, overrides);
+    hydrated.set(identifier, overrides);
   }
 
   return hydrated;
@@ -1053,7 +1117,9 @@ export async function fetchUsers(): Promise<UserAccount[]> {
 
   let permissionOverridesByUser = new Map<string, PermissionOverride[]>();
   try {
-    permissionOverridesByUser = await loadUserPermissionOverrides();
+    permissionOverridesByUser = await loadUserPermissionOverrides({
+      userRecords,
+    });
   } catch (error) {
     console.error('Impossible de récupérer les droits personnalisés.', error);
   }
@@ -1299,6 +1365,7 @@ async function syncUserGroupMemberships(userId: number, groupIds: number[]): Pro
 async function syncUserPermissionOverrides(
   userId: number,
   overrides: PermissionOverride[],
+  userIdentity: Pick<UserAccount, 'azureUpn' | 'email' | 'username' | 'azureOid'> | null,
 ): Promise<PermissionOverride[]> {
   const { moduleIdToKey, keyToModuleId } = await loadModulePermissionMappings();
 
@@ -1315,6 +1382,7 @@ WHERE [userId] = ${userId} AND ${MODULE_PERMISSION_WHERE};`,
   );
 
   const existingByModule = new Map<number, boolean>();
+  let existingIdentifiant: string | null = null;
   for (const record of existingRecords) {
     const moduleIdentifier = toRecordIdentifier(
       getValue(record, ['moduleId', 'moduleID', 'ModuleId', 'ModuleID', 'module_id']),
@@ -1334,6 +1402,15 @@ WHERE [userId] = ${userId} AND ${MODULE_PERMISSION_WHERE};`,
     }
 
     existingByModule.set(moduleId, canView);
+
+    if (!existingIdentifiant) {
+      const identifiantCandidate = toNonEmptyString(
+        getValue(record, ['identifiant', 'Identifiant', 'userIdentifiant']),
+      );
+      if (identifiantCandidate) {
+        existingIdentifiant = identifiantCandidate;
+      }
+    }
   }
 
   const desiredByModule = new Map<number, boolean>();
@@ -1382,6 +1459,20 @@ WHERE [userId] = ${userId} AND ${MODULE_PERMISSION_WHERE};`,
       `  AND [permissionType] <> '${MODULE_PERMISSION_TYPE}';`,
   );
 
+  const resolvedIdentifiant =
+    (userIdentity ? resolveUserIdentifiant(userIdentity) : null) ??
+    existingIdentifiant ??
+    String(userId);
+  const escapedIdentifiant = escapeSqlLiteral(resolvedIdentifiant);
+  const identifiantSql = `N'${escapedIdentifiant}'`;
+
+  statements.push(
+    `UPDATE [userPermissions]\n` +
+      `SET [identifiant] = ${identifiantSql}\n` +
+      `WHERE [userId] = ${userId} AND ${MODULE_PERMISSION_WHERE}\n` +
+      `  AND ([identifiant] IS NULL OR LTRIM(RTRIM([identifiant])) = '' OR [identifiant] <> ${identifiantSql});`,
+  );
+
   if (deletes.length > 0) {
     const deleteList = deletes.join(', ');
     statements.push(
@@ -1401,11 +1492,11 @@ WHERE [userId] = ${userId} AND ${MODULE_PERMISSION_WHERE};`,
     const values = inserts
       .map(
         ({ moduleId, canView }) =>
-          `(${userId}, '${MODULE_PERMISSION_TYPE}', ${moduleId}, ${canView ? 1 : 0})`,
+          `(${userId}, '${MODULE_PERMISSION_TYPE}', ${moduleId}, ${canView ? 1 : 0}, ${identifiantSql})`,
       )
       .join(',\n');
     statements.push(
-      `INSERT INTO [userPermissions] ([userId], [permissionType], [moduleId], [canView]) VALUES ${values};`,
+      `INSERT INTO [userPermissions] ([userId], [permissionType], [moduleId], [canView], [identifiant]) VALUES ${values};`,
     );
   }
 
@@ -1463,6 +1554,12 @@ WHERE [userId] = ${numericUserId};`,
   updatedUser.permissionOverrides = await syncUserPermissionOverrides(
     numericUserId,
     payload.permissionOverrides,
+    {
+      azureUpn: updatedUser.azureUpn,
+      email: updatedUser.email,
+      username: updatedUser.username,
+      azureOid: updatedUser.azureOid,
+    },
   );
 
   return updatedUser;
