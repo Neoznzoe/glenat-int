@@ -1,4 +1,9 @@
 import type { PermissionOverride } from './mockDb';
+import {
+  PERMISSION_DEFINITIONS,
+  isPermissionKey,
+  type PermissionKey,
+} from './access-control';
 
 const INTERNAL_USER_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
@@ -287,11 +292,94 @@ function parsePermissionOverrides(recordsets: RawRecord[][]): PermissionOverride
         continue;
       }
 
-      overrides.set(keyCandidate, mode);
+      const resolvedKey = resolvePermissionKey(keyCandidate);
+      if (!resolvedKey) {
+        continue;
+      }
+
+      overrides.set(resolvedKey, mode);
     }
   }
 
   return Array.from(overrides.entries()).map(([key, mode]) => ({ key, mode }));
+}
+
+const NORMALIZED_DEFINITIONS = PERMISSION_DEFINITIONS.map((definition) => ({
+  key: definition.key,
+  keyNormalized: normalizeForComparison(definition.key),
+  labelNormalized: normalizeForComparison(definition.label ?? ''),
+}));
+
+function normalizeForComparison(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/gi, '')
+    .toLowerCase();
+}
+
+function stripKnownAffixes(value: string): string {
+  if (!value) {
+    return value;
+  }
+
+  const prefixes = ['module', 'page', 'permission', 'intranet', 'groupe', 'glenat'];
+  const suffixes = ['module', 'page', 'permission'];
+
+  let result = value;
+  let modified = true;
+
+  while (modified && result.length > 0) {
+    modified = false;
+
+    for (const prefix of prefixes) {
+      if (result.startsWith(prefix) && result.length > prefix.length) {
+        result = result.slice(prefix.length);
+        modified = true;
+      }
+    }
+
+    for (const suffix of suffixes) {
+      if (result.endsWith(suffix) && result.length > suffix.length) {
+        result = result.slice(0, -suffix.length);
+        modified = true;
+      }
+    }
+  }
+
+  return result;
+}
+
+function resolvePermissionKey(candidate: string): PermissionKey | null {
+  if (isPermissionKey(candidate)) {
+    return candidate;
+  }
+
+  const normalized = normalizeForComparison(candidate);
+  if (!normalized) {
+    return null;
+  }
+
+  const stripped = stripKnownAffixes(normalized);
+
+  for (const definition of NORMALIZED_DEFINITIONS) {
+    const { key, keyNormalized, labelNormalized } = definition;
+    if (normalized === keyNormalized || stripped === keyNormalized) {
+      return key as PermissionKey;
+    }
+    if (labelNormalized) {
+      if (normalized === labelNormalized || stripped === labelNormalized) {
+        return key as PermissionKey;
+      }
+      const combined = `${keyNormalized}${labelNormalized}`;
+      const combinedReverse = `${labelNormalized}${keyNormalized}`;
+      if (normalized === combined || normalized === combinedReverse) {
+        return key as PermissionKey;
+      }
+    }
+  }
+
+  return null;
 }
 
 export function parseDatabaseUserLookupResponse(
