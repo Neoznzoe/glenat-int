@@ -24,7 +24,6 @@ import {
   type PermissionEvaluationRow,
 } from '@/components/admin/UserAccessEditor';
 import { type DraftAccessState, type PermissionSelectValue } from '@/components/admin/access-types';
-import { GroupManager } from '@/components/admin/GroupManager';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -439,8 +438,6 @@ export function Administration() {
           onSave={handleSave}
         />
       </div>
-
-      <GroupManager groups={groups} isLoading={loadingGroups || loadingUsers} />
 
       <Card>
         <CardHeader>
