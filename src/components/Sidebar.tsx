@@ -46,12 +46,16 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
   const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
 
+  const isAccessControlLoading = loadingCurrentUser || loadingGroups;
+  const isAccessDataReady = !isAccessControlLoading && Boolean(currentUser);
+  const shouldShowMenuSkeleton = !isAccessDataReady && isAccessControlLoading;
+
   const accessiblePermissions = useMemo(() => {
-    if (!currentUser) {
+    if (!isAccessDataReady || !currentUser) {
       return new Set<PermissionKey>();
     }
     return new Set(computeEffectivePermissions(currentUser, groups));
-  }, [currentUser, groups]);
+  }, [currentUser, groups, isAccessDataReady]);
 
   const menuItems: Array<{
     id: string;
@@ -147,13 +151,11 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     },
   ];
 
-  const showAllMenus = loadingCurrentUser || loadingGroups || !currentUser;
-
   const userCanAccess = (permission: PermissionKey) => {
-    if (showAllMenus) {
-      return true;
+    if (!isAccessDataReady || !currentUser) {
+      return false;
     }
-    if (currentUser?.isSuperAdmin) {
+    if (currentUser.isSuperAdmin) {
       return true;
     }
     return accessiblePermissions.has(permission);
@@ -161,11 +163,25 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
 
   const location = useDecryptedLocation();
 
-  const mainMenuItems = menuItems.filter(
-    (item) => item.id !== 'administration' && userCanAccess(item.permission),
-  );
-  const adminMenuItems = menuItems.filter(
-    (item) => item.id === 'administration' && userCanAccess(item.permission),
+  const mainMenuItems = isAccessDataReady
+    ? menuItems.filter((item) => item.id !== 'administration' && userCanAccess(item.permission))
+    : [];
+  const adminMenuItems = isAccessDataReady
+    ? menuItems.filter((item) => item.id === 'administration' && userCanAccess(item.permission))
+    : [];
+
+  const renderMenuSkeleton = (count: number) => (
+    <ul className="space-y-1">
+      {Array.from({ length: count }).map((_, index) => (
+        <li key={`sidebar-skeleton-${index}`}>
+          <div
+            className={`rounded-lg bg-white/10 animate-pulse ${
+              isExpanded ? 'h-10 w-full' : 'h-10 w-10 mx-auto'
+            }`}
+          />
+        </li>
+      ))}
+    </ul>
   );
 
   return (
@@ -199,8 +215,11 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       <div className="flex-1 min-h-0 flex flex-col justify-between">
         {/* Menu principal */}
         <nav className="p-2">
-          <ul className="space-y-1">
-            {mainMenuItems.map((item) => {
+          {shouldShowMenuSkeleton ? (
+            renderMenuSkeleton(8)
+          ) : (
+            <ul className="space-y-1">
+              {mainMenuItems.map((item) => {
                 const isActive = item.path === '/'
                   ? location.pathname === '/'
                   : location.pathname.startsWith(item.path);
@@ -232,13 +251,17 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
                   </li>
                 );
               })}
-          </ul>
+            </ul>
+          )}
         </nav>
 
         {/* Bloc Administration */}
         <nav className="p-2">
-          <ul>
-            {adminMenuItems.map((item) => {
+          {shouldShowMenuSkeleton ? (
+            renderMenuSkeleton(1)
+          ) : adminMenuItems.length > 0 ? (
+            <ul>
+              {adminMenuItems.map((item) => {
                 const isActive = item.path === '/'
                   ? location.pathname === '/'
                   : location.pathname.startsWith(item.path);
@@ -265,7 +288,8 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
                   </li>
                 );
               })}
-          </ul>
+            </ul>
+          ) : null}
         </nav>
       </div>
 
