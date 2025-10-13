@@ -22,7 +22,12 @@ import {
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoG from '../assets/logos/glenat/glenat_G.svg';
-import { useCurrentUser, useAdminGroups, usePermissionDefinitions } from '@/hooks/useAdminData';
+import {
+  useCurrentUser,
+  useAdminGroups,
+  usePermissionDefinitions,
+  useUserModuleOverrides,
+} from '@/hooks/useAdminData';
 import { computeEffectivePermissions } from '@/lib/mockDb';
 import { BASE_PERMISSIONS, PERMISSION_DEFINITIONS } from '@/lib/access-control';
 import type { PermissionKey } from '@/lib/access-control';
@@ -202,6 +207,10 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
   const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
   const { data: permissionDefinitions = [], isLoading: loadingPermissions } = usePermissionDefinitions();
+  const userIdForOverrides = currentUser?.id;
+  const { data: moduleOverrides = [], isLoading: loadingModuleOverrides } = useUserModuleOverrides(
+    userIdForOverrides,
+  );
 
   const resolvedPermissionDefinitions = useMemo(
     () => (permissionDefinitions.length ? permissionDefinitions : PERMISSION_DEFINITIONS),
@@ -302,18 +311,41 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     });
   }, [jobCount, resolvePermissionKey]);
 
-  const isAccessControlLoading = loadingCurrentUser || loadingGroups || loadingPermissions;
+  const isAccessControlLoading =
+    loadingCurrentUser || loadingGroups || loadingPermissions || loadingModuleOverrides;
   const isAccessDataReady = !isAccessControlLoading && Boolean(currentUser);
   const shouldShowMenuSkeleton = !isAccessDataReady && isAccessControlLoading;
+
+  const deniedPermissions = useMemo(() => {
+    if (!moduleOverrides.length) {
+      return new Set<PermissionKey>();
+    }
+    return new Set(
+      moduleOverrides
+        .filter((override) => override.mode === 'deny')
+        .map((override) => resolvePermissionKey(override.key as PermissionKey, [override.key])),
+    );
+  }, [moduleOverrides, resolvePermissionKey]);
 
   const accessiblePermissions = useMemo(() => {
     if (!isAccessDataReady || !currentUser) {
       return new Set<PermissionKey>();
     }
-    return new Set(
+    const computed = new Set(
       computeEffectivePermissions(currentUser, groups, resolvedPermissionDefinitions, resolvedBasePermissions),
     );
-  }, [currentUser, groups, isAccessDataReady, resolvedPermissionDefinitions, resolvedBasePermissions]);
+    for (const denied of deniedPermissions) {
+      computed.delete(denied);
+    }
+    return computed;
+  }, [
+    currentUser,
+    groups,
+    isAccessDataReady,
+    resolvedPermissionDefinitions,
+    resolvedBasePermissions,
+    deniedPermissions,
+  ]);
 
   const userCanAccess = (permission: PermissionKey) => {
     if (!isAccessDataReady || !currentUser) {
@@ -321,6 +353,9 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     }
     if (currentUser.isSuperAdmin) {
       return true;
+    }
+    if (deniedPermissions.has(permission)) {
+      return false;
     }
     return accessiblePermissions.has(permission);
   };

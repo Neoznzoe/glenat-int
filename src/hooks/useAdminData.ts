@@ -4,6 +4,7 @@ import {
   fetchPermissions,
   fetchAuditLog,
   fetchCurrentUser,
+  fetchUserModuleOverrides,
   persistUserAccess,
   persistModuleOverrideChange,
   createGroup,
@@ -21,6 +22,7 @@ const GROUPS_QUERY_KEY = ['admin', 'groups'] as const;
 const PERMISSIONS_QUERY_KEY = ['admin', 'permissions'] as const;
 const CURRENT_USER_QUERY_KEY = ['admin', 'current-user'] as const;
 const AUDIT_LOG_QUERY_KEY = ['admin', 'audit-log'] as const;
+const USER_MODULE_OVERRIDES_QUERY_KEY = ['admin', 'user-module-overrides'] as const;
 
 export function useAdminUsers() {
   return useQuery<UserAccount[]>({ queryKey: USERS_QUERY_KEY, queryFn: fetchUsers });
@@ -49,6 +51,19 @@ export function useAuditLog(limit = 25) {
 
 export function useCurrentUser() {
   return useQuery<UserAccount>({ queryKey: CURRENT_USER_QUERY_KEY, queryFn: fetchCurrentUser });
+}
+
+export function useUserModuleOverrides(userId?: string) {
+  return useQuery<PermissionOverride[]>({
+    queryKey: [...USER_MODULE_OVERRIDES_QUERY_KEY, userId ?? 'anonymous'],
+    queryFn: () => {
+      if (!userId) {
+        throw new Error("L'identifiant utilisateur est requis pour charger ses permissions.");
+      }
+      return fetchUserModuleOverrides(userId);
+    },
+    enabled: Boolean(userId),
+  });
 }
 
 interface UpdateUserOptions {
@@ -146,4 +161,5 @@ export {
   PERMISSIONS_QUERY_KEY,
   CURRENT_USER_QUERY_KEY,
   AUDIT_LOG_QUERY_KEY,
+  USER_MODULE_OVERRIDES_QUERY_KEY,
 };

@@ -1143,6 +1143,30 @@ export async function fetchCurrentUser(): Promise<UserAccount> {
   return nextUser;
 }
 
+export async function fetchUserModuleOverrides(userId: string): Promise<PermissionOverride[]> {
+  const numericUserId = toDatabaseIntegerId(userId);
+
+  if (numericUserId === null) {
+    return [];
+  }
+
+  const maps = await loadModulePermissionMaps();
+  const permissionRecords = await runDatabaseQuery(
+    `SET NOCOUNT ON;
+SELECT *
+FROM [userPermissions]
+WHERE [userId] = ${numericUserId}
+  AND UPPER(LTRIM(RTRIM([permissionType]))) = 'MODULE';`,
+    "exceptions d'accès individuelles (sidebar)",
+  );
+
+  const overridesByUser = buildModuleOverrideMap(permissionRecords, maps.keyByModuleId);
+  const overrides = overridesByUser.get(userId) ?? [];
+  const sanitized = sanitizePermissionOverrides(overrides);
+
+  return sanitized.filter((override) => maps.moduleIdByKey.has(override.key));
+}
+
 function toDatabaseIntegerId(value: string | undefined): number | null {
   if (!value) {
     return null;
