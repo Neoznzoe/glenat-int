@@ -298,8 +298,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
 
   const resolvePermissionKey = useCallback(
     (fallbackKey: PermissionKey, aliases: Array<string | number | undefined> = []) => {
-      const candidates: Array<string | number | undefined> = [fallbackKey, ...aliases];
-      for (const candidate of candidates) {
+      for (const candidate of aliases) {
         const normalized = normalizePermissionAlias(candidate);
         if (!normalized) {
           continue;
@@ -309,6 +308,15 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
           return resolved;
         }
       }
+
+      const normalizedFallback = normalizePermissionAlias(fallbackKey);
+      if (normalizedFallback) {
+        const resolvedFallback = modulePermissionMap.get(normalizedFallback);
+        if (resolvedFallback) {
+          return resolvedFallback;
+        }
+      }
+
       return fallbackKey;
     },
     [modulePermissionMap],
