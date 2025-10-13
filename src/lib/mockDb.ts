@@ -685,13 +685,14 @@ export function evaluatePermission(
   user: UserAccount,
   groups: GroupDefinition[],
   key: PermissionKey,
+  basePermissions: PermissionKey[] = BASE_PERMISSIONS,
 ): PermissionEvaluation {
   const inheritedFrom = groups
     .filter(
       (group) => user.groups.includes(group.id) && group.defaultPermissions.includes(key),
     )
     .map((group) => group.name);
-  const basePermission = BASE_PERMISSIONS.includes(key);
+  const basePermission = basePermissions.includes(key);
 
   if (user.isSuperAdmin) {
     return {
@@ -749,14 +750,20 @@ export function evaluatePermission(
 export function computeEffectivePermissions(
   user: UserAccount,
   groups: GroupDefinition[],
+  definitions: PermissionDefinition[] = PERMISSION_DEFINITIONS,
+  basePermissions: PermissionKey[] = BASE_PERMISSIONS,
 ): PermissionKey[] {
+  const uniqueDefinitions = definitions.filter((definition, index, array) =>
+    array.findIndex((candidate) => candidate.key === definition.key) === index,
+  );
+
   if (user.isSuperAdmin) {
-    return PERMISSION_DEFINITIONS.map((permission) => permission.key);
+    return uniqueDefinitions.map((permission) => permission.key);
   }
 
   const effective: PermissionKey[] = [];
-  for (const definition of PERMISSION_DEFINITIONS) {
-    const evaluation = evaluatePermission(user, groups, definition.key);
+  for (const definition of uniqueDefinitions) {
+    const evaluation = evaluatePermission(user, groups, definition.key, basePermissions);
     if (evaluation.effective) {
       effective.push(definition.key);
     }
