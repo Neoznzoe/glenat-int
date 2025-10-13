@@ -44,7 +44,7 @@ type SidebarMenuItemConfig = {
   usesJobCountBadge?: boolean;
 };
 
-type SidebarMenuItem = SidebarMenuItemConfig & { badge?: number };
+type SidebarMenuItem = SidebarMenuItemConfig & { badge?: number; moduleId?: string };
 
 const MENU_ITEM_CONFIG: SidebarMenuItemConfig[] = [
   { id: 'home', icon: Home, label: 'Accueil', path: '/', permission: 'home', aliases: ['accueil'] },
@@ -208,8 +208,17 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
   const { data: permissionDefinitions = [], isLoading: loadingPermissions } = usePermissionDefinitions();
   const userIdForOverrides = currentUser?.id;
-  const { data: moduleOverrides = [], isLoading: loadingModuleOverrides } = useUserModuleOverrides(
+  const { data: moduleOverrideData, isLoading: loadingModuleOverrides } = useUserModuleOverrides(
     userIdForOverrides,
+  );
+
+  const moduleOverrides = useMemo(
+    () => moduleOverrideData?.overrides ?? [],
+    [moduleOverrideData],
+  );
+  const deniedModuleIdList = useMemo(
+    () => moduleOverrideData?.deniedModuleIds ?? [],
+    [moduleOverrideData],
   );
 
   const resolvedPermissionDefinitions = useMemo(
@@ -273,6 +282,20 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     return map;
   }, [resolvedPermissionDefinitions]);
 
+  const permissionKeyToModuleId = useMemo(() => {
+    const map = new Map<PermissionKey, string>();
+    for (const definition of resolvedPermissionDefinitions) {
+      if (definition.type && definition.type !== 'module') {
+        continue;
+      }
+      const metadataId = definition.metadata?.id;
+      if (typeof metadataId === 'string' || typeof metadataId === 'number') {
+        map.set(definition.key as PermissionKey, metadataId.toString());
+      }
+    }
+    return map;
+  }, [resolvedPermissionDefinitions]);
+
   const resolvePermissionKey = useCallback(
     (fallbackKey: PermissionKey, aliases: Array<string | number | undefined> = []) => {
       const candidates: Array<string | number | undefined> = [fallbackKey, ...aliases];
@@ -307,9 +330,10 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
         ...item,
         permission,
         badge: item.usesJobCountBadge ? jobCount : undefined,
+        moduleId: permissionKeyToModuleId.get(permission),
       };
     });
-  }, [jobCount, resolvePermissionKey]);
+  }, [jobCount, resolvePermissionKey, permissionKeyToModuleId]);
 
   const isAccessControlLoading =
     loadingCurrentUser || loadingGroups || loadingPermissions || loadingModuleOverrides;
@@ -326,6 +350,17 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
         .map((override) => resolvePermissionKey(override.key as PermissionKey, [override.key])),
     );
   }, [moduleOverrides, resolvePermissionKey]);
+
+  const deniedModuleIds = useMemo(() => {
+    if (!deniedModuleIdList.length) {
+      return new Set<string>();
+    }
+    return new Set(
+      deniedModuleIdList
+        .map((identifier) => (typeof identifier === 'string' ? identifier.trim() : String(identifier)))
+        .filter((identifier) => identifier.length > 0),
+    );
+  }, [deniedModuleIdList]);
 
   const accessiblePermissions = useMemo(() => {
     if (!isAccessDataReady || !currentUser) {
@@ -363,10 +398,26 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const location = useDecryptedLocation();
 
   const mainMenuItems = isAccessDataReady
-    ? resolvedMenuItems.filter((item) => item.id !== 'administration' && userCanAccess(item.permission))
+    ? resolvedMenuItems.filter((item) => {
+        if (item.id === 'administration') {
+          return false;
+        }
+        if (item.moduleId && deniedModuleIds.has(item.moduleId)) {
+          return false;
+        }
+        return userCanAccess(item.permission);
+      })
     : [];
   const adminMenuItems = isAccessDataReady
-    ? resolvedMenuItems.filter((item) => item.id === 'administration' && userCanAccess(item.permission))
+    ? resolvedMenuItems.filter((item) => {
+        if (item.id !== 'administration') {
+          return false;
+        }
+        if (item.moduleId && deniedModuleIds.has(item.moduleId)) {
+          return false;
+        }
+        return userCanAccess(item.permission);
+      })
     : [];
 
   const renderMenuSkeleton = (count: number) => (

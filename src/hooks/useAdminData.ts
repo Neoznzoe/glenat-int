@@ -13,6 +13,7 @@ import {
   type UserAccount,
   type PermissionOverride,
   type AuditLogEntry,
+  type UserModuleOverrideSummary,
 } from '@/lib/adminApi';
 import { type GroupDefinition, type PermissionDefinition } from '@/lib/access-control';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -54,7 +55,7 @@ export function useCurrentUser() {
 }
 
 export function useUserModuleOverrides(userId?: string) {
-  return useQuery<PermissionOverride[]>({
+  return useQuery<UserModuleOverrideSummary>({
     queryKey: [...USER_MODULE_OVERRIDES_QUERY_KEY, userId ?? 'anonymous'],
     queryFn: () => {
       if (!userId) {

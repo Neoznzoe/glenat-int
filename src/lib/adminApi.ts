@@ -49,6 +49,11 @@ interface ModulePermissionMaps {
   keyByModuleId: Map<string, PermissionKey>;
 }
 
+export interface UserModuleOverrideSummary {
+  overrides: PermissionOverride[];
+  deniedModuleIds: string[];
+}
+
 export interface UpdateModuleOverridePayload {
   userId: string;
   permissionKey: PermissionKey;
@@ -1143,11 +1148,11 @@ export async function fetchCurrentUser(): Promise<UserAccount> {
   return nextUser;
 }
 
-export async function fetchUserModuleOverrides(userId: string): Promise<PermissionOverride[]> {
+export async function fetchUserModuleOverrides(userId: string): Promise<UserModuleOverrideSummary> {
   const numericUserId = toDatabaseIntegerId(userId);
 
   if (numericUserId === null) {
-    return [];
+    return { overrides: [], deniedModuleIds: [] };
   }
 
   const maps = await loadModulePermissionMaps();
@@ -1160,11 +1165,52 @@ WHERE [userId] = ${numericUserId}
     "exceptions d'accès individuelles (sidebar)",
   );
 
-  const overridesByUser = buildModuleOverrideMap(permissionRecords, maps.keyByModuleId);
-  const overrides = overridesByUser.get(userId) ?? [];
-  const sanitized = sanitizePermissionOverrides(overrides);
+  const latestOverrides = new Map<PermissionKey, PermissionOverride['mode']>();
 
-  return sanitized.filter((override) => maps.moduleIdByKey.has(override.key));
+  for (const record of permissionRecords) {
+    const typeValue = toNonEmptyString(
+      getValue(record, ['permissionType', 'PermissionType', 'type', 'Type']),
+    );
+    if (!typeValue || typeValue.trim().toUpperCase() !== 'MODULE') {
+      continue;
+    }
+
+    const moduleId = toRecordIdentifier(
+      getValue(record, ['moduleId', 'ModuleId', 'moduleID', 'ModuleID']),
+    );
+    if (!moduleId) {
+      continue;
+    }
+
+    const permissionKey = maps.keyByModuleId.get(moduleId);
+    if (!permissionKey) {
+      continue;
+    }
+
+    const canViewValue = getValue(record, ['canView', 'CanView', 'can_view', 'Can_View']);
+    const canView = toOptionalBoolean(canViewValue);
+    if (canView === null) {
+      continue;
+    }
+
+    const mode: PermissionOverride['mode'] = canView ? 'allow' : 'deny';
+    latestOverrides.set(permissionKey, mode);
+  }
+
+  const overrides = Array.from(latestOverrides.entries()).map(([key, mode]) => ({ key, mode }));
+  const sanitized = sanitizePermissionOverrides(overrides).filter((override) =>
+    maps.moduleIdByKey.has(override.key),
+  );
+
+  const deniedModuleIds = sanitized
+    .filter((override) => override.mode === 'deny')
+    .map((override) => maps.moduleIdByKey.get(override.key))
+    .filter((value): value is string => typeof value === 'string');
+
+  return {
+    overrides: sanitized,
+    deniedModuleIds: Array.from(new Set(deniedModuleIds)),
+  };
 }
 
 function toDatabaseIntegerId(value: string | undefined): number | null {
