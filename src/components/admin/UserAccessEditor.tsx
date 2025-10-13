@@ -269,6 +269,44 @@ export function UserAccessEditor({
                   const showModuleOrigin = Boolean(moduleOrigin);
                   const pageCountLabel =
                     pages.length > 0 ? `${pages.length} page${pages.length > 1 ? 's' : ''}` : '';
+                  const isModule = definition.type !== 'page';
+                  const metadata = definition.metadata ?? {};
+                  const moduleId =
+                    typeof metadata.moduleId === 'string'
+                      ? metadata.moduleId
+                      : typeof metadata.id === 'string'
+                        ? metadata.id
+                        : undefined;
+                  const moduleVersion =
+                    typeof metadata.version === 'number'
+                      ? metadata.version.toString()
+                      : typeof metadata.version === 'string'
+                        ? metadata.version.trim()
+                        : undefined;
+                  const moduleIsActive =
+                    typeof metadata.isActive === 'boolean' ? metadata.isActive : undefined;
+                  const moduleSupportsMultilingual =
+                    typeof metadata.supportsMultilingual === 'boolean'
+                      ? metadata.supportsMultilingual
+                      : undefined;
+                  const moduleDescription = isModule && definition.description ? definition.description : null;
+                  const moduleTags: string[] = [];
+                  if (isModule) {
+                    if (moduleId) {
+                      moduleTags.push(`#${moduleId}`);
+                    }
+                    if (moduleVersion) {
+                      moduleTags.push(`v${moduleVersion}`);
+                    }
+                    if (moduleIsActive !== undefined) {
+                      moduleTags.push(moduleIsActive ? 'Actif' : 'Inactif');
+                    }
+                    if (moduleSupportsMultilingual !== undefined) {
+                      moduleTags.push(
+                        moduleSupportsMultilingual ? 'Multilingue' : 'Monolingue',
+                      );
+                    }
+                  }
 
                   return (
                     <Collapsible
@@ -285,7 +323,29 @@ export function UserAccessEditor({
                                     type="button"
                                     className="flex w-full items-center justify-between rounded-md border border-transparent bg-transparent p-2 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-muted/60"
                                   >
-                                    <span className={cn('font-medium', tone)}>{definition.label}</span>
+                                    <span className="flex flex-col gap-1 text-left">
+                                      <span className={cn('font-medium', tone)}>
+                                        {definition.label}
+                                      </span>
+                                      {moduleDescription && (
+                                        <span className="text-xs text-muted-foreground">
+                                          {moduleDescription}
+                                        </span>
+                                      )}
+                                      {moduleTags.length > 0 && (
+                                        <span className="flex flex-wrap gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                                          {moduleTags.map((tag) => (
+                                            <Badge
+                                              key={`${definition.key}-${tag}`}
+                                              variant="outline"
+                                              className="pointer-events-none border text-[10px] font-medium uppercase tracking-wide"
+                                            >
+                                              {tag}
+                                            </Badge>
+                                          ))}
+                                        </span>
+                                      )}
+                                    </span>
                                     <span className="text-xs font-medium text-muted-foreground transition-colors data-[state=open]:text-primary">
                                       {pageCountLabel}
                                     </span>
@@ -298,6 +358,24 @@ export function UserAccessEditor({
                             ) : (
                               <div className="space-y-2 rounded-md p-2">
                                 <div className={cn('font-medium', tone)}>{definition.label}</div>
+                                {moduleDescription && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {moduleDescription}
+                                  </div>
+                                )}
+                                {moduleTags.length > 0 && (
+                                  <div className="flex flex-wrap gap-2">
+                                    {moduleTags.map((tag) => (
+                                      <Badge
+                                        key={`${definition.key}-tag-${tag}`}
+                                        variant="outline"
+                                        className="pointer-events-none border text-[10px] font-medium uppercase tracking-wide"
+                                      >
+                                        {tag}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
                                 {showModuleOrigin && (
                                   <div className="text-xs text-muted-foreground">{moduleOrigin}</div>
                                 )}

@@ -577,23 +577,49 @@ function normalizeModuleDefinition(
     toNonEmptyString(getValue(record, ['description', 'Description'])) ??
     slugSource;
   const label = humanizeLabel(labelSource);
-  const description =
-    toNonEmptyString(
-      getValue(record, ['supportMultilingual', 'SupportMultilingual', 'description', 'Description']),
-    ) ?? '';
+  const description = toNonEmptyString(getValue(record, ['description', 'Description'])) ?? '';
 
   const metadata: Record<string, unknown> = {
     id,
+    moduleId: id,
     slug: slugSource,
   };
 
+  const supportsMultilingualValue = getValue(record, [
+    'supportMultilingual',
+    'SupportMultilingual',
+  ]);
+  const supportsMultilingual = toOptionalBoolean(supportsMultilingualValue);
+  if (supportsMultilingual !== null) {
+    metadata.supportsMultilingual = supportsMultilingual;
+  } else if (supportsMultilingualValue !== undefined && supportsMultilingualValue !== null) {
+    metadata.supportsMultilingual = supportsMultilingualValue;
+  }
+
   const isActiveValue = getValue(record, ['isActive', 'IsActive', 'active', 'Active']);
-  if (isActiveValue !== undefined) {
+  const isActive = toOptionalBoolean(isActiveValue);
+  if (isActive !== null) {
+    metadata.isActive = isActive;
+  } else if (isActiveValue !== undefined && isActiveValue !== null) {
     metadata.isActive = isActiveValue;
   }
+
   const versionValue = getValue(record, ['version', 'Version']);
-  if (versionValue !== undefined) {
-    metadata.version = versionValue;
+  if (versionValue !== undefined && versionValue !== null) {
+    metadata.version =
+      typeof versionValue === 'number'
+        ? versionValue
+        : toNonEmptyString(versionValue) ?? versionValue;
+  }
+
+  const createdAt = normalizeDateValue(getValue(record, ['createdAt', 'CreatedAt', 'created_at']));
+  if (createdAt) {
+    metadata.createdAt = createdAt;
+  }
+
+  const updatedAt = normalizeDateValue(getValue(record, ['updatedAt', 'UpdatedAt', 'updated_at']));
+  if (updatedAt) {
+    metadata.updatedAt = updatedAt;
   }
 
   return {
