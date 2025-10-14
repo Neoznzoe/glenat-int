@@ -19,10 +19,12 @@ import {
   Newspaper,
   Store,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoG from '../assets/logos/glenat/glenat_G.svg';
 import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
+import { useModules } from '@/hooks/useModules';
 import { computeEffectivePermissions } from '@/lib/mockDb';
 import type { PermissionKey } from '@/lib/access-control';
 import { useDecryptedLocation } from '@/lib/secureRouting';
@@ -31,6 +33,166 @@ import { SecureNavLink } from '@/components/routing/SecureLink';
 interface SidebarProps {
   jobCount?: number;
   onExpandChange?: (expanded: boolean) => void;
+}
+
+type SidebarSection = 'main' | 'admin';
+
+interface SidebarModuleConfig {
+  key: string;
+  icon: LucideIcon;
+  label: string;
+  path: string;
+  permission: PermissionKey;
+  section: SidebarSection;
+  moduleKeys?: string[];
+  alwaysVisible?: boolean;
+  getBadge?: (context: { jobCount?: number }) => number | undefined;
+}
+
+const SIDEBAR_MODULE_CONFIGS: SidebarModuleConfig[] = [
+  {
+    key: 'home',
+    icon: Home,
+    label: 'Accueil',
+    path: '/',
+    permission: 'home',
+    section: 'main',
+    alwaysVisible: true,
+  },
+  {
+    key: 'qui',
+    icon: UserRoundSearch,
+    label: 'Qui fait quoi',
+    path: '/qui',
+    permission: 'qui',
+    section: 'main',
+  },
+  {
+    key: 'catalogue',
+    icon: LibraryBig,
+    label: 'Catalogue',
+    path: '/catalogue/offices',
+    permission: 'catalogue',
+    section: 'main',
+  },
+  {
+    key: 'kiosque',
+    icon: Store,
+    label: 'Kiosque',
+    path: '/catalogue/kiosque',
+    permission: 'catalogue',
+    section: 'main',
+    moduleKeys: ['kiosque', 'catalogue'],
+  },
+  {
+    key: 'doc',
+    icon: Files,
+    label: "Glénat'Doc",
+    path: '/doc',
+    permission: 'doc',
+    section: 'main',
+  },
+  {
+    key: 'fee',
+    icon: Users,
+    label: "Glénat'Fée",
+    path: '/fee',
+    permission: 'fee',
+    section: 'main',
+  },
+  {
+    key: 'agenda',
+    icon: Calendar,
+    label: 'Agenda',
+    path: '/agenda',
+    permission: 'agenda',
+    section: 'main',
+  },
+  {
+    key: 'planning',
+    icon: CalendarDays,
+    label: 'Planning',
+    path: '/planning',
+    permission: 'planning',
+    section: 'main',
+  },
+  {
+    key: 'contrats',
+    icon: Signature,
+    label: 'Contrats',
+    path: '/contrats',
+    permission: 'contrats',
+    section: 'main',
+  },
+  {
+    key: 'rh',
+    icon: PersonStanding,
+    label: 'Ressources humaines',
+    path: '/rh',
+    permission: 'rh',
+    section: 'main',
+  },
+  {
+    key: 'temps',
+    icon: CalendarClock,
+    label: 'Saisie des temps',
+    path: '/temps',
+    permission: 'temps',
+    section: 'main',
+  },
+  {
+    key: 'atelier',
+    icon: Hammer,
+    label: 'Travaux atelier',
+    path: '/atelier',
+    permission: 'atelier',
+    section: 'main',
+  },
+  {
+    key: 'espace',
+    icon: SquareUserRound,
+    label: 'Mon espace',
+    path: '/espace',
+    permission: 'espace',
+    section: 'main',
+  },
+  {
+    key: 'emploi',
+    icon: BriefcaseBusiness,
+    label: 'Emploi',
+    path: '/emploi',
+    permission: 'emploi',
+    section: 'main',
+    getBadge: ({ jobCount }) => jobCount,
+  },
+  {
+    key: 'annonces',
+    icon: Newspaper,
+    label: 'Petites annonces',
+    path: '/annonces',
+    permission: 'annonces',
+    section: 'main',
+  },
+  {
+    key: 'services',
+    icon: Info,
+    label: 'Services',
+    path: '/services',
+    permission: 'services',
+    section: 'main',
+  },
+  {
+    key: 'administration',
+    icon: Settings,
+    label: 'Administration',
+    path: '/administration',
+    permission: 'administration',
+    section: 'admin',
+  },
+];
+
+function normalizeModuleKey(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 }
 
 export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
@@ -45,6 +207,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
 
   const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
   const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
+  const { data: modules } = useModules();
 
   const accessiblePermissions = useMemo(() => {
     if (!currentUser) {
@@ -53,99 +216,55 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     return new Set(computeEffectivePermissions(currentUser, groups));
   }, [currentUser, groups]);
 
-  const menuItems: Array<{
-    id: string;
-    icon: typeof Home;
-    label: string;
-    path: string;
-    permission: PermissionKey;
-    badge?: number;
-  }> = [
-    { id: 'home', icon: Home, label: 'Accueil', path: '/', permission: 'home' },
-    {
-      id: 'qui',
-      icon: UserRoundSearch,
-      label: 'Qui fait quoi',
-      path: '/qui',
-      permission: 'qui',
-    },
-    {
-      id: 'catalogue',
-      icon: LibraryBig,
-      label: 'Catalogue',
-      path: '/catalogue/offices',
-      permission: 'catalogue',
-    },
-    {
-      id: 'kiosque',
-      icon: Store,
-      label: 'Kiosque',
-      path: '/catalogue/kiosque',
-      permission: 'catalogue',
-    },
-    { id: 'doc', icon: Files, label: "Glénat'Doc", path: '/doc', permission: 'doc' },
-    { id: 'fee', icon: Users, label: "Glénat'Fée", path: '/fee', permission: 'fee' },
-    { id: 'agenda', icon: Calendar, label: 'Agenda', path: '/agenda', permission: 'agenda' },
-    {
-      id: 'planning',
-      icon: CalendarDays,
-      label: 'Planning',
-      path: '/planning',
-      permission: 'planning',
-    },
-    {
-      id: 'contrats',
-      icon: Signature,
-      label: 'Contrats',
-      path: '/contrats',
-      permission: 'contrats',
-    },
-    { id: 'rh', icon: PersonStanding, label: 'Ressources humaines', path: '/rh', permission: 'rh' },
-    {
-      id: 'temps',
-      icon: CalendarClock,
-      label: 'Saisie des temps',
-      path: '/temps',
-      permission: 'temps',
-    },
-    {
-      id: 'atelier',
-      icon: Hammer,
-      label: 'Travaux atelier',
-      path: '/atelier',
-      permission: 'atelier',
-    },
-    {
-      id: 'espace',
-      icon: SquareUserRound,
-      label: 'Mon espace',
-      path: '/espace',
-      permission: 'espace',
-    },
-    {
-      id: 'emploi',
-      icon: BriefcaseBusiness,
-      label: 'Emploi',
-      path: '/emploi',
-      permission: 'emploi',
-      badge: jobCount,
-    },
-    {
-      id: 'annonces',
-      icon: Newspaper,
-      label: 'Petites annonces',
-      path: '/annonces',
-      permission: 'annonces',
-    },
-    { id: 'services', icon: Info, label: 'Services', path: '/services', permission: 'services' },
-    {
-      id: 'administration',
-      icon: Settings,
-      label: 'Administration',
-      path: '/administration',
-      permission: 'administration',
-    },
-  ];
+  const moduleMap = useMemo(() => {
+    if (!modules) {
+      return null;
+    }
+    const map = new Map<string, (typeof modules)[number]>();
+    modules.forEach((module) => {
+      if (module.isActive === false) {
+        return;
+      }
+      const rawNameValue = module.metadata?.rawName;
+      const rawName = typeof rawNameValue === 'string' ? rawNameValue : undefined;
+      const keys = new Set<string>([
+        module.key,
+        module.slug,
+        rawName ?? '',
+      ]);
+      keys.forEach((key) => {
+        if (!key) {
+          return;
+        }
+        map.set(normalizeModuleKey(key), module);
+      });
+    });
+    return map;
+  }, [modules]);
+
+  const menuItems = useMemo(() => {
+    return SIDEBAR_MODULE_CONFIGS.filter((config) => {
+      if (!moduleMap) {
+        return true;
+      }
+      if (config.alwaysVisible) {
+        return true;
+      }
+      const keys = config.moduleKeys ?? [config.key];
+      return keys.some((key) => moduleMap.has(normalizeModuleKey(key)));
+    }).map((config) => {
+      const module = moduleMap
+        ? (config.moduleKeys ?? [config.key])
+            .map((key) => moduleMap.get(normalizeModuleKey(key)))
+            .find(Boolean)
+        : undefined;
+      return {
+        ...config,
+        label: module?.displayName ?? config.label,
+        badge: config.getBadge?.({ jobCount }),
+      };
+    });
+  }, [moduleMap, jobCount]);
 
   const showAllMenus = loadingCurrentUser || loadingGroups || !currentUser;
 
@@ -162,10 +281,10 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const location = useDecryptedLocation();
 
   const mainMenuItems = menuItems.filter(
-    (item) => item.id !== 'administration' && userCanAccess(item.permission),
+    (item) => item.section === 'main' && userCanAccess(item.permission),
   );
   const adminMenuItems = menuItems.filter(
-    (item) => item.id === 'administration' && userCanAccess(item.permission),
+    (item) => item.section === 'admin' && userCanAccess(item.permission),
   );
 
   return (
@@ -205,7 +324,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
                   ? location.pathname === '/'
                   : location.pathname.startsWith(item.path);
                 return (
-                  <li key={item.id}>
+                  <li key={item.key}>
                     <SecureNavLink
                       to={item.path}
                       className={`relative flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
@@ -243,7 +362,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
                   ? location.pathname === '/'
                   : location.pathname.startsWith(item.path);
                 return (
-                  <li key={item.id}>
+                  <li key={item.key}>
                     <SecureNavLink
                       to={item.path}
                       className={`flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
