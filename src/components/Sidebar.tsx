@@ -67,6 +67,7 @@ const SIDEBAR_MODULE_CONFIGS: SidebarModuleConfig[] = [
     path: '/qui',
     permission: 'qui',
     section: 'main',
+    moduleKeys: ['qui', 'col'],
   },
   {
     key: 'catalogue',
@@ -189,6 +190,7 @@ const SIDEBAR_MODULE_CONFIGS: SidebarModuleConfig[] = [
     path: '/administration',
     permission: 'administration',
     section: 'admin',
+    moduleKeys: ['administration', 'admin'],
   },
 ];
 
@@ -319,6 +321,51 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     useUserModulePermissions(databaseUserId);
   const userPermissions = useMemo(() => userPermissionsData ?? [], [userPermissionsData]);
 
+  const deniedModuleIds = useMemo(() => {
+    if (!userPermissions.length) {
+      return new Set<string>();
+    }
+
+    const denied = new Set<string>();
+
+    userPermissions.forEach((permission) => {
+      if (permission.canView !== false || !permission.moduleId) {
+        return;
+      }
+
+      const normalizedModuleId = normalizeRecordIdentifier(permission.moduleId);
+      if (!normalizedModuleId) {
+        return;
+      }
+
+      denied.add(normalizedModuleId);
+    });
+
+    return denied;
+  }, [userPermissions]);
+
+  const effectiveModules = useMemo(() => {
+    if (!modules) {
+      return undefined;
+    }
+
+    if (!deniedModuleIds.size) {
+      return modules;
+    }
+
+    return modules.map((module) => {
+      const moduleId = normalizeRecordIdentifier(module.id);
+      if (moduleId && deniedModuleIds.has(moduleId)) {
+        return {
+          ...module,
+          isActive: false,
+        };
+      }
+
+      return module;
+    });
+  }, [modules, deniedModuleIds]);
+
   const accessiblePermissions = useMemo(() => {
     if (!currentUser) {
       return new Set<PermissionKey>();
@@ -327,12 +374,12 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   }, [currentUser, groups]);
 
   const moduleMaps = useMemo(() => {
-    if (!modules) {
+    if (!effectiveModules) {
       return null;
     }
     const byKey = new Map<string, (typeof modules)[number]>();
     const byId = new Map<string, (typeof modules)[number]>();
-    modules.forEach((module) => {
+    effectiveModules.forEach((module) => {
       if (module.isActive === false) {
         return;
       }
@@ -351,49 +398,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       });
     });
     return { byKey, byId };
-  }, [modules]);
-
-  const deniedModuleKeys = useMemo(() => {
-    if (!moduleMaps) {
-      return null;
-    }
-
-    if (!userPermissions.length) {
-      return new Set<string>();
-    }
-
-    const deniedKeys = new Set<string>();
-
-    userPermissions.forEach((permission) => {
-      if (permission.canView !== false || !permission.moduleId) {
-        return;
-      }
-
-      const normalizedModuleId = normalizeRecordIdentifier(permission.moduleId);
-      if (!normalizedModuleId) {
-        return;
-      }
-
-      const module = moduleMaps.byId.get(normalizedModuleId);
-      if (!module) {
-        deniedKeys.add(normalizeModuleKey(normalizedModuleId));
-        return;
-      }
-
-      const rawNameValue = module.metadata?.rawName;
-      const rawName = typeof rawNameValue === 'string' ? rawNameValue : undefined;
-      const candidateKeys = [module.key, module.slug, rawName, normalizedModuleId];
-
-      candidateKeys.forEach((key) => {
-        if (!key) {
-          return;
-        }
-        deniedKeys.add(normalizeModuleKey(key));
-      });
-    });
-
-    return deniedKeys;
-  }, [moduleMaps, userPermissions]);
+  }, [effectiveModules]);
 
   const permissionsReady = !databaseUserId || !loadingUserPermissions;
 
@@ -404,36 +409,11 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
 
     return SIDEBAR_MODULE_CONFIGS.filter((config) => {
       if (!moduleMaps) {
-        return true;
+        return config.alwaysVisible ?? true;
       }
+
       const normalizedKeys = config.moduleKeys ?? [config.key];
-      if (config.alwaysVisible) {
-        if (!deniedModuleKeys || deniedModuleKeys.size === 0) {
-          return true;
-        }
-        const isCompletelyDenied = normalizedKeys.every((key) =>
-          deniedModuleKeys.has(normalizeModuleKey(key)),
-        );
-        return !isCompletelyDenied;
-      }
-
-      const hasActiveModule = normalizedKeys.some((key) =>
-        moduleMaps.byKey.has(normalizeModuleKey(key)),
-      );
-
-      if (!hasActiveModule) {
-        return false;
-      }
-
-      if (!deniedModuleKeys || deniedModuleKeys.size === 0) {
-        return true;
-      }
-
-      const isCompletelyDenied = normalizedKeys.every((key) =>
-        deniedModuleKeys.has(normalizeModuleKey(key)),
-      );
-
-      return !isCompletelyDenied;
+      return normalizedKeys.some((key) => moduleMaps.byKey.has(normalizeModuleKey(key)));
     }).map((config) => {
       const module = moduleMaps
         ? (config.moduleKeys ?? [config.key])
@@ -442,11 +422,11 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
         : undefined;
       return {
         ...config,
-        label: module?.displayName ?? config.label,
+        label: module?.description ?? module?.displayName ?? config.label,
         badge: config.getBadge?.({ jobCount }),
       };
     });
-  }, [permissionsReady, moduleMaps, deniedModuleKeys, jobCount]);
+  }, [permissionsReady, moduleMaps, jobCount]);
 
   const showAllMenus = loadingCurrentUser || loadingGroups || !currentUser;
 
