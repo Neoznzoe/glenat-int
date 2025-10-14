@@ -30,7 +30,7 @@ import {
 } from '@/hooks/useAdminData';
 import { computeEffectivePermissions } from '@/lib/mockDb';
 import { BASE_PERMISSIONS, PERMISSION_DEFINITIONS } from '@/lib/access-control';
-import type { PermissionKey } from '@/lib/access-control';
+import type { PermissionDefinition, PermissionKey } from '@/lib/access-control';
 import { useDecryptedLocation } from '@/lib/secureRouting';
 import { SecureNavLink } from '@/components/routing/SecureLink';
 
@@ -189,6 +189,17 @@ function normalizePermissionAlias(value: unknown): string | null {
     .toLowerCase();
 }
 
+function toModuleIdentifier(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : undefined;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value.toString();
+  }
+  return undefined;
+}
+
 interface SidebarProps {
   jobCount?: number;
   onExpandChange?: (expanded: boolean) => void;
@@ -226,74 +237,49 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     [permissionDefinitions],
   );
 
-  const modulePermissionMap = useMemo(() => {
-    const map = new Map<string, PermissionKey>();
+  const definitionLookups = useMemo(() => {
+    const moduleDefinitions = new Map<string, PermissionDefinition>();
+    const pageDefinitions = new Map<string, PermissionDefinition>();
 
-    const register = (value: unknown, key: PermissionKey, force = false) => {
-      const normalized = normalizePermissionAlias(value);
+    const register = (
+      map: Map<string, PermissionDefinition>,
+      alias: unknown,
+      definition: PermissionDefinition,
+      force = false,
+    ) => {
+      const normalized = normalizePermissionAlias(alias);
       if (!normalized) {
         return;
       }
       if (!force && map.has(normalized)) {
         return;
       }
-      map.set(normalized, key);
+      map.set(normalized, definition);
     };
 
-    for (const legacy of PERMISSION_DEFINITIONS) {
-      if (legacy.type && legacy.type !== 'module') {
-        continue;
+    const registerDefinition = (definition: PermissionDefinition, force = false) => {
+      const targetMap =
+        definition.type === 'page' || definition.parentKey ? pageDefinitions : moduleDefinitions;
+      register(targetMap, definition.key, definition, force);
+      register(targetMap, definition.label, definition, force);
+      const metadata = definition.metadata ?? {};
+      register(targetMap, metadata.id, definition, force);
+      register(targetMap, metadata.slug, definition, force);
+      register(targetMap, metadata.moduleId, definition, force);
+      if (definition.type === 'page' && definition.parentKey) {
+        register(targetMap, `${definition.parentKey}:${metadata.slug}`, definition, force);
       }
-      register(legacy.key, legacy.key);
-      register(legacy.label, legacy.key);
-    }
+    };
 
     for (const definition of resolvedPermissionDefinitions) {
-      if (definition.type && definition.type !== 'module') {
-        continue;
-      }
-      register(definition.key, definition.key, true);
-      register(definition.label, definition.key, true);
-      if (definition.metadata) {
-        const { id, slug } = definition.metadata;
-        if (slug) {
-          register(slug, definition.key, true);
-        }
-        if (typeof id === 'number' || typeof id === 'string') {
-          register(id, definition.key, true);
-        }
-      }
+      registerDefinition(definition, true);
     }
 
     for (const legacy of PERMISSION_DEFINITIONS) {
-      if (legacy.type && legacy.type !== 'module') {
-        continue;
-      }
-      const normalizedLabel = normalizePermissionAlias(legacy.label);
-      if (!normalizedLabel) {
-        continue;
-      }
-      const resolvedKey = map.get(normalizedLabel);
-      if (resolvedKey) {
-        register(legacy.key, resolvedKey, true);
-      }
+      registerDefinition(legacy, false);
     }
 
-    return map;
-  }, [resolvedPermissionDefinitions]);
-
-  const permissionKeyToModuleId = useMemo(() => {
-    const map = new Map<PermissionKey, string>();
-    for (const definition of resolvedPermissionDefinitions) {
-      if (definition.type && definition.type !== 'module') {
-        continue;
-      }
-      const metadataId = definition.metadata?.id;
-      if (typeof metadataId === 'string' || typeof metadataId === 'number') {
-        map.set(definition.key as PermissionKey, metadataId.toString());
-      }
-    }
-    return map;
+    return { modules: moduleDefinitions, pages: pageDefinitions };
   }, [resolvedPermissionDefinitions]);
 
   const resolvePermissionKey = useCallback(
@@ -303,23 +289,31 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
         if (!normalized) {
           continue;
         }
-        const resolved = modulePermissionMap.get(normalized);
-        if (resolved) {
-          return resolved;
+        const pageDefinition = definitionLookups.pages.get(normalized);
+        if (pageDefinition?.parentKey) {
+          return pageDefinition.parentKey as PermissionKey;
+        }
+        const moduleDefinition = definitionLookups.modules.get(normalized);
+        if (moduleDefinition) {
+          return moduleDefinition.key as PermissionKey;
         }
       }
 
       const normalizedFallback = normalizePermissionAlias(fallbackKey);
       if (normalizedFallback) {
-        const resolvedFallback = modulePermissionMap.get(normalizedFallback);
-        if (resolvedFallback) {
-          return resolvedFallback;
+        const pageDefinition = definitionLookups.pages.get(normalizedFallback);
+        if (pageDefinition?.parentKey) {
+          return pageDefinition.parentKey as PermissionKey;
+        }
+        const moduleDefinition = definitionLookups.modules.get(normalizedFallback);
+        if (moduleDefinition) {
+          return moduleDefinition.key as PermissionKey;
         }
       }
 
       return fallbackKey;
     },
-    [modulePermissionMap],
+    [definitionLookups.modules, definitionLookups.pages],
   );
 
   const resolvedBasePermissions = useMemo(() => {
@@ -332,16 +326,78 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
 
   const resolvedMenuItems = useMemo<SidebarMenuItem[]>(() => {
     return MENU_ITEM_CONFIG.map((item) => {
-      const aliases = [item.label, item.id, ...(item.aliases ?? [])];
-      const permission = resolvePermissionKey(item.permission, aliases);
+      const pathSegments = item.path
+        .split('/')
+        .map((segment) => segment.trim())
+        .filter((segment) => segment.length > 0);
+      const aliases = [
+        item.label,
+        item.id,
+        ...pathSegments,
+        ...(item.aliases ?? []),
+        item.permission,
+      ];
+
+      let permission = resolvePermissionKey(item.permission, aliases);
+      let resolvedLabel = item.label;
+      let resolvedModuleId: string | undefined;
+
+      const definitionCandidates = aliases
+        .map((candidate) => normalizePermissionAlias(candidate))
+        .filter((candidate): candidate is string => Boolean(candidate));
+
+      for (const candidate of definitionCandidates) {
+        const pageDefinition = definitionLookups.pages.get(candidate);
+        if (pageDefinition) {
+          if (pageDefinition.label) {
+            resolvedLabel = pageDefinition.label;
+          }
+          const metadata = pageDefinition.metadata ?? {};
+          resolvedModuleId =
+            toModuleIdentifier(metadata.moduleId) ?? toModuleIdentifier(metadata.id) ??
+            resolvedModuleId;
+          if (pageDefinition.parentKey) {
+            permission = pageDefinition.parentKey as PermissionKey;
+          }
+          break;
+        }
+
+        const moduleDefinition = definitionLookups.modules.get(candidate);
+        if (moduleDefinition) {
+          if (moduleDefinition.label) {
+            resolvedLabel = moduleDefinition.label;
+          }
+          const metadata = moduleDefinition.metadata ?? {};
+          resolvedModuleId =
+            toModuleIdentifier(metadata.id) ?? toModuleIdentifier(metadata.moduleId) ??
+            resolvedModuleId;
+          permission = moduleDefinition.key as PermissionKey;
+          break;
+        }
+      }
+
+      if (!resolvedModuleId) {
+        const fallbackAlias = normalizePermissionAlias(permission);
+        if (fallbackAlias) {
+          const moduleDefinition = definitionLookups.modules.get(fallbackAlias);
+          const metadata = moduleDefinition?.metadata ?? {};
+          resolvedModuleId =
+            toModuleIdentifier(metadata.id) ?? toModuleIdentifier(metadata.moduleId) ?? undefined;
+          if (moduleDefinition?.label) {
+            resolvedLabel = moduleDefinition.label;
+          }
+        }
+      }
+
       return {
         ...item,
+        label: resolvedLabel,
         permission,
         badge: item.usesJobCountBadge ? jobCount : undefined,
-        moduleId: permissionKeyToModuleId.get(permission),
+        moduleId: resolvedModuleId,
       };
     });
-  }, [jobCount, resolvePermissionKey, permissionKeyToModuleId]);
+  }, [definitionLookups.modules, definitionLookups.pages, jobCount, resolvePermissionKey]);
 
   const isAccessControlLoading =
     loadingCurrentUser || loadingGroups || loadingPermissions || loadingModuleOverrides;
