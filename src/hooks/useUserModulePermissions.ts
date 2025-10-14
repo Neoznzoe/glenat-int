@@ -41,7 +41,7 @@ export function useUserModulePermissions(userId?: string) {
 
   return useQuery<UserPermissionRecord[]>({
     queryKey: [...USER_PERMISSIONS_QUERY_KEY, normalizedUserId ?? 'anonymous'],
-    queryFn: fetchUserPermissions,
+    queryFn: () => fetchUserPermissions(normalizedUserId ?? undefined),
     enabled: Boolean(normalizedUserId),
     staleTime: 5 * 60 * 1000,
     retry: 1,

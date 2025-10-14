@@ -204,6 +204,103 @@ function normalizeRecordIdentifier(value: string | undefined): string | undefine
   return trimmed.length ? trimmed : undefined;
 }
 
+function toDatabaseUserIdCandidate(value: unknown): string | undefined {
+  if (typeof value === 'number') {
+    if (Number.isFinite(value) && Number.isInteger(value) && value >= 0) {
+      return String(value);
+    }
+    return undefined;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+    if (/^[0-9]+$/.test(trimmed)) {
+      const parsed = Number.parseInt(trimmed, 10);
+      if (Number.isSafeInteger(parsed)) {
+        return String(parsed);
+      }
+    }
+  }
+  return undefined;
+}
+
+function findNestedDatabaseUserId(
+  value: unknown,
+  visited: Set<unknown> = new Set<unknown>(),
+): string | undefined {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value === 'number' || typeof value === 'string') {
+    return toDatabaseUserIdCandidate(value);
+  }
+
+  if (visited.has(value)) {
+    return undefined;
+  }
+  visited.add(value);
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const candidate = findNestedDatabaseUserId(item, visited);
+      if (candidate) {
+        return candidate;
+      }
+    }
+    return undefined;
+  }
+
+  if (typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>);
+
+    for (const [key, nested] of entries) {
+      if (key.toLowerCase() === 'userid' || key.toLowerCase() === 'user_id') {
+        const candidate = toDatabaseUserIdCandidate(nested);
+        if (candidate) {
+          return candidate;
+        }
+      }
+    }
+
+    for (const [, nested] of entries) {
+      const candidate = findNestedDatabaseUserId(nested, visited);
+      if (candidate) {
+        return candidate;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function deriveDatabaseUserId(user: unknown): string | undefined {
+  if (!user || typeof user !== 'object') {
+    return undefined;
+  }
+
+  const directId = toDatabaseUserIdCandidate((user as { id?: unknown }).id);
+  if (directId) {
+    return directId;
+  }
+
+  const metadata = (user as { metadata?: unknown }).metadata;
+  const fromMetadata = findNestedDatabaseUserId(metadata);
+  if (fromMetadata) {
+    return fromMetadata;
+  }
+
+  const data = (user as { data?: unknown }).data;
+  const fromData = findNestedDatabaseUserId(data);
+  if (fromData) {
+    return fromData;
+  }
+
+  return findNestedDatabaseUserId(user);
+}
+
 export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const [isPinned, setIsPinned] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -217,8 +314,9 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
   const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
   const { data: modules } = useModules();
+  const databaseUserId = useMemo(() => deriveDatabaseUserId(currentUser), [currentUser]);
   const { data: userPermissionsData, isLoading: loadingUserPermissions } =
-    useUserModulePermissions(currentUser?.id);
+    useUserModulePermissions(databaseUserId);
   const userPermissions = useMemo(() => userPermissionsData ?? [], [userPermissionsData]);
 
   const accessiblePermissions = useMemo(() => {
@@ -297,7 +395,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     return deniedKeys;
   }, [moduleMaps, userPermissions]);
 
-  const permissionsReady = !currentUser?.id || !loadingUserPermissions;
+  const permissionsReady = !databaseUserId || !loadingUserPermissions;
 
   const menuItems = useMemo(() => {
     if (!permissionsReady) {

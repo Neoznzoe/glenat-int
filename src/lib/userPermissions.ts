@@ -192,13 +192,50 @@ function normalizeUserPermission(
   };
 }
 
-export async function fetchUserPermissions(): Promise<UserPermissionRecord[]> {
+function toDatabaseUserId(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (!/^[0-9]+$/.test(trimmed)) {
+    return null;
+  }
+  const parsed = Number.parseInt(trimmed, 10);
+  if (!Number.isSafeInteger(parsed)) {
+    return null;
+  }
+  return String(parsed);
+}
+
+function buildUserPermissionsQuery(userId?: string): string {
+  const databaseUserId = toDatabaseUserId(userId);
+  if (!databaseUserId) {
+    return USER_PERMISSIONS_QUERY;
+  }
+
+  return [
+    'SET NOCOUNT ON;',
+    'SELECT *',
+    'FROM [userPermissions]',
+    `WHERE [userId] = ${databaseUserId}`,
+    "  AND UPPER(LTRIM(RTRIM([permissionType]))) = 'MODULE';",
+  ].join('\n');
+}
+
+export async function fetchUserPermissions(
+  userId?: string,
+): Promise<UserPermissionRecord[]> {
+  const query = buildUserPermissionsQuery(userId);
+
   const response = await fetch(USER_PERMISSIONS_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ query: USER_PERMISSIONS_QUERY }),
+    body: JSON.stringify({ query }),
   });
 
   if (!response.ok) {
