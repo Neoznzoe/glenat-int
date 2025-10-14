@@ -21,11 +21,10 @@ import {
   LayoutGrid,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoG from '../assets/logos/glenat/glenat_G.svg';
-import { useCurrentUser, useAdminGroups, usePermissionDefinitions } from '@/hooks/useAdminData';
-import { computeEffectivePermissions } from '@/lib/mockDb';
+import { useCurrentUser, usePermissionDefinitions } from '@/hooks/useAdminData';
 import type { PermissionDefinition, PermissionKey } from '@/lib/access-control';
 import { useDecryptedLocation } from '@/lib/secureRouting';
 import { SecureNavLink } from '@/components/routing/SecureLink';
@@ -142,6 +141,30 @@ function humanizeKey(value: string): string {
     .join(' ');
 }
 
+function isTruthy(value: unknown): boolean {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'number') {
+    return value !== 0;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return false;
+    }
+    return ['1', 'true', 'oui', 'yes', 'on', 'actif', 'active'].includes(normalized);
+  }
+  return false;
+}
+
+function normalizePermissionKey(value: PermissionKey | undefined): PermissionKey | null {
+  if (!value) {
+    return null;
+  }
+  return value.trim().toLowerCase() as PermissionKey;
+}
+
 function createMenuItem(
   key: string,
   definition: PermissionDefinition | undefined,
@@ -158,6 +181,13 @@ function createMenuItem(
     (normalizedSlug ? MODULE_CONFIGS[normalizedSlug] : undefined);
   if (!definition && !config) {
     return null;
+  }
+
+  if (definition?.metadata && 'isActive' in definition.metadata) {
+    const rawActive = definition.metadata.isActive;
+    if (!isTruthy(rawActive)) {
+      return null;
+    }
   }
 
   const resolvedKey = (definition?.key ?? key) as PermissionKey;
@@ -228,32 +258,62 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   }, [isExpanded, onExpandChange]);
 
   const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
-  const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
   const { data: permissionDefinitions, isLoading: loadingPermissions } = usePermissionDefinitions();
 
-  const accessiblePermissions = useMemo(() => {
-    if (!currentUser) {
-      return new Set<PermissionKey>();
+  const isLoadingData = loadingCurrentUser || loadingPermissions;
+
+  const { allowedPermissions, deniedPermissions } = useMemo(() => {
+    const overrides = currentUser?.permissionOverrides ?? [];
+    const allowed = new Set<PermissionKey>();
+    const denied = new Set<PermissionKey>();
+
+    for (const override of overrides) {
+      const normalized = normalizePermissionKey(override.key);
+      if (!normalized) {
+        continue;
+      }
+      if (override.mode === 'allow') {
+        allowed.add(normalized);
+      } else if (override.mode === 'deny') {
+        denied.add(normalized);
+      }
     }
-    return new Set(computeEffectivePermissions(currentUser, groups));
-  }, [currentUser, groups]);
+
+    return { allowedPermissions: allowed, deniedPermissions: denied };
+  }, [currentUser?.permissionOverrides]);
 
   const menuItems = useMemo(
     () => buildMenuItems(permissionDefinitions, { jobCount }),
     [permissionDefinitions, jobCount],
   );
 
-  const showAllMenus = loadingCurrentUser || loadingGroups || loadingPermissions || !currentUser;
+  const userCanAccess = useCallback(
+    (permission: PermissionKey) => {
+      if (isLoadingData || !currentUser) {
+        return false;
+      }
 
-  const userCanAccess = (permission: PermissionKey) => {
-    if (showAllMenus) {
+      if (currentUser.isSuperAdmin) {
+        return true;
+      }
+
+      const normalized = normalizePermissionKey(permission);
+      if (!normalized) {
+        return false;
+      }
+
+      if (deniedPermissions.has(normalized)) {
+        return false;
+      }
+
+      if (allowedPermissions.size > 0) {
+        return allowedPermissions.has(normalized);
+      }
+
       return true;
-    }
-    if (currentUser?.isSuperAdmin) {
-      return true;
-    }
-    return accessiblePermissions.has(permission);
-  };
+    },
+    [allowedPermissions, deniedPermissions, currentUser, isLoadingData],
+  );
 
   const location = useDecryptedLocation();
 
