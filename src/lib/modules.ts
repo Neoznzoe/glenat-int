@@ -12,6 +12,7 @@ export interface ModuleRecord {
   id: string;
   key: string;
   slug: string;
+  moduleId?: string;
   displayName?: string;
   description?: string;
   isActive?: boolean;
@@ -42,20 +43,23 @@ function toNonEmptyString(value: unknown): string | undefined {
   return undefined;
 }
 
-function normalizeId(value: unknown, index: number): string {
-  const candidate = toNonEmptyString(value);
-  if (candidate) {
-    return candidate;
-  }
-  return `module-${index + 1}`;
-}
-
 function normalizeKey(value: string): string {
   return value
     .trim()
     .toLowerCase()
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-]/g, '');
+}
+
+function toRecordIdentifier(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : undefined;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value.toString();
+  }
+  return undefined;
 }
 
 function toOptionalBoolean(value: unknown): boolean | undefined {
@@ -155,10 +159,15 @@ function normalizeModule(record: RawModuleRecord, index: number): ModuleRecord |
     return null;
   }
 
-  const id = normalizeId(
-    record.id ?? (record as Record<string, unknown>).ID ?? record.moduleId ?? record.ModuleId,
-    index,
-  );
+  const rawModuleId =
+    toRecordIdentifier(record.moduleId ?? (record as Record<string, unknown>).ModuleId ?? (record as Record<string, unknown>).moduleID ?? (record as Record<string, unknown>).ModuleID) ??
+    undefined;
+
+  const rawIdCandidate =
+    toRecordIdentifier(record.id ?? (record as Record<string, unknown>).ID ?? (record as Record<string, unknown>).Id) ??
+    undefined;
+
+  const id = rawIdCandidate ?? rawModuleId ?? `module-${index + 1}`;
   const slug = normalizeKey(rawName);
 
   const displayName =
@@ -181,6 +190,7 @@ function normalizeModule(record: RawModuleRecord, index: number): ModuleRecord |
   const knownKeys = new Set([
     'id',
     'ID',
+    'Id',
     'moduleId',
     'ModuleId',
     'moduleID',
@@ -213,6 +223,7 @@ function normalizeModule(record: RawModuleRecord, index: number): ModuleRecord |
     id,
     key: slug,
     slug,
+    moduleId: rawModuleId ?? rawIdCandidate ?? undefined,
     displayName,
     description,
     isActive,

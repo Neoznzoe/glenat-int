@@ -321,27 +321,30 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     useUserModulePermissions(databaseUserId);
   const userPermissions = useMemo(() => userPermissionsData ?? [], [userPermissionsData]);
 
-  const deniedModuleIds = useMemo(() => {
+  const userPermissionsByModuleId = useMemo(() => {
     if (!userPermissions.length) {
-      return new Set<string>();
+      return new Map<string, boolean>();
     }
 
-    const denied = new Set<string>();
+    const visibilityByModule = new Map<string, boolean>();
 
     userPermissions.forEach((permission) => {
-      if (permission.canView !== false || !permission.moduleId) {
+      const moduleId = normalizeRecordIdentifier(permission.moduleId);
+      if (!moduleId) {
         return;
       }
 
-      const normalizedModuleId = normalizeRecordIdentifier(permission.moduleId);
-      if (!normalizedModuleId) {
+      if (permission.canView === true) {
+        visibilityByModule.set(moduleId, true);
         return;
       }
 
-      denied.add(normalizedModuleId);
+      if (permission.canView === false) {
+        visibilityByModule.set(moduleId, false);
+      }
     });
 
-    return denied;
+    return visibilityByModule;
   }, [userPermissions]);
 
   const effectiveModules = useMemo(() => {
@@ -349,22 +352,40 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       return undefined;
     }
 
-    if (!deniedModuleIds.size) {
+    if (!userPermissionsByModuleId.size) {
       return modules;
     }
 
     return modules.map((module) => {
-      const moduleId = normalizeRecordIdentifier(module.id);
-      if (moduleId && deniedModuleIds.has(moduleId)) {
+      const identifiers = [
+        normalizeRecordIdentifier(module.moduleId),
+        normalizeRecordIdentifier(module.id),
+      ].filter((value): value is string => Boolean(value));
+
+      const decision = identifiers.reduce<boolean | undefined>((choice, identifier) => {
+        if (choice !== undefined) {
+          return choice;
+        }
+        return userPermissionsByModuleId.get(identifier);
+      }, undefined);
+
+      if (decision === false) {
         return {
           ...module,
           isActive: false,
         };
       }
 
+      if (decision === true) {
+        return {
+          ...module,
+          isActive: module.isActive ?? true,
+        };
+      }
+
       return module;
     });
-  }, [modules, deniedModuleIds]);
+  }, [modules, userPermissionsByModuleId]);
 
   const accessiblePermissions = useMemo(() => {
     if (!currentUser) {
@@ -383,13 +404,20 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       if (module.isActive === false) {
         return;
       }
+      const identifiers = new Set<string>();
       const normalizedId = normalizeRecordIdentifier(module.id);
       if (normalizedId) {
         byId.set(normalizedId, module);
+        identifiers.add(normalizedId);
+      }
+      const normalizedModuleId = normalizeRecordIdentifier(module.moduleId);
+      if (normalizedModuleId) {
+        byId.set(normalizedModuleId, module);
+        identifiers.add(normalizedModuleId);
       }
       const rawNameValue = module.metadata?.rawName;
       const rawName = typeof rawNameValue === 'string' ? rawNameValue : undefined;
-      const keys = new Set<string>([module.key, module.slug, rawName ?? '', normalizedId ?? '']);
+      const keys = new Set<string>([module.key, module.slug, rawName ?? '', ...identifiers]);
       keys.forEach((key) => {
         if (!key) {
           return;
@@ -413,11 +441,31 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       }
 
       const normalizedKeys = config.moduleKeys ?? [config.key];
-      return normalizedKeys.some((key) => moduleMaps.byKey.has(normalizeModuleKey(key)));
+      const matches = normalizedKeys.some((key) => {
+        const keyMatch = moduleMaps.byKey.has(normalizeModuleKey(key));
+        if (keyMatch) {
+          return true;
+        }
+        const identifier = normalizeRecordIdentifier(key);
+        return identifier ? moduleMaps.byId.has(identifier) : false;
+      });
+
+      if (matches) {
+        return true;
+      }
+
+      return config.alwaysVisible ?? false;
     }).map((config) => {
       const module = moduleMaps
         ? (config.moduleKeys ?? [config.key])
-            .map((key) => moduleMaps.byKey.get(normalizeModuleKey(key)))
+            .map((key) => {
+              const keyMatch = moduleMaps.byKey.get(normalizeModuleKey(key));
+              if (keyMatch) {
+                return keyMatch;
+              }
+              const identifier = normalizeRecordIdentifier(key);
+              return identifier ? moduleMaps.byId.get(identifier) : undefined;
+            })
             .find(Boolean)
         : undefined;
       return {
@@ -427,6 +475,40 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       };
     });
   }, [permissionsReady, moduleMaps, jobCount]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || !moduleMaps) {
+      return;
+    }
+
+    SIDEBAR_MODULE_CONFIGS.forEach((config) => {
+      const module = (config.moduleKeys ?? [config.key])
+        .map((key) => {
+          const keyMatch = moduleMaps.byKey.get(normalizeModuleKey(key));
+          if (keyMatch) {
+            return keyMatch;
+          }
+          const identifier = normalizeRecordIdentifier(key);
+          return identifier ? moduleMaps.byId.get(identifier) : undefined;
+        })
+        .find(Boolean);
+
+      if (!module) {
+        console.warn(`Module non trouvé dans la DB: ${config.key}`);
+        return;
+      }
+
+      const identifiers = [
+        normalizeRecordIdentifier(module.moduleId),
+        normalizeRecordIdentifier(module.id),
+      ].filter((value): value is string => Boolean(value));
+
+      const denied = identifiers.some((identifier) => userPermissionsByModuleId.get(identifier) === false);
+      if (denied) {
+        console.log(`🚫 Accès refusé: ${config.key} (moduleId: ${module.moduleId ?? module.id})`);
+      }
+    });
+  }, [moduleMaps, userPermissionsByModuleId]);
 
   const showAllMenus = loadingCurrentUser || loadingGroups || !currentUser;
 
