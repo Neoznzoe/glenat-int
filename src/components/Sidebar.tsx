@@ -25,6 +25,7 @@ import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoG from '../assets/logos/glenat/glenat_G.svg';
 import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
 import { useModules } from '@/hooks/useModules';
+import { useUserModulePermissions } from '@/hooks/useUserModulePermissions';
 import { computeEffectivePermissions } from '@/lib/mockDb';
 import type { PermissionKey } from '@/lib/access-control';
 import { useDecryptedLocation } from '@/lib/secureRouting';
@@ -195,6 +196,14 @@ function normalizeModuleKey(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 }
 
+function normalizeRecordIdentifier(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+}
+
 export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const [isPinned, setIsPinned] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -208,6 +217,9 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
   const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
   const { data: modules } = useModules();
+  const { data: userPermissionsData, isLoading: loadingUserPermissions } =
+    useUserModulePermissions(currentUser?.id);
+  const userPermissions = useMemo(() => userPermissionsData ?? [], [userPermissionsData]);
 
   const accessiblePermissions = useMemo(() => {
     if (!currentUser) {
@@ -216,46 +228,118 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     return new Set(computeEffectivePermissions(currentUser, groups));
   }, [currentUser, groups]);
 
-  const moduleMap = useMemo(() => {
+  const moduleMaps = useMemo(() => {
     if (!modules) {
       return null;
     }
-    const map = new Map<string, (typeof modules)[number]>();
+    const byKey = new Map<string, (typeof modules)[number]>();
+    const byId = new Map<string, (typeof modules)[number]>();
     modules.forEach((module) => {
       if (module.isActive === false) {
         return;
       }
+      const normalizedId = normalizeRecordIdentifier(module.id);
+      if (normalizedId) {
+        byId.set(normalizedId, module);
+      }
       const rawNameValue = module.metadata?.rawName;
       const rawName = typeof rawNameValue === 'string' ? rawNameValue : undefined;
-      const keys = new Set<string>([
-        module.key,
-        module.slug,
-        rawName ?? '',
-      ]);
+      const keys = new Set<string>([module.key, module.slug, rawName ?? '', normalizedId ?? '']);
       keys.forEach((key) => {
         if (!key) {
           return;
         }
-        map.set(normalizeModuleKey(key), module);
+        byKey.set(normalizeModuleKey(key), module);
       });
     });
-    return map;
+    return { byKey, byId };
   }, [modules]);
 
+  const deniedModuleKeys = useMemo(() => {
+    if (!moduleMaps) {
+      return null;
+    }
+
+    if (!userPermissions.length) {
+      return new Set<string>();
+    }
+
+    const deniedKeys = new Set<string>();
+
+    userPermissions.forEach((permission) => {
+      if (permission.canView !== false || !permission.moduleId) {
+        return;
+      }
+
+      const normalizedModuleId = normalizeRecordIdentifier(permission.moduleId);
+      if (!normalizedModuleId) {
+        return;
+      }
+
+      const module = moduleMaps.byId.get(normalizedModuleId);
+      if (!module) {
+        deniedKeys.add(normalizeModuleKey(normalizedModuleId));
+        return;
+      }
+
+      const rawNameValue = module.metadata?.rawName;
+      const rawName = typeof rawNameValue === 'string' ? rawNameValue : undefined;
+      const candidateKeys = [module.key, module.slug, rawName, normalizedModuleId];
+
+      candidateKeys.forEach((key) => {
+        if (!key) {
+          return;
+        }
+        deniedKeys.add(normalizeModuleKey(key));
+      });
+    });
+
+    return deniedKeys;
+  }, [moduleMaps, userPermissions]);
+
+  const permissionsReady = !currentUser?.id || !loadingUserPermissions;
+
   const menuItems = useMemo(() => {
+    if (!permissionsReady) {
+      return [] as Array<SidebarModuleConfig & { label: string; badge?: number }>;
+    }
+
     return SIDEBAR_MODULE_CONFIGS.filter((config) => {
-      if (!moduleMap) {
+      if (!moduleMaps) {
         return true;
       }
+      const normalizedKeys = config.moduleKeys ?? [config.key];
       if (config.alwaysVisible) {
+        if (!deniedModuleKeys || deniedModuleKeys.size === 0) {
+          return true;
+        }
+        const isCompletelyDenied = normalizedKeys.every((key) =>
+          deniedModuleKeys.has(normalizeModuleKey(key)),
+        );
+        return !isCompletelyDenied;
+      }
+
+      const hasActiveModule = normalizedKeys.some((key) =>
+        moduleMaps.byKey.has(normalizeModuleKey(key)),
+      );
+
+      if (!hasActiveModule) {
+        return false;
+      }
+
+      if (!deniedModuleKeys || deniedModuleKeys.size === 0) {
         return true;
       }
-      const keys = config.moduleKeys ?? [config.key];
-      return keys.some((key) => moduleMap.has(normalizeModuleKey(key)));
+
+      const isCompletelyDenied = normalizedKeys.every((key) =>
+        deniedModuleKeys.has(normalizeModuleKey(key)),
+      );
+
+      return !isCompletelyDenied;
     }).map((config) => {
-      const module = moduleMap
+      const module = moduleMaps
         ? (config.moduleKeys ?? [config.key])
-            .map((key) => moduleMap.get(normalizeModuleKey(key)))
+            .map((key) => moduleMaps.byKey.get(normalizeModuleKey(key)))
             .find(Boolean)
         : undefined;
       return {
@@ -264,7 +348,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
         badge: config.getBadge?.({ jobCount }),
       };
     });
-  }, [moduleMap, jobCount]);
+  }, [permissionsReady, moduleMaps, deniedModuleKeys, jobCount]);
 
   const showAllMenus = loadingCurrentUser || loadingGroups || !currentUser;
 
