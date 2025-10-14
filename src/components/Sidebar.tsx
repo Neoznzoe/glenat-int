@@ -24,7 +24,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoG from '../assets/logos/glenat/glenat_G.svg';
 import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
-import { useModules } from '@/hooks/useModules';
+import { useModules, type ModuleRecord } from '@/hooks/useModules';
 import { useUserModulePermissions } from '@/hooks/useUserModulePermissions';
 import { computeEffectivePermissions } from '@/lib/mockDb';
 import type { PermissionKey } from '@/lib/access-control';
@@ -377,8 +377,8 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     if (!effectiveModules) {
       return null;
     }
-    const byKey = new Map<string, (typeof modules)[number]>();
-    const byId = new Map<string, (typeof modules)[number]>();
+    const byKey = new Map<string, ModuleRecord>();
+    const byId = new Map<string, ModuleRecord>();
     effectiveModules.forEach((module) => {
       if (module.isActive === false) {
         return;
