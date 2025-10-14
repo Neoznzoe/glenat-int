@@ -18,19 +18,203 @@ import {
   LibraryBig,
   Newspaper,
   Store,
+  LayoutGrid,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoG from '../assets/logos/glenat/glenat_G.svg';
-import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
+import { useCurrentUser, useAdminGroups, usePermissionDefinitions } from '@/hooks/useAdminData';
 import { computeEffectivePermissions } from '@/lib/mockDb';
-import type { PermissionKey } from '@/lib/access-control';
+import type { PermissionDefinition, PermissionKey } from '@/lib/access-control';
 import { useDecryptedLocation } from '@/lib/secureRouting';
 import { SecureNavLink } from '@/components/routing/SecureLink';
 
 interface SidebarProps {
   jobCount?: number;
   onExpandChange?: (expanded: boolean) => void;
+}
+
+interface SidebarMenuItem {
+  id: string;
+  icon: LucideIcon;
+  label: string;
+  path: string;
+  permission: PermissionKey;
+  badge?: number;
+  section: 'main' | 'admin';
+}
+
+interface ModuleConfig {
+  id?: string;
+  label?: string;
+  path?: string;
+  icon?: LucideIcon;
+  section?: 'main' | 'admin';
+  permissionOverride?: PermissionKey;
+  getBadge?: (context: { jobCount?: number }) => number | undefined;
+}
+
+const DEFAULT_ICON: LucideIcon = LayoutGrid;
+
+const MODULE_CONFIGS: Record<string, ModuleConfig> = {
+  home: { id: 'home', label: 'Accueil', path: '/', icon: Home },
+  qui: { id: 'qui', label: 'Qui fait quoi', path: '/qui', icon: UserRoundSearch },
+  catalogue: {
+    id: 'catalogue',
+    label: 'Catalogue',
+    path: '/catalogue/offices',
+    icon: LibraryBig,
+  },
+  kiosque: {
+    id: 'kiosque',
+    label: 'Kiosque',
+    path: '/catalogue/kiosque',
+    icon: Store,
+    permissionOverride: 'catalogue',
+  },
+  doc: { id: 'doc', label: "Glénat'Doc", path: '/doc', icon: Files },
+  fee: { id: 'fee', label: "Glénat'Fée", path: '/fee', icon: Users },
+  agenda: { id: 'agenda', label: 'Agenda', path: '/agenda', icon: Calendar },
+  planning: { id: 'planning', label: 'Planning', path: '/planning', icon: CalendarDays },
+  contrats: { id: 'contrats', label: 'Contrats', path: '/contrats', icon: Signature },
+  rh: { id: 'rh', label: 'Ressources humaines', path: '/rh', icon: PersonStanding },
+  temps: {
+    id: 'temps',
+    label: 'Saisie des temps',
+    path: '/temps',
+    icon: CalendarClock,
+  },
+  atelier: { id: 'atelier', label: 'Travaux atelier', path: '/atelier', icon: Hammer },
+  espace: { id: 'espace', label: 'Mon espace', path: '/espace', icon: SquareUserRound },
+  emploi: {
+    id: 'emploi',
+    label: 'Emploi',
+    path: '/emploi',
+    icon: BriefcaseBusiness,
+    getBadge: ({ jobCount }) => jobCount,
+  },
+  annonces: {
+    id: 'annonces',
+    label: 'Petites annonces',
+    path: '/annonces',
+    icon: Newspaper,
+  },
+  services: { id: 'services', label: 'Services', path: '/services', icon: Info },
+  administration: {
+    id: 'administration',
+    label: 'Administration',
+    path: '/administration',
+    icon: Settings,
+    section: 'admin',
+  },
+};
+
+const MODULE_ORDER = [
+  'home',
+  'qui',
+  'catalogue',
+  'kiosque',
+  'doc',
+  'fee',
+  'agenda',
+  'planning',
+  'contrats',
+  'rh',
+  'temps',
+  'atelier',
+  'espace',
+  'emploi',
+  'annonces',
+  'services',
+  'administration',
+];
+
+function humanizeKey(value: string): string {
+  if (!value) {
+    return value;
+  }
+  const cleaned = value.replace(/^page:/, '').replace(/[_:-]+/g, ' ');
+  return cleaned
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function createMenuItem(
+  key: string,
+  definition: PermissionDefinition | undefined,
+  context: { jobCount?: number },
+): SidebarMenuItem | null {
+  const slug =
+    definition && typeof definition.metadata?.slug === 'string'
+      ? (definition.metadata.slug as string)
+      : undefined;
+  const normalizedSlug = slug?.toLowerCase();
+  const config =
+    MODULE_CONFIGS[key] ??
+    (slug ? MODULE_CONFIGS[slug] : undefined) ??
+    (normalizedSlug ? MODULE_CONFIGS[normalizedSlug] : undefined);
+  if (!definition && !config) {
+    return null;
+  }
+
+  const resolvedKey = (definition?.key ?? key) as PermissionKey;
+  const permission = config?.permissionOverride ?? resolvedKey;
+  const id = config?.id ?? definition?.key ?? key;
+  const icon = config?.icon ?? DEFAULT_ICON;
+  const label = definition?.label ?? config?.label ?? humanizeKey(key);
+  const basePath = config?.path ?? (definition ? `/${definition.key}` : undefined);
+  if (!basePath) {
+    return null;
+  }
+
+  const badge = config?.getBadge?.(context);
+
+  return {
+    id,
+    icon,
+    label,
+    path: basePath,
+    permission,
+    badge,
+    section: config?.section ?? 'main',
+  };
+}
+
+function buildMenuItems(
+  definitions: PermissionDefinition[] | undefined,
+  context: { jobCount?: number },
+): SidebarMenuItem[] {
+  const moduleDefinitions = (definitions ?? []).filter(
+    (definition) => definition.type !== 'page' && (definition.parentKey === null || definition.parentKey === undefined),
+  );
+
+  const definitionByKey = new Map(moduleDefinitions.map((definition) => [definition.key, definition]));
+  const items: SidebarMenuItem[] = [];
+  const seen = new Set<string>();
+
+  const addItem = (key: string, definition?: PermissionDefinition) => {
+    const item = createMenuItem(key, definition, context);
+    if (item) {
+      items.push(item);
+      seen.add(key);
+    }
+  };
+
+  for (const key of MODULE_ORDER) {
+    addItem(key, definitionByKey.get(key));
+  }
+
+  for (const definition of moduleDefinitions) {
+    if (seen.has(definition.key)) {
+      continue;
+    }
+    addItem(definition.key, definition);
+  }
+
+  return items;
 }
 
 export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
@@ -45,6 +229,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
 
   const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
   const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
+  const { data: permissionDefinitions, isLoading: loadingPermissions } = usePermissionDefinitions();
 
   const accessiblePermissions = useMemo(() => {
     if (!currentUser) {
@@ -53,101 +238,12 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     return new Set(computeEffectivePermissions(currentUser, groups));
   }, [currentUser, groups]);
 
-  const menuItems: Array<{
-    id: string;
-    icon: typeof Home;
-    label: string;
-    path: string;
-    permission: PermissionKey;
-    badge?: number;
-  }> = [
-    { id: 'home', icon: Home, label: 'Accueil', path: '/', permission: 'home' },
-    {
-      id: 'qui',
-      icon: UserRoundSearch,
-      label: 'Qui fait quoi',
-      path: '/qui',
-      permission: 'qui',
-    },
-    {
-      id: 'catalogue',
-      icon: LibraryBig,
-      label: 'Catalogue',
-      path: '/catalogue/offices',
-      permission: 'catalogue',
-    },
-    {
-      id: 'kiosque',
-      icon: Store,
-      label: 'Kiosque',
-      path: '/catalogue/kiosque',
-      permission: 'catalogue',
-    },
-    { id: 'doc', icon: Files, label: "Glénat'Doc", path: '/doc', permission: 'doc' },
-    { id: 'fee', icon: Users, label: "Glénat'Fée", path: '/fee', permission: 'fee' },
-    { id: 'agenda', icon: Calendar, label: 'Agenda', path: '/agenda', permission: 'agenda' },
-    {
-      id: 'planning',
-      icon: CalendarDays,
-      label: 'Planning',
-      path: '/planning',
-      permission: 'planning',
-    },
-    {
-      id: 'contrats',
-      icon: Signature,
-      label: 'Contrats',
-      path: '/contrats',
-      permission: 'contrats',
-    },
-    { id: 'rh', icon: PersonStanding, label: 'Ressources humaines', path: '/rh', permission: 'rh' },
-    {
-      id: 'temps',
-      icon: CalendarClock,
-      label: 'Saisie des temps',
-      path: '/temps',
-      permission: 'temps',
-    },
-    {
-      id: 'atelier',
-      icon: Hammer,
-      label: 'Travaux atelier',
-      path: '/atelier',
-      permission: 'atelier',
-    },
-    {
-      id: 'espace',
-      icon: SquareUserRound,
-      label: 'Mon espace',
-      path: '/espace',
-      permission: 'espace',
-    },
-    {
-      id: 'emploi',
-      icon: BriefcaseBusiness,
-      label: 'Emploi',
-      path: '/emploi',
-      permission: 'emploi',
-      badge: jobCount,
-    },
-    {
-      id: 'annonces',
-      icon: Newspaper,
-      label: 'Petites annonces',
-      path: '/annonces',
-      permission: 'annonces',
-    },
-    { id: 'services', icon: Info, label: 'Services', path: '/services', permission: 'services' },
-    {
-      id: 'administration',
-      icon: Settings,
-      label: 'Administration',
-      path: '/administration',
-      permission: 'administration',
-    },
-  ];
+  const menuItems = useMemo(
+    () => buildMenuItems(permissionDefinitions, { jobCount }),
+    [permissionDefinitions, jobCount],
+  );
 
-  const showAllMenus = loadingCurrentUser || loadingGroups || !currentUser;
+  const showAllMenus = loadingCurrentUser || loadingGroups || loadingPermissions || !currentUser;
 
   const userCanAccess = (permission: PermissionKey) => {
     if (showAllMenus) {
@@ -162,10 +258,10 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const location = useDecryptedLocation();
 
   const mainMenuItems = menuItems.filter(
-    (item) => item.id !== 'administration' && userCanAccess(item.permission),
+    (item) => item.section === 'main' && userCanAccess(item.permission),
   );
   const adminMenuItems = menuItems.filter(
-    (item) => item.id === 'administration' && userCanAccess(item.permission),
+    (item) => item.section === 'admin' && userCanAccess(item.permission),
   );
 
   return (
