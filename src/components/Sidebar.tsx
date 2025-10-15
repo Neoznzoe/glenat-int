@@ -1,7 +1,7 @@
 import * as LucideIcons from 'lucide-react';
 import { Pin, PinOff } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoG from '../assets/logos/glenat/glenat_G.svg';
 import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
@@ -445,6 +445,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   );
   const currentUserId = toNumericId(currentUser?.id);
   const sidebarUserId = internalUserId ?? currentUserId;
+  const lastModuleSnapshotRef = useRef<string | null>(null);
   useEffect(() => {
     if (internalUserId !== undefined) {
       console.log('Identifiant utilisateur interne détecté :', internalUserId);
@@ -466,6 +467,30 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     error: moduleError,
   } = useSidebarModules(sidebarUserId);
   const waitingForModules = loadingModules || fetchingModules || sidebarUserId === undefined;
+  useEffect(() => {
+    lastModuleSnapshotRef.current = null;
+  }, [sidebarUserId]);
+  useEffect(() => {
+    if (!moduleDefinitions || waitingForModules || hasModuleError) {
+      return;
+    }
+
+    const serialized = JSON.stringify(moduleDefinitions);
+
+    if (lastModuleSnapshotRef.current === null) {
+      lastModuleSnapshotRef.current = serialized;
+      return;
+    }
+
+    if (lastModuleSnapshotRef.current !== serialized) {
+      console.info(
+        "Changement détecté dans les modules — rechargement de la page pour refléter l'état de la base de données.",
+      );
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    }
+  }, [moduleDefinitions, waitingForModules, hasModuleError]);
 
   const accessiblePermissions = useMemo(() => {
     if (!currentUser) {

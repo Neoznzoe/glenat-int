@@ -13,5 +13,7 @@ export function useSidebarModules(userId?: number | null) {
     queryFn: () => fetchModules(sanitizedId),
     enabled: sanitizedId !== undefined,
     staleTime: 5 * 60 * 1000,
+    refetchInterval: sanitizedId !== undefined ? 15_000 : false,
+    refetchIntervalInBackground: true,
   });
 }
