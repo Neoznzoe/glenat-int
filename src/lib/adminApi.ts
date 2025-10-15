@@ -188,30 +188,6 @@ function toOptionalBoolean(value: unknown): boolean | null {
   return null;
 }
 
-function extractIconLikeValue(record: RawDatabaseUserRecord): string | undefined {
-  for (const [key, value] of Object.entries(record)) {
-    if (value === undefined || value === null) {
-      continue;
-    }
-
-    const normalizedKey = key.toLowerCase();
-    if (
-      normalizedKey.includes('icon') ||
-      normalizedKey.includes('icone') ||
-      normalizedKey.includes('logo') ||
-      normalizedKey.includes('glyph') ||
-      normalizedKey.includes('picto')
-    ) {
-      const iconValue = toNonEmptyString(value);
-      if (iconValue) {
-        return iconValue;
-      }
-    }
-  }
-
-  return undefined;
-}
-
 function normalizeGroups(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value
@@ -613,9 +589,7 @@ function normalizeModuleDefinition(
     metadata.path = pathValue;
   }
 
-  const iconValue =
-    toNonEmptyString(getValue(record, ['icon', 'Icon', 'iconName', 'IconName'])) ??
-    extractIconLikeValue(record);
+  const iconValue = toNonEmptyString(getValue(record, ['icon', 'Icon', 'iconName', 'IconName']));
   if (iconValue) {
     metadata.icon = iconValue;
   }
