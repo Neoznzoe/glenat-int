@@ -123,43 +123,68 @@ function extractModulePath(metadata: ModuleMetadata, key: string): string | null
 }
 
 function resolveBadgeValue(badge: unknown, jobCount?: number): number | string | undefined {
-  if (typeof badge === 'number' && Number.isFinite(badge)) {
-    return badge;
-  }
-  if (typeof badge === 'string') {
-    const trimmed = badge.trim();
-    if (!trimmed) {
-      return undefined;
-    }
-    const numeric = Number.parseInt(trimmed, 10);
-    if (!Number.isNaN(numeric)) {
-      return numeric;
-    }
-    if (jobCount !== undefined && trimmed.toLowerCase() === 'jobcount') {
-      return jobCount;
-    }
-    return trimmed;
-  }
-  if (typeof badge === 'object' && badge !== null) {
-    const badgeRecord = badge as Record<string, unknown>;
-    if (badgeRecord.type && jobCount !== undefined) {
-      const typeValue = toNonEmptyString(badgeRecord.type);
-      if (typeValue && typeValue.toLowerCase() === 'jobcount') {
-        return jobCount;
+  const normalizedJobCount =
+    typeof jobCount === 'number' && Number.isFinite(jobCount) && jobCount > 0
+      ? Math.trunc(jobCount)
+      : undefined;
+
+  const resolvePrimitive = (value: unknown): number | string | undefined => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      if (value <= 0) {
+        return undefined;
       }
-    }
-    if (badgeRecord.value !== undefined) {
-      if (typeof badgeRecord.value === 'number' && Number.isFinite(badgeRecord.value)) {
-        return badgeRecord.value;
+      if (value === 1 && normalizedJobCount !== undefined) {
+        return normalizedJobCount;
       }
-      if (typeof badgeRecord.value === 'string') {
-        const trimmed = badgeRecord.value.trim();
-        if (trimmed) {
-          return trimmed;
+      return Math.trunc(value);
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return undefined;
+      }
+      const numeric = Number.parseFloat(trimmed);
+      if (!Number.isNaN(numeric)) {
+        if (numeric <= 0) {
+          return undefined;
         }
+        if (numeric === 1 && normalizedJobCount !== undefined) {
+          return normalizedJobCount;
+        }
+        return Math.trunc(numeric);
+      }
+      if (normalizedJobCount !== undefined && trimmed.toLowerCase() === 'jobcount') {
+        return normalizedJobCount;
+      }
+      return trimmed;
+    }
+    return undefined;
+  };
+
+  if (badge === null || badge === undefined) {
+    return undefined;
+  }
+
+  const primitiveValue = resolvePrimitive(badge);
+  if (primitiveValue !== undefined) {
+    return primitiveValue;
+  }
+
+  if (typeof badge === 'object') {
+    const badgeRecord = badge as Record<string, unknown>;
+
+    if (normalizedJobCount !== undefined) {
+      const typeValue = toNonEmptyString(badgeRecord.type)?.toLowerCase();
+      if (typeValue && ['jobcount', 'count', 'job-count'].includes(typeValue)) {
+        return normalizedJobCount;
       }
     }
+
+    if ('value' in badgeRecord) {
+      return resolvePrimitive(badgeRecord.value);
+    }
   }
+
   return undefined;
 }
 
@@ -172,18 +197,44 @@ function resolveLucideIcon(name?: string): LucideIcon | null {
     return null;
   }
 
-  const base = normalized.replace(/icon$/i, '');
+  const sanitized = normalized
+    .replace(/^lucide[:\s_-]*/i, '')
+    .replace(/^icon[:\s_-]*/i, '')
+    .replace(/icon$/i, '')
+    .replace(/[-_\s]+icon$/i, '')
+    .replace(/^[^a-z0-9]+/i, '')
+    .replace(/[^a-z0-9]+$/i, '');
+
+  const base = sanitized || normalized;
+  const segments = base
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean);
+  const pascal = segments
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join('');
+  const camel = pascal ? pascal.charAt(0).toLowerCase() + pascal.slice(1) : '';
+  const upper = base.toUpperCase();
+  const lower = base.toLowerCase();
+  const kebab = segments.map((part) => part.toLowerCase()).join('-');
+
   const variants = new Set<string>([
     normalized,
+    sanitized,
     base,
-    base.toLowerCase(),
-    base.charAt(0).toUpperCase() + base.slice(1),
-    base
-      .split(/[\s_-]+/)
-      .filter(Boolean)
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(''),
+    pascal,
+    camel,
+    lower,
+    upper,
+    kebab,
   ]);
+
+  if (pascal) {
+    variants.add(pascal.replace(/\d+$/, (match) => match));
+  }
+
+  if (segments.length > 1) {
+    variants.add(segments.join(''));
+  }
 
   for (const candidate of variants) {
     if (!candidate) {

@@ -4,13 +4,13 @@ import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { Toaster } from '@/components/ui/sonner';
 import AppRoutes, { LAZY_ROUTE_PRELOADERS, ROUTES_CONFIG } from './routes';
-import { useJobOffers } from '@/hooks/useJobOffers';
+import { usePublishedJobOfferCount } from '@/hooks/useJobOffers';
 import { SecureRoutingProvider } from './lib/secureRouting';
 
 function App() {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
-  const { data: jobOffers, isLoading: loadingJobOffers } = useJobOffers();
-  const jobCount = loadingJobOffers ? undefined : jobOffers?.length ?? 0;
+  const { data: publishedJobCount, isLoading: loadingJobCount } = usePublishedJobOfferCount();
+  const jobCount = loadingJobCount ? undefined : publishedJobCount;
 
   useEffect(() => {
     LAZY_ROUTE_PRELOADERS.forEach((preload) => {
