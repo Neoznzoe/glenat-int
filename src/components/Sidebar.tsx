@@ -376,8 +376,26 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     if (!currentUser) {
       return new Set<PermissionKey>();
     }
-    return new Set(computeEffectivePermissions(currentUser, groups));
+
+    const normalized = computeEffectivePermissions(currentUser, groups).map((key) =>
+      key.trim().toLowerCase() as PermissionKey,
+    );
+
+    return new Set(normalized);
   }, [currentUser, groups]);
+
+  const deniedPermissions = useMemo(() => {
+    if (!currentUser?.permissionOverrides?.length) {
+      return new Set<PermissionKey>();
+    }
+
+    const deniedKeys = currentUser.permissionOverrides
+      .filter((override) => override.mode === 'deny' && typeof override.key === 'string')
+      .map((override) => override.key.trim().toLowerCase() as PermissionKey)
+      .filter((key) => key.length > 0);
+
+    return new Set(deniedKeys);
+  }, [currentUser?.permissionOverrides]);
 
   const processedModules = useMemo(() => {
     if (!moduleDefinitions) {
@@ -461,13 +479,18 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const showAllMenus = loadingCurrentUser || loadingGroups || !currentUser;
 
   const userCanAccess = (permission: PermissionKey) => {
+    const normalizedPermission = permission.trim().toLowerCase() as PermissionKey;
+
+    if (deniedPermissions.has(normalizedPermission)) {
+      return false;
+    }
     if (showAllMenus) {
       return true;
     }
     if (currentUser?.isSuperAdmin) {
       return true;
     }
-    return accessiblePermissions.has(permission);
+    return accessiblePermissions.has(normalizedPermission);
   };
 
   const location = useDecryptedLocation();
