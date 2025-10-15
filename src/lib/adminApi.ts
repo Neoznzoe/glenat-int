@@ -566,7 +566,19 @@ function normalizeModuleDefinition(
     (numericId !== undefined ? numericId.toString() : `module-${index + 1}`);
   const slugSource =
     toNonEmptyString(getValue(record, ['name', 'Name', 'slug', 'Slug'])) ?? id ?? `module-${index + 1}`;
-  const key = normalizeKey(slugSource, `module-${index + 1}`);
+  const permissionSource = toNonEmptyString(
+    getValue(record, [
+      'permission',
+      'Permission',
+      'permissionKey',
+      'PermissionKey',
+      'modulePermission',
+      'ModulePermission',
+      'key',
+      'Key',
+    ]),
+  );
+  const key = normalizeKey(permissionSource ?? slugSource, `module-${index + 1}`);
   const labelSource =
     toNonEmptyString(getValue(record, ['name', 'Name', 'label', 'Label'])) ??
     toNonEmptyString(getValue(record, ['description', 'Description'])) ??
@@ -582,13 +594,57 @@ function normalizeModuleDefinition(
     slug: slugSource,
   };
 
-  const isActiveValue = getValue(record, ['isActive', 'IsActive', 'active', 'Active']);
-  if (isActiveValue !== undefined) {
+  if (permissionSource) {
+    metadata.permission = permissionSource;
+  }
+
+  const pathValue = toNonEmptyString(
+    getValue(record, ['path', 'Path', 'route', 'Route', 'url', 'Url', 'href', 'Href', 'link', 'Link']),
+  );
+  if (pathValue) {
+    metadata.path = pathValue;
+  }
+  const defaultPathValue = toNonEmptyString(
+    getValue(record, ['defaultPath', 'DefaultPath', 'defaultRoute', 'DefaultRoute']),
+  );
+  if (defaultPathValue) {
+    metadata.defaultPath = defaultPathValue;
+  }
+
+  const iconValue = toNonEmptyString(getValue(record, ['icon', 'Icon', 'iconName', 'IconName']));
+  if (iconValue) {
+    metadata.icon = iconValue;
+  }
+
+  const logoValue = toNonEmptyString(
+    getValue(record, ['logo', 'Logo', 'logoUrl', 'LogoUrl', 'logoPath', 'LogoPath', 'iconUrl', 'IconUrl', 'iconPath', 'IconPath']),
+  );
+  if (logoValue) {
+    metadata.logo = logoValue;
+  }
+
+  const isActiveValue = toOptionalBoolean(getValue(record, ['isActive', 'IsActive', 'active', 'Active']));
+  if (isActiveValue !== null) {
     metadata.isActive = isActiveValue;
   }
   const versionValue = getValue(record, ['version', 'Version']);
   if (versionValue !== undefined) {
     metadata.version = versionValue;
+  }
+
+  const orderValue = getValue(record, [
+    'order',
+    'Order',
+    'displayOrder',
+    'DisplayOrder',
+    'position',
+    'Position',
+    'sortOrder',
+    'SortOrder',
+  ]);
+  const numericOrder = toNumber(orderValue);
+  if (numericOrder !== undefined) {
+    metadata.order = numericOrder;
   }
 
   return {
