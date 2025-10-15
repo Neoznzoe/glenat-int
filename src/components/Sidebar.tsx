@@ -101,7 +101,15 @@ function collectInternalUserRecords(value: unknown): Record<string, unknown>[] {
   if (typeof value === 'object') {
     const record = value as Record<string, unknown>;
     const nested: Record<string, unknown>[] = [];
-    for (const key of ['result', 'Recordset', 'recordset', 'records', 'rows', 'data']) {
+    for (const key of [
+      'result',
+      'Result',
+      'Recordset',
+      'recordset',
+      'records',
+      'rows',
+      'data',
+    ]) {
       if (key in record) {
         nested.push(...collectInternalUserRecords(record[key]));
       }
@@ -121,13 +129,24 @@ function extractInternalUserId(
     return undefined;
   }
 
-  const candidates = collectInternalUserRecords(internalUser.result);
+  const record = internalUser as Record<string, unknown>;
+  const resultBuckets: Record<string, unknown>[] = [];
+
+  if ('result' in record) {
+    resultBuckets.push(...collectInternalUserRecords(record['result']));
+  }
+  if ('Result' in record) {
+    resultBuckets.push(...collectInternalUserRecords(record['Result']));
+  }
+
+  const candidates = resultBuckets.length
+    ? resultBuckets
+    : collectInternalUserRecords(record);
 
   if (!candidates.length) {
-    const envelope = internalUser as Record<string, unknown>;
     for (const key of ['Recordset', 'recordset', 'records', 'rows', 'data']) {
-      if (key in envelope) {
-        candidates.push(...collectInternalUserRecords(envelope[key]));
+      if (key in record) {
+        candidates.push(...collectInternalUserRecords(record[key]));
       }
       if (candidates.length) {
         break;
@@ -135,14 +154,14 @@ function extractInternalUserId(
     }
   }
 
-  for (const record of candidates) {
+  for (const candidate of candidates) {
     const possibleId =
-      record['userId'] ??
-      record['UserId'] ??
-      record['userID'] ??
-      record['USERID'] ??
-      record['id'] ??
-      record['ID'];
+      candidate['userId'] ??
+      candidate['UserId'] ??
+      candidate['userID'] ??
+      candidate['USERID'] ??
+      candidate['id'] ??
+      candidate['ID'];
     const numericId = toNumberValue(possibleId);
     if (numericId !== undefined) {
       return numericId;
