@@ -1,28 +1,11 @@
-import {
-  Home,
-  Calendar,
-  Users,
-  Files,
-  Settings,
-  Pin,
-  PinOff,
-  UserRoundSearch,
-  Info,
-  BriefcaseBusiness,
-  CalendarDays,
-  Signature,
-  CalendarClock,
-  SquareUserRound,
-  PersonStanding,
-  Hammer,
-  LibraryBig,
-  Newspaper,
-  Store,
-} from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
+import { Pin, PinOff } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoG from '../assets/logos/glenat/glenat_G.svg';
 import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
+import { useSidebarModules } from '@/hooks/useModules';
 import { computeEffectivePermissions } from '@/lib/mockDb';
 import type { PermissionKey } from '@/lib/access-control';
 import { useDecryptedLocation } from '@/lib/secureRouting';
@@ -31,6 +14,268 @@ import { SecureNavLink } from '@/components/routing/SecureLink';
 interface SidebarProps {
   jobCount?: number;
   onExpandChange?: (expanded: boolean) => void;
+}
+
+interface SidebarModuleEntry {
+  id: string;
+  label: string;
+  path: string;
+  permission: PermissionKey;
+  icon: LucideIcon | null;
+  badge?: number | string;
+  order: number;
+  section?: string;
+}
+
+type ModuleMetadata = Record<string, unknown>;
+
+function toNonEmptyString(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : undefined;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value.toString();
+  }
+  return undefined;
+}
+
+function toNumberValue(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+    const parsed = Number.parseFloat(trimmed);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+  }
+  return undefined;
+}
+
+function resolveBoolean(value: unknown, fallback = true): boolean {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'number') {
+    return value !== 0;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return fallback;
+    }
+    if (['0', 'false', 'non', 'no', 'off'].includes(normalized)) {
+      return false;
+    }
+    if (['1', 'true', 'oui', 'yes', 'on'].includes(normalized)) {
+      return true;
+    }
+  }
+  return fallback;
+}
+
+function normalizeRoute(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+  if (/^[a-z]+:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  if (trimmed === '/') {
+    return '/';
+  }
+  const normalized = trimmed.replace(/^\/+/, '');
+  return `/${normalized}`;
+}
+
+function extractModulePath(metadata: ModuleMetadata, key: string): string | null {
+  const candidates = [
+    toNonEmptyString(metadata.path),
+    toNonEmptyString(metadata.url),
+    toNonEmptyString(metadata.href),
+    toNonEmptyString(metadata.route),
+    toNonEmptyString(metadata.externalPath),
+    toNonEmptyString(metadata.slug),
+    key,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) {
+      continue;
+    }
+    const normalized = normalizeRoute(candidate);
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  if (key && key.trim().toLowerCase() === 'home') {
+    return '/';
+  }
+
+  return null;
+}
+
+function resolveBadgeValue(badge: unknown, jobCount?: number): number | string | undefined {
+  const normalizedJobCount =
+    typeof jobCount === 'number' && Number.isFinite(jobCount) && jobCount > 0
+      ? Math.trunc(jobCount)
+      : undefined;
+
+  const resolvePrimitive = (value: unknown): number | string | undefined => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      if (value <= 0) {
+        return undefined;
+      }
+      if (value === 1 && normalizedJobCount !== undefined) {
+        return normalizedJobCount;
+      }
+      return Math.trunc(value);
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return undefined;
+      }
+      const numeric = Number.parseFloat(trimmed);
+      if (!Number.isNaN(numeric)) {
+        if (numeric <= 0) {
+          return undefined;
+        }
+        if (numeric === 1 && normalizedJobCount !== undefined) {
+          return normalizedJobCount;
+        }
+        return Math.trunc(numeric);
+      }
+      if (normalizedJobCount !== undefined && trimmed.toLowerCase() === 'jobcount') {
+        return normalizedJobCount;
+      }
+      return trimmed;
+    }
+    return undefined;
+  };
+
+  if (badge === null || badge === undefined) {
+    return undefined;
+  }
+
+  const primitiveValue = resolvePrimitive(badge);
+  if (primitiveValue !== undefined) {
+    return primitiveValue;
+  }
+
+  if (typeof badge === 'object') {
+    const badgeRecord = badge as Record<string, unknown>;
+
+    if (normalizedJobCount !== undefined) {
+      const typeValue = toNonEmptyString(badgeRecord.type)?.toLowerCase();
+      if (typeValue && ['jobcount', 'count', 'job-count'].includes(typeValue)) {
+        return normalizedJobCount;
+      }
+    }
+
+    if ('value' in badgeRecord) {
+      return resolvePrimitive(badgeRecord.value);
+    }
+  }
+
+  return undefined;
+}
+
+function resolveLucideIcon(name?: string): LucideIcon | null {
+  if (!name) {
+    return null;
+  }
+  const normalized = name.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const sanitized = normalized
+    .replace(/^lucide[:\s_-]*/i, '')
+    .replace(/^icon[:\s_-]*/i, '')
+    .replace(/icon$/i, '')
+    .replace(/[-_\s]+icon$/i, '')
+    .replace(/^[^a-z0-9]+/i, '')
+    .replace(/[^a-z0-9]+$/i, '');
+
+  const base = sanitized || normalized;
+  const segments = base
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean);
+  const pascal = segments
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join('');
+  const camel = pascal ? pascal.charAt(0).toLowerCase() + pascal.slice(1) : '';
+  const upper = base.toUpperCase();
+  const lower = base.toLowerCase();
+  const kebab = segments.map((part) => part.toLowerCase()).join('-');
+
+  const variants = new Set<string>([
+    normalized,
+    sanitized,
+    base,
+    pascal,
+    camel,
+    lower,
+    upper,
+    kebab,
+  ]);
+
+  if (pascal) {
+    variants.add(pascal.replace(/\d+$/, (match) => match));
+  }
+
+  if (segments.length > 1) {
+    variants.add(segments.join(''));
+  }
+
+  for (const candidate of variants) {
+    if (!candidate) {
+      continue;
+    }
+    const iconCandidate = LucideIcons[candidate as keyof typeof LucideIcons];
+    if (typeof iconCandidate === 'function') {
+      return iconCandidate as LucideIcon;
+    }
+  }
+
+  return null;
+}
+
+function isAdministrationModule(module: SidebarModuleEntry): boolean {
+  if (module.section) {
+    const normalized = module.section.toLowerCase();
+    if (normalized === 'administration' || normalized === 'admin') {
+      return true;
+    }
+  }
+  return module.permission.toLowerCase() === 'administration';
+}
+
+function SidebarSkeletonList({ count, isExpanded }: { count: number; isExpanded: boolean }) {
+  return (
+    <ul className="space-y-1" aria-hidden>
+      {Array.from({ length: count }).map((_, index) => (
+        <li key={`sidebar-skeleton-${index}`}>
+          <div
+            className={`flex items-center w-full px-2 py-2 rounded-lg bg-white/10 animate-pulse ${
+              isExpanded ? 'space-x-3' : 'justify-center'
+            }`}
+          >
+            <div className="h-5 w-5 rounded-full bg-white/30" />
+            {isExpanded ? <div className="h-3 flex-1 rounded bg-white/30" /> : null}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
@@ -45,6 +290,12 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
 
   const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
   const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
+  const {
+    data: moduleDefinitions,
+    isLoading: loadingModules,
+    isError: hasModuleError,
+    error: moduleError,
+  } = useSidebarModules();
 
   const accessiblePermissions = useMemo(() => {
     if (!currentUser) {
@@ -53,99 +304,68 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     return new Set(computeEffectivePermissions(currentUser, groups));
   }, [currentUser, groups]);
 
-  const menuItems: Array<{
-    id: string;
-    icon: typeof Home;
-    label: string;
-    path: string;
-    permission: PermissionKey;
-    badge?: number;
-  }> = [
-    { id: 'home', icon: Home, label: 'Accueil', path: '/', permission: 'home' },
-    {
-      id: 'qui',
-      icon: UserRoundSearch,
-      label: 'Qui fait quoi',
-      path: '/qui',
-      permission: 'qui',
-    },
-    {
-      id: 'catalogue',
-      icon: LibraryBig,
-      label: 'Catalogue',
-      path: '/catalogue/offices',
-      permission: 'catalogue',
-    },
-    {
-      id: 'kiosque',
-      icon: Store,
-      label: 'Kiosque',
-      path: '/catalogue/kiosque',
-      permission: 'catalogue',
-    },
-    { id: 'doc', icon: Files, label: "Glénat'Doc", path: '/doc', permission: 'doc' },
-    { id: 'fee', icon: Users, label: "Glénat'Fée", path: '/fee', permission: 'fee' },
-    { id: 'agenda', icon: Calendar, label: 'Agenda', path: '/agenda', permission: 'agenda' },
-    {
-      id: 'planning',
-      icon: CalendarDays,
-      label: 'Planning',
-      path: '/planning',
-      permission: 'planning',
-    },
-    {
-      id: 'contrats',
-      icon: Signature,
-      label: 'Contrats',
-      path: '/contrats',
-      permission: 'contrats',
-    },
-    { id: 'rh', icon: PersonStanding, label: 'Ressources humaines', path: '/rh', permission: 'rh' },
-    {
-      id: 'temps',
-      icon: CalendarClock,
-      label: 'Saisie des temps',
-      path: '/temps',
-      permission: 'temps',
-    },
-    {
-      id: 'atelier',
-      icon: Hammer,
-      label: 'Travaux atelier',
-      path: '/atelier',
-      permission: 'atelier',
-    },
-    {
-      id: 'espace',
-      icon: SquareUserRound,
-      label: 'Mon espace',
-      path: '/espace',
-      permission: 'espace',
-    },
-    {
-      id: 'emploi',
-      icon: BriefcaseBusiness,
-      label: 'Emploi',
-      path: '/emploi',
-      permission: 'emploi',
-      badge: jobCount,
-    },
-    {
-      id: 'annonces',
-      icon: Newspaper,
-      label: 'Petites annonces',
-      path: '/annonces',
-      permission: 'annonces',
-    },
-    { id: 'services', icon: Info, label: 'Services', path: '/services', permission: 'services' },
-    {
-      id: 'administration',
-      icon: Settings,
-      label: 'Administration',
-      path: '/administration',
-      permission: 'administration',
-    },
-  ];
+  const processedModules = useMemo(() => {
+    if (!moduleDefinitions) {
+      return [];
+    }
+
+    const items: SidebarModuleEntry[] = [];
+
+    moduleDefinitions.forEach((definition, index) => {
+      if (definition.type !== 'module') {
+        return;
+      }
+
+      const metadata = (definition.metadata ?? {}) as ModuleMetadata;
+
+      if (!resolveBoolean(metadata.isActive, true)) {
+        return;
+      }
+
+      const path = extractModulePath(metadata, definition.key);
+      if (!path) {
+        return;
+      }
+
+      const id =
+        toNonEmptyString(metadata.id) ??
+        toNonEmptyString(metadata.slug) ??
+        definition.key ??
+        `module-${index + 1}`;
+
+      const label = definition.label ?? id;
+
+      const permissionKey = (toNonEmptyString(metadata.permissionKey) ?? definition.key) as PermissionKey;
+      const normalizedPermission = permissionKey.trim().toLowerCase() as PermissionKey;
+
+      const iconName = toNonEmptyString(metadata.icon);
+      const icon = resolveLucideIcon(iconName);
+
+      const badge = resolveBadgeValue(metadata.badge, jobCount);
+      const order = toNumberValue(metadata.order) ?? index;
+      const section = toNonEmptyString(metadata.section)?.toLowerCase();
+
+      const entry: SidebarModuleEntry = {
+        id,
+        label,
+        path,
+        permission: normalizedPermission,
+        icon,
+        badge,
+        order,
+        section,
+      };
+
+      items.push(entry);
+    });
+
+    return items.sort((left, right) => {
+      if (left.order !== right.order) {
+        return left.order - right.order;
+      }
+      return left.label.localeCompare(right.label, 'fr', { sensitivity: 'base' });
+    });
+  }, [moduleDefinitions, jobCount]);
 
   const showAllMenus = loadingCurrentUser || loadingGroups || !currentUser;
 
@@ -161,12 +381,19 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
 
   const location = useDecryptedLocation();
 
-  const mainMenuItems = menuItems.filter(
-    (item) => item.id !== 'administration' && userCanAccess(item.permission),
+  const mainMenuItems = processedModules.filter(
+    (item) => !isAdministrationModule(item) && userCanAccess(item.permission),
   );
-  const adminMenuItems = menuItems.filter(
-    (item) => item.id === 'administration' && userCanAccess(item.permission),
+  const adminMenuItems = processedModules.filter(
+    (item) => isAdministrationModule(item) && userCanAccess(item.permission),
   );
+
+  const moduleErrorMessage =
+    hasModuleError && moduleError
+      ? moduleError instanceof Error
+        ? moduleError.message
+        : String(moduleError)
+      : null;
 
   return (
     <div
@@ -199,11 +426,18 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       <div className="flex-1 min-h-0 flex flex-col justify-between">
         {/* Menu principal */}
         <nav className="p-2">
-          <ul className="space-y-1">
-            {mainMenuItems.map((item) => {
-                const isActive = item.path === '/'
-                  ? location.pathname === '/'
-                  : location.pathname.startsWith(item.path);
+          {loadingModules ? (
+            <SidebarSkeletonList count={6} isExpanded={isExpanded} />
+          ) : (
+            <ul className="space-y-1">
+              {mainMenuItems.map((item) => {
+                const isInternalLink = item.path.startsWith('/');
+                const isActive = isInternalLink
+                  ? item.path === '/'
+                    ? location.pathname === '/'
+                    : location.pathname.startsWith(item.path)
+                  : false;
+
                 return (
                   <li key={item.id}>
                     <SecureNavLink
@@ -215,7 +449,13 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
                       } ${isExpanded ? 'space-x-3' : 'justify-center'}`}
                       title={!isExpanded ? item.label : ''}
                     >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
+                      {item.icon ? (
+                        <item.icon className="h-5 w-5 flex-shrink-0" />
+                      ) : (
+                        <span className="h-5 w-5 flex-shrink-0 flex items-center justify-center rounded-full bg-white/20 text-xs font-semibold uppercase">
+                          {item.label.charAt(0)}
+                        </span>
+                      )}
                       <span
                         className={`font-medium transition-all duration-300 whitespace-nowrap ${
                           isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
@@ -224,7 +464,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
                         {item.label}
                       </span>
                       {item.badge !== undefined ? (
-                        <span className="absolute -top-[5px] -right-[5px] bg-white text-primary text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                        <span className="absolute -top-[6px] -right-[6px] bg-white text-primary text-xs font-bold rounded-full px-1 min-h-[20px] min-w-[20px] flex items-center justify-center">
                           {item.badge}
                         </span>
                       ) : null}
@@ -232,16 +472,29 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
                   </li>
                 );
               })}
-          </ul>
+            </ul>
+          )}
+          {hasModuleError && moduleErrorMessage ? (
+            <div className="mt-3 text-xs text-red-100/80 bg-black/20 rounded-lg px-3 py-2">
+              Impossible de charger le menu ({moduleErrorMessage}).
+            </div>
+          ) : null}
         </nav>
 
         {/* Bloc Administration */}
         <nav className="p-2">
-          <ul>
-            {adminMenuItems.map((item) => {
-                const isActive = item.path === '/'
-                  ? location.pathname === '/'
-                  : location.pathname.startsWith(item.path);
+          {loadingModules ? (
+            <SidebarSkeletonList count={2} isExpanded={isExpanded} />
+          ) : (
+            <ul>
+              {adminMenuItems.map((item) => {
+                const isInternalLink = item.path.startsWith('/');
+                const isActive = isInternalLink
+                  ? item.path === '/'
+                    ? location.pathname === '/'
+                    : location.pathname.startsWith(item.path)
+                  : false;
+
                 return (
                   <li key={item.id}>
                     <SecureNavLink
@@ -253,7 +506,13 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
                       } ${isExpanded ? 'space-x-3' : 'justify-center'}`}
                       title={!isExpanded ? item.label : ''}
                     >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
+                      {item.icon ? (
+                        <item.icon className="h-5 w-5 flex-shrink-0" />
+                      ) : (
+                        <span className="h-5 w-5 flex-shrink-0 flex items-center justify-center rounded-full bg-white/20 text-xs font-semibold uppercase">
+                          {item.label.charAt(0)}
+                        </span>
+                      )}
                       <span
                         className={`font-medium transition-all duration-300 whitespace-nowrap ${
                           isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
@@ -265,7 +524,8 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
                   </li>
                 );
               })}
-          </ul>
+            </ul>
+          )}
         </nav>
       </div>
 

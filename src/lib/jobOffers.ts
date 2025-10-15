@@ -3,6 +3,8 @@ const JOB_OFFERS_ENDPOINT = import.meta.env.DEV
   : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
 
 const JOB_OFFERS_QUERY = 'SELECT * FROM offres_emploi WHERE publiee = 1;';
+const JOB_OFFER_COUNT_QUERY =
+  'SELECT COUNT(*) AS nombre_offres FROM [jobOffers] WHERE publiee = 1;';
 
 export interface DatabaseJobOffersResponse {
   success?: boolean;
@@ -248,4 +250,84 @@ export async function fetchJobOffers(): Promise<JobOfferRecord[]> {
 
 export const JOB_OFFERS_QUERY_KEY = ['job-offers'] as const;
 
-export { JOB_OFFERS_ENDPOINT, JOB_OFFERS_QUERY };
+export async function fetchPublishedJobOfferCount(): Promise<number> {
+  const payload = { query: JOB_OFFER_COUNT_QUERY };
+  const response = await fetch(JOB_OFFERS_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `La récupération du nombre d'offres d'emploi a échoué (${response.status}) ${response.statusText}`,
+    );
+  }
+
+  const data = (await response.json()) as DatabaseJobOffersResponse;
+  if (data.success === false) {
+    throw new Error(data.message || "La récupération du nombre d'offres d'emploi a échoué.");
+  }
+
+  let rawRecords = extractArray(data.result);
+  if (!rawRecords.length) {
+    rawRecords = extractArray(data.data);
+  }
+  if (!rawRecords.length) {
+    rawRecords = extractArray(data as unknown);
+  }
+
+  const [firstRecord] = rawRecords;
+  if (!firstRecord) {
+    return 0;
+  }
+
+  const countCandidates = [
+    firstRecord['nombre_offres'],
+    firstRecord['nombreOffres'],
+    firstRecord['NombreOffres'],
+    firstRecord['count'],
+    firstRecord['Count'],
+    firstRecord['total'],
+    firstRecord['Total'],
+  ];
+
+  const parseCandidate = (input: unknown): number | null => {
+    if (typeof input === 'number' && Number.isFinite(input) && input >= 0) {
+      return Math.trunc(input);
+    }
+    if (typeof input === 'string') {
+      const trimmed = input.trim();
+      if (!trimmed) {
+        return null;
+      }
+      const parsed = Number.parseInt(trimmed, 10);
+      if (!Number.isNaN(parsed) && parsed >= 0) {
+        return parsed;
+      }
+    }
+    return null;
+  };
+
+  for (const candidate of countCandidates) {
+    const parsed = parseCandidate(candidate);
+    if (parsed !== null) {
+      return parsed;
+    }
+  }
+
+  for (const value of Object.values(firstRecord)) {
+    const parsed = parseCandidate(value);
+    if (parsed !== null) {
+      return parsed;
+    }
+  }
+
+  return 0;
+}
+
+export const JOB_OFFER_COUNT_QUERY_KEY = ['job-offers', 'count'] as const;
+
+export { JOB_OFFERS_ENDPOINT, JOB_OFFERS_QUERY, JOB_OFFER_COUNT_QUERY };

@@ -582,8 +582,59 @@ function normalizeModuleDefinition(
     slug: slugSource,
   };
 
-  const isActiveValue = getValue(record, ['isActive', 'IsActive', 'active', 'Active']);
-  if (isActiveValue !== undefined) {
+  const pathValue = toNonEmptyString(
+    getValue(record, ['path', 'Path', 'route', 'Route', 'href', 'Href', 'url', 'Url']),
+  );
+  if (pathValue) {
+    metadata.path = pathValue;
+  }
+
+  const iconValue = toNonEmptyString(getValue(record, ['icon', 'Icon', 'iconName', 'IconName']));
+  if (iconValue) {
+    metadata.icon = iconValue;
+  }
+
+  const permissionValue = toNonEmptyString(
+    getValue(record, ['permission', 'Permission', 'permissionKey', 'PermissionKey']),
+  );
+  if (permissionValue) {
+    metadata.permissionKey = permissionValue;
+  }
+
+  const badgeValue = getValue(record, ['badge', 'Badge']);
+  if (badgeValue !== undefined) {
+    metadata.badge = badgeValue;
+  }
+
+  const sectionValue = getValue(record, ['section', 'Section', 'category', 'Category', 'area', 'Area']);
+  if (sectionValue !== undefined && sectionValue !== null) {
+    const sectionString = toNonEmptyString(sectionValue) ?? String(sectionValue);
+    if (sectionString.trim()) {
+      metadata.section = sectionString;
+    }
+  }
+
+  const orderValue = getValue(record, ['order', 'Order', 'displayOrder', 'DisplayOrder', 'position', 'Position']);
+  const orderNumber = toNumber(orderValue);
+  if (orderNumber !== undefined) {
+    metadata.order = orderNumber;
+  } else if (typeof orderValue === 'string') {
+    const trimmed = orderValue.trim();
+    if (trimmed) {
+      const parsed = Number.parseFloat(trimmed);
+      if (!Number.isNaN(parsed)) {
+        metadata.order = parsed;
+      }
+    }
+  }
+
+  const externalPathValue = toNonEmptyString(getValue(record, ['externalPath', 'ExternalPath']));
+  if (externalPathValue) {
+    metadata.externalPath = externalPathValue;
+  }
+
+  const isActiveValue = toOptionalBoolean(getValue(record, ['isActive', 'IsActive', 'active', 'Active']));
+  if (isActiveValue !== null) {
     metadata.isActive = isActiveValue;
   }
   const versionValue = getValue(record, ['version', 'Version']);
@@ -993,6 +1044,12 @@ export async function fetchGroups(): Promise<GroupDefinition[]> {
   groups.sort((left, right) => left.name.localeCompare(right.name, 'fr', { sensitivity: 'base' }));
 
   return groups;
+}
+
+export async function fetchModules(): Promise<PermissionDefinition[]> {
+  const moduleRecords = await runDatabaseQuery(ADMIN_MODULES_QUERY, 'modules');
+
+  return moduleRecords.map((record, index) => normalizeModuleDefinition(record, index));
 }
 
 export async function fetchPermissions(): Promise<PermissionDefinition[]> {
