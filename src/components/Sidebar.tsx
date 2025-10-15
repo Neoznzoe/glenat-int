@@ -29,6 +29,32 @@ interface SidebarModuleEntry {
 
 type ModuleMetadata = Record<string, unknown>;
 
+const LUCIDE_ICON_ENTRIES = Object.entries(LucideIcons).filter(
+  ([, component]) => typeof component === 'function',
+) as Array<[string, LucideIcon]>;
+
+const LUCIDE_ICON_BY_NORMALIZED_KEY = new Map<string, LucideIcon>();
+
+function normalizeIconKey(value: string): string {
+  return value.replace(/[^a-z0-9]/gi, '').toLowerCase();
+}
+
+for (const [exportName, component] of LUCIDE_ICON_ENTRIES) {
+  const normalizedKey = normalizeIconKey(exportName);
+  if (normalizedKey && !LUCIDE_ICON_BY_NORMALIZED_KEY.has(normalizedKey)) {
+    LUCIDE_ICON_BY_NORMALIZED_KEY.set(normalizedKey, component);
+  }
+}
+
+function tokenizeIconIdentifier(value: string): string[] {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z])([A-Z][a-z0-9])/g, '$1 $2')
+    .split(/[^a-zA-Z0-9]+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+}
+
 function toNonEmptyString(value: unknown): string | undefined {
   if (typeof value === 'string') {
     const trimmed = value.trim();
@@ -192,6 +218,7 @@ function resolveLucideIcon(name?: string): LucideIcon | null {
   if (!name) {
     return null;
   }
+
   const normalized = name.trim();
   if (!normalized) {
     return null;
@@ -205,44 +232,74 @@ function resolveLucideIcon(name?: string): LucideIcon | null {
     .replace(/^[^a-z0-9]+/i, '')
     .replace(/[^a-z0-9]+$/i, '');
 
-  const base = sanitized || normalized;
-  const segments = base
-    .split(/[^a-zA-Z0-9]+/)
-    .filter(Boolean);
-  const pascal = segments
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join('');
-  const camel = pascal ? pascal.charAt(0).toLowerCase() + pascal.slice(1) : '';
-  const upper = base.toUpperCase();
-  const lower = base.toLowerCase();
-  const kebab = segments.map((part) => part.toLowerCase()).join('-');
+  const candidates = new Set<string>();
+  const queue: string[] = [];
+  const enqueue = (value?: string) => {
+    if (!value) {
+      return;
+    }
+    const trimmed = value.trim();
+    if (!trimmed || candidates.has(trimmed)) {
+      return;
+    }
+    candidates.add(trimmed);
+    queue.push(trimmed);
+  };
 
-  const variants = new Set<string>([
-    normalized,
-    sanitized,
-    base,
-    pascal,
-    camel,
-    lower,
-    upper,
-    kebab,
-  ]);
+  enqueue(normalized);
+  enqueue(sanitized);
 
-  if (pascal) {
-    variants.add(pascal.replace(/\d+$/, (match) => match));
-  }
+  while (queue.length > 0) {
+    const candidate = queue.shift()!;
 
-  if (segments.length > 1) {
-    variants.add(segments.join(''));
-  }
+    const compoundParts = candidate.split(/[|/\\,;]+/);
+    for (const part of compoundParts) {
+      const trimmedPart = part.trim();
+      if (trimmedPart && trimmedPart !== candidate) {
+        enqueue(trimmedPart);
+      }
+    }
 
-  for (const candidate of variants) {
-    if (!candidate) {
+    const segments = tokenizeIconIdentifier(candidate);
+    if (!segments.length) {
       continue;
     }
-    const iconCandidate = LucideIcons[candidate as keyof typeof LucideIcons];
-    if (typeof iconCandidate === 'function') {
-      return iconCandidate as LucideIcon;
+
+    const lowerSegments = segments.map((segment) => segment.toLowerCase());
+    const pascal = segments
+      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase())
+      .join('');
+    const camel = pascal ? pascal.charAt(0).toLowerCase() + pascal.slice(1) : '';
+    const kebab = lowerSegments.join('-');
+    const snake = lowerSegments.join('_');
+    const joined = segments.join('');
+    const spaced = segments.join(' ');
+    const dotted = lowerSegments.join('.');
+
+    enqueue(pascal);
+    enqueue(camel);
+    enqueue(kebab);
+    enqueue(snake);
+    enqueue(joined);
+    enqueue(spaced);
+    enqueue(dotted);
+    enqueue(segments.join('-icon'));
+    enqueue(segments.join('_icon'));
+  }
+
+  for (const candidate of candidates) {
+    const direct = (LucideIcons as Record<string, unknown>)[candidate];
+    if (typeof direct === 'function') {
+      return direct as LucideIcon;
+    }
+
+    const normalizedKey = normalizeIconKey(candidate);
+    if (!normalizedKey) {
+      continue;
+    }
+    const normalizedIcon = LUCIDE_ICON_BY_NORMALIZED_KEY.get(normalizedKey);
+    if (normalizedIcon) {
+      return normalizedIcon;
     }
   }
 
