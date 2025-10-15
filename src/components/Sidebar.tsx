@@ -10,6 +10,8 @@ import { computeEffectivePermissions } from '@/lib/mockDb';
 import type { PermissionKey } from '@/lib/access-control';
 import { useDecryptedLocation } from '@/lib/secureRouting';
 import { SecureNavLink } from '@/components/routing/SecureLink';
+import { useAuth } from '@/context/AuthContext';
+import type { DatabaseUserLookupResponse } from '@/lib/internalUserLookup';
 
 interface SidebarProps {
   jobCount?: number;
@@ -85,6 +87,69 @@ function toNumericId(value?: string): number | undefined {
   }
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function collectInternalUserRecords(value: unknown): Record<string, unknown>[] {
+  if (!value) {
+    return [];
+  }
+  if (Array.isArray(value)) {
+    return value.filter(
+      (entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null,
+    );
+  }
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const nested: Record<string, unknown>[] = [];
+    for (const key of ['result', 'Recordset', 'recordset', 'records', 'rows', 'data']) {
+      if (key in record) {
+        nested.push(...collectInternalUserRecords(record[key]));
+      }
+    }
+    if (nested.length > 0) {
+      return nested;
+    }
+    return [record];
+  }
+  return [];
+}
+
+function extractInternalUserId(
+  internalUser?: DatabaseUserLookupResponse | null,
+): number | undefined {
+  if (!internalUser) {
+    return undefined;
+  }
+
+  const candidates = collectInternalUserRecords(internalUser.result);
+
+  if (!candidates.length) {
+    const envelope = internalUser as Record<string, unknown>;
+    for (const key of ['Recordset', 'recordset', 'records', 'rows', 'data']) {
+      if (key in envelope) {
+        candidates.push(...collectInternalUserRecords(envelope[key]));
+      }
+      if (candidates.length) {
+        break;
+      }
+    }
+  }
+
+  for (const record of candidates) {
+    const possibleId =
+      record['userId'] ??
+      record['UserId'] ??
+      record['userID'] ??
+      record['USERID'] ??
+      record['id'] ??
+      record['ID'];
+    const numericId = toNumberValue(possibleId);
+    if (numericId !== undefined) {
+      return numericId;
+    }
+  }
+
+  return undefined;
 }
 
 function normalizeRoute(value: string): string {
@@ -371,17 +436,36 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     onExpandChange?.(isExpanded);
   }, [isExpanded, onExpandChange]);
 
+  const { user: authUser } = useAuth();
   const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
   const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
+  const internalUserId = useMemo(
+    () => extractInternalUserId(authUser?.internalUser),
+    [authUser?.internalUser],
+  );
   const currentUserId = toNumericId(currentUser?.id);
+  const sidebarUserId = internalUserId ?? currentUserId;
+  useEffect(() => {
+    if (internalUserId !== undefined) {
+      console.log('Identifiant utilisateur interne détecté :', internalUserId);
+    }
+  }, [internalUserId]);
+  useEffect(() => {
+    if (internalUserId === undefined && currentUserId !== undefined) {
+      console.log(
+        "Identifiant utilisateur récupéré depuis l'API d'administration :",
+        currentUserId,
+      );
+    }
+  }, [currentUserId, internalUserId]);
   const {
     data: moduleDefinitions,
     isLoading: loadingModules,
     isFetching: fetchingModules,
     isError: hasModuleError,
     error: moduleError,
-  } = useSidebarModules(currentUserId);
-  const waitingForModules = loadingModules || fetchingModules || currentUserId === undefined;
+  } = useSidebarModules(sidebarUserId);
+  const waitingForModules = loadingModules || fetchingModules || sidebarUserId === undefined;
 
   const accessiblePermissions = useMemo(() => {
     if (!currentUser) {

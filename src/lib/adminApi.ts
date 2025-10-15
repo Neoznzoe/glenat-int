@@ -1051,6 +1051,12 @@ function buildSidebarModulesQuery(userId?: number): string {
   const sanitizedId = hasValidId ? Math.trunc(userId) : null;
   const userIdLiteral = sanitizedId === null ? 'CAST(NULL AS INT)' : String(sanitizedId);
 
+  if (sanitizedId !== null) {
+    console.log(`Requête SQL modules – DECLARE @userId INT = ${sanitizedId};`);
+  } else {
+    console.warn('Requête SQL modules – aucun identifiant utilisateur valide fourni.');
+  }
+
   return [
     'SET NOCOUNT ON;',
     `DECLARE @userId INT = ${userIdLiteral};`,
