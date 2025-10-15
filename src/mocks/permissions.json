@@ -1,0 +1,17 @@
+[
+  {
+    "userId": 1,
+    "moduleId": 3,
+    "canView": false
+  },
+  {
+    "userId": 1,
+    "moduleId": 4,
+    "canView": true
+  },
+  {
+    "userId": 2,
+    "moduleId": 4,
+    "canView": false
+  }
+]

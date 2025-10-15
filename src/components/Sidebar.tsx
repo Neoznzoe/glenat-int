@@ -1,361 +1,24 @@
-import * as LucideIcons from 'lucide-react';
-import { Pin, PinOff } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
-import Logo from '../assets/logos/glenat/glenat_white.svg';
-import LogoG from '../assets/logos/glenat/glenat_G.svg';
-import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
-import { useSidebarModules } from '@/hooks/useModules';
-import { computeEffectivePermissions } from '@/lib/mockDb';
-import type { PermissionKey } from '@/lib/access-control';
-import { useDecryptedLocation } from '@/lib/secureRouting';
-import { SecureNavLink } from '@/components/routing/SecureLink';
+import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import clsx from "clsx";
+import { Pin, PinOff } from "lucide-react";
+import { SidebarSkeleton } from "@/components/SidebarSkeleton";
+import { useVisibleModules } from "@/hooks/useVisibleModules";
+import { resolveLucideIcon } from "@/lib/icons";
+import type { VisibleModule } from "@/types/sidebar";
 
-interface SidebarProps {
+const ADMIN_SECTION_KEY = "administration";
+
+export type SidebarProps = {
   jobCount?: number;
   onExpandChange?: (expanded: boolean) => void;
-}
-
-interface SidebarModuleEntry {
-  id: string;
-  label: string;
-  path: string;
-  permission: PermissionKey;
-  icon: LucideIcon | null;
-  badge?: number | string;
-  order: number;
-  section?: string;
-}
-
-type ModuleMetadata = Record<string, unknown>;
-
-function toNonEmptyString(value: unknown): string | undefined {
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    return trimmed ? trimmed : undefined;
-  }
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value.toString();
-  }
-  return undefined;
-}
-
-function toNumberValue(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return undefined;
-    }
-    const parsed = Number.parseFloat(trimmed);
-    if (!Number.isNaN(parsed)) {
-      return parsed;
-    }
-  }
-  return undefined;
-}
-
-function resolveBoolean(value: unknown, fallback = true): boolean {
-  if (typeof value === 'boolean') {
-    return value;
-  }
-  if (typeof value === 'number') {
-    return value !== 0;
-  }
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase();
-    if (!normalized) {
-      return fallback;
-    }
-    if (['0', 'false', 'non', 'no', 'off'].includes(normalized)) {
-      return false;
-    }
-    if (['1', 'true', 'oui', 'yes', 'on'].includes(normalized)) {
-      return true;
-    }
-  }
-  return fallback;
-}
-
-function normalizeRoute(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return trimmed;
-  }
-  if (/^[a-z]+:\/\//i.test(trimmed)) {
-    return trimmed;
-  }
-  if (trimmed === '/') {
-    return '/';
-  }
-  const normalized = trimmed.replace(/^\/+/, '');
-  return `/${normalized}`;
-}
-
-function extractModulePath(metadata: ModuleMetadata, key: string): string | null {
-  const candidates = [
-    toNonEmptyString(metadata.path),
-    toNonEmptyString(metadata.url),
-    toNonEmptyString(metadata.href),
-    toNonEmptyString(metadata.route),
-    toNonEmptyString(metadata.externalPath),
-    toNonEmptyString(metadata.slug),
-    key,
-  ];
-
-  for (const candidate of candidates) {
-    if (!candidate) {
-      continue;
-    }
-    const normalized = normalizeRoute(candidate);
-    if (normalized) {
-      return normalized;
-    }
-  }
-
-  if (key && key.trim().toLowerCase() === 'home') {
-    return '/';
-  }
-
-  return null;
-}
-
-function resolveBadgeValue(badge: unknown, jobCount?: number): number | string | undefined {
-  const normalizedJobCount =
-    typeof jobCount === 'number' && Number.isFinite(jobCount) && jobCount > 0
-      ? Math.trunc(jobCount)
-      : undefined;
-
-  const resolvePrimitive = (value: unknown): number | string | undefined => {
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      if (value <= 0) {
-        return undefined;
-      }
-      if (value === 1 && normalizedJobCount !== undefined) {
-        return normalizedJobCount;
-      }
-      return Math.trunc(value);
-    }
-    if (typeof value === 'string') {
-      const trimmed = value.trim();
-      if (!trimmed) {
-        return undefined;
-      }
-      const numeric = Number.parseFloat(trimmed);
-      if (!Number.isNaN(numeric)) {
-        if (numeric <= 0) {
-          return undefined;
-        }
-        if (numeric === 1 && normalizedJobCount !== undefined) {
-          return normalizedJobCount;
-        }
-        return Math.trunc(numeric);
-      }
-      if (normalizedJobCount !== undefined && trimmed.toLowerCase() === 'jobcount') {
-        return normalizedJobCount;
-      }
-      return trimmed;
-    }
-    return undefined;
-  };
-
-  if (badge === null || badge === undefined) {
-    return undefined;
-  }
-
-  const primitiveValue = resolvePrimitive(badge);
-  if (primitiveValue !== undefined) {
-    return primitiveValue;
-  }
-
-  if (typeof badge === 'object') {
-    const badgeRecord = badge as Record<string, unknown>;
-
-    if (normalizedJobCount !== undefined) {
-      const typeValue = toNonEmptyString(badgeRecord.type)?.toLowerCase();
-      if (typeValue && ['jobcount', 'count', 'job-count'].includes(typeValue)) {
-        return normalizedJobCount;
-      }
-    }
-
-    if ('value' in badgeRecord) {
-      return resolvePrimitive(badgeRecord.value);
-    }
-  }
-
-  return undefined;
-}
-
-const ICON_ALIAS_MAP: Record<string, keyof typeof LucideIcons> = {
-  home: 'Home',
-  accueil: 'Home',
-  dashboard: 'LayoutDashboard',
-  annuaire: 'Users',
-  collaborateurs: 'Users',
-  'qui-fait-quoi': 'Users',
-  catalogue: 'BookOpen',
-  kiosque: 'Newspaper',
-  kiosk: 'Newspaper',
-  actualites: 'Newspaper',
-  news: 'Newspaper',
-  agenda: 'CalendarDays',
-  planning: 'CalendarCheck',
-  evenement: 'CalendarCheck',
-  events: 'CalendarCheck',
-  emploi: 'BriefcaseBusiness',
-  jobs: 'BriefcaseBusiness',
-  recrutement: 'BriefcaseBusiness',
-  ressources: 'Boxes',
-  ressourceshumaines: 'UserCog',
-  rh: 'UserCog',
-  formations: 'GraduationCap',
-  communication: 'Megaphone',
-  contact: 'AtSign',
-  annonce: 'Megaphone',
-  outils: 'Wrench',
-  documentation: 'Files',
-  documents: 'Files',
-  doc: 'Files',
-  support: 'LifeBuoy',
-  admin: 'Settings',
-  administration: 'Settings',
-  parametres: 'Settings',
-  configuration: 'SlidersHorizontal',
-  statistiques: 'BarChart3',
-  rapports: 'BarChart3',
-  rapport: 'BarChart3',
-  glenart: 'Palette',
-  kiosquedoc: 'Newspaper',
-  service: 'Building2',
-  services: 'Building2',
-  operations: 'Workflow',
-  procedure: 'Workflow',
-  processus: 'Workflow',
-  facturation: 'Receipt',
-  finance: 'PieChart',
-  partenaires: 'Handshake',
 };
 
-function normalizeIconKey(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-function resolveLucideIcon(name?: string): LucideIcon | null {
-  if (!name) {
-    return null;
-  }
-  const normalized = name.trim();
-  if (!normalized) {
-    return null;
-  }
-
-  const sanitized = normalized
-    .replace(/^lucide[:\s_-]*/i, '')
-    .replace(/^icon[:\s_-]*/i, '')
-    .replace(/^uil[:\s_-]*/i, '')
-    .replace(/^fa[:\s_-]*/i, '')
-    .replace(/icon$/i, '')
-    .replace(/[-_\s]+icon$/i, '')
-    .replace(/^[^a-z0-9]+/i, '')
-    .replace(/[^a-z0-9]+$/i, '');
-
-  const base = sanitized || normalized;
-  const segments = base
-    .split(/[^a-zA-Z0-9]+/)
-    .filter(Boolean);
-  const pascal = segments
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join('');
-  const camel = pascal ? pascal.charAt(0).toLowerCase() + pascal.slice(1) : '';
-  const upper = base.toUpperCase();
-  const lower = base.toLowerCase();
-  const kebab = segments.map((part) => part.toLowerCase()).join('-');
-
-  const aliasCandidates = [normalized, sanitized, base, kebab];
-  for (const candidate of aliasCandidates) {
-    if (!candidate) {
-      continue;
-    }
-    const alias = ICON_ALIAS_MAP[normalizeIconKey(candidate)];
-    if (alias) {
-      const iconCandidate = LucideIcons[alias as keyof typeof LucideIcons];
-      if (iconCandidate) {
-        return iconCandidate as LucideIcon;
-      }
-    }
-  }
-
-  const variants = new Set<string>([
-    normalized,
-    sanitized,
-    base,
-    pascal,
-    camel,
-    lower,
-    upper,
-    kebab,
-  ]);
-
-  if (pascal) {
-    variants.add(pascal.replace(/\d+$/, (match) => match));
-  }
-
-  if (segments.length > 1) {
-    variants.add(segments.join(''));
-  }
-
-  for (const candidate of variants) {
-    if (!candidate) {
-      continue;
-    }
-    const iconCandidate = LucideIcons[candidate as keyof typeof LucideIcons];
-    if (iconCandidate) {
-      return iconCandidate as LucideIcon;
-    }
-  }
-
-  return null;
-}
-
-function isAdministrationModule(module: SidebarModuleEntry): boolean {
-  if (module.section) {
-    const normalized = module.section.toLowerCase();
-    if (normalized === 'administration' || normalized === 'admin') {
-      return true;
-    }
-  }
-  return module.permission.toLowerCase() === 'administration';
-}
-
-function SidebarSkeletonList({ count, isExpanded }: { count: number; isExpanded: boolean }) {
-  return (
-    <ul className="space-y-1" aria-hidden>
-      {Array.from({ length: count }).map((_, index) => (
-        <li key={`sidebar-skeleton-${index}`}>
-          <div
-            className={`flex items-center w-full px-2 py-2 rounded-lg bg-white/10 animate-pulse ${
-              isExpanded ? 'space-x-3' : 'justify-center'
-            }`}
-          >
-            <div className="h-5 w-5 rounded-full bg-white/30" />
-            {isExpanded ? <div className="h-3 flex-1 rounded bg-white/30" /> : null}
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
-  const [isPinned, setIsPinned] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+export function Sidebar({ jobCount, onExpandChange }: SidebarProps): JSX.Element {
+  const location = useLocation();
+  const [isPinned, setIsPinned] = useState<boolean>(true);
+  const [isHovered, setIsHovered] = useState<boolean>(false);
+  const { data, loading, error } = useVisibleModules();
 
   const isExpanded = isPinned || isHovered;
 
@@ -363,271 +26,159 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     onExpandChange?.(isExpanded);
   }, [isExpanded, onExpandChange]);
 
-  const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
-  const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
-  const {
-    data: moduleDefinitions,
-    isLoading: loadingModules,
-    isError: hasModuleError,
-    error: moduleError,
-  } = useSidebarModules();
-
-  const accessiblePermissions = useMemo(() => {
-    if (!currentUser) {
-      return new Set<PermissionKey>();
-    }
-    return new Set(computeEffectivePermissions(currentUser, groups));
-  }, [currentUser, groups]);
-
-  const processedModules = useMemo(() => {
-    if (!moduleDefinitions) {
-      return [];
+  const [principalModules, administrationModules] = useMemo(() => {
+    if (!data) {
+      return [[], []] as [VisibleModule[], VisibleModule[]];
     }
 
-    const items: SidebarModuleEntry[] = [];
+    const administration: VisibleModule[] = [];
+    const principal: VisibleModule[] = [];
 
-    moduleDefinitions.forEach((definition, index) => {
-      if (definition.type !== 'module') {
-        return;
+    for (const module of data) {
+      if ((module.section ?? "").toLowerCase() === ADMIN_SECTION_KEY) {
+        administration.push(module);
+      } else {
+        principal.push(module);
       }
-
-      const metadata = (definition.metadata ?? {}) as ModuleMetadata;
-
-      if (!resolveBoolean(metadata.isActive, true)) {
-        return;
-      }
-
-      const path = extractModulePath(metadata, definition.key);
-      if (!path) {
-        return;
-      }
-
-      const id =
-        toNonEmptyString(metadata.id) ??
-        toNonEmptyString(metadata.slug) ??
-        definition.key ??
-        `module-${index + 1}`;
-
-      const label = definition.label ?? id;
-
-      const permissionKey = (toNonEmptyString(metadata.permissionKey) ?? definition.key) as PermissionKey;
-      const normalizedPermission = permissionKey.trim().toLowerCase() as PermissionKey;
-
-      const iconName = toNonEmptyString(metadata.icon);
-      let icon = resolveLucideIcon(iconName);
-
-      if (!icon) {
-        const fallbackIconCandidates = [
-          toNonEmptyString(metadata.slug),
-          toNonEmptyString(metadata.path),
-          definition.label,
-          definition.key,
-        ];
-
-        for (const candidate of fallbackIconCandidates) {
-          icon = resolveLucideIcon(candidate ?? undefined);
-          if (icon) {
-            break;
-          }
-        }
-      }
-
-      const badge = resolveBadgeValue(metadata.badge, jobCount);
-      const order = toNumberValue(metadata.order) ?? index;
-      const section = toNonEmptyString(metadata.section)?.toLowerCase();
-
-      const entry: SidebarModuleEntry = {
-        id,
-        label,
-        path,
-        permission: normalizedPermission,
-        icon,
-        badge,
-        order,
-        section,
-      };
-
-      items.push(entry);
-    });
-
-    return items.sort((left, right) => {
-      if (left.order !== right.order) {
-        return left.order - right.order;
-      }
-      return left.label.localeCompare(right.label, 'fr', { sensitivity: 'base' });
-    });
-  }, [moduleDefinitions, jobCount]);
-
-  const showAllMenus = loadingCurrentUser || loadingGroups || !currentUser;
-
-  const userCanAccess = (permission: PermissionKey) => {
-    if (showAllMenus) {
-      return true;
     }
-    if (currentUser?.isSuperAdmin) {
-      return true;
-    }
-    return accessiblePermissions.has(permission);
-  };
 
-  const location = useDecryptedLocation();
-
-  const mainMenuItems = processedModules.filter(
-    (item) => !isAdministrationModule(item) && userCanAccess(item.permission),
-  );
-  const adminMenuItems = processedModules.filter(
-    (item) => isAdministrationModule(item) && userCanAccess(item.permission),
-  );
-
-  const moduleErrorMessage =
-    hasModuleError && moduleError
-      ? moduleError instanceof Error
-        ? moduleError.message
-        : String(moduleError)
-      : null;
+    return [principal, administration] as [VisibleModule[], VisibleModule[]];
+  }, [data]);
 
   return (
-    <div
-      className={`bg-primary text-primary-foreground flex flex-col h-screen transition-all duration-300 ease-in-out relative ${
-        isExpanded ? 'w-64' : 'w-16'
-      }`}
+    <aside
+      className={clsx(
+        "group/sidebar relative flex h-full flex-col border-r border-border bg-background transition-all duration-200",
+        isExpanded ? "w-64" : "w-16"
+      )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Header */}
-      <div className="h-16 p-4 border-b border-red-400/50 flex items-center justify-between min-h-[64px]">
-        {isExpanded ? (
-          <img src={Logo} alt="Logo Glénat" className="h-8 w-auto flex-shrink-0" />
-        ) : (
-          <img src={LogoG} alt="Logo Glénat" className="h-8 w-auto flex-shrink-0" />
-        )}
-        
-        <button
-          onClick={() => setIsPinned(!isPinned)}
-          className={`p-1 rounded hover:bg-white/20 transition-all duration-300 ${
-            isExpanded ? 'opacity-100' : 'opacity-0'
-          }`}
-          title={isPinned ? 'Déverrouiller la sidebar' : 'Verrouiller la sidebar'}
+      <header className="flex items-center justify-between px-2 py-3">
+        <span
+          className={clsx(
+            "flex items-center gap-2 text-sm font-semibold",
+            !isExpanded && "sr-only"
+          )}
         >
-          {isPinned ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
-        </button>
-      </div>
-
-      {/* Contenu principal = menu du haut + administration séparée */}
-      <div className="flex-1 min-h-0 flex flex-col justify-between">
-        {/* Menu principal */}
-        <nav className="p-2">
-          {loadingModules ? (
-            <SidebarSkeletonList count={6} isExpanded={isExpanded} />
-          ) : (
-            <ul className="space-y-1">
-              {mainMenuItems.map((item) => {
-                const isInternalLink = item.path.startsWith('/');
-                const isActive = isInternalLink
-                  ? item.path === '/'
-                    ? location.pathname === '/'
-                    : location.pathname.startsWith(item.path)
-                  : false;
-
-                return (
-                  <li key={item.id}>
-                    <SecureNavLink
-                      to={item.path}
-                      className={`relative flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
-                        isActive
-                          ? 'bg-white/20 text-white'
-                          : 'text-red-100 hover:bg-white/10 hover:text-white'
-                      } ${isExpanded ? 'space-x-3' : 'justify-center'}`}
-                      title={!isExpanded ? item.label : ''}
-                    >
-                      {item.icon ? (
-                        <item.icon className="h-5 w-5 flex-shrink-0" />
-                      ) : (
-                        <span className="h-5 w-5 flex-shrink-0 flex items-center justify-center rounded-full bg-white/20 text-xs font-semibold uppercase">
-                          {item.label.charAt(0)}
-                        </span>
-                      )}
-                      <span
-                        className={`font-medium transition-all duration-300 whitespace-nowrap ${
-                          isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
-                        }`}
-                      >
-                        {item.label}
-                      </span>
-                      {item.badge !== undefined ? (
-                        <span className="absolute -top-[6px] -right-[6px] bg-white text-primary text-xs font-bold rounded-full px-1 min-h-[20px] min-w-[20px] flex items-center justify-center">
-                          {item.badge}
-                        </span>
-                      ) : null}
-                    </SecureNavLink>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {hasModuleError && moduleErrorMessage ? (
-            <div className="mt-3 text-xs text-red-100/80 bg-black/20 rounded-lg px-3 py-2">
-              Impossible de charger le menu ({moduleErrorMessage}).
-            </div>
+          Navigation
+          {typeof jobCount === "number" ? (
+            <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold text-primary">
+              {jobCount}
+            </span>
           ) : null}
-        </nav>
-
-        {/* Bloc Administration */}
-        <nav className="p-2">
-          {loadingModules ? (
-            <SidebarSkeletonList count={2} isExpanded={isExpanded} />
-          ) : (
-            <ul>
-              {adminMenuItems.map((item) => {
-                const isInternalLink = item.path.startsWith('/');
-                const isActive = isInternalLink
-                  ? item.path === '/'
-                    ? location.pathname === '/'
-                    : location.pathname.startsWith(item.path)
-                  : false;
-
-                return (
-                  <li key={item.id}>
-                    <SecureNavLink
-                      to={item.path}
-                      className={`flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
-                        isActive
-                          ? 'bg-white/20 text-white'
-                          : 'text-red-100 hover:bg-white/10 hover:text-white'
-                      } ${isExpanded ? 'space-x-3' : 'justify-center'}`}
-                      title={!isExpanded ? item.label : ''}
-                    >
-                      {item.icon ? (
-                        <item.icon className="h-5 w-5 flex-shrink-0" />
-                      ) : (
-                        <span className="h-5 w-5 flex-shrink-0 flex items-center justify-center rounded-full bg-white/20 text-xs font-semibold uppercase">
-                          {item.label.charAt(0)}
-                        </span>
-                      )}
-                      <span
-                        className={`font-medium transition-all duration-300 whitespace-nowrap ${
-                          isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
-                        }`}
-                      >
-                        {item.label}
-                      </span>
-                    </SecureNavLink>
-                  </li>
-                );
-              })}
-            </ul>
+        </span>
+        <button
+          type="button"
+          className={clsx(
+            "inline-flex items-center gap-1 rounded-md border border-transparent px-2 py-1 text-xs font-medium",
+            "text-muted-foreground transition hover:bg-muted",
+            !isExpanded && "mx-auto"
           )}
-        </nav>
-      </div>
+          onClick={() => setIsPinned((value) => !value)}
+          aria-pressed={isPinned}
+        >
+          {isPinned ? <PinOff className="h-4 w-4" aria-hidden /> : <Pin className="h-4 w-4" aria-hidden />}
+          {isExpanded ? <span>{isPinned ? "Détacher" : "Épingler"}</span> : null}
+        </button>
+      </header>
 
-      {/* Footer */}
-      <div className="h-12 flex-none border-t border-red-400/50 flex items-center px-4">
-        <div className={`text-xs text-red-100 transition-all duration-300 ${
-          isExpanded ? 'opacity-100' : 'opacity-0'
-        }`}>
-          Version 1.0.0
-        </div>
-      </div>
-    </div>
+      <nav className="flex-1 space-y-6 overflow-y-auto px-2 pb-6" aria-label="Navigation principale">
+        {loading ? (
+          <SidebarSkeleton count={6} isExpanded={isExpanded} />
+        ) : (
+          <>
+            {error ? (
+              <p className="rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                {error}
+              </p>
+            ) : null}
+
+            <SidebarSection
+              title="Principal"
+              modules={principalModules}
+              isExpanded={isExpanded}
+              currentPath={location.pathname}
+            />
+
+            {administrationModules.length > 0 ? (
+              <SidebarSection
+                title="Administration"
+                modules={administrationModules}
+                isExpanded={isExpanded}
+                currentPath={location.pathname}
+              />
+            ) : null}
+          </>
+        )}
+      </nav>
+    </aside>
   );
 }
+
+type SidebarSectionProps = {
+  title: string;
+  modules: VisibleModule[];
+  isExpanded: boolean;
+  currentPath: string;
+};
+
+function SidebarSection({ title, modules, isExpanded, currentPath }: SidebarSectionProps): JSX.Element | null {
+  if (modules.length === 0) {
+    return null;
+  }
+
+  return (
+    <section>
+      <h2 className={clsx("mb-2 px-2 text-xs font-semibold uppercase text-muted-foreground", !isExpanded && "sr-only")}>
+        {title}
+      </h2>
+      <ul className="space-y-1">
+        {modules.map((module) => (
+          <SidebarItem
+            key={module.id}
+            module={module}
+            isExpanded={isExpanded}
+            currentPath={currentPath}
+          />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+type SidebarItemProps = {
+  module: VisibleModule;
+  isExpanded: boolean;
+  currentPath: string;
+};
+
+function SidebarItem({ module, isExpanded, currentPath }: SidebarItemProps): JSX.Element {
+  const Icon = resolveLucideIcon(module.icon);
+  const isActive = currentPath.startsWith(module.path);
+
+  return (
+    <li>
+      <Link
+        to={module.path}
+        className={clsx(
+          "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition",
+          isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+        )}
+        aria-current={isActive ? "page" : undefined}
+        title={module.name}
+      >
+        {Icon ? (
+          <Icon className="h-4 w-4" aria-hidden />
+        ) : (
+          <span className="flex h-6 w-6 items-center justify-center rounded bg-muted text-xs font-semibold uppercase">
+            {module.name ? module.name.charAt(0).toUpperCase() : "?"}
+          </span>
+        )}
+        {isExpanded ? <span className="truncate">{module.name}</span> : null}
+      </Link>
+    </li>
+  );
+}
+
+export default Sidebar;

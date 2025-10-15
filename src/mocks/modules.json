@@ -1,0 +1,47 @@
+[
+  {
+    "id": 1,
+    "name": "Accueil",
+    "path": "/",
+    "icon": "home",
+    "order": 1,
+    "section": null,
+    "isActive": true
+  },
+  {
+    "id": 2,
+    "name": "Tableau de bord",
+    "path": "/dashboard",
+    "icon": "layout-dashboard",
+    "order": 2,
+    "section": null,
+    "isActive": true
+  },
+  {
+    "id": 3,
+    "name": "Rapports",
+    "path": "/reports",
+    "icon": "file-text",
+    "order": 3,
+    "section": null,
+    "isActive": true
+  },
+  {
+    "id": 4,
+    "name": "Utilisateurs",
+    "path": "/admin/users",
+    "icon": "users",
+    "order": 1,
+    "section": "administration",
+    "isActive": true
+  },
+  {
+    "id": 5,
+    "name": "Paramètres",
+    "path": "/admin/settings",
+    "icon": "settings",
+    "order": 2,
+    "section": "administration",
+    "isActive": true
+  }
+]
