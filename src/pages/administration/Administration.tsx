@@ -248,16 +248,10 @@ export function Administration() {
     const targetUserId = targetUser.id;
     const moduleOverridesToPersist = nextOverrides.filter((override) => {
       const permission = permissionsByKey.get(override.key);
-      return permission?.type === 'module' && override.mode === 'deny';
+      return permission?.type === 'module';
     });
 
-    const overridesForPersistence = nextOverrides.filter((override) => {
-      const permission = permissionsByKey.get(override.key);
-      if (permission?.type === 'module') {
-        return override.mode === 'deny';
-      }
-      return true;
-    });
+    const overridesForPersistence = [...nextOverrides];
 
     try {
       const updatedUser = await moduleOverrideMutation.mutateAsync({

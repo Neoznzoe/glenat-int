@@ -53,14 +53,15 @@ export interface UpdateModuleOverridePayload {
   userId: string;
   permissionKey: PermissionKey;
   /**
-   * Contains the module-level overrides after applying the latest change. Only
-   * permissions with a `deny` mode should be present in this list.
+   * Contains the module-level overrides after applying the latest change. Both
+   * `allow` and `deny` modes must be preserved so the `canView` flag in
+   * `[userPermissions]` mirrors the overrides exactly.
    */
   moduleOverrides: PermissionOverride[];
   /**
-   * Full override list after the change. Module entries must only include
-   * explicit denies so the database mirrors the legacy behaviour where allows
-   * rely on inheritance.
+   * Full override list after the change. Module entries should keep explicit
+   * `allow` or `deny` overrides so individual visibility decisions can be
+   * reconstructed when reading from the database.
    */
   allOverrides: PermissionOverride[];
   groups: string[];
@@ -1344,18 +1345,19 @@ export async function persistModuleOverrideChange(
     );
   }
 
-  const hasDenyOverride = sanitizedModuleOverrides.some(
-    (override) => override.key === payload.permissionKey && override.mode === 'deny',
-  );
-
   const statements = [
     'SET NOCOUNT ON;',
     `DELETE FROM [userPermissions] WHERE [userId] = ${numericUserId} AND UPPER(LTRIM(RTRIM([permissionType]))) = 'MODULE' AND [moduleId] = ${numericModuleId};`,
   ];
 
-  if (hasDenyOverride) {
+  const overrideForModule = sanitizedModuleOverrides.find(
+    (override) => override.key === payload.permissionKey,
+  );
+
+  if (overrideForModule) {
+    const canView = overrideForModule.mode === 'allow' ? 1 : 0;
     statements.push(
-      `INSERT INTO [userPermissions] ([userId], [permissionType], [moduleId], [canView]) VALUES (${numericUserId}, 'MODULE', ${numericModuleId}, 0);`,
+      `INSERT INTO [userPermissions] ([userId], [permissionType], [moduleId], [canView]) VALUES (${numericUserId}, 'MODULE', ${numericModuleId}, ${canView});`,
     );
   }
 
