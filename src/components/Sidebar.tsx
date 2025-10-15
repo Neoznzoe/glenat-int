@@ -79,6 +79,14 @@ function resolveBoolean(value: unknown, fallback = true): boolean {
   return fallback;
 }
 
+function toNumericId(value?: string): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 function normalizeRoute(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -365,12 +373,15 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
 
   const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
   const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
+  const currentUserId = toNumericId(currentUser?.id);
   const {
     data: moduleDefinitions,
     isLoading: loadingModules,
+    isFetching: fetchingModules,
     isError: hasModuleError,
     error: moduleError,
-  } = useSidebarModules();
+  } = useSidebarModules(currentUserId);
+  const waitingForModules = loadingModules || fetchingModules || currentUserId === undefined;
 
   const accessiblePermissions = useMemo(() => {
     if (!currentUser) {
@@ -458,7 +469,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     });
   }, [moduleDefinitions, jobCount]);
 
-  const showAllMenus = loadingCurrentUser || loadingGroups || !currentUser;
+  const showAllMenus = loadingCurrentUser || loadingGroups || waitingForModules || !currentUser;
 
   const userCanAccess = (permission: PermissionKey) => {
     if (showAllMenus) {
@@ -517,7 +528,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       <div className="flex-1 min-h-0 flex flex-col justify-between">
         {/* Menu principal */}
         <nav className="p-2">
-          {loadingModules ? (
+          {waitingForModules ? (
             <SidebarSkeletonList count={6} isExpanded={isExpanded} />
           ) : (
             <ul className="space-y-1">
@@ -574,7 +585,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
 
         {/* Bloc Administration */}
         <nav className="p-2">
-          {loadingModules ? (
+          {waitingForModules ? (
             <SidebarSkeletonList count={2} isExpanded={isExpanded} />
           ) : (
             <ul>

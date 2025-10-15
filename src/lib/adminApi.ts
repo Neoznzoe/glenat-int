@@ -16,7 +16,7 @@ const ADMIN_DATABASE_ENDPOINT =
   'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
 
 const ADMIN_USERS_QUERY = 'SELECT * FROM [users];';
-const ADMIN_MODULES_QUERY = 'SELECT * FROM [modules];';
+const ADMIN_MODULES_QUERY = 'SET NOCOUNT ON;\nSELECT * FROM [modules];';
 const ADMIN_PAGES_QUERY = 'SELECT * FROM [pages];';
 const ADMIN_MODULE_PAGES_QUERY = 'SELECT * FROM [modulesPages];';
 const ADMIN_GROUPS_QUERY = 'SELECT * FROM [userGroups];';
@@ -1046,8 +1046,36 @@ export async function fetchGroups(): Promise<GroupDefinition[]> {
   return groups;
 }
 
-export async function fetchModules(): Promise<PermissionDefinition[]> {
-  const moduleRecords = await runDatabaseQuery(ADMIN_MODULES_QUERY, 'modules');
+function buildSidebarModulesQuery(userId?: number): string {
+  const hasValidId = typeof userId === 'number' && Number.isFinite(userId);
+  const sanitizedId = hasValidId ? Math.trunc(userId) : null;
+  const userIdLiteral = sanitizedId === null ? 'CAST(NULL AS INT)' : String(sanitizedId);
+
+  return [
+    'SET NOCOUNT ON;',
+    `DECLARE @userId INT = ${userIdLiteral};`,
+    'WITH VisibleModules AS (',
+    '  SELECT',
+    '    m.*,',
+    "    CONVERT(bit, CASE WHEN up.[canView] = 0 THEN 0 ELSE 1 END) AS [isUserVisible]",
+    '  FROM [modules] AS m',
+    '  LEFT JOIN [userPermissions] AS up',
+    '    ON up.[moduleId] = m.[id]',
+    '   AND up.[userId] = @userId',
+    "   AND UPPER(LTRIM(RTRIM(up.[permissionType]))) = 'MODULE'",
+    '  WHERE m.[isActive] = 1',
+    ')',
+    'SELECT *',
+    'FROM VisibleModules',
+    'WHERE [isUserVisible] = CONVERT(bit, 1);',
+  ].join('\n');
+}
+
+export async function fetchModules(userId?: number): Promise<PermissionDefinition[]> {
+  const moduleRecords = await runDatabaseQuery(
+    buildSidebarModulesQuery(userId),
+    'modules visibles',
+  );
 
   return moduleRecords.map((record, index) => normalizeModuleDefinition(record, index));
 }
