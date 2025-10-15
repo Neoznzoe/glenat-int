@@ -20,17 +20,17 @@ async function bootstrap() {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <MsalProvider instance={msalInstance}>
-        <AuthProvider>
-          <Provider store={store}>
-            <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <Provider store={store}>
               <ThemeProvider>
                 <BrowserRouter>
                   <App />
                 </BrowserRouter>
               </ThemeProvider>
-            </QueryClientProvider>
-          </Provider>
-        </AuthProvider>
+            </Provider>
+          </AuthProvider>
+        </QueryClientProvider>
       </MsalProvider>
     </StrictMode>,
   );

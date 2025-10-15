@@ -6,6 +6,7 @@ import {
   listAuditLog,
   getCurrentUser,
   updateUserAccess,
+  setCurrentUserId,
   type PermissionOverride,
   type UserAccount,
   type AuditLogEntry,
@@ -61,6 +62,22 @@ async function handleAdminRequest(request: Request): Promise<Response | undefine
     if (pathname === '/api/admin/current-user' && method === 'GET') {
       const user = await getCurrentUser();
       return jsonResponse<UserAccount>(user);
+    }
+
+    if (pathname === '/api/admin/current-user' && method === 'POST') {
+      const bodyText = await request.text();
+      const body = bodyText ? JSON.parse(bodyText) : {};
+      const userId = typeof body.userId === 'string' ? body.userId : '';
+      if (!userId.trim()) {
+        return errorResponse("Identifiant d'utilisateur requis.", 400);
+      }
+
+      const permissionOverrides = Array.isArray(body.permissionOverrides)
+        ? (body.permissionOverrides as PermissionOverride[])
+        : undefined;
+
+      const updated = await setCurrentUserId(userId, { permissionOverrides });
+      return jsonResponse<UserAccount>(updated);
     }
 
     if (pathname === '/api/admin/audit-log' && method === 'GET') {

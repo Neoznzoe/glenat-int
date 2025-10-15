@@ -8,6 +8,7 @@ import {
   type GroupDefinition,
   type PermissionDefinition,
   type PermissionKey,
+  isPermissionKey,
 } from './access-control';
 import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
 
@@ -65,6 +66,11 @@ export interface UpdateModuleOverridePayload {
   allOverrides: PermissionOverride[];
   groups: string[];
   actorId?: string;
+}
+
+export interface SetCurrentUserPayload {
+  userId: string;
+  permissionOverrides?: PermissionOverride[];
 }
 
 const GROUP_ACCENT_COLORS = [
@@ -203,6 +209,41 @@ function normalizeGroups(value: unknown): string[] {
   return [];
 }
 
+function normalizeForComparison(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/gi, '')
+    .toLowerCase();
+}
+
+function resolvePermissionDefinitionKey(key: string): PermissionKey | null {
+  if (isPermissionKey(key)) {
+    return key;
+  }
+
+  const normalized = normalizeForComparison(key);
+  if (!normalized) {
+    return null;
+  }
+
+  for (const definition of PERMISSION_DEFINITIONS) {
+    const normalizedKey = normalizeForComparison(definition.key);
+    if (normalized === normalizedKey) {
+      return definition.key;
+    }
+
+    if (definition.label) {
+      const normalizedLabel = normalizeForComparison(definition.label);
+      if (normalized === normalizedLabel) {
+        return definition.key;
+      }
+    }
+  }
+
+  return null;
+}
+
 function sanitizePermissionOverrides(overrides: PermissionOverride[]): PermissionOverride[] {
   if (!Array.isArray(overrides) || overrides.length === 0) {
     return [];
@@ -223,11 +264,15 @@ function sanitizePermissionOverrides(overrides: PermissionOverride[]): Permissio
     if (mode !== 'allow' && mode !== 'deny') {
       continue;
     }
-    if (seen.has(key)) {
+    const resolvedKey = resolvePermissionDefinitionKey(key);
+    if (!resolvedKey) {
       continue;
     }
-    seen.add(key);
-    sanitized.unshift({ key, mode });
+    if (seen.has(resolvedKey)) {
+      continue;
+    }
+    seen.add(resolvedKey);
+    sanitized.unshift({ key: resolvedKey, mode });
   }
 
   return sanitized;
@@ -1162,6 +1207,26 @@ SELECT CAST(SCOPE_IDENTITY() AS INT) AS [groupId], N'${escapedName}' AS [groupNa
 export async function fetchAuditLog(limit = 25): Promise<AuditLogEntry[]> {
   const params = new URLSearchParams({ limit: String(limit) });
   return requestJson<AuditLogEntry[]>(`/api/admin/audit-log?${params.toString()}`);
+}
+
+export async function setCurrentUserId(payload: SetCurrentUserPayload): Promise<UserAccount> {
+  const trimmedId = payload.userId.trim();
+  if (!trimmedId) {
+    throw new Error("L'identifiant utilisateur est requis.");
+  }
+
+  const sanitizedOverrides = sanitizePermissionOverrides(payload.permissionOverrides ?? []);
+
+  return requestJson<UserAccount>('/api/admin/current-user', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      userId: trimmedId,
+      permissionOverrides: sanitizedOverrides,
+    }),
+  });
 }
 
 export async function fetchCurrentUser(): Promise<UserAccount> {

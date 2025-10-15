@@ -96,6 +96,10 @@ export interface UpdateUserAccessPayload {
   actorId?: string;
 }
 
+export interface SetCurrentUserOptions {
+  permissionOverrides?: PermissionOverride[];
+}
+
 const STORAGE_KEY = 'glenat-admin-database-v1';
 const DB_VERSION = 2;
 let inMemoryDb: DatabaseSchema | null = null;
@@ -582,6 +586,42 @@ export async function getCurrentUser(): Promise<UserAccount> {
     throw new Error('Current user not found in database');
   }
   return simulateLatency(user);
+}
+
+export async function setCurrentUserId(
+  userId: string,
+  options?: SetCurrentUserOptions,
+): Promise<UserAccount> {
+  const trimmedId = userId.trim();
+  if (!trimmedId) {
+    throw new Error("Identifiant d'utilisateur requis");
+  }
+
+  const db = readDatabase();
+  const userIndex = db.users.findIndex((candidate) => candidate.id === trimmedId);
+  if (userIndex === -1) {
+    throw new Error('Utilisateur introuvable');
+  }
+
+  db.currentUserId = trimmedId;
+
+  const current = db.users[userIndex];
+  let updated = current;
+
+  if (options) {
+    const sanitizedOverrides = sanitizeOverrides(options.permissionOverrides ?? current.permissionOverrides);
+    if (
+      sanitizedOverrides.length !== current.permissionOverrides.length ||
+      sanitizedOverrides.some((override, index) => override.key !== current.permissionOverrides[index]?.key || override.mode !== current.permissionOverrides[index]?.mode)
+    ) {
+      updated = { ...current, permissionOverrides: sanitizedOverrides };
+    }
+  }
+
+  db.users[userIndex] = updated;
+  persistDatabase(db);
+
+  return simulateLatency(updated);
 }
 
 function sanitizeGroups(
