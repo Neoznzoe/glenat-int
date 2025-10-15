@@ -285,8 +285,8 @@ function resolveLucideIcon(name?: string): LucideIcon | null {
     }
     const alias = ICON_ALIAS_MAP[normalizeIconKey(candidate)];
     if (alias) {
-      const iconCandidate = LucideIcons[alias];
-      if (typeof iconCandidate === 'function') {
+      const iconCandidate = LucideIcons[alias as keyof typeof LucideIcons];
+      if (iconCandidate) {
         return iconCandidate as LucideIcon;
       }
     }
@@ -316,7 +316,7 @@ function resolveLucideIcon(name?: string): LucideIcon | null {
       continue;
     }
     const iconCandidate = LucideIcons[candidate as keyof typeof LucideIcons];
-    if (typeof iconCandidate === 'function') {
+    if (iconCandidate) {
       return iconCandidate as LucideIcon;
     }
   }
