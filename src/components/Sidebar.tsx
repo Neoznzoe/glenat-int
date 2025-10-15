@@ -361,43 +361,50 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   }, [permissionDefinitions]);
 
   const moduleItems = useMemo<SidebarMenuItem[]>(() => {
-    return moduleDefinitions
-      .map((definition, index) => {
-        const path = resolveModulePath(definition);
-        if (!path) {
-          return null;
-        }
+    return moduleDefinitions.reduce<SidebarMenuItem[]>((items, definition, index) => {
+      const path = resolveModulePath(definition);
+      if (!path) {
+        return items;
+      }
 
-        const { icon, logoUrl } = resolveModuleVisual(definition);
-        let iconComponent = icon ?? resolveIconByName(definition.key);
-        if (!iconComponent && !logoUrl) {
-          iconComponent = DEFAULT_ICON;
-        }
+      const { icon, logoUrl } = resolveModuleVisual(definition);
+      let iconComponent = icon ?? resolveIconByName(definition.key);
+      if (!iconComponent && !logoUrl) {
+        iconComponent = DEFAULT_ICON;
+      }
 
-        const rawId = definition.metadata?.id;
-        const identifier =
-          typeof rawId === 'string'
-            ? rawId
-            : typeof rawId === 'number'
-              ? rawId.toString()
-              : definition.key || `module-${index + 1}`;
+      const rawId = definition.metadata?.id;
+      const identifier =
+        typeof rawId === 'string'
+          ? rawId
+          : typeof rawId === 'number'
+            ? rawId.toString()
+            : definition.key || `module-${index + 1}`;
 
-        const badge =
-          definition.key === 'emploi' && typeof jobCount === 'number'
-            ? jobCount
-            : undefined;
+      const badge =
+        definition.key === 'emploi' && typeof jobCount === 'number'
+          ? jobCount
+          : undefined;
 
-        return {
-          id: identifier,
-          label: definition.label,
-          path,
-          permission: definition.key,
-          icon: iconComponent,
-          logoUrl,
-          badge,
-        } satisfies SidebarMenuItem;
-      })
-      .filter((item): item is SidebarMenuItem => item !== null);
+      const item: SidebarMenuItem = {
+        id: identifier,
+        label: definition.label,
+        path,
+        permission: definition.key,
+        badge,
+      };
+
+      if (iconComponent) {
+        item.icon = iconComponent;
+      }
+
+      if (logoUrl) {
+        item.logoUrl = logoUrl;
+      }
+
+      items.push(item);
+      return items;
+    }, []);
   }, [moduleDefinitions, jobCount]);
 
   const showAllMenus = loadingCurrentUser || loadingGroups || loadingPermissions || !currentUser;
