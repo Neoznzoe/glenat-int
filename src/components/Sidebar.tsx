@@ -188,6 +188,65 @@ function resolveBadgeValue(badge: unknown, jobCount?: number): number | string |
   return undefined;
 }
 
+const ICON_ALIAS_MAP: Record<string, keyof typeof LucideIcons> = {
+  home: 'Home',
+  accueil: 'Home',
+  dashboard: 'LayoutDashboard',
+  annuaire: 'Users',
+  collaborateurs: 'Users',
+  'qui-fait-quoi': 'Users',
+  catalogue: 'BookOpen',
+  kiosque: 'Newspaper',
+  kiosk: 'Newspaper',
+  actualites: 'Newspaper',
+  news: 'Newspaper',
+  agenda: 'CalendarDays',
+  planning: 'CalendarCheck',
+  evenement: 'CalendarCheck',
+  events: 'CalendarCheck',
+  emploi: 'BriefcaseBusiness',
+  jobs: 'BriefcaseBusiness',
+  recrutement: 'BriefcaseBusiness',
+  ressources: 'Boxes',
+  ressourceshumaines: 'UserCog',
+  rh: 'UserCog',
+  formations: 'GraduationCap',
+  communication: 'Megaphone',
+  contact: 'AtSign',
+  annonce: 'Megaphone',
+  outils: 'Wrench',
+  documentation: 'Files',
+  documents: 'Files',
+  doc: 'Files',
+  support: 'LifeBuoy',
+  admin: 'Settings',
+  administration: 'Settings',
+  parametres: 'Settings',
+  configuration: 'SlidersHorizontal',
+  statistiques: 'BarChart3',
+  rapports: 'BarChart3',
+  rapport: 'BarChart3',
+  glenart: 'Palette',
+  kiosquedoc: 'Newspaper',
+  service: 'Building2',
+  services: 'Building2',
+  operations: 'Workflow',
+  procedure: 'Workflow',
+  processus: 'Workflow',
+  facturation: 'Receipt',
+  finance: 'PieChart',
+  partenaires: 'Handshake',
+};
+
+function normalizeIconKey(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 function resolveLucideIcon(name?: string): LucideIcon | null {
   if (!name) {
     return null;
@@ -200,6 +259,8 @@ function resolveLucideIcon(name?: string): LucideIcon | null {
   const sanitized = normalized
     .replace(/^lucide[:\s_-]*/i, '')
     .replace(/^icon[:\s_-]*/i, '')
+    .replace(/^uil[:\s_-]*/i, '')
+    .replace(/^fa[:\s_-]*/i, '')
     .replace(/icon$/i, '')
     .replace(/[-_\s]+icon$/i, '')
     .replace(/^[^a-z0-9]+/i, '')
@@ -216,6 +277,20 @@ function resolveLucideIcon(name?: string): LucideIcon | null {
   const upper = base.toUpperCase();
   const lower = base.toLowerCase();
   const kebab = segments.map((part) => part.toLowerCase()).join('-');
+
+  const aliasCandidates = [normalized, sanitized, base, kebab];
+  for (const candidate of aliasCandidates) {
+    if (!candidate) {
+      continue;
+    }
+    const alias = ICON_ALIAS_MAP[normalizeIconKey(candidate)];
+    if (alias) {
+      const iconCandidate = LucideIcons[alias as keyof typeof LucideIcons];
+      if (iconCandidate) {
+        return iconCandidate as LucideIcon;
+      }
+    }
+  }
 
   const variants = new Set<string>([
     normalized,
@@ -241,7 +316,7 @@ function resolveLucideIcon(name?: string): LucideIcon | null {
       continue;
     }
     const iconCandidate = LucideIcons[candidate as keyof typeof LucideIcons];
-    if (typeof iconCandidate === 'function') {
+    if (iconCandidate) {
       return iconCandidate as LucideIcon;
     }
   }
@@ -339,7 +414,23 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       const normalizedPermission = permissionKey.trim().toLowerCase() as PermissionKey;
 
       const iconName = toNonEmptyString(metadata.icon);
-      const icon = resolveLucideIcon(iconName);
+      let icon = resolveLucideIcon(iconName);
+
+      if (!icon) {
+        const fallbackIconCandidates = [
+          toNonEmptyString(metadata.slug),
+          toNonEmptyString(metadata.path),
+          definition.label,
+          definition.key,
+        ];
+
+        for (const candidate of fallbackIconCandidates) {
+          icon = resolveLucideIcon(candidate ?? undefined);
+          if (icon) {
+            break;
+          }
+        }
+      }
 
       const badge = resolveBadgeValue(metadata.badge, jobCount);
       const order = toNumberValue(metadata.order) ?? index;
