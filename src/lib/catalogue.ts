@@ -546,7 +546,7 @@ const NEXT_OFFICES_SQL_QUERY = `;WITH next_offices AS (
     SELECT TOP (4)
            office,
            MIN(dateMev) AS nextDate
-    FROM dbo.cataLivres
+    FROM dbo.catalogBooks
     WHERE dateMev >= CONVERT(date, GETDATE())
       AND dateMev >= '20000101'
       AND dateMev < DATEADD(year, 5, CONVERT(date, GETDATE()))
@@ -555,7 +555,7 @@ const NEXT_OFFICES_SQL_QUERY = `;WITH next_offices AS (
     ORDER BY MIN(dateMev) ASC, office ASC
 )
 SELECT c.*
-FROM dbo.cataLivres AS c
+FROM dbo.catalogBooks AS c
 JOIN next_offices AS n
   ON n.office = c.office
 ORDER BY n.nextDate ASC, n.office ASC, c.dateMev ASC;`;
@@ -1221,6 +1221,9 @@ export async function fetchCatalogueOffices(
 
     const payload = (await response.json()) as DatabaseApiResponse;
     const records = extractDatabaseRows(payload);
+
+    console.log('[catalogueApi] Offices payload brut', payload);
+    console.log('[catalogueApi] Offices enregistrements', records);
 
     if (!records.length) {
       throw new Error("La base de donnees n'a retourne aucun resultat");
