@@ -54,6 +54,14 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     parentKey: null,
   },
   {
+    key: 'kiosque',
+    label: 'Kiosque',
+    description: 'Accès au kiosque de lecture des publications numériques.',
+    category: 'Catalogue',
+    type: 'module',
+    parentKey: null,
+  },
+  {
     key: 'doc',
     label: "Glénat'Doc",
     description: 'Accès à la documentation interne et aux procédures.',

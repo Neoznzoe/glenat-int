@@ -1,7 +1,7 @@
 import * as LucideIcons from 'lucide-react';
 import { Pin, PinOff } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoG from '../assets/logos/glenat/glenat_G.svg';
 import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
@@ -10,6 +10,8 @@ import { computeEffectivePermissions } from '@/lib/mockDb';
 import type { PermissionKey } from '@/lib/access-control';
 import { useDecryptedLocation } from '@/lib/secureRouting';
 import { SecureNavLink } from '@/components/routing/SecureLink';
+import { useAuth } from '@/context/AuthContext';
+import type { DatabaseUserLookupResponse } from '@/lib/internalUserLookup';
 
 interface SidebarProps {
   jobCount?: number;
@@ -77,6 +79,96 @@ function resolveBoolean(value: unknown, fallback = true): boolean {
     }
   }
   return fallback;
+}
+
+function toNumericId(value?: string): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function collectInternalUserRecords(value: unknown): Record<string, unknown>[] {
+  if (!value) {
+    return [];
+  }
+  if (Array.isArray(value)) {
+    return value.filter(
+      (entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null,
+    );
+  }
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const nested: Record<string, unknown>[] = [];
+    for (const key of [
+      'result',
+      'Result',
+      'Recordset',
+      'recordset',
+      'records',
+      'rows',
+      'data',
+    ]) {
+      if (key in record) {
+        nested.push(...collectInternalUserRecords(record[key]));
+      }
+    }
+    if (nested.length > 0) {
+      return nested;
+    }
+    return [record];
+  }
+  return [];
+}
+
+function extractInternalUserId(
+  internalUser?: DatabaseUserLookupResponse | null,
+): number | undefined {
+  if (!internalUser) {
+    return undefined;
+  }
+
+  const record = internalUser as Record<string, unknown>;
+  const resultBuckets: Record<string, unknown>[] = [];
+
+  if ('result' in record) {
+    resultBuckets.push(...collectInternalUserRecords(record['result']));
+  }
+  if ('Result' in record) {
+    resultBuckets.push(...collectInternalUserRecords(record['Result']));
+  }
+
+  const candidates = resultBuckets.length
+    ? resultBuckets
+    : collectInternalUserRecords(record);
+
+  if (!candidates.length) {
+    for (const key of ['Recordset', 'recordset', 'records', 'rows', 'data']) {
+      if (key in record) {
+        candidates.push(...collectInternalUserRecords(record[key]));
+      }
+      if (candidates.length) {
+        break;
+      }
+    }
+  }
+
+  for (const candidate of candidates) {
+    const possibleId =
+      candidate['userId'] ??
+      candidate['UserId'] ??
+      candidate['userID'] ??
+      candidate['USERID'] ??
+      candidate['id'] ??
+      candidate['ID'];
+    const numericId = toNumberValue(possibleId);
+    if (numericId !== undefined) {
+      return numericId;
+    }
+  }
+
+  return undefined;
 }
 
 function normalizeRoute(value: string): string {
@@ -363,14 +455,61 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     onExpandChange?.(isExpanded);
   }, [isExpanded, onExpandChange]);
 
+  const { user: authUser } = useAuth();
   const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
   const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
+  const internalUserId = useMemo(
+    () => extractInternalUserId(authUser?.internalUser),
+    [authUser?.internalUser],
+  );
+  const currentUserId = toNumericId(currentUser?.id);
+  const sidebarUserId = internalUserId ?? currentUserId;
+  const lastModuleSnapshotRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (internalUserId !== undefined) {
+      console.log('Identifiant utilisateur interne détecté :', internalUserId);
+    }
+  }, [internalUserId]);
+  useEffect(() => {
+    if (internalUserId === undefined && currentUserId !== undefined) {
+      console.log(
+        "Identifiant utilisateur récupéré depuis l'API d'administration :",
+        currentUserId,
+      );
+    }
+  }, [currentUserId, internalUserId]);
   const {
     data: moduleDefinitions,
     isLoading: loadingModules,
+    isFetching: fetchingModules,
     isError: hasModuleError,
     error: moduleError,
-  } = useSidebarModules();
+  } = useSidebarModules(sidebarUserId);
+  const waitingForModules = loadingModules || fetchingModules || sidebarUserId === undefined;
+  useEffect(() => {
+    lastModuleSnapshotRef.current = null;
+  }, [sidebarUserId]);
+  useEffect(() => {
+    if (!moduleDefinitions || waitingForModules || hasModuleError) {
+      return;
+    }
+
+    const serialized = JSON.stringify(moduleDefinitions);
+
+    if (lastModuleSnapshotRef.current === null) {
+      lastModuleSnapshotRef.current = serialized;
+      return;
+    }
+
+    if (lastModuleSnapshotRef.current !== serialized) {
+      console.info(
+        "Changement détecté dans les modules — rechargement de la page pour refléter l'état de la base de données.",
+      );
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    }
+  }, [moduleDefinitions, waitingForModules, hasModuleError]);
 
   const accessiblePermissions = useMemo(() => {
     if (!currentUser) {
@@ -458,7 +597,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     });
   }, [moduleDefinitions, jobCount]);
 
-  const showAllMenus = loadingCurrentUser || loadingGroups || !currentUser;
+  const showAllMenus = loadingCurrentUser || loadingGroups || waitingForModules || !currentUser;
 
   const userCanAccess = (permission: PermissionKey) => {
     if (showAllMenus) {
@@ -517,7 +656,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       <div className="flex-1 min-h-0 flex flex-col justify-between">
         {/* Menu principal */}
         <nav className="p-2">
-          {loadingModules ? (
+          {waitingForModules ? (
             <SidebarSkeletonList count={6} isExpanded={isExpanded} />
           ) : (
             <ul className="space-y-1">
@@ -574,7 +713,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
 
         {/* Bloc Administration */}
         <nav className="p-2">
-          {loadingModules ? (
+          {waitingForModules ? (
             <SidebarSkeletonList count={2} isExpanded={isExpanded} />
           ) : (
             <ul>

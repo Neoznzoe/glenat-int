@@ -16,7 +16,7 @@ const ADMIN_DATABASE_ENDPOINT =
   'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
 
 const ADMIN_USERS_QUERY = 'SELECT * FROM [users];';
-const ADMIN_MODULES_QUERY = 'SELECT * FROM [modules];';
+const ADMIN_MODULES_QUERY = 'SET NOCOUNT ON;\nSELECT * FROM [modules];';
 const ADMIN_PAGES_QUERY = 'SELECT * FROM [pages];';
 const ADMIN_MODULE_PAGES_QUERY = 'SELECT * FROM [modulesPages];';
 const ADMIN_GROUPS_QUERY = 'SELECT * FROM [userGroups];';
@@ -271,6 +271,14 @@ function normalizeKey(value: string | undefined, fallback: string): string {
     return normalizeKey(fallback, fallback);
   }
   return fallback;
+}
+
+function normalizePermissionKey(value: unknown): PermissionKey | undefined {
+  const raw = toNonEmptyString(value);
+  if (!raw) {
+    return undefined;
+  }
+  return normalizeKey(raw, raw) as PermissionKey;
 }
 
 function humanizeLabel(value: string): string {
@@ -594,11 +602,15 @@ function normalizeModuleDefinition(
     metadata.icon = iconValue;
   }
 
-  const permissionValue = toNonEmptyString(
-    getValue(record, ['permission', 'Permission', 'permissionKey', 'PermissionKey']),
-  );
-  if (permissionValue) {
-    metadata.permissionKey = permissionValue;
+  const permissionValue = getValue(record, ['permission', 'Permission', 'permissionKey', 'PermissionKey']);
+  const normalizedPermissionKey = normalizePermissionKey(permissionValue);
+  if (normalizedPermissionKey) {
+    metadata.permissionKey = normalizedPermissionKey;
+  } else {
+    const fallbackPermission = toNonEmptyString(permissionValue);
+    if (fallbackPermission) {
+      metadata.permissionKey = fallbackPermission;
+    }
   }
 
   const badgeValue = getValue(record, ['badge', 'Badge']);
@@ -754,11 +766,32 @@ async function loadModulePermissionMaps(): Promise<ModulePermissionMaps> {
     if (!rawId) {
       return;
     }
-    if (!moduleIdByKey.has(definition.key)) {
-      moduleIdByKey.set(definition.key, rawId);
+    const metadata = (definition.metadata ?? {}) as Record<string, unknown>;
+    const metadataPermissionKey = normalizePermissionKey(metadata.permissionKey);
+    const normalizedDefinitionKey = normalizePermissionKey(definition.key);
+
+    const candidateKeys = new Set<PermissionKey>();
+    if (metadataPermissionKey) {
+      candidateKeys.add(metadataPermissionKey);
     }
+    if (normalizedDefinitionKey) {
+      candidateKeys.add(normalizedDefinitionKey);
+    } else if (typeof definition.key === 'string' && definition.key.trim()) {
+      candidateKeys.add(definition.key.trim().toLowerCase() as PermissionKey);
+    }
+
+    for (const key of candidateKeys) {
+      if (!moduleIdByKey.has(key)) {
+        moduleIdByKey.set(key, rawId);
+      }
+    }
+
     if (!keyByModuleId.has(rawId)) {
-      keyByModuleId.set(rawId, definition.key);
+      const canonicalKey = metadataPermissionKey ?? normalizedDefinitionKey;
+      const preferredKey = canonicalKey ?? candidateKeys.values().next().value;
+      if (preferredKey) {
+        keyByModuleId.set(rawId, preferredKey);
+      }
     }
   });
 
@@ -1046,8 +1079,42 @@ export async function fetchGroups(): Promise<GroupDefinition[]> {
   return groups;
 }
 
-export async function fetchModules(): Promise<PermissionDefinition[]> {
-  const moduleRecords = await runDatabaseQuery(ADMIN_MODULES_QUERY, 'modules');
+function buildSidebarModulesQuery(userId?: number): string {
+  const hasValidId = typeof userId === 'number' && Number.isFinite(userId);
+  const sanitizedId = hasValidId ? Math.trunc(userId) : null;
+  const userIdLiteral = sanitizedId === null ? 'CAST(NULL AS INT)' : String(sanitizedId);
+
+  if (sanitizedId !== null) {
+    console.log(`Requête SQL modules – DECLARE @userId INT = ${sanitizedId};`);
+  } else {
+    console.warn('Requête SQL modules – aucun identifiant utilisateur valide fourni.');
+  }
+
+  return [
+    'SET NOCOUNT ON;',
+    `DECLARE @userId INT = ${userIdLiteral};`,
+    'WITH VisibleModules AS (',
+    '  SELECT',
+    '    m.*,',
+    "    CONVERT(bit, CASE WHEN up.[canView] = 0 THEN 0 ELSE 1 END) AS [isUserVisible]",
+    '  FROM [modules] AS m',
+    '  LEFT JOIN [userPermissions] AS up',
+    '    ON up.[moduleId] = m.[id]',
+    '   AND up.[userId] = @userId',
+    "   AND UPPER(LTRIM(RTRIM(up.[permissionType]))) = 'MODULE'",
+    '  WHERE m.[isActive] = 1',
+    ')',
+    'SELECT *',
+    'FROM VisibleModules',
+    'WHERE [isUserVisible] = CONVERT(bit, 1);',
+  ].join('\n');
+}
+
+export async function fetchModules(userId?: number): Promise<PermissionDefinition[]> {
+  const moduleRecords = await runDatabaseQuery(
+    buildSidebarModulesQuery(userId),
+    'modules visibles',
+  );
 
   return moduleRecords.map((record, index) => normalizeModuleDefinition(record, index));
 }
