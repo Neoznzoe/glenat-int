@@ -13,6 +13,7 @@ import OnePieceBlue from '@/assets/images/onepiece-blue.webp';
 import OnePieceYellow from '@/assets/images/onepiece-yellow.webp';
 import OnePieceBlueDeep from '@/assets/images/onepiece-bluedeep.webp';
 import OnePieceRed from '@/assets/images/onepiece-red.webp';
+import PlaceholderCover from '@/assets/images/catalogue-placeholder.svg';
 import UniversBD from '@/assets/logos/univers/univers-bd.svg';
 import UniversJeune from '@/assets/logos/univers/univers-jeunesse.svg';
 import UniversLivre from '@/assets/logos/univers/univers-livres.svg';
@@ -91,6 +92,16 @@ export interface CatalogueDb {
   kiosques: CatalogueKiosqueDefinition[];
   editions: CatalogueEdition[];
 }
+
+const CATALOGUE_OFFICES_ENDPOINT = import.meta.env.VITE_CATALOGUE_OFFICES_ENDPOINT ??
+  (import.meta.env.DEV
+    ? '/intranet/call-database'
+    : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase');
+
+const CATALOGUE_OFFICES_QUERY =
+  typeof import.meta.env.VITE_CATALOGUE_OFFICES_QUERY === 'string'
+    ? import.meta.env.VITE_CATALOGUE_OFFICES_QUERY
+    : undefined;
 
 export const catalogueDb: CatalogueDb = {
   books: [
@@ -446,6 +457,644 @@ const cloneBook = (ean: string): CatalogueBook => {
   };
 };
 
+type RawCatalogueOfficeRecord = Record<string, unknown>;
+
+interface CatalogueDatabaseResponse {
+  success?: boolean;
+  message?: string;
+  result?: unknown;
+  data?: unknown;
+  rows?: unknown;
+  recordset?: unknown;
+  Recordset?: unknown;
+  recordsets?: unknown;
+  records?: unknown;
+  [key: string]: unknown;
+}
+
+const NORMALIZED_KEY_CACHE = new Map<string, string>();
+
+const normalizeKeyName = (key: string): string => {
+  const cached = NORMALIZED_KEY_CACHE.get(key);
+  if (cached) {
+    return cached;
+  }
+  const normalized = key
+    .toLowerCase()
+    .replace(/[\s_]+/g, '')
+    .replace(/[^a-z0-9]/g, '');
+  NORMALIZED_KEY_CACHE.set(key, normalized);
+  return normalized;
+};
+
+const getCandidateValue = (record: RawCatalogueOfficeRecord, keys: string[]): unknown => {
+  for (const key of keys) {
+    if (key in record) {
+      const value = record[key];
+      if (value !== undefined && value !== null) {
+        return value;
+      }
+    }
+  }
+
+  const normalizedTargets = keys.map(normalizeKeyName);
+  for (const [candidateKey, candidateValue] of Object.entries(record)) {
+    if (candidateValue === undefined || candidateValue === null) {
+      continue;
+    }
+    if (normalizedTargets.includes(normalizeKeyName(candidateKey))) {
+      return candidateValue;
+    }
+  }
+
+  return undefined;
+};
+
+const toTrimmedString = (value: unknown): string | undefined => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : undefined;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value.toString();
+  }
+  return undefined;
+};
+
+const toOptionalNumber = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const normalized = value
+      .trim()
+      .replace(/\s+/g, '')
+      .replace(',', '.')
+      .replace(/[^0-9.+-]/g, '');
+    if (!normalized) {
+      return undefined;
+    }
+    const parsed = Number.parseFloat(normalized);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+  }
+  return undefined;
+};
+
+const toOptionalInteger = (value: unknown): number | undefined => {
+  const numeric = toOptionalNumber(value);
+  if (numeric === undefined || Number.isNaN(numeric)) {
+    return undefined;
+  }
+  const integer = Math.round(numeric);
+  if (!Number.isFinite(integer)) {
+    return undefined;
+  }
+  return integer;
+};
+
+const parseDateCandidate = (value: unknown): Date | null => {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    if (value > 1e11) {
+      return new Date(value);
+    }
+    if (value > 4e4) {
+      const excelEpoch = Date.UTC(1899, 11, 30);
+      return new Date(excelEpoch + Math.round(value) * 86400000);
+    }
+    return new Date(value * 1000);
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const parsed = Date.parse(trimmed);
+    if (!Number.isNaN(parsed)) {
+      return new Date(parsed);
+    }
+
+    const slashMatch = trimmed.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/);
+    if (slashMatch) {
+      const [, day, month, year] = slashMatch;
+      const date = new Date(Number(year), Number(month) - 1, Number(day));
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    const compactMatch = trimmed.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (compactMatch) {
+      const [, year, month, day] = compactMatch;
+      const date = new Date(Number(year), Number(month) - 1, Number(day));
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+  }
+  return null;
+};
+
+const formatDisplayDate = (date: Date): string =>
+  new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date);
+
+const formatDateTime = (date: Date, time?: string): string => {
+  const base = formatDisplayDate(date);
+  if (!time) {
+    return base;
+  }
+  const trimmed = time.trim();
+  if (!trimmed) {
+    return base;
+  }
+  return `${base} à ${trimmed}`;
+};
+
+const OFFICE_IDENTIFIER_KEYS = [
+  'office',
+  'officeId',
+  'officeID',
+  'office_id',
+  'officeCode',
+  'office_code',
+  'numero',
+  'numeroOffice',
+  'numero_office',
+  'officeNumber',
+  'idOffice',
+  'codeOffice',
+];
+
+const OFFICE_DATE_KEYS = [
+  'officeDate',
+  'dateOffice',
+  'date_office',
+  'office_date',
+  'date',
+  'Date',
+  'dateParution',
+  'DateParution',
+  'datePublication',
+  'DatePublication',
+];
+
+const SHIPPING_TEXT_KEYS = [
+  'shipping',
+  'Shipping',
+  'shippingLabel',
+  'ShippingLabel',
+  'envoi',
+  'Envoi',
+  'expedition',
+  'Expedition',
+  'modeExpedition',
+  'ModeExpedition',
+  'libelleExpedition',
+  'LibelleExpedition',
+];
+
+const SHIPPING_DATE_KEYS = [
+  'shippingDate',
+  'ShippingDate',
+  'dateEnvoi',
+  'DateEnvoi',
+  'dateExpedition',
+  'DateExpedition',
+  'expeditionDate',
+  'ExpeditionDate',
+];
+
+const SHIPPING_TIME_KEYS = [
+  'shippingTime',
+  'ShippingTime',
+  'heureEnvoi',
+  'HeureEnvoi',
+  'heureExpedition',
+  'HeureExpedition',
+];
+
+const EAN_KEYS = [
+  'ean',
+  'EAN',
+  'ean13',
+  'EAN13',
+  'ean_13',
+  'eanCode',
+  'Ean',
+  'isbn',
+  'ISBN',
+  'codeEAN',
+  'code_ean',
+  'CodeEAN',
+];
+
+const TITLE_KEYS = ['title', 'Title', 'titre', 'Titre', 'libelle', 'Libelle', 'name', 'Name', 'ouvrage', 'Ouvrage'];
+
+const AUTHORS_KEYS = ['authors', 'Authors', 'auteur', 'Auteur', 'auteurs', 'Auteurs'];
+
+const PUBLISHER_KEYS = [
+  'publisher',
+  'Publisher',
+  'editeur',
+  'Editeur',
+  'marque',
+  'Marque',
+  'label',
+  'Label',
+  'univers',
+  'Univers',
+];
+
+const PUBLICATION_DATE_KEYS = [
+  'publicationDate',
+  'PublicationDate',
+  'datePublication',
+  'DatePublication',
+  'parution',
+  'Parution',
+  'dateParution',
+  'DateParution',
+  'sortie',
+  'Sortie',
+];
+
+const PRICE_KEYS = ['priceHT', 'PriceHT', 'prixHT', 'PrixHT', 'prix', 'Prix', 'tarifHT', 'TarifHT', 'tarif', 'Tarif'];
+
+const STOCK_KEYS = [
+  'stock',
+  'Stock',
+  'quantite',
+  'Quantite',
+  'qte',
+  'Qte',
+  'stockTheorique',
+  'StockTheorique',
+  'stockPrev',
+  'StockPrev',
+  'stock_previsionnel',
+];
+
+const COVER_KEYS = [
+  'cover',
+  'Cover',
+  'image',
+  'Image',
+  'visuel',
+  'Visuel',
+  'illustration',
+  'Illustration',
+  'urlImage',
+  'UrlImage',
+  'vignette',
+  'Vignette',
+];
+
+const RIBBON_KEYS = ['ribbon', 'Ribbon', 'ribbonText', 'RibbonText', 'badge', 'Badge'];
+
+const INFO_LABEL_KEYS = ['infoLabel', 'InfoLabel', 'statut', 'Statut', 'status', 'Status'];
+
+const INFO_VALUE_KEYS = [
+  'infoValue',
+  'InfoValue',
+  'statutDetail',
+  'StatutDetail',
+  'etat',
+  'Etat',
+  'statusDetail',
+  'StatusDetail',
+];
+
+const VIEWS_KEYS = ['views', 'Views', 'nbVues', 'NbVues', 'vues', 'Vues'];
+
+const extractOfficeRecords = (payload: unknown): RawCatalogueOfficeRecord[] => {
+  const visited = new Set<unknown>();
+  const queue: unknown[] = [payload];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (current === undefined || current === null) {
+      continue;
+    }
+    if (visited.has(current)) {
+      continue;
+    }
+    visited.add(current);
+
+    if (Array.isArray(current)) {
+      const records = current.filter(
+        (item): item is RawCatalogueOfficeRecord =>
+          item !== null && typeof item === 'object' && !Array.isArray(item),
+      );
+      if (records.length) {
+        return records;
+      }
+      continue;
+    }
+
+    if (typeof current === 'string') {
+      try {
+        const parsed = JSON.parse(current) as unknown;
+        queue.push(parsed);
+      } catch {
+        // ignore parse errors
+      }
+      continue;
+    }
+
+    if (typeof current === 'object') {
+      const objectPayload = current as Record<string, unknown>;
+      const keysToInspect = ['rows', 'data', 'result', 'recordset', 'Recordset', 'records'];
+      for (const key of keysToInspect) {
+        if (key in objectPayload) {
+          queue.push(objectPayload[key]);
+        }
+      }
+      if (Array.isArray(objectPayload.recordsets)) {
+        for (const entry of objectPayload.recordsets as unknown[]) {
+          queue.push(entry);
+        }
+      }
+    }
+  }
+
+  return [];
+};
+
+const determinePublisherColor = (publisher?: string): string => {
+  if (!publisher) {
+    return '--glenat-bd';
+  }
+
+  const normalized = publisher.toLowerCase();
+  if (normalized.includes('jeunesse')) {
+    return '--glenat-jeunesse';
+  }
+  if (normalized.includes('manga')) {
+    return '--glenat-manga';
+  }
+  if (normalized.includes('livre')) {
+    return '--glenat-livre';
+  }
+  if (normalized.includes('bd')) {
+    return '--glenat-bd';
+  }
+  if (normalized.includes("vent d'ouest") || normalized.includes('vents d’ouest')) {
+    return '--glenat-bd';
+  }
+  return '--glenat-bd';
+};
+
+const buildPlaceholderBook = (
+  record: RawCatalogueOfficeRecord,
+  ean: string,
+  fallbackDate?: Date | null,
+): CatalogueBook => {
+  const publisher =
+    toTrimmedString(getCandidateValue(record, PUBLISHER_KEYS)) ?? 'Éditeur à confirmer';
+  const title = toTrimmedString(getCandidateValue(record, TITLE_KEYS)) ?? `Référence ${ean}`;
+  const authors =
+    toTrimmedString(getCandidateValue(record, AUTHORS_KEYS)) ?? 'Auteur à confirmer';
+  const publicationDateCandidate =
+    parseDateCandidate(getCandidateValue(record, PUBLICATION_DATE_KEYS)) ?? fallbackDate ?? null;
+  const publicationDate = publicationDateCandidate
+    ? formatDisplayDate(publicationDateCandidate)
+    : 'Date à confirmer';
+  const price = toOptionalNumber(getCandidateValue(record, PRICE_KEYS));
+  const stock = toOptionalInteger(getCandidateValue(record, STOCK_KEYS)) ?? 0;
+  const cover =
+    toTrimmedString(getCandidateValue(record, COVER_KEYS)) ?? PlaceholderCover;
+  const ribbonText = toTrimmedString(getCandidateValue(record, RIBBON_KEYS));
+  const infoLabel = toTrimmedString(getCandidateValue(record, INFO_LABEL_KEYS));
+
+  const rawInfoValue = getCandidateValue(record, INFO_VALUE_KEYS);
+  const infoValueString = toTrimmedString(rawInfoValue);
+  const infoValueNumber = toOptionalNumber(rawInfoValue);
+  const infoValue = infoValueString ?? (infoValueNumber !== undefined ? infoValueNumber : undefined);
+
+  const rawViews = toOptionalNumber(getCandidateValue(record, VIEWS_KEYS));
+  const views = rawViews !== undefined && Number.isFinite(rawViews) ? Math.max(0, Math.round(rawViews)) : undefined;
+
+  return {
+    cover,
+    title,
+    ean,
+    authors,
+    publisher,
+    publicationDate,
+    priceHT: (price ?? 0).toFixed(2),
+    stock,
+    color: determinePublisherColor(publisher),
+    ...(ribbonText ? { ribbonText } : {}),
+    ...(infoLabel ? { infoLabel } : {}),
+    ...(infoValue !== undefined ? { infoValue } : {}),
+    ...(views !== undefined ? { views } : {}),
+  };
+};
+
+const tryCloneBook = (ean: string): CatalogueBook | null => {
+  try {
+    return cloneBook(ean);
+  } catch (error) {
+    console.warn(`[catalogueApi] Livre introuvable pour l'EAN ${ean}`, error);
+    return null;
+  }
+};
+
+const resolveBookFromRecord = (
+  record: RawCatalogueOfficeRecord,
+  ean: string,
+  fallbackDate?: Date | null,
+): CatalogueBook | null => {
+  const existing = tryCloneBook(ean);
+  if (existing) {
+    const infoLabel = toTrimmedString(getCandidateValue(record, INFO_LABEL_KEYS));
+    const rawInfoValue = getCandidateValue(record, INFO_VALUE_KEYS);
+    const infoValueString = toTrimmedString(rawInfoValue);
+    const infoValueNumber = toOptionalNumber(rawInfoValue);
+    const infoValue = infoValueString ?? (infoValueNumber !== undefined ? infoValueNumber : undefined);
+    const rawViews = toOptionalNumber(getCandidateValue(record, VIEWS_KEYS));
+    const views =
+      rawViews !== undefined && Number.isFinite(rawViews) ? Math.max(0, Math.round(rawViews)) : undefined;
+
+    return {
+      ...existing,
+      ...(infoLabel ? { infoLabel } : {}),
+      ...(infoValue !== undefined ? { infoValue } : {}),
+      ...(views !== undefined ? { views } : {}),
+    };
+  }
+
+  return buildPlaceholderBook(record, ean, fallbackDate);
+};
+
+interface OfficeAccumulator {
+  office: string;
+  order: number;
+  officeDate?: Date | null;
+  shippingText?: string;
+  shippingDate?: Date | null;
+  shippingTime?: string;
+  books: CatalogueBook[];
+  seenEans: Set<string>;
+}
+
+const extractShippingInformation = (
+  record: RawCatalogueOfficeRecord,
+): { text?: string; date?: Date | null; time?: string } => {
+  const text = toTrimmedString(getCandidateValue(record, SHIPPING_TEXT_KEYS));
+  const date = parseDateCandidate(getCandidateValue(record, SHIPPING_DATE_KEYS));
+  const time = toTrimmedString(getCandidateValue(record, SHIPPING_TIME_KEYS));
+  return { text: text ?? undefined, date, time: time ?? undefined };
+};
+
+const buildOfficeGroupsFromRecords = (
+  records: RawCatalogueOfficeRecord[],
+): CatalogueOfficeGroup[] => {
+  if (!records.length) {
+    return [];
+  }
+
+  const groups = new Map<string, OfficeAccumulator>();
+  let order = 0;
+
+  for (const record of records) {
+    if (!record || typeof record !== 'object') {
+      continue;
+    }
+
+    const officeIdentifier = toTrimmedString(getCandidateValue(record, OFFICE_IDENTIFIER_KEYS));
+    if (!officeIdentifier) {
+      continue;
+    }
+
+    let accumulator = groups.get(officeIdentifier);
+    if (!accumulator) {
+      accumulator = {
+        office: officeIdentifier,
+        order: order += 1,
+        books: [],
+        seenEans: new Set<string>(),
+      };
+      groups.set(officeIdentifier, accumulator);
+    }
+
+    const officeDateCandidate = parseDateCandidate(getCandidateValue(record, OFFICE_DATE_KEYS));
+    if (officeDateCandidate && !accumulator.officeDate) {
+      accumulator.officeDate = officeDateCandidate;
+    }
+
+    const shippingInfo = extractShippingInformation(record);
+    if (shippingInfo.text && !accumulator.shippingText) {
+      accumulator.shippingText = shippingInfo.text;
+    }
+    if (shippingInfo.date && !accumulator.shippingDate) {
+      accumulator.shippingDate = shippingInfo.date;
+    }
+    if (shippingInfo.time && !accumulator.shippingTime) {
+      accumulator.shippingTime = shippingInfo.time;
+    }
+
+    const ean = toTrimmedString(getCandidateValue(record, EAN_KEYS));
+    if (!ean || accumulator.seenEans.has(ean)) {
+      continue;
+    }
+
+    const book = resolveBookFromRecord(record, ean, accumulator.officeDate ?? shippingInfo.date ?? null);
+    if (!book) {
+      continue;
+    }
+
+    accumulator.seenEans.add(ean);
+    accumulator.books.push(book);
+  }
+
+  const result = Array.from(groups.values())
+    .filter(group => group.books.length > 0)
+    .sort((a, b) => {
+      if (a.officeDate && b.officeDate) {
+        return b.officeDate.getTime() - a.officeDate.getTime();
+      }
+      if (a.officeDate) {
+        return -1;
+      }
+      if (b.officeDate) {
+        return 1;
+      }
+      return a.order - b.order;
+    })
+    .map(group => {
+      const date = group.officeDate ? formatDisplayDate(group.officeDate) : 'Date à confirmer';
+      const shipping = group.shippingText
+        ? group.shippingText
+        : group.shippingDate
+          ? `Expédition planifiée le ${formatDateTime(group.shippingDate, group.shippingTime)}`
+          : group.officeDate
+            ? `Expédition planifiée le ${formatDisplayDate(group.officeDate)}`
+            : 'Expédition à confirmer';
+
+      return {
+        office: group.office,
+        date,
+        shipping,
+        books: group.books,
+      } satisfies CatalogueOfficeGroup;
+    });
+
+  return result;
+};
+
+const fetchOfficeGroupsFromDatabase = async (): Promise<CatalogueOfficeGroup[] | null> => {
+  if (!CATALOGUE_OFFICES_QUERY) {
+    return null;
+  }
+
+  const response = await fetch(CATALOGUE_OFFICES_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query: CATALOGUE_OFFICES_QUERY }),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Impossible de charger les offices (${response.status}) ${response.statusText}`,
+    );
+  }
+
+  const payload = (await response.json()) as CatalogueDatabaseResponse;
+  if (payload.success === false) {
+    const message = typeof payload.message === 'string' ? payload.message : undefined;
+    throw new Error(message ?? 'Impossible de charger les offices');
+  }
+
+  const candidatePayload =
+    payload.result ??
+    payload.data ??
+    payload.rows ??
+    payload.recordset ??
+    payload.Recordset ??
+    payload.records ??
+    payload.recordsets ??
+    payload;
+
+  const records = extractOfficeRecords(candidatePayload);
+  if (!records.length) {
+    return [];
+  }
+
+  const groups = buildOfficeGroupsFromRecords(records);
+  if (!groups.length) {
+    throw new Error('Impossible de construire les offices à partir des données reçues.');
+  }
+
+  return groups;
+};
+
 const logRequest = (endpoint: string) => {
   console.info(`[catalogueApi] ${endpoint} appelé`);
 };
@@ -495,6 +1144,21 @@ export async function fetchCatalogueReleases(): Promise<CatalogueReleaseGroup[]>
 export async function fetchCatalogueOffices(): Promise<CatalogueOfficeGroup[]> {
   const endpoint = 'fetchCatalogueOffices';
   logRequest(endpoint);
+  if (CATALOGUE_OFFICES_QUERY) {
+    try {
+      const groups = await fetchOfficeGroupsFromDatabase();
+      if (groups && groups.length > 0) {
+        logResponse(endpoint, groups);
+        return groups;
+      }
+      if (groups && groups.length === 0) {
+        console.warn('[catalogueApi] Aucun office retourné par la base, utilisation du jeu statique.');
+      }
+    } catch (error) {
+      console.error('[catalogueApi] Échec de la récupération des offices depuis la base.', error);
+    }
+  }
+
   const data = catalogueDb.offices.map(office => ({
     office: office.office,
     date: office.date,
