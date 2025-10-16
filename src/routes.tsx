@@ -1,5 +1,6 @@
 import { lazy } from 'react';
 import { type RouteDefinition, SecureRoutes } from '@/lib/secureRouting';
+import { ModuleAccessGuard } from '@/components/routing/ModuleAccessGuard';
 
 import { Home } from './pages/Home';
 const Emploi = lazy(() => import('./pages/Emploi'));
@@ -16,17 +17,94 @@ const Administration = lazy(() => import('./pages/administration/Administration'
 
 export const ROUTES_CONFIG: RouteDefinition[] = [
   { path: '/', element: <Home /> },
-  { path: '/emploi', element: <Emploi /> },
-  { path: '/services', element: <Services /> },
-  { path: '/services/production', element: <Production /> },
-  { path: '/catalogue', element: <Catalogue /> },
-  { path: '/catalogue/all', element: <CatalogueAll /> },
-  { path: '/catalogue/kiosque', element: <Kiosque /> },
-  { path: '/catalogue/offices', element: <Offices /> },
-  { path: '/catalogue/nouveautes', element: <Nouveautes /> },
-  { path: '/catalogue/couverture-a-paraitre', element: <CouvertureAParaitre /> },
-  { path: '/catalogue/book', element: <BookDetails /> },
-  { path: '/administration', element: <Administration /> },
+  {
+    path: '/emploi',
+    element: (
+      <ModuleAccessGuard permission="emploi">
+        <Emploi />
+      </ModuleAccessGuard>
+    ),
+  },
+  {
+    path: '/services',
+    element: (
+      <ModuleAccessGuard permission="services">
+        <Services />
+      </ModuleAccessGuard>
+    ),
+  },
+  {
+    path: '/services/production',
+    element: (
+      <ModuleAccessGuard permission="services">
+        <Production />
+      </ModuleAccessGuard>
+    ),
+  },
+  {
+    path: '/catalogue',
+    element: (
+      <ModuleAccessGuard permission="catalogue">
+        <Catalogue />
+      </ModuleAccessGuard>
+    ),
+  },
+  {
+    path: '/catalogue/all',
+    element: (
+      <ModuleAccessGuard permission="catalogue">
+        <CatalogueAll />
+      </ModuleAccessGuard>
+    ),
+  },
+  {
+    path: '/catalogue/kiosque',
+    element: (
+      <ModuleAccessGuard permission="kiosque">
+        <Kiosque />
+      </ModuleAccessGuard>
+    ),
+  },
+  {
+    path: '/catalogue/offices',
+    element: (
+      <ModuleAccessGuard permission="catalogue">
+        <Offices />
+      </ModuleAccessGuard>
+    ),
+  },
+  {
+    path: '/catalogue/nouveautes',
+    element: (
+      <ModuleAccessGuard permission="catalogue">
+        <Nouveautes />
+      </ModuleAccessGuard>
+    ),
+  },
+  {
+    path: '/catalogue/couverture-a-paraitre',
+    element: (
+      <ModuleAccessGuard permission="catalogue">
+        <CouvertureAParaitre />
+      </ModuleAccessGuard>
+    ),
+  },
+  {
+    path: '/catalogue/book',
+    element: (
+      <ModuleAccessGuard permission="catalogue">
+        <BookDetails />
+      </ModuleAccessGuard>
+    ),
+  },
+  {
+    path: '/administration',
+    element: (
+      <ModuleAccessGuard permission="administration">
+        <Administration />
+      </ModuleAccessGuard>
+    ),
+  },
 ];
 
 export const LAZY_ROUTE_PRELOADERS: Array<() => Promise<unknown>> = [
