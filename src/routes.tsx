@@ -2,6 +2,7 @@ import { lazy } from 'react';
 import { type RouteDefinition, SecureRoutes } from '@/lib/secureRouting';
 
 import { Home } from './pages/Home';
+import { ModuleAccessGuard } from './components/ModuleAccessGuard';
 const Emploi = lazy(() => import('./pages/Emploi'));
 const Services = lazy(() => import('./pages/services/Services'));
 const Production = lazy(() => import('./pages/services/Production'));
@@ -26,7 +27,14 @@ export const ROUTES_CONFIG: RouteDefinition[] = [
   { path: '/catalogue/nouveautes', element: <Nouveautes /> },
   { path: '/catalogue/couverture-a-paraitre', element: <CouvertureAParaitre /> },
   { path: '/catalogue/book', element: <BookDetails /> },
-  { path: '/administration', element: <Administration /> },
+  {
+    path: '/administration',
+    element: (
+      <ModuleAccessGuard permission="administration">
+        <Administration />
+      </ModuleAccessGuard>
+    ),
+  },
 ];
 
 export const LAZY_ROUTE_PRELOADERS: Array<() => Promise<unknown>> = [
