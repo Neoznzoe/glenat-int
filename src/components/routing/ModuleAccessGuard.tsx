@@ -1,8 +1,11 @@
 import { LockKeyhole, TriangleAlert } from 'lucide-react';
 import { useMemo, type ReactNode } from 'react';
-import { useAdminGroups, useCurrentUser } from '@/hooks/useAdminData';
+import { useCurrentUser } from '@/hooks/useAdminData';
+import { useSidebarModules } from '@/hooks/useModules';
+import { useAuth } from '@/context/AuthContext';
 import { computeEffectivePermissions } from '@/lib/mockDb';
-import type { PermissionKey } from '@/lib/access-control';
+import { GROUP_DEFINITIONS, type PermissionDefinition, type PermissionKey } from '@/lib/access-control';
+import { extractInternalUserId, toNumericId } from '@/lib/userIdentifiers';
 
 interface ModuleAccessGuardProps {
   permission: PermissionKey;
@@ -59,34 +62,68 @@ function AccessErrorView() {
   );
 }
 
+function normalizePermissionKey(definition: PermissionDefinition): PermissionKey | null {
+  const metadataKey = typeof definition.metadata?.permissionKey === 'string'
+    ? definition.metadata.permissionKey.trim().toLowerCase()
+    : undefined;
+  const definitionKey = typeof definition.key === 'string'
+    ? definition.key.trim().toLowerCase()
+    : undefined;
+
+  const resolved = metadataKey || definitionKey;
+  return resolved ? (resolved as PermissionKey) : null;
+}
+
 export function ModuleAccessGuard({ permission, children }: ModuleAccessGuardProps) {
+  const { user: authUser, loading: loadingAuth } = useAuth();
   const {
     data: currentUser,
     isLoading: loadingCurrentUser,
     error: currentUserError,
   } = useCurrentUser();
+
+  const internalUserId = useMemo(
+    () => extractInternalUserId(authUser?.internalUser),
+    [authUser?.internalUser],
+  );
+  const currentUserId = useMemo(() => toNumericId(currentUser?.id), [currentUser?.id]);
+  const sidebarUserId = internalUserId ?? currentUserId;
+
   const {
-    data: groups = [],
-    isLoading: loadingGroups,
-    error: groupsError,
-  } = useAdminGroups();
+    data: moduleDefinitions,
+    isLoading: loadingModules,
+    isFetching: fetchingModules,
+    error: modulesError,
+  } = useSidebarModules(sidebarUserId);
 
   const accessiblePermissions = useMemo(() => {
-    if (!currentUser) {
-      return new Set<PermissionKey>();
-    }
-    return new Set(computeEffectivePermissions(currentUser, groups));
-  }, [currentUser, groups]);
+    const permissionsFromProfile = currentUser
+      ? computeEffectivePermissions(currentUser, GROUP_DEFINITIONS)
+      : [];
+    const permissionsFromModules = moduleDefinitions
+      ? moduleDefinitions
+          .map((definition) => normalizePermissionKey(definition))
+          .filter((key): key is PermissionKey => Boolean(key))
+      : [];
 
-  const isLoading = loadingCurrentUser || loadingGroups;
+    return new Set<PermissionKey>([...permissionsFromProfile, ...permissionsFromModules]);
+  }, [currentUser, moduleDefinitions]);
+
+  const isLoading =
+    loadingAuth ||
+    loadingCurrentUser ||
+    (sidebarUserId !== undefined && (loadingModules || fetchingModules));
   if (isLoading) {
     return <LoadingPlaceholder />;
   }
 
-  const hasError = Boolean(currentUserError || groupsError);
-  if (hasError) {
-    console.error('Impossible de vérifier les autorisations de module :', currentUserError || groupsError);
+  if (currentUserError) {
+    console.error('Impossible de vérifier les autorisations de module :', currentUserError);
     return <AccessErrorView />;
+  }
+
+  if (modulesError) {
+    console.warn('Impossible de charger la liste des modules visibles :', modulesError);
   }
 
   const isAllowed = currentUser?.isSuperAdmin || accessiblePermissions.has(permission);
