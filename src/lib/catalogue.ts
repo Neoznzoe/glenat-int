@@ -774,6 +774,31 @@ const parseDateInput = (value: unknown): Date | null => {
     return new Date(value.getTime());
   }
 
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const dateContainer = value as { date?: unknown; value?: unknown; timestamp?: unknown };
+
+    if (dateContainer.date !== undefined) {
+      const nested = parseDateInput(dateContainer.date);
+      if (nested) {
+        return nested;
+      }
+    }
+
+    if (dateContainer.value !== undefined) {
+      const nested = parseDateInput(dateContainer.value);
+      if (nested) {
+        return nested;
+      }
+    }
+
+    if (dateContainer.timestamp !== undefined) {
+      const nested = parseDateInput(dateContainer.timestamp);
+      if (nested) {
+        return nested;
+      }
+    }
+  }
+
   if (typeof value === 'string') {
     const trimmed = value.trim();
     if (!trimmed) {
@@ -952,7 +977,16 @@ const extractShippingMessage = (record: RawCatalogueOfficeRecord): string | unde
   );
 
   const date = formatDisplayDate(
-    getField(record, 'dateexpedition', 'datechronolivre', 'dateenvoi', 'datepreparation', 'dateexp'),
+    getField(
+      record,
+      'dateexpedition',
+      'datechronolivre',
+      'dateenvoi',
+      'datepreparation',
+      'dateexp',
+      'datelimitechrono',
+      'dateenvoicvimprimeur',
+    ),
   );
 
   if (message && date) {
@@ -973,7 +1007,21 @@ const extractShippingMessage = (record: RawCatalogueOfficeRecord): string | unde
 const normalizeBookFromRecord = async (
   record: RawCatalogueOfficeRecord,
 ): Promise<CatalogueBook | null> => {
-  const ean = ensureString(getField(record, 'ean', 'idarticle', 'id_article', 'codeean'));
+  const rawEan = ensureString(
+    getField(
+      record,
+      'ean',
+      'idarticle',
+      'id_article',
+      'codeean',
+      'iditem',
+      'isbn13',
+      'isbn',
+    ),
+  );
+  const sanitizedEan = rawEan?.replace(/[^0-9xX]/g, '')?.toUpperCase();
+  const ean = sanitizedEan && sanitizedEan.length ? sanitizedEan : rawEan;
+
   if (!ean) {
     return null;
   }
@@ -995,9 +1043,11 @@ const normalizeBookFromRecord = async (
         'datemev',
       ),
     ) ?? 'À confirmer';
-  const priceHT = formatPrice(getField(record, 'prixht', 'prix_public_ht', 'prixpublicht', 'prix'));
+  const priceHT = formatPrice(
+    getField(record, 'prixht', 'prix_public_ht', 'prixpublicht', 'prix', 'priceht', 'price'),
+  );
   const stock = ensureNumber(
-    getField(record, 'stock', 'stockdispo', 'qtestock', 'quantitestock', 'stocklibrairie'),
+    getField(record, 'stock', 'stockdispo', 'qtestock', 'quantitestock', 'stocklibrairie', 'stocks'),
   ) ?? 0;
   return {
     cover: FALLBACK_COVER_DATA_URL,
