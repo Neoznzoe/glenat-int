@@ -273,6 +273,14 @@ function normalizeKey(value: string | undefined, fallback: string): string {
   return fallback;
 }
 
+function normalizePermissionKey(value: unknown): PermissionKey | undefined {
+  const raw = toNonEmptyString(value);
+  if (!raw) {
+    return undefined;
+  }
+  return normalizeKey(raw, raw) as PermissionKey;
+}
+
 function humanizeLabel(value: string): string {
   const spaced = value
     .replace(/[_-]+/g, ' ')
@@ -594,11 +602,15 @@ function normalizeModuleDefinition(
     metadata.icon = iconValue;
   }
 
-  const permissionValue = toNonEmptyString(
-    getValue(record, ['permission', 'Permission', 'permissionKey', 'PermissionKey']),
-  );
-  if (permissionValue) {
-    metadata.permissionKey = permissionValue;
+  const permissionValue = getValue(record, ['permission', 'Permission', 'permissionKey', 'PermissionKey']);
+  const normalizedPermissionKey = normalizePermissionKey(permissionValue);
+  if (normalizedPermissionKey) {
+    metadata.permissionKey = normalizedPermissionKey;
+  } else {
+    const fallbackPermission = toNonEmptyString(permissionValue);
+    if (fallbackPermission) {
+      metadata.permissionKey = fallbackPermission;
+    }
   }
 
   const badgeValue = getValue(record, ['badge', 'Badge']);
@@ -754,11 +766,32 @@ async function loadModulePermissionMaps(): Promise<ModulePermissionMaps> {
     if (!rawId) {
       return;
     }
-    if (!moduleIdByKey.has(definition.key)) {
-      moduleIdByKey.set(definition.key, rawId);
+    const metadata = (definition.metadata ?? {}) as Record<string, unknown>;
+    const metadataPermissionKey = normalizePermissionKey(metadata.permissionKey);
+    const normalizedDefinitionKey = normalizePermissionKey(definition.key);
+
+    const candidateKeys = new Set<PermissionKey>();
+    if (metadataPermissionKey) {
+      candidateKeys.add(metadataPermissionKey);
     }
+    if (normalizedDefinitionKey) {
+      candidateKeys.add(normalizedDefinitionKey);
+    } else if (typeof definition.key === 'string' && definition.key.trim()) {
+      candidateKeys.add(definition.key.trim().toLowerCase() as PermissionKey);
+    }
+
+    for (const key of candidateKeys) {
+      if (!moduleIdByKey.has(key)) {
+        moduleIdByKey.set(key, rawId);
+      }
+    }
+
     if (!keyByModuleId.has(rawId)) {
-      keyByModuleId.set(rawId, definition.key);
+      const canonicalKey = metadataPermissionKey ?? normalizedDefinitionKey;
+      const preferredKey = canonicalKey ?? candidateKeys.values().next().value;
+      if (preferredKey) {
+        keyByModuleId.set(rawId, preferredKey);
+      }
     }
   });
 
