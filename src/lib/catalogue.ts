@@ -1072,6 +1072,7 @@ const buildCatalogueOfficeGroups = async (
       office: string;
       records: RawCatalogueOfficeRecord[];
       date?: string;
+      rawDate?: unknown;
       shipping?: string;
       order: number;
     }
@@ -1097,11 +1098,21 @@ const buildCatalogueOfficeGroups = async (
 
     group.records.push(record);
 
+    const rawDate = getField(
+      record,
+      'datemev',
+      'date',
+      'dateparution',
+      'nextdate',
+      'dateoffre',
+    );
+
+    if (group.rawDate === undefined && rawDate !== undefined) {
+      group.rawDate = rawDate;
+    }
+
     if (!group.date) {
-      group.date =
-        formatDisplayDate(
-          getField(record, 'datemev', 'date', 'dateparution', 'nextdate', 'dateoffre'),
-        ) ?? undefined;
+      group.date = formatDisplayDate(rawDate) ?? undefined;
     }
 
     if (!group.shipping) {
@@ -1109,9 +1120,42 @@ const buildCatalogueOfficeGroups = async (
     }
   });
 
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
   const groups = await Promise.all(
     Array.from(groupsMap.values())
-      .sort((a, b) => a.order - b.order)
+      .sort((a, b) => {
+        const dateA = parseDateInput(a.rawDate ?? a.date);
+        const dateB = parseDateInput(b.rawDate ?? b.date);
+
+        const hasDateA = dateA !== null;
+        const hasDateB = dateB !== null;
+
+        if (hasDateA !== hasDateB) {
+          return hasDateA ? -1 : 1;
+        }
+
+        if (!dateA || !dateB) {
+          return a.order - b.order;
+        }
+
+        const isPastA = dateA.getTime() < startOfToday.getTime();
+        const isPastB = dateB.getTime() < startOfToday.getTime();
+
+        if (isPastA !== isPastB) {
+          return isPastA ? 1 : -1;
+        }
+
+        const diffA = Math.abs(dateA.getTime() - startOfToday.getTime());
+        const diffB = Math.abs(dateB.getTime() - startOfToday.getTime());
+
+        if (diffA !== diffB) {
+          return diffA - diffB;
+        }
+
+        return a.order - b.order;
+      })
       .map(async group => {
         const books = (
           await Promise.all(group.records.map(record => normalizeBookFromRecord(record)))
