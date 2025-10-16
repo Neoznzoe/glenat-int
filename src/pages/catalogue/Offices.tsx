@@ -45,12 +45,14 @@ export function Offices() {
   useEffect(() => {
     let isActive = true;
 
-    fetchCatalogueOffices()
-      .then(data => {
-        if (isActive) {
-          setOffices(data);
-        }
-      })
+    const handleProgress = (groups: CatalogueOfficeGroup[]) => {
+      if (isActive) {
+        setOffices(groups);
+      }
+    };
+
+    fetchCatalogueOffices({ hydrateCovers: false, onCoverProgress: handleProgress })
+      .then(handleProgress)
       .catch(error => {
         console.error('Impossible de récupérer les offices', error);
       });
