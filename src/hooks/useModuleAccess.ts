@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
-import { useAdminGroups, useCurrentUser } from '@/hooks/useAdminData';
-import { computeEffectivePermissions } from '@/lib/mockDb';
+import { useCurrentUser } from '@/hooks/useAdminData';
 import type { PermissionKey } from '@/lib/access-control';
 
 interface ModulePermissionState {
@@ -16,14 +15,20 @@ export function useModulePermission(permission?: PermissionKey): ModulePermissio
     isFetching: fetchingCurrentUser,
     error: currentUserError,
   } = useCurrentUser();
-  const {
-    data: groups,
-    isLoading: loadingGroups,
-    isFetching: fetchingGroups,
-    error: groupsError,
-  } = useAdminGroups();
 
-  const loading = loadingCurrentUser || loadingGroups || fetchingCurrentUser || fetchingGroups;
+  const loading = loadingCurrentUser || fetchingCurrentUser;
+
+  const deniedPermissions = useMemo(() => {
+    if (!currentUser) {
+      return new Set<PermissionKey>();
+    }
+
+    return new Set<PermissionKey>(
+      (currentUser.permissionOverrides ?? [])
+        .filter((override) => override.mode === 'deny' && typeof override.key === 'string')
+        .map((override) => override.key.trim().toLowerCase() as PermissionKey),
+    );
+  }, [currentUser]);
 
   const allowed = useMemo(() => {
     if (!permission) {
@@ -38,18 +43,12 @@ export function useModulePermission(permission?: PermissionKey): ModulePermissio
       return true;
     }
 
-    if (!groups) {
-      return false;
-    }
+    const normalizedPermission = permission.trim().toLowerCase() as PermissionKey;
 
-    const accessiblePermissions = new Set(
-      computeEffectivePermissions(currentUser, groups),
-    );
+    return !deniedPermissions.has(normalizedPermission);
+  }, [currentUser, deniedPermissions, permission]);
 
-    return accessiblePermissions.has(permission);
-  }, [currentUser, groups, permission]);
-
-  const error = (currentUserError as Error | null) ?? (groupsError as Error | null) ?? null;
+  const error = currentUserError as Error | null;
 
   return { loading, allowed, error };
 }
