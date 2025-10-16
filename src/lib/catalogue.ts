@@ -13,7 +13,6 @@ import OnePieceBlue from '@/assets/images/onepiece-blue.webp';
 import OnePieceYellow from '@/assets/images/onepiece-yellow.webp';
 import OnePieceBlueDeep from '@/assets/images/onepiece-bluedeep.webp';
 import OnePieceRed from '@/assets/images/onepiece-red.webp';
-import PlaceholderCover from '@/assets/images/catalogue-placeholder.svg';
 import UniversBD from '@/assets/logos/univers/univers-bd.svg';
 import UniversJeune from '@/assets/logos/univers/univers-jeunesse.svg';
 import UniversLivre from '@/assets/logos/univers/univers-livres.svg';
@@ -92,16 +91,6 @@ export interface CatalogueDb {
   kiosques: CatalogueKiosqueDefinition[];
   editions: CatalogueEdition[];
 }
-
-const CATALOGUE_OFFICES_ENDPOINT = import.meta.env.VITE_CATALOGUE_OFFICES_ENDPOINT ??
-  (import.meta.env.DEV
-    ? '/intranet/call-database'
-    : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase');
-
-const CATALOGUE_OFFICES_QUERY =
-  typeof import.meta.env.VITE_CATALOGUE_OFFICES_QUERY === 'string'
-    ? import.meta.env.VITE_CATALOGUE_OFFICES_QUERY
-    : undefined;
 
 export const catalogueDb: CatalogueDb = {
   books: [
@@ -457,644 +446,6 @@ const cloneBook = (ean: string): CatalogueBook => {
   };
 };
 
-type RawCatalogueOfficeRecord = Record<string, unknown>;
-
-interface CatalogueDatabaseResponse {
-  success?: boolean;
-  message?: string;
-  result?: unknown;
-  data?: unknown;
-  rows?: unknown;
-  recordset?: unknown;
-  Recordset?: unknown;
-  recordsets?: unknown;
-  records?: unknown;
-  [key: string]: unknown;
-}
-
-const NORMALIZED_KEY_CACHE = new Map<string, string>();
-
-const normalizeKeyName = (key: string): string => {
-  const cached = NORMALIZED_KEY_CACHE.get(key);
-  if (cached) {
-    return cached;
-  }
-  const normalized = key
-    .toLowerCase()
-    .replace(/[\s_]+/g, '')
-    .replace(/[^a-z0-9]/g, '');
-  NORMALIZED_KEY_CACHE.set(key, normalized);
-  return normalized;
-};
-
-const getCandidateValue = (record: RawCatalogueOfficeRecord, keys: string[]): unknown => {
-  for (const key of keys) {
-    if (key in record) {
-      const value = record[key];
-      if (value !== undefined && value !== null) {
-        return value;
-      }
-    }
-  }
-
-  const normalizedTargets = keys.map(normalizeKeyName);
-  for (const [candidateKey, candidateValue] of Object.entries(record)) {
-    if (candidateValue === undefined || candidateValue === null) {
-      continue;
-    }
-    if (normalizedTargets.includes(normalizeKeyName(candidateKey))) {
-      return candidateValue;
-    }
-  }
-
-  return undefined;
-};
-
-const toTrimmedString = (value: unknown): string | undefined => {
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    return trimmed.length ? trimmed : undefined;
-  }
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value.toString();
-  }
-  return undefined;
-};
-
-const toOptionalNumber = (value: unknown): number | undefined => {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === 'string') {
-    const normalized = value
-      .trim()
-      .replace(/\s+/g, '')
-      .replace(',', '.')
-      .replace(/[^0-9.+-]/g, '');
-    if (!normalized) {
-      return undefined;
-    }
-    const parsed = Number.parseFloat(normalized);
-    if (!Number.isNaN(parsed)) {
-      return parsed;
-    }
-  }
-  return undefined;
-};
-
-const toOptionalInteger = (value: unknown): number | undefined => {
-  const numeric = toOptionalNumber(value);
-  if (numeric === undefined || Number.isNaN(numeric)) {
-    return undefined;
-  }
-  const integer = Math.round(numeric);
-  if (!Number.isFinite(integer)) {
-    return undefined;
-  }
-  return integer;
-};
-
-const parseDateCandidate = (value: unknown): Date | null => {
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : value;
-  }
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    if (value > 1e11) {
-      return new Date(value);
-    }
-    if (value > 4e4) {
-      const excelEpoch = Date.UTC(1899, 11, 30);
-      return new Date(excelEpoch + Math.round(value) * 86400000);
-    }
-    return new Date(value * 1000);
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return null;
-    }
-    const parsed = Date.parse(trimmed);
-    if (!Number.isNaN(parsed)) {
-      return new Date(parsed);
-    }
-
-    const slashMatch = trimmed.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/);
-    if (slashMatch) {
-      const [, day, month, year] = slashMatch;
-      const date = new Date(Number(year), Number(month) - 1, Number(day));
-      return Number.isNaN(date.getTime()) ? null : date;
-    }
-
-    const compactMatch = trimmed.match(/^(\d{4})(\d{2})(\d{2})$/);
-    if (compactMatch) {
-      const [, year, month, day] = compactMatch;
-      const date = new Date(Number(year), Number(month) - 1, Number(day));
-      return Number.isNaN(date.getTime()) ? null : date;
-    }
-  }
-  return null;
-};
-
-const formatDisplayDate = (date: Date): string =>
-  new Intl.DateTimeFormat('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date);
-
-const formatDateTime = (date: Date, time?: string): string => {
-  const base = formatDisplayDate(date);
-  if (!time) {
-    return base;
-  }
-  const trimmed = time.trim();
-  if (!trimmed) {
-    return base;
-  }
-  return `${base} à ${trimmed}`;
-};
-
-const OFFICE_IDENTIFIER_KEYS = [
-  'office',
-  'officeId',
-  'officeID',
-  'office_id',
-  'officeCode',
-  'office_code',
-  'numero',
-  'numeroOffice',
-  'numero_office',
-  'officeNumber',
-  'idOffice',
-  'codeOffice',
-];
-
-const OFFICE_DATE_KEYS = [
-  'officeDate',
-  'dateOffice',
-  'date_office',
-  'office_date',
-  'date',
-  'Date',
-  'dateParution',
-  'DateParution',
-  'datePublication',
-  'DatePublication',
-];
-
-const SHIPPING_TEXT_KEYS = [
-  'shipping',
-  'Shipping',
-  'shippingLabel',
-  'ShippingLabel',
-  'envoi',
-  'Envoi',
-  'expedition',
-  'Expedition',
-  'modeExpedition',
-  'ModeExpedition',
-  'libelleExpedition',
-  'LibelleExpedition',
-];
-
-const SHIPPING_DATE_KEYS = [
-  'shippingDate',
-  'ShippingDate',
-  'dateEnvoi',
-  'DateEnvoi',
-  'dateExpedition',
-  'DateExpedition',
-  'expeditionDate',
-  'ExpeditionDate',
-];
-
-const SHIPPING_TIME_KEYS = [
-  'shippingTime',
-  'ShippingTime',
-  'heureEnvoi',
-  'HeureEnvoi',
-  'heureExpedition',
-  'HeureExpedition',
-];
-
-const EAN_KEYS = [
-  'ean',
-  'EAN',
-  'ean13',
-  'EAN13',
-  'ean_13',
-  'eanCode',
-  'Ean',
-  'isbn',
-  'ISBN',
-  'codeEAN',
-  'code_ean',
-  'CodeEAN',
-];
-
-const TITLE_KEYS = ['title', 'Title', 'titre', 'Titre', 'libelle', 'Libelle', 'name', 'Name', 'ouvrage', 'Ouvrage'];
-
-const AUTHORS_KEYS = ['authors', 'Authors', 'auteur', 'Auteur', 'auteurs', 'Auteurs'];
-
-const PUBLISHER_KEYS = [
-  'publisher',
-  'Publisher',
-  'editeur',
-  'Editeur',
-  'marque',
-  'Marque',
-  'label',
-  'Label',
-  'univers',
-  'Univers',
-];
-
-const PUBLICATION_DATE_KEYS = [
-  'publicationDate',
-  'PublicationDate',
-  'datePublication',
-  'DatePublication',
-  'parution',
-  'Parution',
-  'dateParution',
-  'DateParution',
-  'sortie',
-  'Sortie',
-];
-
-const PRICE_KEYS = ['priceHT', 'PriceHT', 'prixHT', 'PrixHT', 'prix', 'Prix', 'tarifHT', 'TarifHT', 'tarif', 'Tarif'];
-
-const STOCK_KEYS = [
-  'stock',
-  'Stock',
-  'quantite',
-  'Quantite',
-  'qte',
-  'Qte',
-  'stockTheorique',
-  'StockTheorique',
-  'stockPrev',
-  'StockPrev',
-  'stock_previsionnel',
-];
-
-const COVER_KEYS = [
-  'cover',
-  'Cover',
-  'image',
-  'Image',
-  'visuel',
-  'Visuel',
-  'illustration',
-  'Illustration',
-  'urlImage',
-  'UrlImage',
-  'vignette',
-  'Vignette',
-];
-
-const RIBBON_KEYS = ['ribbon', 'Ribbon', 'ribbonText', 'RibbonText', 'badge', 'Badge'];
-
-const INFO_LABEL_KEYS = ['infoLabel', 'InfoLabel', 'statut', 'Statut', 'status', 'Status'];
-
-const INFO_VALUE_KEYS = [
-  'infoValue',
-  'InfoValue',
-  'statutDetail',
-  'StatutDetail',
-  'etat',
-  'Etat',
-  'statusDetail',
-  'StatusDetail',
-];
-
-const VIEWS_KEYS = ['views', 'Views', 'nbVues', 'NbVues', 'vues', 'Vues'];
-
-const extractOfficeRecords = (payload: unknown): RawCatalogueOfficeRecord[] => {
-  const visited = new Set<unknown>();
-  const queue: unknown[] = [payload];
-
-  while (queue.length > 0) {
-    const current = queue.shift();
-    if (current === undefined || current === null) {
-      continue;
-    }
-    if (visited.has(current)) {
-      continue;
-    }
-    visited.add(current);
-
-    if (Array.isArray(current)) {
-      const records = current.filter(
-        (item): item is RawCatalogueOfficeRecord =>
-          item !== null && typeof item === 'object' && !Array.isArray(item),
-      );
-      if (records.length) {
-        return records;
-      }
-      continue;
-    }
-
-    if (typeof current === 'string') {
-      try {
-        const parsed = JSON.parse(current) as unknown;
-        queue.push(parsed);
-      } catch {
-        // ignore parse errors
-      }
-      continue;
-    }
-
-    if (typeof current === 'object') {
-      const objectPayload = current as Record<string, unknown>;
-      const keysToInspect = ['rows', 'data', 'result', 'recordset', 'Recordset', 'records'];
-      for (const key of keysToInspect) {
-        if (key in objectPayload) {
-          queue.push(objectPayload[key]);
-        }
-      }
-      if (Array.isArray(objectPayload.recordsets)) {
-        for (const entry of objectPayload.recordsets as unknown[]) {
-          queue.push(entry);
-        }
-      }
-    }
-  }
-
-  return [];
-};
-
-const determinePublisherColor = (publisher?: string): string => {
-  if (!publisher) {
-    return '--glenat-bd';
-  }
-
-  const normalized = publisher.toLowerCase();
-  if (normalized.includes('jeunesse')) {
-    return '--glenat-jeunesse';
-  }
-  if (normalized.includes('manga')) {
-    return '--glenat-manga';
-  }
-  if (normalized.includes('livre')) {
-    return '--glenat-livre';
-  }
-  if (normalized.includes('bd')) {
-    return '--glenat-bd';
-  }
-  if (normalized.includes("vent d'ouest") || normalized.includes('vents d’ouest')) {
-    return '--glenat-bd';
-  }
-  return '--glenat-bd';
-};
-
-const buildPlaceholderBook = (
-  record: RawCatalogueOfficeRecord,
-  ean: string,
-  fallbackDate?: Date | null,
-): CatalogueBook => {
-  const publisher =
-    toTrimmedString(getCandidateValue(record, PUBLISHER_KEYS)) ?? 'Éditeur à confirmer';
-  const title = toTrimmedString(getCandidateValue(record, TITLE_KEYS)) ?? `Référence ${ean}`;
-  const authors =
-    toTrimmedString(getCandidateValue(record, AUTHORS_KEYS)) ?? 'Auteur à confirmer';
-  const publicationDateCandidate =
-    parseDateCandidate(getCandidateValue(record, PUBLICATION_DATE_KEYS)) ?? fallbackDate ?? null;
-  const publicationDate = publicationDateCandidate
-    ? formatDisplayDate(publicationDateCandidate)
-    : 'Date à confirmer';
-  const price = toOptionalNumber(getCandidateValue(record, PRICE_KEYS));
-  const stock = toOptionalInteger(getCandidateValue(record, STOCK_KEYS)) ?? 0;
-  const cover =
-    toTrimmedString(getCandidateValue(record, COVER_KEYS)) ?? PlaceholderCover;
-  const ribbonText = toTrimmedString(getCandidateValue(record, RIBBON_KEYS));
-  const infoLabel = toTrimmedString(getCandidateValue(record, INFO_LABEL_KEYS));
-
-  const rawInfoValue = getCandidateValue(record, INFO_VALUE_KEYS);
-  const infoValueString = toTrimmedString(rawInfoValue);
-  const infoValueNumber = toOptionalNumber(rawInfoValue);
-  const infoValue = infoValueString ?? (infoValueNumber !== undefined ? infoValueNumber : undefined);
-
-  const rawViews = toOptionalNumber(getCandidateValue(record, VIEWS_KEYS));
-  const views = rawViews !== undefined && Number.isFinite(rawViews) ? Math.max(0, Math.round(rawViews)) : undefined;
-
-  return {
-    cover,
-    title,
-    ean,
-    authors,
-    publisher,
-    publicationDate,
-    priceHT: (price ?? 0).toFixed(2),
-    stock,
-    color: determinePublisherColor(publisher),
-    ...(ribbonText ? { ribbonText } : {}),
-    ...(infoLabel ? { infoLabel } : {}),
-    ...(infoValue !== undefined ? { infoValue } : {}),
-    ...(views !== undefined ? { views } : {}),
-  };
-};
-
-const tryCloneBook = (ean: string): CatalogueBook | null => {
-  try {
-    return cloneBook(ean);
-  } catch (error) {
-    console.warn(`[catalogueApi] Livre introuvable pour l'EAN ${ean}`, error);
-    return null;
-  }
-};
-
-const resolveBookFromRecord = (
-  record: RawCatalogueOfficeRecord,
-  ean: string,
-  fallbackDate?: Date | null,
-): CatalogueBook | null => {
-  const existing = tryCloneBook(ean);
-  if (existing) {
-    const infoLabel = toTrimmedString(getCandidateValue(record, INFO_LABEL_KEYS));
-    const rawInfoValue = getCandidateValue(record, INFO_VALUE_KEYS);
-    const infoValueString = toTrimmedString(rawInfoValue);
-    const infoValueNumber = toOptionalNumber(rawInfoValue);
-    const infoValue = infoValueString ?? (infoValueNumber !== undefined ? infoValueNumber : undefined);
-    const rawViews = toOptionalNumber(getCandidateValue(record, VIEWS_KEYS));
-    const views =
-      rawViews !== undefined && Number.isFinite(rawViews) ? Math.max(0, Math.round(rawViews)) : undefined;
-
-    return {
-      ...existing,
-      ...(infoLabel ? { infoLabel } : {}),
-      ...(infoValue !== undefined ? { infoValue } : {}),
-      ...(views !== undefined ? { views } : {}),
-    };
-  }
-
-  return buildPlaceholderBook(record, ean, fallbackDate);
-};
-
-interface OfficeAccumulator {
-  office: string;
-  order: number;
-  officeDate?: Date | null;
-  shippingText?: string;
-  shippingDate?: Date | null;
-  shippingTime?: string;
-  books: CatalogueBook[];
-  seenEans: Set<string>;
-}
-
-const extractShippingInformation = (
-  record: RawCatalogueOfficeRecord,
-): { text?: string; date?: Date | null; time?: string } => {
-  const text = toTrimmedString(getCandidateValue(record, SHIPPING_TEXT_KEYS));
-  const date = parseDateCandidate(getCandidateValue(record, SHIPPING_DATE_KEYS));
-  const time = toTrimmedString(getCandidateValue(record, SHIPPING_TIME_KEYS));
-  return { text: text ?? undefined, date, time: time ?? undefined };
-};
-
-const buildOfficeGroupsFromRecords = (
-  records: RawCatalogueOfficeRecord[],
-): CatalogueOfficeGroup[] => {
-  if (!records.length) {
-    return [];
-  }
-
-  const groups = new Map<string, OfficeAccumulator>();
-  let order = 0;
-
-  for (const record of records) {
-    if (!record || typeof record !== 'object') {
-      continue;
-    }
-
-    const officeIdentifier = toTrimmedString(getCandidateValue(record, OFFICE_IDENTIFIER_KEYS));
-    if (!officeIdentifier) {
-      continue;
-    }
-
-    let accumulator = groups.get(officeIdentifier);
-    if (!accumulator) {
-      accumulator = {
-        office: officeIdentifier,
-        order: order += 1,
-        books: [],
-        seenEans: new Set<string>(),
-      };
-      groups.set(officeIdentifier, accumulator);
-    }
-
-    const officeDateCandidate = parseDateCandidate(getCandidateValue(record, OFFICE_DATE_KEYS));
-    if (officeDateCandidate && !accumulator.officeDate) {
-      accumulator.officeDate = officeDateCandidate;
-    }
-
-    const shippingInfo = extractShippingInformation(record);
-    if (shippingInfo.text && !accumulator.shippingText) {
-      accumulator.shippingText = shippingInfo.text;
-    }
-    if (shippingInfo.date && !accumulator.shippingDate) {
-      accumulator.shippingDate = shippingInfo.date;
-    }
-    if (shippingInfo.time && !accumulator.shippingTime) {
-      accumulator.shippingTime = shippingInfo.time;
-    }
-
-    const ean = toTrimmedString(getCandidateValue(record, EAN_KEYS));
-    if (!ean || accumulator.seenEans.has(ean)) {
-      continue;
-    }
-
-    const book = resolveBookFromRecord(record, ean, accumulator.officeDate ?? shippingInfo.date ?? null);
-    if (!book) {
-      continue;
-    }
-
-    accumulator.seenEans.add(ean);
-    accumulator.books.push(book);
-  }
-
-  const result = Array.from(groups.values())
-    .filter(group => group.books.length > 0)
-    .sort((a, b) => {
-      if (a.officeDate && b.officeDate) {
-        return b.officeDate.getTime() - a.officeDate.getTime();
-      }
-      if (a.officeDate) {
-        return -1;
-      }
-      if (b.officeDate) {
-        return 1;
-      }
-      return a.order - b.order;
-    })
-    .map(group => {
-      const date = group.officeDate ? formatDisplayDate(group.officeDate) : 'Date à confirmer';
-      const shipping = group.shippingText
-        ? group.shippingText
-        : group.shippingDate
-          ? `Expédition planifiée le ${formatDateTime(group.shippingDate, group.shippingTime)}`
-          : group.officeDate
-            ? `Expédition planifiée le ${formatDisplayDate(group.officeDate)}`
-            : 'Expédition à confirmer';
-
-      return {
-        office: group.office,
-        date,
-        shipping,
-        books: group.books,
-      } satisfies CatalogueOfficeGroup;
-    });
-
-  return result;
-};
-
-const fetchOfficeGroupsFromDatabase = async (): Promise<CatalogueOfficeGroup[] | null> => {
-  if (!CATALOGUE_OFFICES_QUERY) {
-    return null;
-  }
-
-  const response = await fetch(CATALOGUE_OFFICES_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ query: CATALOGUE_OFFICES_QUERY }),
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `Impossible de charger les offices (${response.status}) ${response.statusText}`,
-    );
-  }
-
-  const payload = (await response.json()) as CatalogueDatabaseResponse;
-  if (payload.success === false) {
-    const message = typeof payload.message === 'string' ? payload.message : undefined;
-    throw new Error(message ?? 'Impossible de charger les offices');
-  }
-
-  const candidatePayload =
-    payload.result ??
-    payload.data ??
-    payload.rows ??
-    payload.recordset ??
-    payload.Recordset ??
-    payload.records ??
-    payload.recordsets ??
-    payload;
-
-  const records = extractOfficeRecords(candidatePayload);
-  if (!records.length) {
-    return [];
-  }
-
-  const groups = buildOfficeGroupsFromRecords(records);
-  if (!groups.length) {
-    throw new Error('Impossible de construire les offices à partir des données reçues.');
-  }
-
-  return groups;
-};
-
 const logRequest = (endpoint: string) => {
   console.info(`[catalogueApi] ${endpoint} appelé`);
 };
@@ -1113,6 +464,14 @@ export interface CatalogueOfficeGroup {
   date: string;
   shipping: string;
   books: CatalogueBook[];
+}
+
+export interface HydrateCatalogueOfficeGroupsOptions {
+  onCoverProgress?: (groups: CatalogueOfficeGroup[]) => void;
+}
+
+export interface FetchCatalogueOfficesOptions extends HydrateCatalogueOfficeGroupsOptions {
+  hydrateCovers?: boolean;
 }
 
 export interface CatalogueKiosqueGroup {
@@ -1141,32 +500,716 @@ export async function fetchCatalogueReleases(): Promise<CatalogueReleaseGroup[]>
   return Promise.resolve(data);
 }
 
-export async function fetchCatalogueOffices(): Promise<CatalogueOfficeGroup[]> {
-  const endpoint = 'fetchCatalogueOffices';
-  logRequest(endpoint);
-  if (CATALOGUE_OFFICES_QUERY) {
-    try {
-      const groups = await fetchOfficeGroupsFromDatabase();
-      if (groups && groups.length > 0) {
-        logResponse(endpoint, groups);
-        return groups;
-      }
-      if (groups && groups.length === 0) {
-        console.warn('[catalogueApi] Aucun office retourné par la base, utilisation du jeu statique.');
-      }
-    } catch (error) {
-      console.error('[catalogueApi] Échec de la récupération des offices depuis la base.', error);
+const CATALOGUE_OFFICES_ENDPOINT = import.meta.env.DEV
+  ? '/intranet/callDatabase'
+  : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
+
+const parseEndpointList = (value: unknown): string[] => {
+  if (typeof value !== 'string') {
+    return [];
+  }
+
+  return value
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+};
+
+const resolveCoverageEndpoints = (): string[] => {
+  const overrides = parseEndpointList(import.meta.env.VITE_CATALOGUE_COVER_ENDPOINT);
+  if (overrides.length > 0) {
+    return overrides;
+  }
+
+  if (import.meta.env.DEV) {
+    return ['/extranet/couverture'];
+  }
+
+  const endpoints = new Set<string>();
+
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname.toLowerCase();
+
+    if (hostname.includes('intranet')) {
+      endpoints.add('https://api-dev.groupe-glenat.com/Api/v1.0/Extranet/couverture');
     }
   }
 
-  const data = catalogueDb.offices.map(office => ({
-    office: office.office,
-    date: office.date,
-    shipping: office.shipping,
-    books: office.bookEans.map(cloneBook),
+  endpoints.add('https://api-recette.groupe-glenat.com/Api/v1.0/Extranet/couverture');
+
+  return Array.from(endpoints);
+};
+
+const CATALOGUE_COVERAGE_ENDPOINTS = resolveCoverageEndpoints();
+
+const NEXT_OFFICES_SQL_QUERY = `;WITH next_offices AS (
+    SELECT TOP (4)
+           office,
+           MIN(dateMev) AS nextDate
+    FROM dbo.cataLivres
+    WHERE dateMev >= CONVERT(date, GETDATE())
+      AND dateMev >= '20000101'
+      AND dateMev < DATEADD(year, 5, CONVERT(date, GETDATE()))
+      AND office <> '0000'
+    GROUP BY office
+    ORDER BY MIN(dateMev) ASC, office ASC
+)
+SELECT c.*
+FROM dbo.cataLivres AS c
+JOIN next_offices AS n
+  ON n.office = c.office
+ORDER BY n.nextDate ASC, n.office ASC, c.dateMev ASC;`;
+
+const FALLBACK_COVER_DATA_URL =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300" preserveAspectRatio="xMidYMid meet"><rect width="200" height="300" fill="#f4f4f5"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#a1a1aa">Couverture indisponible</text></svg>',
+  );
+
+type CoverApiResponse = {
+  success?: boolean;
+  message?: string;
+  result?: {
+    ean?: string;
+    imageBase64?: string;
+  };
+};
+
+const wait = (ms: number) =>
+  new Promise<void>(resolve => {
+    setTimeout(resolve, ms);
+  });
+
+const COVER_FETCH_RETRY_ATTEMPTS = 3;
+const COVER_FETCH_RETRY_DELAY_MS = 150;
+
+const coverCache = new Map<string, string>();
+const pendingCoverRequests = new Map<string, Promise<string | null>>();
+
+let lastCoverFetch: Promise<unknown> = Promise.resolve();
+
+const shouldIncludeCredentials = (endpoint: string): boolean => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  try {
+    const base = window.location.origin ?? 'https://groupe-glenat.com';
+    const url = new URL(endpoint, base);
+
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return false;
+    }
+
+    const hostname = url.hostname.toLowerCase();
+    const currentHost = window.location.hostname.toLowerCase();
+
+    if (hostname === currentHost) {
+      return true;
+    }
+
+    if (hostname.includes('api-dev.groupe-glenat.com')) {
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.warn('[catalogueApi] Impossible de déterminer le domaine pour la couverture', endpoint, error);
+    return false;
+  }
+};
+
+const buildCoverRequestInit = (endpoint: string): RequestInit => {
+  const init: RequestInit = {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  };
+
+  if (shouldIncludeCredentials(endpoint)) {
+    init.credentials = 'include';
+  }
+
+  return init;
+};
+
+const normaliseCoverDataUrl = (value: string | undefined): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.startsWith('data:')) {
+    return trimmed;
+  }
+
+  return `data:image/jpeg;base64,${trimmed}`;
+};
+
+const fetchCover = async (ean: string): Promise<string | null> => {
+  if (!ean) {
+    return null;
+  }
+
+  const cachedCover = coverCache.get(ean);
+  if (cachedCover) {
+    return cachedCover;
+  }
+
+  const pendingRequest = pendingCoverRequests.get(ean);
+  if (pendingRequest) {
+    return pendingRequest;
+  }
+
+  const previousFetch = lastCoverFetch;
+  const request = (async () => {
+    await previousFetch.catch(() => {});
+    await wait(3);
+
+    for (let attempt = 0; attempt < COVER_FETCH_RETRY_ATTEMPTS; attempt += 1) {
+      for (const endpoint of CATALOGUE_COVERAGE_ENDPOINTS) {
+        const url = `${endpoint}${endpoint.includes('?') ? '&' : '?'}ean=${encodeURIComponent(ean)}`;
+
+        try {
+          const response = await fetch(url, buildCoverRequestInit(endpoint));
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status} ${response.statusText}`);
+          }
+
+          const data = (await response.json()) as CoverApiResponse;
+          const imageBase64 = normaliseCoverDataUrl(data?.result?.imageBase64);
+
+          if (data?.success && imageBase64) {
+            console.log('[catalogueApi] Couverture reçue', ean, {
+              endpoint,
+              message: data?.message,
+              attempt,
+            });
+            coverCache.set(ean, imageBase64);
+            return imageBase64;
+          }
+
+          const errorMessage = data?.message ?? "Réponse inattendue de l'API couverture";
+          throw new Error(errorMessage);
+        } catch (error) {
+          console.error(
+            `[catalogueApi] Impossible de récupérer la couverture ${ean} via ${endpoint} (tentative ${attempt + 1})`,
+            error,
+          );
+        }
+      }
+
+      if (attempt < COVER_FETCH_RETRY_ATTEMPTS - 1) {
+        await wait(COVER_FETCH_RETRY_DELAY_MS);
+      }
+    }
+
+    return null;
+  })();
+
+  pendingCoverRequests.set(ean, request);
+
+  lastCoverFetch = request.then(
+    () => undefined,
+    () => undefined,
+  );
+
+  request.finally(() => {
+    pendingCoverRequests.delete(ean);
+  });
+
+  return request;
+};
+
+type RawCatalogueOfficeRecord = Record<string, unknown>;
+
+interface DatabaseApiResponse {
+  success?: boolean;
+  message?: string;
+  result?: unknown;
+  data?: unknown;
+  recordset?: unknown;
+  recordsets?: unknown;
+  rows?: unknown;
+  [key: string]: unknown;
+}
+
+const ensureString = (value: unknown): string | undefined => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : undefined;
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value.toString();
+  }
+
+  return undefined;
+};
+
+const ensureNumber = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.replace(',', '.').trim();
+    if (!normalized) {
+      return undefined;
+    }
+    const parsed = Number.parseFloat(normalized);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  return undefined;
+};
+
+const parseDateInput = (value: unknown): Date | null => {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return new Date(value.getTime());
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    const frenchFormat = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (frenchFormat) {
+      const [, day, month, year] = frenchFormat;
+      return new Date(Number(year), Number(month) - 1, Number(day));
+    }
+
+    const isoCompactFormat = trimmed.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (isoCompactFormat) {
+      const [, year, month, day] = isoCompactFormat;
+      return new Date(Number(year), Number(month) - 1, Number(day));
+    }
+
+    const serializedDate = trimmed.match(/\/Date\((\d+)\)\//);
+    if (serializedDate) {
+      const [, timestamp] = serializedDate;
+      const parsed = Number.parseInt(timestamp, 10);
+      if (Number.isFinite(parsed)) {
+        return new Date(parsed);
+      }
+    }
+
+    const normalized = /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}(:\d{2}(\.\d+)?)?)/.test(trimmed)
+      ? trimmed.replace(' ', 'T')
+      : trimmed;
+
+    const timestamp = Date.parse(normalized);
+    if (!Number.isNaN(timestamp)) {
+      return new Date(timestamp);
+    }
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    if (value > 10_000) {
+      return new Date(value);
+    }
+
+    const excelEpoch = Date.UTC(1899, 11, 30);
+    const milliseconds = Math.round(value * 24 * 60 * 60 * 1000);
+    return new Date(excelEpoch + milliseconds);
+  }
+
+  return null;
+};
+
+const formatDisplayDate = (value: unknown): string | undefined => {
+  const date = parseDateInput(value);
+  if (date) {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear());
+    return `${day}/${month}/${year}`;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      return `${day}/${month}/${year}`;
+    }
+  }
+
+  return undefined;
+};
+
+const formatPrice = (value: unknown): string => {
+  const numeric = ensureNumber(value);
+  if (numeric === undefined) {
+    return '0.00';
+  }
+
+  return numeric.toFixed(2);
+};
+
+const getField = (source: RawCatalogueOfficeRecord, ...keys: string[]): unknown => {
+  const lowered = Object.keys(source).reduce<Record<string, string>>((acc, key) => {
+    acc[key.toLowerCase()] = key;
+    return acc;
+  }, {});
+
+  for (const key of keys) {
+    const candidate = lowered[key.toLowerCase()];
+    if (candidate !== undefined) {
+      return source[candidate];
+    }
+  }
+
+  return undefined;
+};
+
+const extractDatabaseRows = (payload: unknown): RawCatalogueOfficeRecord[] => {
+  const visit = (input: unknown): unknown => {
+    if (Array.isArray(input)) {
+      return input;
+    }
+
+    if (typeof input === 'string') {
+      try {
+        const parsed = JSON.parse(input) as unknown;
+        return visit(parsed);
+      } catch {
+        return [];
+      }
+    }
+
+    if (input && typeof input === 'object') {
+      const objectPayload = input as Record<string, unknown>;
+      const possibleKeys = ['rows', 'data', 'result', 'recordset', 'Recordset', 'records'];
+
+      for (const key of possibleKeys) {
+        const candidate = objectPayload[key];
+        if (Array.isArray(candidate)) {
+          return candidate;
+        }
+      }
+
+      if (Array.isArray(objectPayload.recordsets)) {
+        const [first] = objectPayload.recordsets as unknown[];
+        if (Array.isArray(first)) {
+          return first;
+        }
+      }
+    }
+
+    return [];
+  };
+
+  const result = visit(payload);
+  if (!Array.isArray(result)) {
+    return [];
+  }
+
+  return result.filter((item): item is RawCatalogueOfficeRecord => Boolean(item) && typeof item === 'object');
+};
+
+const getColorFromPublisher = (publisher?: string): string => {
+  if (!publisher) {
+    return '--glenat-bd';
+  }
+
+  const normalized = publisher.toLowerCase();
+
+  if (normalized.includes('manga')) {
+    return '--glenat-manga';
+  }
+
+  if (normalized.includes('jeunesse')) {
+    return '--glenat-jeunesse';
+  }
+
+  if (normalized.includes('livre') || normalized.includes('hugo')) {
+    return '--glenat-livre';
+  }
+
+  return '--glenat-bd';
+};
+
+const extractShippingMessage = (record: RawCatalogueOfficeRecord): string | undefined => {
+  const message = ensureString(
+    getField(
+      record,
+      'shipping',
+      'chronolivre',
+      'messagechronolivre',
+      'infochronolivre',
+      'commentaireexpedition',
+      'commentaire',
+      'texteexpedition',
+    ),
+  );
+
+  const date = formatDisplayDate(
+    getField(record, 'dateexpedition', 'datechronolivre', 'dateenvoi', 'datepreparation', 'dateexp'),
+  );
+
+  if (message && date) {
+    return `${message} ${date}`;
+  }
+
+  if (message) {
+    return message;
+  }
+
+  if (date) {
+    return `Expédition le ${date}`;
+  }
+
+  return undefined;
+};
+
+const normalizeBookFromRecord = async (
+  record: RawCatalogueOfficeRecord,
+): Promise<CatalogueBook | null> => {
+  const ean = ensureString(getField(record, 'ean', 'idarticle', 'id_article', 'codeean'));
+  if (!ean) {
+    return null;
+  }
+
+  const title =
+    ensureString(getField(record, 'titre', 'title', 'libelle', 'libelleshort')) ?? `Article ${ean}`;
+  const authors = ensureString(getField(record, 'createur', 'auteur', 'auteurs', 'createurs')) ?? 'Auteur à confirmer';
+  const publisher =
+    ensureString(getField(record, 'editeur', 'marque', 'label', 'publisher')) ?? 'Éditeur à confirmer';
+  const publicationDate =
+    formatDisplayDate(
+      getField(
+        record,
+        'dateparution',
+        'date_parution',
+        'datepublication',
+        'datepublicationprevue',
+        'datedisponibilite',
+        'datemev',
+      ),
+    ) ?? 'À confirmer';
+  const priceHT = formatPrice(getField(record, 'prixht', 'prix_public_ht', 'prixpublicht', 'prix'));
+  const stock = ensureNumber(
+    getField(record, 'stock', 'stockdispo', 'qtestock', 'quantitestock', 'stocklibrairie'),
+  ) ?? 0;
+  return {
+    cover: FALLBACK_COVER_DATA_URL,
+    title,
+    ean,
+    authors,
+    publisher,
+    publicationDate,
+    priceHT,
+    stock,
+    color: getColorFromPublisher(publisher),
+    ribbonText: 'À paraître',
+  };
+};
+
+const buildCatalogueOfficeGroups = async (
+  records: RawCatalogueOfficeRecord[],
+): Promise<CatalogueOfficeGroup[]> => {
+  const groupsMap = new Map<
+    string,
+    {
+      office: string;
+      records: RawCatalogueOfficeRecord[];
+      date?: string;
+      shipping?: string;
+      order: number;
+    }
+  >();
+
+  let order = 0;
+
+  records.forEach(record => {
+    const office = ensureString(getField(record, 'office', 'codeoffice'));
+    if (!office) {
+      return;
+    }
+
+    let group = groupsMap.get(office);
+    if (!group) {
+      group = {
+        office,
+        records: [],
+        order: order++,
+      };
+      groupsMap.set(office, group);
+    }
+
+    group.records.push(record);
+
+    if (!group.date) {
+      group.date =
+        formatDisplayDate(
+          getField(record, 'datemev', 'date', 'dateparution', 'nextdate', 'dateoffre'),
+        ) ?? undefined;
+    }
+
+    if (!group.shipping) {
+      group.shipping = extractShippingMessage(record);
+    }
+  });
+
+  const groups = await Promise.all(
+    Array.from(groupsMap.values())
+      .sort((a, b) => a.order - b.order)
+      .map(async group => {
+        const books = (
+          await Promise.all(group.records.map(record => normalizeBookFromRecord(record)))
+        ).filter((book): book is CatalogueBook => book !== null);
+
+        if (!books.length) {
+          return null;
+        }
+
+        return {
+          office: group.office,
+          date: group.date ?? 'À confirmer',
+          shipping: group.shipping ?? 'Expédition à confirmer',
+          books,
+        } satisfies CatalogueOfficeGroup;
+      }),
+  );
+
+  return groups.filter((group): group is CatalogueOfficeGroup => group !== null);
+};
+
+export async function hydrateCatalogueOfficeGroupsWithCovers(
+  groups: CatalogueOfficeGroup[],
+  options: HydrateCatalogueOfficeGroupsOptions = {},
+): Promise<CatalogueOfficeGroup[]> {
+  const { onCoverProgress } = options;
+  const coverCache = new Map<string, Promise<string | null>>();
+  const resultGroups = groups.map(group => ({
+    ...group,
+    books: group.books.map(book => ({ ...book })),
   }));
-  logResponse(endpoint, data);
-  return Promise.resolve(data);
+
+  let hasProgress = false;
+
+  const emitProgress = () => {
+    if (!onCoverProgress) {
+      return;
+    }
+
+    hasProgress = true;
+    const snapshot = resultGroups.map(group => ({
+      ...group,
+      books: group.books.map(book => ({ ...book })),
+    }));
+    onCoverProgress(snapshot);
+  };
+
+  for (const group of resultGroups) {
+    await Promise.all(
+      group.books.map(async (book, bookIndex) => {
+        const ean = book.ean;
+
+        if (!ean) {
+          return;
+        }
+
+        let coverPromise = coverCache.get(ean);
+
+        if (!coverPromise) {
+          coverPromise = fetchCover(ean).catch(error => {
+            console.warn(
+              `[catalogueApi] Impossible de recuperer la couverture pour ${ean}`,
+              error,
+            );
+            return null;
+          });
+          coverCache.set(ean, coverPromise);
+        }
+
+        const cover = await coverPromise;
+
+        if (cover && cover !== book.cover) {
+          group.books[bookIndex] = { ...book, cover };
+          emitProgress();
+        }
+      }),
+    );
+  }
+
+  if (onCoverProgress && !hasProgress) {
+    emitProgress();
+  }
+
+  return resultGroups;
+}
+
+export async function fetchCatalogueOffices(
+  options: FetchCatalogueOfficesOptions = {},
+): Promise<CatalogueOfficeGroup[]> {
+  const { hydrateCovers = true, onCoverProgress } = options;
+  const endpoint = 'fetchCatalogueOffices';
+  logRequest(endpoint);
+
+  try {
+    const response = await fetch(CATALOGUE_OFFICES_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ query: NEXT_OFFICES_SQL_QUERY }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+
+    const payload = (await response.json()) as DatabaseApiResponse;
+    const records = extractDatabaseRows(payload);
+
+    if (!records.length) {
+      throw new Error("La base de donnees n'a retourne aucun resultat");
+    }
+
+    const groups = await buildCatalogueOfficeGroups(records);
+
+    if (!groups.length) {
+      throw new Error('Impossible de construire les offices a partir des donnees recues');
+    }
+
+    if (!hydrateCovers) {
+      logResponse(endpoint, groups);
+
+      if (onCoverProgress) {
+        void hydrateCatalogueOfficeGroupsWithCovers(groups, { onCoverProgress }).catch(error => {
+          console.warn('[catalogueApi] Hydratation des couvertures interrompue', error);
+        });
+      }
+
+      return groups;
+    }
+
+    const hydratedGroups = await hydrateCatalogueOfficeGroupsWithCovers(groups, {
+      onCoverProgress,
+    });
+
+    logResponse(endpoint, hydratedGroups);
+    return hydratedGroups;
+  } catch (error) {
+    console.error('[catalogueApi] Impossible de recuperer les prochaines offices', error);
+    throw error;
+  }
+}
+
+export const FALLBACK_CATALOGUE_COVER = FALLBACK_COVER_DATA_URL;
+
+export async function fetchCatalogueCover(ean: string): Promise<string | null> {
+  return fetchCover(ean);
 }
 
 export async function fetchCatalogueKiosques(): Promise<CatalogueKiosqueGroup[]> {
