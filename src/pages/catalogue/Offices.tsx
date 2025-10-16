@@ -19,7 +19,7 @@ import {
   ArrowDownWideNarrow,
   ArrowUpWideNarrow,
 } from 'lucide-react';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
 import { fetchCatalogueOffices, type CatalogueOfficeGroup } from '@/lib/catalogue';
 
@@ -39,18 +39,20 @@ export function Offices() {
   ];
 
   const [selectedPublishers, setSelectedPublishers] = useState<string[]>([]);
-  const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
+  const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('asc');
   const [offices, setOffices] = useState<CatalogueOfficeGroup[] | null>(null);
 
   useEffect(() => {
     let isActive = true;
 
-    fetchCatalogueOffices()
-      .then(data => {
-        if (isActive) {
-          setOffices(data);
-        }
-      })
+    const handleProgress = (groups: CatalogueOfficeGroup[]) => {
+      if (isActive) {
+        setOffices(groups);
+      }
+    };
+
+    fetchCatalogueOffices({ hydrateCovers: false, onCoverProgress: handleProgress })
+      .then(handleProgress)
       .catch(error => {
         console.error('Impossible de récupérer les offices', error);
       });
@@ -71,18 +73,76 @@ export function Offices() {
     );
   };
 
-  const parseDate = (dateStr: string) => {
-    const [day, month, year] = dateStr.split('/').map(Number);
-    return new Date(year, month - 1, day);
+  const parseDate = (dateStr: string): Date | null => {
+    const segments = dateStr.split('/');
+
+    if (segments.length !== 3) {
+      return null;
+    }
+
+    const [dayStr, monthStr, yearStr] = segments;
+    const day = Number(dayStr);
+    const month = Number(monthStr);
+    const year = Number(yearStr);
+
+    if (Number.isNaN(day) || Number.isNaN(month) || Number.isNaN(year)) {
+      return null;
+    }
+
+    const parsed = new Date(year, month - 1, day);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
-  const sortedOffices = offices
-    ? [...offices].sort((a, b) => {
-        const dateA = parseDate(a.date).getTime();
-        const dateB = parseDate(b.date).getTime();
-        return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
-      })
-    : [];
+  const sortedOffices = useMemo(() => {
+    if (!offices) {
+      return [] as CatalogueOfficeGroup[];
+    }
+
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    const compare = (
+      a: { group: CatalogueOfficeGroup; index: number },
+      b: { group: CatalogueOfficeGroup; index: number },
+    ) => {
+      const dateA = parseDate(a.group.date);
+      const dateB = parseDate(b.group.date);
+
+      const hasDateA = dateA !== null;
+      const hasDateB = dateB !== null;
+
+      if (hasDateA !== hasDateB) {
+        return hasDateA ? -1 : 1;
+      }
+
+      if (!dateA || !dateB) {
+        return a.index - b.index;
+      }
+
+      const isPastA = dateA.getTime() < startOfToday.getTime();
+      const isPastB = dateB.getTime() < startOfToday.getTime();
+
+      if (isPastA !== isPastB) {
+        return isPastA ? 1 : -1;
+      }
+
+      const diffA = Math.abs(dateA.getTime() - startOfToday.getTime());
+      const diffB = Math.abs(dateB.getTime() - startOfToday.getTime());
+
+      if (diffA !== diffB) {
+        return diffA - diffB;
+      }
+
+      return a.index - b.index;
+    };
+
+    const direction = sortDirection === 'asc' ? 1 : -1;
+
+    return offices
+      .map((group, index) => ({ group, index }))
+      .sort((a, b) => compare(a, b) * direction)
+      .map(({ group }) => group);
+  }, [offices, sortDirection]);
 
   return (
     <div className="p-6 space-y-6">

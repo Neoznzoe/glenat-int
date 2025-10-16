@@ -546,7 +546,7 @@ const NEXT_OFFICES_SQL_QUERY = `;WITH next_offices AS (
     SELECT TOP (4)
            office,
            MIN(dateMev) AS nextDate
-    FROM dbo.cataLivres
+    FROM dbo.catalogBooks
     WHERE dateMev >= CONVERT(date, GETDATE())
       AND dateMev >= '20000101'
       AND dateMev < DATEADD(year, 5, CONVERT(date, GETDATE()))
@@ -555,7 +555,7 @@ const NEXT_OFFICES_SQL_QUERY = `;WITH next_offices AS (
     ORDER BY MIN(dateMev) ASC, office ASC
 )
 SELECT c.*
-FROM dbo.cataLivres AS c
+FROM dbo.catalogBooks AS c
 JOIN next_offices AS n
   ON n.office = c.office
 ORDER BY n.nextDate ASC, n.office ASC, c.dateMev ASC;`;
@@ -774,6 +774,31 @@ const parseDateInput = (value: unknown): Date | null => {
     return new Date(value.getTime());
   }
 
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const dateContainer = value as { date?: unknown; value?: unknown; timestamp?: unknown };
+
+    if (dateContainer.date !== undefined) {
+      const nested = parseDateInput(dateContainer.date);
+      if (nested) {
+        return nested;
+      }
+    }
+
+    if (dateContainer.value !== undefined) {
+      const nested = parseDateInput(dateContainer.value);
+      if (nested) {
+        return nested;
+      }
+    }
+
+    if (dateContainer.timestamp !== undefined) {
+      const nested = parseDateInput(dateContainer.timestamp);
+      if (nested) {
+        return nested;
+      }
+    }
+  }
+
   if (typeof value === 'string') {
     const trimmed = value.trim();
     if (!trimmed) {
@@ -952,7 +977,16 @@ const extractShippingMessage = (record: RawCatalogueOfficeRecord): string | unde
   );
 
   const date = formatDisplayDate(
-    getField(record, 'dateexpedition', 'datechronolivre', 'dateenvoi', 'datepreparation', 'dateexp'),
+    getField(
+      record,
+      'dateexpedition',
+      'datechronolivre',
+      'dateenvoi',
+      'datepreparation',
+      'dateexp',
+      'datelimitechrono',
+      'dateenvoicvimprimeur',
+    ),
   );
 
   if (message && date) {
@@ -973,7 +1007,21 @@ const extractShippingMessage = (record: RawCatalogueOfficeRecord): string | unde
 const normalizeBookFromRecord = async (
   record: RawCatalogueOfficeRecord,
 ): Promise<CatalogueBook | null> => {
-  const ean = ensureString(getField(record, 'ean', 'idarticle', 'id_article', 'codeean'));
+  const rawEan = ensureString(
+    getField(
+      record,
+      'ean',
+      'idarticle',
+      'id_article',
+      'codeean',
+      'iditem',
+      'isbn13',
+      'isbn',
+    ),
+  );
+  const sanitizedEan = rawEan?.replace(/[^0-9xX]/g, '')?.toUpperCase();
+  const ean = sanitizedEan && sanitizedEan.length ? sanitizedEan : rawEan;
+
   if (!ean) {
     return null;
   }
@@ -995,9 +1043,11 @@ const normalizeBookFromRecord = async (
         'datemev',
       ),
     ) ?? 'À confirmer';
-  const priceHT = formatPrice(getField(record, 'prixht', 'prix_public_ht', 'prixpublicht', 'prix'));
+  const priceHT = formatPrice(
+    getField(record, 'prixht', 'prix_public_ht', 'prixpublicht', 'prix', 'priceht', 'price'),
+  );
   const stock = ensureNumber(
-    getField(record, 'stock', 'stockdispo', 'qtestock', 'quantitestock', 'stocklibrairie'),
+    getField(record, 'stock', 'stockdispo', 'qtestock', 'quantitestock', 'stocklibrairie', 'stocks'),
   ) ?? 0;
   return {
     cover: FALLBACK_COVER_DATA_URL,
@@ -1022,6 +1072,7 @@ const buildCatalogueOfficeGroups = async (
       office: string;
       records: RawCatalogueOfficeRecord[];
       date?: string;
+      rawDate?: unknown;
       shipping?: string;
       order: number;
     }
@@ -1047,11 +1098,21 @@ const buildCatalogueOfficeGroups = async (
 
     group.records.push(record);
 
+    const rawDate = getField(
+      record,
+      'datemev',
+      'date',
+      'dateparution',
+      'nextdate',
+      'dateoffre',
+    );
+
+    if (group.rawDate === undefined && rawDate !== undefined) {
+      group.rawDate = rawDate;
+    }
+
     if (!group.date) {
-      group.date =
-        formatDisplayDate(
-          getField(record, 'datemev', 'date', 'dateparution', 'nextdate', 'dateoffre'),
-        ) ?? undefined;
+      group.date = formatDisplayDate(rawDate) ?? undefined;
     }
 
     if (!group.shipping) {
@@ -1059,9 +1120,42 @@ const buildCatalogueOfficeGroups = async (
     }
   });
 
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
   const groups = await Promise.all(
     Array.from(groupsMap.values())
-      .sort((a, b) => a.order - b.order)
+      .sort((a, b) => {
+        const dateA = parseDateInput(a.rawDate ?? a.date);
+        const dateB = parseDateInput(b.rawDate ?? b.date);
+
+        const hasDateA = dateA !== null;
+        const hasDateB = dateB !== null;
+
+        if (hasDateA !== hasDateB) {
+          return hasDateA ? -1 : 1;
+        }
+
+        if (!dateA || !dateB) {
+          return a.order - b.order;
+        }
+
+        const isPastA = dateA.getTime() < startOfToday.getTime();
+        const isPastB = dateB.getTime() < startOfToday.getTime();
+
+        if (isPastA !== isPastB) {
+          return isPastA ? 1 : -1;
+        }
+
+        const diffA = Math.abs(dateA.getTime() - startOfToday.getTime());
+        const diffB = Math.abs(dateB.getTime() - startOfToday.getTime());
+
+        if (diffA !== diffB) {
+          return diffA - diffB;
+        }
+
+        return a.order - b.order;
+      })
       .map(async group => {
         const books = (
           await Promise.all(group.records.map(record => normalizeBookFromRecord(record)))
@@ -1171,6 +1265,9 @@ export async function fetchCatalogueOffices(
 
     const payload = (await response.json()) as DatabaseApiResponse;
     const records = extractDatabaseRows(payload);
+
+    console.log('[catalogueApi] Offices payload brut', payload);
+    console.log('[catalogueApi] Offices enregistrements', records);
 
     if (!records.length) {
       throw new Error("La base de donnees n'a retourne aucun resultat");
