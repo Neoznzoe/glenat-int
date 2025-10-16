@@ -118,7 +118,12 @@ export function useModulePermission(permission?: PermissionKey): ModulePermissio
       return false;
     }
 
-    return allowedPermissions.has(normalizedPermission);
+    if (allowedPermissions.has(normalizedPermission)) {
+      return true;
+    }
+
+    // Par défaut, les modules sont accessibles sauf si un refus explicite est appliqué.
+    return true;
   }, [
     allowedPermissions,
     deniedPermissions,
