@@ -18,6 +18,8 @@ import {
   useNavigate,
   useParams,
 } from 'react-router-dom';
+import type { PermissionKey } from '@/lib/access-control';
+import { useModulePermission } from '@/hooks/useModuleAccess';
 import {
   decryptUrlToken,
   encryptUrlPayload,
@@ -28,6 +30,7 @@ import {
 export interface RouteDefinition {
   path: string;
   element: ReactElement;
+  requiredPermission?: PermissionKey;
 }
 
 interface DecryptedLocation {
@@ -205,9 +208,62 @@ export function SecureRoutingProvider({
 interface RouteRendererProps {
   path: string;
   element: ReactElement;
+  requiredPermission?: PermissionKey;
 }
 
-function RouteRenderer({ path, element }: RouteRendererProps): ReactElement | null {
+function LoadingView(): ReactElement {
+  return (
+    <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center">
+      <span
+        aria-hidden="true"
+        className="inline-flex h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent"
+      />
+      <span className="sr-only">Chargement…</span>
+    </div>
+  );
+}
+
+function AccessDeniedView(): ReactElement {
+  return (
+    <div className="p-8 text-center">
+      <h1 className="text-2xl font-semibold mb-2">Accès refusé</h1>
+      <p className="text-muted-foreground">
+        Vous ne disposez pas des autorisations nécessaires pour consulter ce module.
+      </p>
+    </div>
+  );
+}
+
+function PermissionedElement({
+  permission,
+  element,
+}: {
+  permission?: PermissionKey;
+  element: ReactElement;
+}): ReactElement {
+  const { loading, allowed, error } = useModulePermission(permission);
+
+  if (loading) {
+    return <LoadingView />;
+  }
+
+  if (error) {
+    console.error('Erreur lors de la vérification des permissions :', error);
+    return <AccessDeniedView />;
+  }
+
+  if (!allowed) {
+    return <AccessDeniedView />;
+  }
+
+  return element;
+}
+
+function RouteRenderer({
+  path,
+  element,
+  requiredPermission,
+}: RouteRendererProps): ReactElement | null {
   const location = useLocation();
   const navigate = useNavigate();
   const { encryptionEnabled, ensureToken, setDecryptedLocation } =
@@ -253,7 +309,7 @@ function RouteRenderer({ path, element }: RouteRendererProps): ReactElement | nu
     return null;
   }
 
-  return element;
+  return <PermissionedElement permission={requiredPermission} element={element} />;
 }
 
 interface EncryptedRouteProps {
@@ -339,7 +395,12 @@ function EncryptedRoute({ routes }: EncryptedRouteProps): ReactElement {
     return <Navigate to="/" replace />;
   }
 
-  return route.element;
+  return (
+    <PermissionedElement
+      permission={route.requiredPermission}
+      element={route.element}
+    />
+  );
 }
 
 export interface SecureRoutesProps {
@@ -347,15 +408,7 @@ export interface SecureRoutesProps {
 }
 
 export function SecureRoutes({ routes }: SecureRoutesProps): ReactElement {
-  const fallback = (
-    <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center">
-      <span
-        aria-hidden="true"
-        className="inline-flex h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent"
-      />
-      <span className="sr-only">Chargement…</span>
-    </div>
-  );
+  const fallback = <LoadingView />;
 
   return (
     <Routes>
@@ -365,7 +418,11 @@ export function SecureRoutes({ routes }: SecureRoutesProps): ReactElement {
           path={route.path}
           element={
             <Suspense fallback={fallback}>
-              <RouteRenderer path={route.path} element={route.element} />
+              <RouteRenderer
+                path={route.path}
+                element={route.element}
+                requiredPermission={route.requiredPermission}
+              />
             </Suspense>
           }
         />
