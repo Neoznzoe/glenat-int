@@ -24,6 +24,18 @@ import {
   isUrlEncryptionConfigured,
   type EncryptedUrlPayload,
 } from './urlEncryption';
+import { useAuth } from '@/context/AuthContext';
+import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
+import { useSidebarModules } from '@/hooks/useModules';
+import { computeEffectivePermissions } from '@/lib/mockDb';
+import { extractInternalUserId, toNumericId } from '@/lib/userUtils';
+import {
+  extractModulePath,
+  normalizeRoute,
+  resolveModulePermissionKey,
+  resolveModuleVisibility,
+  type ModuleMetadata,
+} from '@/lib/moduleAccess';
 
 export interface RouteDefinition {
   path: string;
@@ -51,6 +63,16 @@ const defaultLocation: DecryptedLocation = {
 
 const SecureRoutingContext = createContext<SecureRoutingContextValue | undefined>(
   undefined,
+);
+
+const ROUTE_LOADING_FALLBACK = (
+  <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center">
+    <span
+      aria-hidden="true"
+      className="inline-flex h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent"
+    />
+    <span className="sr-only">Chargement…</span>
+  </div>
 );
 
 function useSecureRoutingContext(): SecureRoutingContextValue {
@@ -202,9 +224,132 @@ export function SecureRoutingProvider({
   );
 }
 
+interface ModuleAccessState {
+  status: 'loading' | 'allowed' | 'denied';
+}
+
+function useModuleAccessState(targetPath: string): ModuleAccessState {
+  const normalizedTarget = useMemo(() => normalizeRoute(targetPath), [targetPath]);
+  const { user: authUser } = useAuth();
+  const {
+    data: currentUser,
+    isLoading: loadingCurrentUser,
+    error: currentUserError,
+  } = useCurrentUser();
+  const {
+    data: groupsData,
+    isLoading: loadingGroups,
+    error: groupsError,
+  } = useAdminGroups();
+  const internalUserId = useMemo(
+    () => extractInternalUserId(authUser?.internalUser),
+    [authUser?.internalUser],
+  );
+  const currentUserId = useMemo(() => toNumericId(currentUser?.id), [currentUser?.id]);
+  const resolvedUserId = internalUserId ?? currentUserId;
+  const {
+    data: moduleDefinitions,
+    isLoading: loadingModules,
+    isFetching: fetchingModules,
+    error: moduleError,
+  } = useSidebarModules(resolvedUserId);
+
+  if (normalizedTarget.startsWith('http://') || normalizedTarget.startsWith('https://')) {
+    return { status: 'allowed' };
+  }
+
+  if (resolvedUserId === undefined) {
+    if (loadingCurrentUser || (!currentUser && !currentUserError)) {
+      return { status: 'loading' };
+    }
+    return { status: 'allowed' };
+  }
+
+  if (loadingModules || fetchingModules) {
+    return { status: 'loading' };
+  }
+
+  if (!moduleDefinitions) {
+    if (moduleError) {
+      return { status: 'allowed' };
+    }
+    return { status: 'loading' };
+  }
+
+  if (loadingCurrentUser) {
+    return { status: 'loading' };
+  }
+
+  if (!currentUser) {
+    if (currentUserError) {
+      return { status: 'allowed' };
+    }
+    return { status: 'loading' };
+  }
+
+  if (loadingGroups) {
+    return { status: 'loading' };
+  }
+
+  const groups = groupsData ?? [];
+
+  if (!groups.length && groupsError) {
+    return { status: 'allowed' };
+  }
+
+  const matchingModule = moduleDefinitions.find((definition) => {
+    if (definition.type !== 'module') {
+      return false;
+    }
+    const metadata = (definition.metadata ?? {}) as ModuleMetadata;
+    const path = extractModulePath(metadata, definition.key);
+    if (!path || path.startsWith('http://') || path.startsWith('https://')) {
+      return false;
+    }
+    return normalizeRoute(path) === normalizedTarget;
+  });
+
+  if (!matchingModule) {
+    return { status: 'allowed' };
+  }
+
+  const metadata = (matchingModule.metadata ?? {}) as ModuleMetadata;
+  const visibility = resolveModuleVisibility(metadata);
+  if (visibility === false) {
+    return { status: 'denied' };
+  }
+
+  if (currentUser.isSuperAdmin) {
+    return { status: 'allowed' };
+  }
+
+  const permissionKey = resolveModulePermissionKey(matchingModule);
+  const permissions = new Set(computeEffectivePermissions(currentUser, groups));
+
+  if (!permissions.has(permissionKey)) {
+    return { status: 'denied' };
+  }
+
+  return { status: 'allowed' };
+}
+
 interface RouteRendererProps {
   path: string;
   element: ReactElement;
+}
+
+function ModuleAccessBoundary({ path, element }: RouteRendererProps): ReactElement {
+  const access = useModuleAccessState(path);
+
+  if (access.status === 'loading') {
+    return ROUTE_LOADING_FALLBACK;
+  }
+
+  if (access.status === 'denied') {
+    return <Navigate to="/" replace />;
+  }
+
+  return element;
 }
 
 function RouteRenderer({ path, element }: RouteRendererProps): ReactElement | null {
@@ -253,7 +398,7 @@ function RouteRenderer({ path, element }: RouteRendererProps): ReactElement | nu
     return null;
   }
 
-  return element;
+  return <ModuleAccessBoundary path={path} element={element} />;
 }
 
 interface EncryptedRouteProps {
@@ -339,7 +484,7 @@ function EncryptedRoute({ routes }: EncryptedRouteProps): ReactElement {
     return <Navigate to="/" replace />;
   }
 
-  return route.element;
+  return <ModuleAccessBoundary path={route.path} element={route.element} />;
 }
 
 export interface SecureRoutesProps {
@@ -347,16 +492,6 @@ export interface SecureRoutesProps {
 }
 
 export function SecureRoutes({ routes }: SecureRoutesProps): ReactElement {
-  const fallback = (
-    <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center">
-      <span
-        aria-hidden="true"
-        className="inline-flex h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent"
-      />
-      <span className="sr-only">Chargement…</span>
-    </div>
-  );
-
   return (
     <Routes>
       {routes.map((route) => (
@@ -364,7 +499,7 @@ export function SecureRoutes({ routes }: SecureRoutesProps): ReactElement {
           key={route.path}
           path={route.path}
           element={
-            <Suspense fallback={fallback}>
+            <Suspense fallback={ROUTE_LOADING_FALLBACK}>
               <RouteRenderer path={route.path} element={route.element} />
             </Suspense>
           }
@@ -373,7 +508,7 @@ export function SecureRoutes({ routes }: SecureRoutesProps): ReactElement {
       <Route
         path="/ci/*"
         element={
-          <Suspense fallback={fallback}>
+          <Suspense fallback={ROUTE_LOADING_FALLBACK}>
             <EncryptedRoute routes={routes} />
           </Suspense>
         }

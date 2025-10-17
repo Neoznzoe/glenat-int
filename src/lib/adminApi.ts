@@ -590,6 +590,13 @@ function normalizeModuleDefinition(
     slug: slugSource,
   };
 
+  const userVisibleValue = toOptionalBoolean(
+    getValue(record, ['isUserVisible', 'IsUserVisible', 'userVisible', 'UserVisible']),
+  );
+  if (userVisibleValue !== null) {
+    metadata.isUserVisible = userVisibleValue;
+  }
+
   const pathValue = toNonEmptyString(
     getValue(record, ['path', 'Path', 'route', 'Route', 'href', 'Href', 'url', 'Url']),
   );
@@ -1105,8 +1112,7 @@ function buildSidebarModulesQuery(userId?: number): string {
     '  WHERE m.[isActive] = 1',
     ')',
     'SELECT *',
-    'FROM VisibleModules',
-    'WHERE [isUserVisible] = CONVERT(bit, 1);',
+    'FROM VisibleModules;',
   ].join('\n');
 }
 
