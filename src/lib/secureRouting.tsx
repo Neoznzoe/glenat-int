@@ -248,6 +248,35 @@ interface ModuleIndexes {
   byPermission: Map<PermissionKey, PermissionDefinition>;
 }
 
+function pickMoreRestrictiveDefinition(
+  current: PermissionDefinition | undefined,
+  candidate: PermissionDefinition,
+): PermissionDefinition {
+  if (!current) {
+    return candidate;
+  }
+
+  const currentMetadata = (current.metadata ?? {}) as ModuleMetadata;
+  const candidateMetadata = (candidate.metadata ?? {}) as ModuleMetadata;
+
+  const currentVisibility = resolveModuleVisibility(currentMetadata);
+  const candidateVisibility = resolveModuleVisibility(candidateMetadata);
+
+  if (currentVisibility === false) {
+    return current;
+  }
+
+  if (candidateVisibility === false) {
+    return candidate;
+  }
+
+  if (currentVisibility === undefined && candidateVisibility !== undefined) {
+    return candidate;
+  }
+
+  return current;
+}
+
 function buildModuleIndexes(
   moduleDefinitions: PermissionDefinition[] | undefined,
 ): ModuleIndexes {
@@ -267,14 +296,20 @@ function buildModuleIndexes(
     const modulePath = extractModulePath(metadata, definition.key);
     if (modulePath) {
       const normalisedPath = normalizeRoute(modulePath);
-      if (normalisedPath && !byPath.has(normalisedPath)) {
-        byPath.set(normalisedPath, definition);
+      if (normalisedPath) {
+        const existing = byPath.get(normalisedPath);
+        const preferred = pickMoreRestrictiveDefinition(existing, definition);
+        if (!existing || preferred !== existing) {
+          byPath.set(normalisedPath, preferred);
+        }
       }
     }
 
     const permissionKey = resolveModulePermissionKey(definition);
-    if (!byPermission.has(permissionKey)) {
-      byPermission.set(permissionKey, definition);
+    const existingPermission = byPermission.get(permissionKey);
+    const preferredPermission = pickMoreRestrictiveDefinition(existingPermission, definition);
+    if (!existingPermission || preferredPermission !== existingPermission) {
+      byPermission.set(permissionKey, preferredPermission);
     }
   });
 
@@ -282,23 +317,60 @@ function buildModuleIndexes(
 }
 
 function computeModuleFingerprint(
-  moduleDefinitions: PermissionDefinition[] | undefined,
+  moduleIndexes: ModuleIndexes,
+  hasModuleDefinitions: boolean,
 ): string | undefined {
-  if (!moduleDefinitions) {
+  if (!hasModuleDefinitions) {
     return undefined;
   }
 
-  const modules = moduleDefinitions
-    .filter((definition) => !definition.type || definition.type === 'module')
-    .map((definition) => {
-      const metadata = (definition.metadata ?? {}) as ModuleMetadata;
-      return {
+  const aggregated = new Map<
+    string,
+    { key: string; permission: PermissionKey; paths: Set<string>; visible: boolean }
+  >();
+
+  const upsert = (definition: PermissionDefinition) => {
+    const metadata = (definition.metadata ?? {}) as ModuleMetadata;
+    const resolvedPermission = resolveModulePermissionKey(definition);
+    const path = extractModulePath(metadata, definition.key);
+    const normalisedPath = path ? normalizeRoute(path) : '';
+    const visible = resolveModuleVisibility(metadata) !== false;
+
+    const existing = aggregated.get(definition.key);
+    if (!existing) {
+      aggregated.set(definition.key, {
         key: definition.key,
-        permission: resolveModulePermissionKey(definition),
-        path: extractModulePath(metadata, definition.key) ?? '',
-        visible: resolveModuleVisibility(metadata) !== false,
-      };
-    })
+        permission: resolvedPermission,
+        paths: normalisedPath ? new Set([normalisedPath]) : new Set<string>(),
+        visible,
+      });
+      return;
+    }
+
+    if (normalisedPath) {
+      existing.paths.add(normalisedPath);
+    }
+
+    if (!visible) {
+      existing.visible = false;
+    }
+  };
+
+  for (const definition of moduleIndexes.byPath.values()) {
+    upsert(definition);
+  }
+
+  for (const definition of moduleIndexes.byPermission.values()) {
+    upsert(definition);
+  }
+
+  const modules = Array.from(aggregated.values())
+    .map((entry) => ({
+      key: entry.key,
+      permission: entry.permission,
+      paths: Array.from(entry.paths).sort((left, right) => left.localeCompare(right)),
+      visible: entry.visible,
+    }))
     .sort((left, right) => left.key.localeCompare(right.key));
 
   try {
@@ -306,7 +378,9 @@ function computeModuleFingerprint(
   } catch (error) {
     console.warn('Impossible de sérialiser les droits modules :', error);
     return modules
-      .map((entry) => `${entry.key}:${entry.permission}:${entry.path}:${entry.visible ? 1 : 0}`)
+      .map((entry) =>
+        `${entry.key}:${entry.permission}:${entry.paths.join(',')}:${entry.visible ? 1 : 0}`,
+      )
       .join('|');
   }
 }
@@ -376,9 +450,10 @@ function useModuleAccessState(route: RouteDefinition): ModuleAccessState {
     [moduleDefinitions],
   );
 
+  const hasModuleDefinitions = Array.isArray(moduleDefinitions);
   const computedFingerprint = useMemo(
-    () => computeModuleFingerprint(moduleDefinitions as PermissionDefinition[] | undefined),
-    [moduleDefinitions],
+    () => computeModuleFingerprint(moduleIndexes, hasModuleDefinitions),
+    [moduleIndexes, hasModuleDefinitions],
   );
   const lastFingerprintRef = useRef<string | undefined>();
   useEffect(() => {
@@ -399,7 +474,6 @@ function useModuleAccessState(route: RouteDefinition): ModuleAccessState {
     return { status: 'allowed', fingerprint };
   }
 
-  const hasModuleDefinitions = Array.isArray(moduleDefinitions);
   const isInitialLoading = loadingModules && !hasModuleDefinitions;
 
   if (isInitialLoading) {
