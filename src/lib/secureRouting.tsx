@@ -25,9 +25,8 @@ import {
   type EncryptedUrlPayload,
 } from './urlEncryption';
 import { useAuth } from '@/context/AuthContext';
-import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
+import { useCurrentUser } from '@/hooks/useAdminData';
 import { useSidebarModules } from '@/hooks/useModules';
-import { computeEffectivePermissions } from '@/lib/mockDb';
 import { extractInternalUserId, toNumericId } from '@/lib/userUtils';
 import {
   extractModulePath,
@@ -36,7 +35,7 @@ import {
   resolveModuleVisibility,
   type ModuleMetadata,
 } from '@/lib/moduleAccess';
-import { type PermissionKey } from '@/lib/access-control';
+import { type PermissionDefinition, type PermissionKey } from '@/lib/access-control';
 
 type GuardPermissionConfig = PermissionKey | PermissionKey[];
 
@@ -243,6 +242,44 @@ function normalizePermissionKeyValue(permission: PermissionKey): PermissionKey {
   return permission.trim().toLowerCase() as PermissionKey;
 }
 
+interface ModuleIndexes {
+  byPath: Map<string, PermissionDefinition>;
+  byPermission: Map<PermissionKey, PermissionDefinition>;
+}
+
+function buildModuleIndexes(
+  moduleDefinitions: PermissionDefinition[] | undefined,
+): ModuleIndexes {
+  const byPath = new Map<string, PermissionDefinition>();
+  const byPermission = new Map<PermissionKey, PermissionDefinition>();
+
+  if (!moduleDefinitions) {
+    return { byPath, byPermission };
+  }
+
+  moduleDefinitions.forEach((definition) => {
+    if (definition.type && definition.type !== 'module') {
+      return;
+    }
+
+    const metadata = (definition.metadata ?? {}) as ModuleMetadata;
+    const modulePath = extractModulePath(metadata, definition.key);
+    if (modulePath) {
+      const normalisedPath = normalizeRoute(modulePath);
+      if (normalisedPath && !byPath.has(normalisedPath)) {
+        byPath.set(normalisedPath, definition);
+      }
+    }
+
+    const permissionKey = resolveModulePermissionKey(definition);
+    if (!byPermission.has(permissionKey)) {
+      byPermission.set(permissionKey, definition);
+    }
+  });
+
+  return { byPath, byPermission };
+}
+
 function collectGuardModuleCandidates(route: RouteDefinition): string[] {
   const candidates = new Set<string>();
 
@@ -291,11 +328,6 @@ function useModuleAccessState(route: RouteDefinition): ModuleAccessState {
     isLoading: loadingCurrentUser,
     error: currentUserError,
   } = useCurrentUser();
-  const {
-    data: groupsData,
-    isLoading: loadingGroups,
-    error: groupsError,
-  } = useAdminGroups();
   const internalUserId = useMemo(
     () => extractInternalUserId(authUser?.internalUser),
     [authUser?.internalUser],
@@ -308,6 +340,11 @@ function useModuleAccessState(route: RouteDefinition): ModuleAccessState {
     isFetching: fetchingModules,
     error: moduleError,
   } = useSidebarModules(resolvedUserId);
+
+  const moduleIndexes = useMemo<ModuleIndexes>(
+    () => buildModuleIndexes(moduleDefinitions),
+    [moduleDefinitions],
+  );
 
   if (normalizedTarget.startsWith('http://') || normalizedTarget.startsWith('https://')) {
     return { status: 'allowed' };
@@ -330,102 +367,50 @@ function useModuleAccessState(route: RouteDefinition): ModuleAccessState {
     }
     return { status: 'loading' };
   }
+  const isSuperAdmin = currentUser?.isSuperAdmin === true;
 
-  if (loadingCurrentUser) {
-    return { status: 'loading' };
-  }
-
-  if (!currentUser) {
-    if (currentUserError) {
-      return { status: 'allowed' };
-    }
-    return { status: 'loading' };
-  }
-
-  if (loadingGroups) {
-    return { status: 'loading' };
-  }
-
-  const groups = groupsData ?? [];
-
-  if (!groups.length && groupsError) {
+  if (isSuperAdmin) {
     return { status: 'allowed' };
   }
 
-  const permissions = new Set(
-    computeEffectivePermissions(currentUser, groups).map((permission) =>
-      normalizePermissionKeyValue(permission),
-    ),
-  );
+  const modulesByPath = moduleIndexes.byPath;
+  const modulesByPermission = moduleIndexes.byPermission;
 
-  const moduleByPath = moduleDefinitions.find((definition) => {
-    if (definition.type !== 'module') {
-      return false;
-    }
-    const metadata = (definition.metadata ?? {}) as ModuleMetadata;
-    const path = extractModulePath(metadata, definition.key);
-    if (!path || path.startsWith('http://') || path.startsWith('https://')) {
-      return false;
-    }
-    const normalizedPath = normalizeRoute(path);
-    return moduleCandidates.includes(normalizedPath);
-  });
+  const matchedModulesByPath = moduleCandidates
+    .map((candidate) => modulesByPath.get(candidate))
+    .filter((definition): definition is PermissionDefinition => Boolean(definition));
 
-  const permissionsToCheck = guardPermissions.length
-    ? guardPermissions
-    : moduleByPath
-      ? [resolveModulePermissionKey(moduleByPath)]
-      : [];
-
-  const modulesByPermission = guardPermissions.length
-    ? moduleDefinitions.filter((definition) => {
-        if (definition.type !== 'module') {
-          return false;
-        }
-        const key = resolveModulePermissionKey(definition);
-        return guardPermissions.includes(key);
-      })
-    : [];
-
-  const evaluatePermissionList = (requiredPermissions: PermissionKey[]): boolean => {
-    if (!requiredPermissions.length || currentUser.isSuperAdmin) {
-      return true;
-    }
-    return requiredPermissions.every((permission) => permissions.has(permission));
-  };
-
-  if (moduleByPath) {
-    const metadata = (moduleByPath.metadata ?? {}) as ModuleMetadata;
-    const visibility = resolveModuleVisibility(metadata);
-
-    if (visibility === false && !currentUser.isSuperAdmin) {
+  if (moduleCandidates.length > 0) {
+    if (!matchedModulesByPath.length) {
       return { status: 'denied' };
     }
 
-    if (!evaluatePermissionList(permissionsToCheck)) {
-      return { status: 'denied' };
-    }
-
-    return { status: 'allowed' };
-  }
-
-  if (modulesByPermission.length) {
-    const hasHiddenModule = modulesByPermission.some((definition) => {
+    const hasHiddenModule = matchedModulesByPath.some((definition) => {
       const metadata = (definition.metadata ?? {}) as ModuleMetadata;
       return resolveModuleVisibility(metadata) === false;
     });
 
-    if (hasHiddenModule && !currentUser.isSuperAdmin) {
-      return { status: 'denied' };
-    }
-
-    if (!evaluatePermissionList(guardPermissions)) {
+    if (hasHiddenModule) {
       return { status: 'denied' };
     }
   }
 
-  if (permissionsToCheck.length && !evaluatePermissionList(permissionsToCheck)) {
-    return { status: 'denied' };
+  const derivedPermissions = matchedModulesByPath.map((definition) =>
+    resolveModulePermissionKey(definition),
+  );
+  const permissionsToCheck = guardPermissions.length ? guardPermissions : derivedPermissions;
+
+  if (permissionsToCheck.length > 0) {
+    for (const permission of permissionsToCheck) {
+      const definition = modulesByPermission.get(permission);
+      if (!definition) {
+        return { status: 'denied' };
+      }
+      const metadata = (definition.metadata ?? {}) as ModuleMetadata;
+      if (resolveModuleVisibility(metadata) === false) {
+        return { status: 'denied' };
+      }
+    }
   }
 
   return { status: 'allowed' };
