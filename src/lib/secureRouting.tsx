@@ -18,6 +18,9 @@ import {
   useNavigate,
   useParams,
 } from 'react-router-dom';
+import { useAdminGroups, useCurrentUser } from '@/hooks/useAdminData';
+import type { PermissionKey } from './access-control';
+import { computeEffectivePermissions } from './mockDb';
 import {
   decryptUrlToken,
   encryptUrlPayload,
@@ -28,6 +31,7 @@ import {
 export interface RouteDefinition {
   path: string;
   element: ReactElement;
+  requiredPermission?: PermissionKey;
 }
 
 interface DecryptedLocation {
@@ -256,6 +260,81 @@ function RouteRenderer({ path, element }: RouteRendererProps): ReactElement | nu
   return element;
 }
 
+function LoadingIndicator(): ReactElement {
+  return (
+    <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center">
+      <span
+        aria-hidden="true"
+        className="inline-flex h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent"
+      />
+      <span className="sr-only">Chargement…</span>
+    </div>
+  );
+}
+
+function toErrorMessage(error: unknown): string {
+  if (!error) {
+    return "Une erreur inattendue est survenue.";
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return "Une erreur inattendue est survenue.";
+  }
+}
+
+interface PermissionGateProps {
+  requiredPermission?: PermissionKey;
+  permissionSet: Set<PermissionKey>;
+  loading: boolean;
+  errorMessage: string | null;
+  children: ReactElement;
+}
+
+function PermissionGate({
+  requiredPermission,
+  permissionSet,
+  loading,
+  errorMessage,
+  children,
+}: PermissionGateProps): ReactElement {
+  if (!requiredPermission) {
+    return children;
+  }
+
+  if (loading) {
+    return <LoadingIndicator />;
+  }
+
+  if (errorMessage) {
+    return (
+      <div className="p-8 text-center">
+        <h1 className="mb-2 text-2xl font-semibold">Erreur de chargement</h1>
+        <p className="text-muted-foreground">{errorMessage}</p>
+      </div>
+    );
+  }
+
+  if (!permissionSet.has(requiredPermission)) {
+    return (
+      <div className="p-8 text-center">
+        <h1 className="mb-2 text-2xl font-semibold">Accès non autorisé</h1>
+        <p className="text-muted-foreground">
+          Vous n'avez pas la permission nécessaire pour consulter cette page.
+        </p>
+      </div>
+    );
+  }
+
+  return children;
+}
+
 interface EncryptedRouteProps {
   routes: RouteDefinition[];
 }
@@ -347,19 +426,61 @@ export interface SecureRoutesProps {
 }
 
 export function SecureRoutes({ routes }: SecureRoutesProps): ReactElement {
-  const fallback = (
-    <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center">
-      <span
-        aria-hidden="true"
-        className="inline-flex h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent"
-      />
-      <span className="sr-only">Chargement…</span>
-    </div>
+  const {
+    data: currentUser,
+    isLoading: loadingCurrentUser,
+    isError: hasCurrentUserError,
+    error: currentUserError,
+  } = useCurrentUser();
+  const {
+    data: groups = [],
+    isLoading: loadingGroups,
+    isError: hasGroupError,
+    error: groupError,
+  } = useAdminGroups();
+
+  const permissionSet = useMemo(() => {
+    if (!currentUser) {
+      return new Set<PermissionKey>();
+    }
+    return new Set(computeEffectivePermissions(currentUser, groups));
+  }, [currentUser, groups]);
+
+  const loadingPermissions = loadingCurrentUser || loadingGroups;
+
+  const permissionErrorMessage = useMemo(() => {
+    if (hasCurrentUserError) {
+      return toErrorMessage(currentUserError);
+    }
+    if (hasGroupError) {
+      return toErrorMessage(groupError);
+    }
+    return null;
+  }, [hasCurrentUserError, currentUserError, hasGroupError, groupError]);
+
+  const guardedRoutes = useMemo(
+    () =>
+      routes.map((route) => ({
+        ...route,
+        element: (
+          <PermissionGate
+            requiredPermission={route.requiredPermission}
+            permissionSet={permissionSet}
+            loading={loadingPermissions}
+            errorMessage={permissionErrorMessage}
+          >
+            {route.element}
+          </PermissionGate>
+        ),
+      })),
+    [routes, permissionSet, loadingPermissions, permissionErrorMessage],
   );
+
+  const fallback = <LoadingIndicator />;
 
   return (
     <Routes>
-      {routes.map((route) => (
+      {guardedRoutes.map((route) => (
         <Route
           key={route.path}
           path={route.path}
@@ -374,7 +495,7 @@ export function SecureRoutes({ routes }: SecureRoutesProps): ReactElement {
         path="/ci/*"
         element={
           <Suspense fallback={fallback}>
-            <EncryptedRoute routes={routes} />
+            <EncryptedRoute routes={guardedRoutes} />
           </Suspense>
         }
       />

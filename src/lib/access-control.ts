@@ -167,7 +167,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   },
 ];
 
-export const BASE_PERMISSIONS: PermissionKey[] = ['home', 'qui', 'espace'];
+export const BASE_PERMISSIONS: PermissionKey[] = [];
 
 export const GROUP_DEFINITIONS: GroupDefinition[] = [
   {

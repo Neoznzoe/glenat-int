@@ -15,18 +15,30 @@ const BookDetails = lazy(() => import('./pages/catalogue/BookDetails'));
 const Administration = lazy(() => import('./pages/administration/Administration'));
 
 export const ROUTES_CONFIG: RouteDefinition[] = [
-  { path: '/', element: <Home /> },
-  { path: '/emploi', element: <Emploi /> },
-  { path: '/services', element: <Services /> },
-  { path: '/services/production', element: <Production /> },
-  { path: '/catalogue', element: <Catalogue /> },
-  { path: '/catalogue/all', element: <CatalogueAll /> },
-  { path: '/catalogue/kiosque', element: <Kiosque /> },
-  { path: '/catalogue/offices', element: <Offices /> },
-  { path: '/catalogue/nouveautes', element: <Nouveautes /> },
-  { path: '/catalogue/couverture-a-paraitre', element: <CouvertureAParaitre /> },
-  { path: '/catalogue/book', element: <BookDetails /> },
-  { path: '/administration', element: <Administration /> },
+  { path: '/', element: <Home />, requiredPermission: 'home' },
+  { path: '/emploi', element: <Emploi />, requiredPermission: 'emploi' },
+  { path: '/services', element: <Services />, requiredPermission: 'services' },
+  {
+    path: '/services/production',
+    element: <Production />,
+    requiredPermission: 'services',
+  },
+  { path: '/catalogue', element: <Catalogue />, requiredPermission: 'catalogue' },
+  { path: '/catalogue/all', element: <CatalogueAll />, requiredPermission: 'catalogue' },
+  { path: '/catalogue/kiosque', element: <Kiosque />, requiredPermission: 'kiosque' },
+  { path: '/catalogue/offices', element: <Offices />, requiredPermission: 'catalogue' },
+  { path: '/catalogue/nouveautes', element: <Nouveautes />, requiredPermission: 'catalogue' },
+  {
+    path: '/catalogue/couverture-a-paraitre',
+    element: <CouvertureAParaitre />,
+    requiredPermission: 'catalogue',
+  },
+  { path: '/catalogue/book', element: <BookDetails />, requiredPermission: 'catalogue' },
+  {
+    path: '/administration',
+    element: <Administration />,
+    requiredPermission: 'administration',
+  },
 ];
 
 export const LAZY_ROUTE_PRELOADERS: Array<() => Promise<unknown>> = [
