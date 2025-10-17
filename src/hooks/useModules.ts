@@ -12,9 +12,11 @@ export function useSidebarModules(userId?: number | null) {
     queryKey: [...SIDEBAR_MODULES_QUERY_KEY, sanitizedId ?? 'anonymous'],
     queryFn: () => fetchModules(sanitizedId),
     enabled: sanitizedId !== undefined,
-    staleTime: 30_000,
-    refetchInterval: sanitizedId !== undefined ? 5_000 : false,
+    staleTime: 60_000,
+    refetchInterval: sanitizedId !== undefined ? 60_000 : false,
     refetchOnMount: 'always',
     refetchIntervalInBackground: true,
+    refetchOnWindowFocus: false,
+    placeholderData: (previousData: PermissionDefinition[] | undefined) => previousData,
   });
 }

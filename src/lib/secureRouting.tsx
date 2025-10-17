@@ -236,6 +236,7 @@ export function SecureRoutingProvider({
 
 interface ModuleAccessState {
   status: 'loading' | 'allowed' | 'denied';
+  fingerprint?: string;
 }
 
 function normalizePermissionKeyValue(permission: PermissionKey): PermissionKey {
@@ -278,6 +279,36 @@ function buildModuleIndexes(
   });
 
   return { byPath, byPermission };
+}
+
+function computeModuleFingerprint(
+  moduleDefinitions: PermissionDefinition[] | undefined,
+): string | undefined {
+  if (!moduleDefinitions) {
+    return undefined;
+  }
+
+  const modules = moduleDefinitions
+    .filter((definition) => !definition.type || definition.type === 'module')
+    .map((definition) => {
+      const metadata = (definition.metadata ?? {}) as ModuleMetadata;
+      return {
+        key: definition.key,
+        permission: resolveModulePermissionKey(definition),
+        path: extractModulePath(metadata, definition.key) ?? '',
+        visible: resolveModuleVisibility(metadata) !== false,
+      };
+    })
+    .sort((left, right) => left.key.localeCompare(right.key));
+
+  try {
+    return JSON.stringify(modules);
+  } catch (error) {
+    console.warn('Impossible de sérialiser les droits modules :', error);
+    return modules
+      .map((entry) => `${entry.key}:${entry.permission}:${entry.path}:${entry.visible ? 1 : 0}`)
+      .join('|');
+  }
 }
 
 function collectGuardModuleCandidates(route: RouteDefinition): string[] {
@@ -337,40 +368,54 @@ function useModuleAccessState(route: RouteDefinition): ModuleAccessState {
   const {
     data: moduleDefinitions,
     isLoading: loadingModules,
-    isFetching: fetchingModules,
     error: moduleError,
   } = useSidebarModules(resolvedUserId);
 
   const moduleIndexes = useMemo<ModuleIndexes>(
-    () => buildModuleIndexes(moduleDefinitions),
+    () => buildModuleIndexes(moduleDefinitions as PermissionDefinition[] | undefined),
     [moduleDefinitions],
   );
 
+  const computedFingerprint = useMemo(
+    () => computeModuleFingerprint(moduleDefinitions as PermissionDefinition[] | undefined),
+    [moduleDefinitions],
+  );
+  const lastFingerprintRef = useRef<string | undefined>();
+  useEffect(() => {
+    if (computedFingerprint !== undefined) {
+      lastFingerprintRef.current = computedFingerprint;
+    }
+  }, [computedFingerprint]);
+  const fingerprint = computedFingerprint ?? lastFingerprintRef.current;
+
   if (normalizedTarget.startsWith('http://') || normalizedTarget.startsWith('https://')) {
-    return { status: 'allowed' };
+    return { status: 'allowed', fingerprint };
   }
 
   if (resolvedUserId === undefined) {
     if (loadingCurrentUser || (!currentUser && !currentUserError)) {
-      return { status: 'loading' };
+      return { status: 'loading', fingerprint };
     }
-    return { status: 'allowed' };
+    return { status: 'allowed', fingerprint };
   }
 
-  if (loadingModules || fetchingModules) {
+  const hasModuleDefinitions = Array.isArray(moduleDefinitions);
+  const isInitialLoading = loadingModules && !hasModuleDefinitions;
+
+  if (isInitialLoading) {
     return { status: 'loading' };
   }
 
   if (!moduleDefinitions) {
     if (moduleError) {
-      return { status: 'allowed' };
+      return { status: 'allowed', fingerprint };
     }
-    return { status: 'loading' };
+    return { status: 'loading', fingerprint };
   }
   const isSuperAdmin = currentUser?.isSuperAdmin === true;
 
   if (isSuperAdmin) {
-    return { status: 'allowed' };
+    return { status: 'allowed', fingerprint };
   }
 
   const modulesByPath = moduleIndexes.byPath;
@@ -382,7 +427,7 @@ function useModuleAccessState(route: RouteDefinition): ModuleAccessState {
 
   if (moduleCandidates.length > 0) {
     if (!matchedModulesByPath.length) {
-      return { status: 'denied' };
+      return { status: 'denied', fingerprint };
     }
 
     const hasHiddenModule = matchedModulesByPath.some((definition) => {
@@ -391,7 +436,7 @@ function useModuleAccessState(route: RouteDefinition): ModuleAccessState {
     });
 
     if (hasHiddenModule) {
-      return { status: 'denied' };
+      return { status: 'denied', fingerprint };
     }
   }
 
@@ -404,16 +449,16 @@ function useModuleAccessState(route: RouteDefinition): ModuleAccessState {
     for (const permission of permissionsToCheck) {
       const definition = modulesByPermission.get(permission);
       if (!definition) {
-        return { status: 'denied' };
+        return { status: 'denied', fingerprint };
       }
       const metadata = (definition.metadata ?? {}) as ModuleMetadata;
       if (resolveModuleVisibility(metadata) === false) {
-        return { status: 'denied' };
+        return { status: 'denied', fingerprint };
       }
     }
   }
 
-  return { status: 'allowed' };
+  return { status: 'allowed', fingerprint };
 }
 
 interface RouteRendererProps {
@@ -422,8 +467,42 @@ interface RouteRendererProps {
 
 function ModuleAccessBoundary({ route }: RouteRendererProps): ReactElement {
   const access = useModuleAccessState(route);
+  const lastStableAccessRef = useRef<ModuleAccessState | null>(null);
+  const previousFingerprintRef = useRef<string | undefined>();
+
+  useEffect(() => {
+    if (access.status === 'loading') {
+      return;
+    }
+
+    const nextFingerprint = access.fingerprint;
+    const previousFingerprint = previousFingerprintRef.current;
+
+    if (
+      typeof window !== 'undefined' &&
+      previousFingerprint !== undefined &&
+      nextFingerprint !== undefined &&
+      nextFingerprint !== previousFingerprint
+    ) {
+      window.location.reload();
+      return;
+    }
+
+    if (nextFingerprint !== undefined) {
+      previousFingerprintRef.current = nextFingerprint;
+    }
+
+    lastStableAccessRef.current = access;
+  }, [access]);
 
   if (access.status === 'loading') {
+    const lastStableAccess = lastStableAccessRef.current;
+    if (lastStableAccess?.status === 'allowed') {
+      return route.element;
+    }
+    if (lastStableAccess?.status === 'denied') {
+      return <Navigate to="/" replace />;
+    }
     return ROUTE_LOADING_FALLBACK;
   }
 
