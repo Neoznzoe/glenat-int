@@ -28,9 +28,50 @@ export interface GroupDefinition {
   accentColor: string;
 }
 
+const PERMISSION_KEY_ALIASES: Record<string, PermissionKey> = {
+  home: 'accueil',
+  accueil: 'accueil',
+  qui: 'qui-fait-quoi',
+  'qui-fait-quoi': 'qui-fait-quoi',
+  doc: 'glenat-doc',
+  'glenatdoc': 'glenat-doc',
+  "glenat'doc": 'glenat-doc',
+  'glenat-doc': 'glenat-doc',
+  fee: 'glenat-fee',
+  'glenatfee': 'glenat-fee',
+  "glenat'fée": 'glenat-fee',
+  'glenat-fee': 'glenat-fee',
+  rh: 'ressources-humaines',
+  ressourceshumaines: 'ressources-humaines',
+  'ressources-humaines': 'ressources-humaines',
+  temps: 'saisie-des-temps',
+  'saisie-des-temps': 'saisie-des-temps',
+  saisiedestemps: 'saisie-des-temps',
+  atelier: 'travaux-atelier',
+  'travaux-atelier': 'travaux-atelier',
+  travauxatelier: 'travaux-atelier',
+  espace: 'mon-espace',
+  monespace: 'mon-espace',
+  'mon-espace': 'mon-espace',
+  annonces: 'petites-annonces',
+  petitesannonces: 'petites-annonces',
+  'petites-annonces': 'petites-annonces',
+};
+
+export function canonicalizePermissionKey(key: PermissionKey): PermissionKey {
+  if (!key) {
+    return key;
+  }
+  const normalized = key.trim().toLowerCase();
+  if (!normalized) {
+    return key;
+  }
+  return (PERMISSION_KEY_ALIASES[normalized] ?? normalized) as PermissionKey;
+}
+
 export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   {
-    key: 'home',
+    key: 'accueil',
     label: 'Accueil',
     description: "Accès à la page d'accueil de l'intranet.",
     category: 'Général',
@@ -38,7 +79,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     parentKey: null,
   },
   {
-    key: 'qui',
+    key: 'qui-fait-quoi',
     label: 'Qui fait quoi',
     description: 'Annuaire interne et organigrammes.',
     category: 'Général',
@@ -62,7 +103,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     parentKey: null,
   },
   {
-    key: 'doc',
+    key: 'glenat-doc',
     label: "Glénat'Doc",
     description: 'Accès à la documentation interne et aux procédures.',
     category: 'Ressources',
@@ -70,7 +111,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     parentKey: null,
   },
   {
-    key: 'fee',
+    key: 'glenat-fee',
     label: "Glénat'Fée",
     description: 'Accès aux outils bureautiques et formulaires internes.',
     category: 'Ressources',
@@ -102,7 +143,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     parentKey: null,
   },
   {
-    key: 'rh',
+    key: 'ressources-humaines',
     label: 'Ressources humaines',
     description: 'Informations et services liés aux ressources humaines.',
     category: 'RH',
@@ -110,7 +151,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     parentKey: null,
   },
   {
-    key: 'temps',
+    key: 'saisie-des-temps',
     label: 'Saisie des temps',
     description: 'Saisie et validation des temps de production.',
     category: 'Production',
@@ -118,7 +159,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     parentKey: null,
   },
   {
-    key: 'atelier',
+    key: 'travaux-atelier',
     label: 'Travaux atelier',
     description: 'Accès aux suivis de travaux de l’atelier.',
     category: 'Production',
@@ -126,7 +167,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     parentKey: null,
   },
   {
-    key: 'espace',
+    key: 'mon-espace',
     label: 'Mon espace',
     description: 'Espace personnel de chaque collaborateur.',
     category: 'Général',
@@ -142,7 +183,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     parentKey: null,
   },
   {
-    key: 'annonces',
+    key: 'petites-annonces',
     label: 'Petites annonces',
     description: 'Publication et consultation des annonces internes.',
     category: 'Communication',
@@ -175,7 +216,7 @@ export const GROUP_DEFINITIONS: GroupDefinition[] = [
     name: 'Éditions Glénat',
     description:
       "Equipe éditoriale principale. Accès étendu aux catalogues et outils de suivi.",
-    defaultPermissions: ['catalogue', 'doc', 'planning', 'services', 'emploi'],
+    defaultPermissions: ['catalogue', 'glenat-doc', 'planning', 'services', 'emploi'],
     accentColor: 'bg-rose-500/10 text-rose-600 border-rose-200',
   },
   {
@@ -183,7 +224,7 @@ export const GROUP_DEFINITIONS: GroupDefinition[] = [
     name: 'GED',
     description:
       'Gestion électronique des documents. Axée sur les ressources et procédures.',
-    defaultPermissions: ['doc', 'fee', 'services'],
+    defaultPermissions: ['glenat-doc', 'glenat-fee', 'services'],
     accentColor: 'bg-sky-500/10 text-sky-600 border-sky-200',
   },
   {
@@ -191,7 +232,7 @@ export const GROUP_DEFINITIONS: GroupDefinition[] = [
     name: 'Glénat Prod',
     description:
       'Production et logistique. Nécessite les accès aux temps et aux travaux atelier.',
-    defaultPermissions: ['planning', 'temps', 'atelier', 'services'],
+    defaultPermissions: ['planning', 'saisie-des-temps', 'travaux-atelier', 'services'],
     accentColor: 'bg-amber-500/10 text-amber-600 border-amber-200',
   },
   {
@@ -199,7 +240,7 @@ export const GROUP_DEFINITIONS: GroupDefinition[] = [
     name: 'Prestataire externes',
     description:
       'Accès limité pour les partenaires externes aux modules essentiels uniquement.',
-    defaultPermissions: ['services', 'atelier'],
+    defaultPermissions: ['services', 'travaux-atelier'],
     accentColor: 'bg-slate-500/10 text-slate-600 border-slate-200',
   },
   {
@@ -207,7 +248,7 @@ export const GROUP_DEFINITIONS: GroupDefinition[] = [
     name: 'Glénat diffusion',
     description:
       'Réseau de diffusion commerciale. Nécessite les outils catalogue et communication.',
-    defaultPermissions: ['catalogue', 'annonces', 'services', 'planning'],
+    defaultPermissions: ['catalogue', 'petites-annonces', 'services', 'planning'],
     accentColor: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
   },
   {
@@ -221,7 +262,7 @@ export const GROUP_DEFINITIONS: GroupDefinition[] = [
     id: 'hugo-publishing',
     name: 'Hugo publishing',
     description: 'Pôle publishing avec accès renforcé au catalogue et aux services support.',
-    defaultPermissions: ['catalogue', 'services', 'emploi', 'doc'],
+    defaultPermissions: ['catalogue', 'services', 'emploi', 'glenat-doc'],
     accentColor: 'bg-indigo-500/10 text-indigo-600 border-indigo-200',
   },
 ];

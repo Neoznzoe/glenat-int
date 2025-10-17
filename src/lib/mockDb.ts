@@ -2,6 +2,7 @@ import {
   BASE_PERMISSIONS,
   GROUP_DEFINITIONS,
   PERMISSION_DEFINITIONS,
+  canonicalizePermissionKey,
   type GroupDefinition,
   type PermissionDefinition,
   type PermissionKey,
@@ -686,16 +687,22 @@ export function evaluatePermission(
   groups: GroupDefinition[],
   key: PermissionKey,
 ): PermissionEvaluation {
+  const canonicalKey = canonicalizePermissionKey(key);
   const inheritedFrom = groups
-    .filter(
-      (group) => user.groups.includes(group.id) && group.defaultPermissions.includes(key),
+    .filter((group) =>
+      user.groups.includes(group.id) &&
+      group.defaultPermissions.some(
+        (permission) => canonicalizePermissionKey(permission as PermissionKey) === canonicalKey,
+      ),
     )
     .map((group) => group.name);
-  const basePermission = BASE_PERMISSIONS.includes(key);
+  const basePermission = BASE_PERMISSIONS.some(
+    (permission) => canonicalizePermissionKey(permission) === canonicalKey,
+  );
 
   if (user.isSuperAdmin) {
     return {
-      key,
+      key: canonicalKey,
       effective: true,
       origin: 'superadmin' as const,
       inheritedFrom,
@@ -703,12 +710,14 @@ export function evaluatePermission(
     };
   }
 
-  const override = user.permissionOverrides.find((candidate) => candidate.key === key);
+  const override = user.permissionOverrides.find(
+    (candidate) => canonicalizePermissionKey(candidate.key) === canonicalKey,
+  );
   if (override) {
     const origin: PermissionEvaluationOrigin =
       override.mode === 'allow' ? 'override-allow' : 'override-deny';
     return {
-      key,
+      key: canonicalKey,
       effective: override.mode === 'allow',
       origin,
       overrideMode: override.mode,
@@ -719,7 +728,7 @@ export function evaluatePermission(
 
   if (basePermission) {
     return {
-      key,
+      key: canonicalKey,
       effective: true,
       origin: 'base' as const,
       inheritedFrom,
@@ -729,7 +738,7 @@ export function evaluatePermission(
 
   if (inheritedFrom.length > 0) {
     return {
-      key,
+      key: canonicalKey,
       effective: true,
       origin: 'group' as const,
       inheritedFrom,
@@ -738,7 +747,7 @@ export function evaluatePermission(
   }
 
   return {
-    key,
+    key: canonicalKey,
     effective: false,
     origin: 'none' as const,
     inheritedFrom,
@@ -750,15 +759,38 @@ export function computeEffectivePermissions(
   user: UserAccount,
   groups: GroupDefinition[],
 ): PermissionKey[] {
+  const candidateKeys = new Set<PermissionKey>();
+
+  for (const definition of PERMISSION_DEFINITIONS) {
+    candidateKeys.add(canonicalizePermissionKey(definition.key));
+  }
+
+  for (const group of groups) {
+    for (const permission of group.defaultPermissions) {
+      candidateKeys.add(canonicalizePermissionKey(permission as PermissionKey));
+    }
+  }
+
+  for (const override of user.permissionOverrides) {
+    candidateKeys.add(canonicalizePermissionKey(override.key));
+  }
+
+  for (const permission of BASE_PERMISSIONS) {
+    candidateKeys.add(canonicalizePermissionKey(permission));
+  }
+
   if (user.isSuperAdmin) {
-    return PERMISSION_DEFINITIONS.map((permission) => permission.key);
+    return Array.from(candidateKeys);
   }
 
   const effective: PermissionKey[] = [];
-  for (const definition of PERMISSION_DEFINITIONS) {
-    const evaluation = evaluatePermission(user, groups, definition.key);
+  for (const key of candidateKeys) {
+    if (!key) {
+      continue;
+    }
+    const evaluation = evaluatePermission(user, groups, key);
     if (evaluation.effective) {
-      effective.push(definition.key);
+      effective.push(key);
     }
   }
   return effective;

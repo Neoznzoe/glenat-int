@@ -15,7 +15,7 @@ const BookDetails = lazy(() => import('./pages/catalogue/BookDetails'));
 const Administration = lazy(() => import('./pages/administration/Administration'));
 
 export const ROUTES_CONFIG: RouteDefinition[] = [
-  { path: '/', element: <Home />, requiredPermission: 'home' },
+  { path: '/', element: <Home />, requiredPermission: 'accueil' },
   { path: '/emploi', element: <Emploi />, requiredPermission: 'emploi' },
   { path: '/services', element: <Services />, requiredPermission: 'services' },
   {
