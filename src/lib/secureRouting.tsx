@@ -36,10 +36,21 @@ import {
   resolveModuleVisibility,
   type ModuleMetadata,
 } from '@/lib/moduleAccess';
+import { type PermissionKey } from '@/lib/access-control';
+
+type GuardPermissionConfig = PermissionKey | PermissionKey[];
+
+type GuardModulePathConfig = string | string[];
+
+interface RouteGuardConfig {
+  permissions?: GuardPermissionConfig;
+  modulePaths?: GuardModulePathConfig;
+}
 
 export interface RouteDefinition {
   path: string;
   element: ReactElement;
+  guard?: RouteGuardConfig;
 }
 
 interface DecryptedLocation {
@@ -228,8 +239,52 @@ interface ModuleAccessState {
   status: 'loading' | 'allowed' | 'denied';
 }
 
-function useModuleAccessState(targetPath: string): ModuleAccessState {
-  const normalizedTarget = useMemo(() => normalizeRoute(targetPath), [targetPath]);
+function normalizePermissionKeyValue(permission: PermissionKey): PermissionKey {
+  return permission.trim().toLowerCase() as PermissionKey;
+}
+
+function collectGuardModuleCandidates(route: RouteDefinition): string[] {
+  const candidates = new Set<string>();
+
+  const pushCandidate = (value?: string) => {
+    if (!value) {
+      return;
+    }
+    const normalised = normalizeRoute(value);
+    if (!normalised) {
+      return;
+    }
+    candidates.add(normalised);
+  };
+
+  pushCandidate(route.path);
+
+  const modulePaths = route.guard?.modulePaths;
+  if (Array.isArray(modulePaths)) {
+    modulePaths.forEach((entry) => pushCandidate(entry));
+  } else {
+    pushCandidate(modulePaths);
+  }
+
+  return Array.from(candidates);
+}
+
+function collectGuardPermissions(route: RouteDefinition): PermissionKey[] {
+  const raw = route.guard?.permissions;
+  if (!raw) {
+    return [];
+  }
+  const values = Array.isArray(raw) ? raw : [raw];
+  return Array.from(
+    new Set(values.map((permission) => normalizePermissionKeyValue(permission))),
+  );
+}
+
+function useModuleAccessState(route: RouteDefinition): ModuleAccessState {
+  const normalizedTarget = useMemo(() => normalizeRoute(route.path), [route.path]);
+  const moduleCandidates = collectGuardModuleCandidates(route);
+  const guardPermissions = collectGuardPermissions(route);
+
   const { user: authUser } = useAuth();
   const {
     data: currentUser,
@@ -297,7 +352,13 @@ function useModuleAccessState(targetPath: string): ModuleAccessState {
     return { status: 'allowed' };
   }
 
-  const matchingModule = moduleDefinitions.find((definition) => {
+  const permissions = new Set(
+    computeEffectivePermissions(currentUser, groups).map((permission) =>
+      normalizePermissionKeyValue(permission),
+    ),
+  );
+
+  const moduleByPath = moduleDefinitions.find((definition) => {
     if (definition.type !== 'module') {
       return false;
     }
@@ -306,27 +367,64 @@ function useModuleAccessState(targetPath: string): ModuleAccessState {
     if (!path || path.startsWith('http://') || path.startsWith('https://')) {
       return false;
     }
-    return normalizeRoute(path) === normalizedTarget;
+    const normalizedPath = normalizeRoute(path);
+    return moduleCandidates.includes(normalizedPath);
   });
 
-  if (!matchingModule) {
+  const permissionsToCheck = guardPermissions.length
+    ? guardPermissions
+    : moduleByPath
+      ? [resolveModulePermissionKey(moduleByPath)]
+      : [];
+
+  const modulesByPermission = guardPermissions.length
+    ? moduleDefinitions.filter((definition) => {
+        if (definition.type !== 'module') {
+          return false;
+        }
+        const key = resolveModulePermissionKey(definition);
+        return guardPermissions.includes(key);
+      })
+    : [];
+
+  const evaluatePermissionList = (requiredPermissions: PermissionKey[]): boolean => {
+    if (!requiredPermissions.length || currentUser.isSuperAdmin) {
+      return true;
+    }
+    return requiredPermissions.every((permission) => permissions.has(permission));
+  };
+
+  if (moduleByPath) {
+    const metadata = (moduleByPath.metadata ?? {}) as ModuleMetadata;
+    const visibility = resolveModuleVisibility(metadata);
+
+    if (visibility === false && !currentUser.isSuperAdmin) {
+      return { status: 'denied' };
+    }
+
+    if (!evaluatePermissionList(permissionsToCheck)) {
+      return { status: 'denied' };
+    }
+
     return { status: 'allowed' };
   }
 
-  const metadata = (matchingModule.metadata ?? {}) as ModuleMetadata;
-  const visibility = resolveModuleVisibility(metadata);
-  if (visibility === false) {
-    return { status: 'denied' };
+  if (modulesByPermission.length) {
+    const hasHiddenModule = modulesByPermission.some((definition) => {
+      const metadata = (definition.metadata ?? {}) as ModuleMetadata;
+      return resolveModuleVisibility(metadata) === false;
+    });
+
+    if (hasHiddenModule && !currentUser.isSuperAdmin) {
+      return { status: 'denied' };
+    }
+
+    if (!evaluatePermissionList(guardPermissions)) {
+      return { status: 'denied' };
+    }
   }
 
-  if (currentUser.isSuperAdmin) {
-    return { status: 'allowed' };
-  }
-
-  const permissionKey = resolveModulePermissionKey(matchingModule);
-  const permissions = new Set(computeEffectivePermissions(currentUser, groups));
-
-  if (!permissions.has(permissionKey)) {
+  if (permissionsToCheck.length && !evaluatePermissionList(permissionsToCheck)) {
     return { status: 'denied' };
   }
 
@@ -334,12 +432,11 @@ function useModuleAccessState(targetPath: string): ModuleAccessState {
 }
 
 interface RouteRendererProps {
-  path: string;
-  element: ReactElement;
+  route: RouteDefinition;
 }
 
-function ModuleAccessBoundary({ path, element }: RouteRendererProps): ReactElement {
-  const access = useModuleAccessState(path);
+function ModuleAccessBoundary({ route }: RouteRendererProps): ReactElement {
+  const access = useModuleAccessState(route);
 
   if (access.status === 'loading') {
     return ROUTE_LOADING_FALLBACK;
@@ -349,10 +446,10 @@ function ModuleAccessBoundary({ path, element }: RouteRendererProps): ReactEleme
     return <Navigate to="/" replace />;
   }
 
-  return element;
+  return route.element;
 }
 
-function RouteRenderer({ path, element }: RouteRendererProps): ReactElement | null {
+function RouteRenderer({ route }: RouteRendererProps): ReactElement | null {
   const location = useLocation();
   const navigate = useNavigate();
   const { encryptionEnabled, ensureToken, setDecryptedLocation } =
@@ -360,17 +457,17 @@ function RouteRenderer({ path, element }: RouteRendererProps): ReactElement | nu
 
   useEffect(() => {
     if (!encryptionEnabled) {
-      setDecryptedLocation({ pathname: path, search: location.search });
+      setDecryptedLocation({ pathname: route.path, search: location.search });
       return;
     }
 
-    if (location.pathname !== path) {
+    if (location.pathname !== route.path) {
       return;
     }
 
     let cancelled = false;
 
-    void ensureToken(path, location.search)
+    void ensureToken(route.path, location.search)
       .then((token) => {
         if (cancelled || !token) {
           return;
@@ -388,7 +485,7 @@ function RouteRenderer({ path, element }: RouteRendererProps): ReactElement | nu
     encryptionEnabled,
     ensureToken,
     navigate,
-    path,
+    route.path,
     location.pathname,
     location.search,
     setDecryptedLocation,
@@ -398,7 +495,7 @@ function RouteRenderer({ path, element }: RouteRendererProps): ReactElement | nu
     return null;
   }
 
-  return <ModuleAccessBoundary path={path} element={element} />;
+  return <ModuleAccessBoundary route={route} />;
 }
 
 interface EncryptedRouteProps {
@@ -484,7 +581,7 @@ function EncryptedRoute({ routes }: EncryptedRouteProps): ReactElement {
     return <Navigate to="/" replace />;
   }
 
-  return <ModuleAccessBoundary path={route.path} element={route.element} />;
+  return <ModuleAccessBoundary route={route} />;
 }
 
 export interface SecureRoutesProps {
@@ -500,7 +597,7 @@ export function SecureRoutes({ routes }: SecureRoutesProps): ReactElement {
           path={route.path}
           element={
             <Suspense fallback={ROUTE_LOADING_FALLBACK}>
-              <RouteRenderer path={route.path} element={route.element} />
+              <RouteRenderer route={route} />
             </Suspense>
           }
         />

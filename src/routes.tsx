@@ -15,18 +15,50 @@ const BookDetails = lazy(() => import('./pages/catalogue/BookDetails'));
 const Administration = lazy(() => import('./pages/administration/Administration'));
 
 export const ROUTES_CONFIG: RouteDefinition[] = [
-  { path: '/', element: <Home /> },
-  { path: '/emploi', element: <Emploi /> },
-  { path: '/services', element: <Services /> },
-  { path: '/services/production', element: <Production /> },
-  { path: '/catalogue', element: <Catalogue /> },
-  { path: '/catalogue/all', element: <CatalogueAll /> },
-  { path: '/catalogue/kiosque', element: <Kiosque /> },
-  { path: '/catalogue/offices', element: <Offices /> },
-  { path: '/catalogue/nouveautes', element: <Nouveautes /> },
-  { path: '/catalogue/couverture-a-paraitre', element: <CouvertureAParaitre /> },
-  { path: '/catalogue/book', element: <BookDetails /> },
-  { path: '/administration', element: <Administration /> },
+  { path: '/', element: <Home />, guard: { permissions: 'home' } },
+  { path: '/emploi', element: <Emploi />, guard: { permissions: 'emploi' } },
+  { path: '/services', element: <Services />, guard: { permissions: 'services' } },
+  {
+    path: '/services/production',
+    element: <Production />,
+    guard: { permissions: 'services', modulePaths: '/services' },
+  },
+  {
+    path: '/catalogue',
+    element: <Catalogue />,
+    guard: { permissions: 'catalogue', modulePaths: '/catalogue/offices' },
+  },
+  {
+    path: '/catalogue/all',
+    element: <CatalogueAll />,
+    guard: { permissions: 'catalogue', modulePaths: '/catalogue/offices' },
+  },
+  {
+    path: '/catalogue/kiosque',
+    element: <Kiosque />,
+    guard: { permissions: 'catalogue', modulePaths: '/catalogue/kiosque' },
+  },
+  {
+    path: '/catalogue/offices',
+    element: <Offices />,
+    guard: { permissions: 'catalogue', modulePaths: '/catalogue/offices' },
+  },
+  {
+    path: '/catalogue/nouveautes',
+    element: <Nouveautes />,
+    guard: { permissions: 'catalogue', modulePaths: '/catalogue/offices' },
+  },
+  {
+    path: '/catalogue/couverture-a-paraitre',
+    element: <CouvertureAParaitre />,
+    guard: { permissions: 'catalogue', modulePaths: '/catalogue/offices' },
+  },
+  {
+    path: '/catalogue/book',
+    element: <BookDetails />,
+    guard: { permissions: 'catalogue', modulePaths: '/catalogue/offices' },
+  },
+  { path: '/administration', element: <Administration />, guard: { permissions: 'administration' } },
 ];
 
 export const LAZY_ROUTE_PRELOADERS: Array<() => Promise<unknown>> = [
