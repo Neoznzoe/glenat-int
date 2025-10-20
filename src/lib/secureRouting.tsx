@@ -10,6 +10,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Navigate,
   Route,
@@ -18,16 +19,144 @@ import {
   useNavigate,
   useParams,
 } from 'react-router-dom';
+import { type PermissionKey } from './access-control';
+import { fetchCurrentUser, fetchGroups } from './adminApi';
 import {
   decryptUrlToken,
   encryptUrlPayload,
   isUrlEncryptionConfigured,
   type EncryptedUrlPayload,
 } from './urlEncryption';
+import { computeEffectivePermissions } from './mockDb';
+import { CURRENT_USER_QUERY_KEY, GROUPS_QUERY_KEY } from '@/hooks/useAdminData';
+
+type PermissionRequirement = PermissionKey | PermissionKey[];
 
 export interface RouteDefinition {
   path: string;
   element: ReactElement;
+  requiredPermissions?: PermissionRequirement;
+}
+
+type PermissionGuardStatus = 'loading' | 'allowed' | 'denied';
+
+function normalizePermissions(input?: PermissionRequirement): PermissionKey[] {
+  if (!input) {
+    return [];
+  }
+  const list = Array.isArray(input) ? input : [input];
+  return list
+    .map((permission) => permission.trim().toLowerCase() as PermissionKey)
+    .filter((permission) => permission.length > 0);
+}
+
+function LoadingIndicator(): ReactElement {
+  return (
+    <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center">
+      <span
+        aria-hidden="true"
+        className="inline-flex h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent"
+      />
+      <span className="sr-only">Chargement…</span>
+    </div>
+  );
+}
+
+function usePermissionGuard(requiredPermissions?: PermissionRequirement): PermissionGuardStatus {
+  const normalizedPermissions = useMemo(
+    () => normalizePermissions(requiredPermissions),
+    [requiredPermissions],
+  );
+  const needsAccessData = normalizedPermissions.length > 0;
+
+  const {
+    data: currentUser,
+    isPending: userPending,
+    isError: userError,
+    error: userErrorData,
+  } = useQuery({
+    queryKey: CURRENT_USER_QUERY_KEY,
+    queryFn: fetchCurrentUser,
+    enabled: needsAccessData,
+    staleTime: 60 * 1000,
+  });
+
+  const {
+    data: groupData,
+    isPending: groupsPending,
+    isError: groupsError,
+    error: groupsErrorData,
+  } = useQuery({
+    queryKey: GROUPS_QUERY_KEY,
+    queryFn: fetchGroups,
+    enabled: needsAccessData,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (userError) {
+      console.error(
+        "Impossible de récupérer les informations de l'utilisateur courant pour la protection des routes.",
+        userErrorData,
+      );
+    }
+  }, [userError, userErrorData]);
+
+  useEffect(() => {
+    if (groupsError) {
+      console.error(
+        'Impossible de récupérer la liste des groupes pour la protection des routes.',
+        groupsErrorData,
+      );
+    }
+  }, [groupsError, groupsErrorData]);
+
+  if (!needsAccessData) {
+    return 'allowed';
+  }
+
+  if (userPending || groupsPending) {
+    return 'loading';
+  }
+
+  if (userError || groupsError || !currentUser) {
+    return 'denied';
+  }
+
+  if (currentUser.isSuperAdmin) {
+    return 'allowed';
+  }
+
+  const groupList = groupData ?? [];
+
+  const accessiblePermissions = new Set(
+    computeEffectivePermissions(currentUser, groupList),
+  );
+
+  const hasPermission = normalizedPermissions.some((permission) =>
+    accessiblePermissions.has(permission),
+  );
+
+  return hasPermission ? 'allowed' : 'denied';
+}
+
+interface GuardedElementProps {
+  element: ReactElement;
+  requiredPermissions?: PermissionRequirement;
+}
+
+function GuardedElement({ element, requiredPermissions }: GuardedElementProps): ReactElement {
+  const guardStatus = usePermissionGuard(requiredPermissions);
+
+  if (guardStatus === 'loading') {
+    return <LoadingIndicator />;
+  }
+
+  if (guardStatus === 'denied') {
+    return <Navigate to="/" replace />;
+  }
+
+  return element;
 }
 
 interface DecryptedLocation {
@@ -205,9 +334,10 @@ export function SecureRoutingProvider({
 interface RouteRendererProps {
   path: string;
   element: ReactElement;
+  requiredPermissions?: PermissionRequirement;
 }
 
-function RouteRenderer({ path, element }: RouteRendererProps): ReactElement | null {
+function RouteRenderer({ path, element, requiredPermissions }: RouteRendererProps): ReactElement | null {
   const location = useLocation();
   const navigate = useNavigate();
   const { encryptionEnabled, ensureToken, setDecryptedLocation } =
@@ -253,7 +383,7 @@ function RouteRenderer({ path, element }: RouteRendererProps): ReactElement | nu
     return null;
   }
 
-  return element;
+  return <GuardedElement element={element} requiredPermissions={requiredPermissions} />;
 }
 
 interface EncryptedRouteProps {
@@ -322,15 +452,7 @@ function EncryptedRoute({ routes }: EncryptedRouteProps): ReactElement {
   }
 
   if (!payload) {
-    return (
-      <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center">
-        <span
-          aria-hidden="true"
-          className="inline-flex h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent"
-        />
-        <span className="sr-only">Chargement…</span>
-      </div>
-    );
+    return <LoadingIndicator />;
   }
 
   const route = routes.find((item) => item.path === payload.path);
@@ -339,7 +461,12 @@ function EncryptedRoute({ routes }: EncryptedRouteProps): ReactElement {
     return <Navigate to="/" replace />;
   }
 
-  return route.element;
+  return (
+    <GuardedElement
+      element={route.element}
+      requiredPermissions={route.requiredPermissions}
+    />
+  );
 }
 
 export interface SecureRoutesProps {
@@ -347,15 +474,7 @@ export interface SecureRoutesProps {
 }
 
 export function SecureRoutes({ routes }: SecureRoutesProps): ReactElement {
-  const fallback = (
-    <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center">
-      <span
-        aria-hidden="true"
-        className="inline-flex h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent"
-      />
-      <span className="sr-only">Chargement…</span>
-    </div>
-  );
+  const fallback = <LoadingIndicator />;
 
   return (
     <Routes>
@@ -365,7 +484,11 @@ export function SecureRoutes({ routes }: SecureRoutesProps): ReactElement {
           path={route.path}
           element={
             <Suspense fallback={fallback}>
-              <RouteRenderer path={route.path} element={route.element} />
+              <RouteRenderer
+                path={route.path}
+                element={route.element}
+                requiredPermissions={route.requiredPermissions}
+              />
             </Suspense>
           }
         />
