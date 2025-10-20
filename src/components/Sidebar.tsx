@@ -7,7 +7,7 @@ import LogoG from '../assets/logos/glenat/glenat_G.svg';
 import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
 import { useSidebarModules } from '@/hooks/useModules';
 import { computeEffectivePermissions } from '@/lib/mockDb';
-import type { PermissionKey } from '@/lib/access-control';
+import type { PermissionDefinition, PermissionKey } from '@/lib/access-control';
 import { useDecryptedLocation } from '@/lib/secureRouting';
 import { SecureNavLink } from '@/components/routing/SecureLink';
 import { useAuth } from '@/context/AuthContext';
@@ -29,7 +29,16 @@ interface SidebarModuleEntry {
   section?: string;
 }
 
-type ModuleMetadata = Record<string, unknown>;
+interface ModuleMetadata extends Record<string, unknown> {
+  isUserVisible?: unknown;
+}
+
+interface DisplayableModule {
+  definition: PermissionDefinition;
+  metadata: ModuleMetadata;
+  index: number;
+  path: string;
+}
 
 function toNonEmptyString(value: unknown): string | undefined {
   if (typeof value === 'string') {
@@ -212,6 +221,45 @@ function extractModulePath(metadata: ModuleMetadata, key: string): string | null
   }
 
   return null;
+}
+
+function resolveModuleVisibility(definition: PermissionDefinition): boolean {
+  const metadata = (definition.metadata ?? {}) as ModuleMetadata;
+  return resolveBoolean(metadata.isUserVisible, true);
+}
+
+function createModuleSnapshot(modules: DisplayableModule[]): string {
+  if (modules.length === 0) {
+    return '[]';
+  }
+
+  const normalized = modules.map(({ definition, metadata, index, path }) => {
+    const id =
+      toNonEmptyString(metadata.id) ??
+      toNonEmptyString(metadata.slug) ??
+      definition.key ??
+      `module-${index + 1}`;
+    const label = definition.label ?? id;
+    const order = toNumberValue(metadata.order) ?? index;
+
+    return {
+      id,
+      label,
+      path,
+      order,
+    };
+  });
+
+  normalized.sort((left, right) => {
+    if (left.order !== right.order) {
+      return left.order - right.order;
+    }
+    return left.label.localeCompare(right.label, 'fr', { sensitivity: 'base' });
+  });
+
+  return JSON.stringify(
+    normalized.map(({ id, label, path }) => ({ id, label, path })),
+  );
 }
 
 function resolveBadgeValue(badge: unknown, jobCount?: number): number | string | undefined {
@@ -489,19 +537,54 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   useEffect(() => {
     lastModuleSnapshotRef.current = null;
   }, [sidebarUserId]);
+  const moduleDefinitionsList = moduleDefinitions ?? [];
+
+  const displayableModules = useMemo(() => {
+    if (moduleDefinitionsList.length === 0) {
+      return [] as DisplayableModule[];
+    }
+
+    return moduleDefinitionsList
+      .map((definition, index) => {
+        if (definition.type && definition.type !== 'module') {
+          return null;
+        }
+
+        if (!resolveModuleVisibility(definition)) {
+          return null;
+        }
+
+        const metadata = (definition.metadata ?? {}) as ModuleMetadata;
+
+        if (!resolveBoolean(metadata.isActive, true)) {
+          return null;
+        }
+
+        const path = extractModulePath(metadata, definition.key);
+        if (!path) {
+          return null;
+        }
+
+        return { definition, metadata, index, path } as DisplayableModule;
+      })
+      .filter((entry): entry is DisplayableModule => entry !== null);
+  }, [moduleDefinitionsList]);
+
+  const moduleSnapshot = useMemo(
+    () => createModuleSnapshot(displayableModules),
+    [displayableModules],
+  );
   useEffect(() => {
     if (!moduleDefinitions || waitingForModules || hasModuleError) {
       return;
     }
 
-    const serialized = JSON.stringify(moduleDefinitions);
-
     if (lastModuleSnapshotRef.current === null) {
-      lastModuleSnapshotRef.current = serialized;
+      lastModuleSnapshotRef.current = moduleSnapshot;
       return;
     }
 
-    if (lastModuleSnapshotRef.current !== serialized) {
+    if (lastModuleSnapshotRef.current !== moduleSnapshot) {
       console.info(
         "Changement détecté dans les modules — rechargement de la page pour refléter l'état de la base de données.",
       );
@@ -509,7 +592,62 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
         window.location.reload();
       }
     }
-  }, [moduleDefinitions, waitingForModules, hasModuleError]);
+  }, [moduleDefinitions, waitingForModules, hasModuleError, moduleSnapshot]);
+
+  useEffect(() => {
+    if (sidebarUserId !== 6 || waitingForModules || hasModuleError) {
+      return;
+    }
+
+    if (!moduleDefinitions || moduleDefinitions.length === 0) {
+      return;
+    }
+
+    const accessibleModules = moduleDefinitions.filter((definition) => {
+      if (definition.type && definition.type !== 'module') {
+        return false;
+      }
+      return resolveModuleVisibility(definition);
+    });
+
+    const inaccessibleModules = moduleDefinitions.filter((definition) => {
+      if (definition.type && definition.type !== 'module') {
+        return false;
+      }
+      return !resolveModuleVisibility(definition);
+    });
+
+    const displayNameSource = currentUser?.displayName ?? 'victor besson';
+    const normalizedDisplayName = displayNameSource.trim().toLowerCase() || 'victor besson';
+
+    const formatModule = (definition: PermissionDefinition) => {
+      const metadata = (definition.metadata ?? {}) as ModuleMetadata;
+      const moduleId =
+        toNonEmptyString(metadata.id) ??
+        toNonEmptyString(metadata.slug) ??
+        definition.key ??
+        'inconnu';
+      const label = definition.label ?? String(moduleId);
+      return `#${moduleId} ${label}`;
+    };
+
+    const accessibleText = accessibleModules.length
+      ? accessibleModules.map(formatModule).join(', ')
+      : 'aucun';
+    const inaccessibleText = inaccessibleModules.length
+      ? inaccessibleModules.map(formatModule).join(', ')
+      : 'aucun';
+
+    console.log(
+      `userId = 6, ${normalizedDisplayName} accès aux modules : ${accessibleText}, et modules inaccessibles : ${inaccessibleText}`,
+    );
+  }, [
+    sidebarUserId,
+    moduleDefinitions,
+    currentUser?.displayName,
+    waitingForModules,
+    hasModuleError,
+  ]);
 
   const accessiblePermissions = useMemo(() => {
     if (!currentUser) {
@@ -519,28 +657,13 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   }, [currentUser, groups]);
 
   const processedModules = useMemo(() => {
-    if (!moduleDefinitions) {
+    if (displayableModules.length === 0) {
       return [];
     }
 
     const items: SidebarModuleEntry[] = [];
 
-    moduleDefinitions.forEach((definition, index) => {
-      if (definition.type !== 'module') {
-        return;
-      }
-
-      const metadata = (definition.metadata ?? {}) as ModuleMetadata;
-
-      if (!resolveBoolean(metadata.isActive, true)) {
-        return;
-      }
-
-      const path = extractModulePath(metadata, definition.key);
-      if (!path) {
-        return;
-      }
-
+    displayableModules.forEach(({ definition, metadata, index, path }) => {
       const id =
         toNonEmptyString(metadata.id) ??
         toNonEmptyString(metadata.slug) ??
@@ -595,7 +718,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       }
       return left.label.localeCompare(right.label, 'fr', { sensitivity: 'base' });
     });
-  }, [moduleDefinitions, jobCount]);
+  }, [displayableModules, jobCount]);
 
   const showAllMenus = loadingCurrentUser || loadingGroups || waitingForModules || !currentUser;
 

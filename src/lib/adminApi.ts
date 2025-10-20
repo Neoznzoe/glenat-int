@@ -645,6 +645,13 @@ function normalizeModuleDefinition(
     metadata.externalPath = externalPathValue;
   }
 
+  const isUserVisibleValue = toOptionalBoolean(
+    getValue(record, ['isUserVisible', 'IsUserVisible', 'canView', 'CanView']),
+  );
+  if (isUserVisibleValue !== null) {
+    metadata.isUserVisible = isUserVisibleValue;
+  }
+
   const isActiveValue = toOptionalBoolean(getValue(record, ['isActive', 'IsActive', 'active', 'Active']));
   if (isActiveValue !== null) {
     metadata.isActive = isActiveValue;
@@ -1105,8 +1112,7 @@ function buildSidebarModulesQuery(userId?: number): string {
     '  WHERE m.[isActive] = 1',
     ')',
     'SELECT *',
-    'FROM VisibleModules',
-    'WHERE [isUserVisible] = CONVERT(bit, 1);',
+    'FROM VisibleModules;',
   ].join('\n');
 }
 
