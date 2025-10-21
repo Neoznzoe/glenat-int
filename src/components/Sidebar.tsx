@@ -510,9 +510,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const isExpanded = !isManuallyCollapsed || isHovered;
 
   const handleSidebarMouseEnter = () => {
-    if (!isManuallyCollapsed) {
-      setIsHovered(true);
-    }
+    setIsHovered(true);
   };
 
   const handleSidebarMouseLeave = () => {
@@ -520,6 +518,12 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   };
 
   const handleCollapsedTriggerHover = () => {
+    if (isManuallyCollapsed) {
+      setIsHovered(true);
+    }
+  };
+
+  const handleCollapsedHeaderHover = () => {
     if (isManuallyCollapsed) {
       setIsHovered(true);
     }
@@ -741,7 +745,13 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       onBlurCapture={handleSidebarBlur}
     >
       {/* Header */}
-      <div className="h-16 px-4 border-b border-red-400/50 flex items-center justify-between min-h-[64px]">
+      <div
+        className={`h-16 px-4 border-b border-red-400/50 flex items-center ${
+          isExpanded ? 'justify-between' : 'justify-center'
+        } min-h-[64px]`}
+        onMouseEnter={handleCollapsedHeaderHover}
+        onFocus={handleCollapsedHeaderHover}
+      >
         <div
           className={`relative flex items-center gap-2 overflow-hidden ${
             isManuallyCollapsed ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/60 rounded-md' : ''
@@ -773,22 +783,18 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
           />
         </div>
 
-        <button
-          onClick={() => {
-            setIsManuallyCollapsed((previous) => !previous);
-            setIsHovered(false);
-          }}
-          className={`p-1 rounded transition-all duration-300 ${
-            isExpanded
-              ? 'opacity-100 hover:bg-white/20 pointer-events-auto'
-              : 'opacity-0 pointer-events-none'
-          }`}
-          title={isManuallyCollapsed ? 'Déplier la sidebar' : 'Replier la sidebar'}
-          aria-hidden={!isExpanded}
-          tabIndex={isExpanded ? 0 : -1}
-        >
-          <PanelLeft className={`h-4 w-4 transition-transform ${isManuallyCollapsed ? 'rotate-180' : ''}`} />
-        </button>
+        {isExpanded ? (
+          <button
+            onClick={() => {
+              setIsManuallyCollapsed((previous) => !previous);
+              setIsHovered(false);
+            }}
+            className="p-1 rounded transition-all duration-300 hover:bg-white/20"
+            title={isManuallyCollapsed ? 'Déplier la sidebar' : 'Replier la sidebar'}
+          >
+            <PanelLeft className={`h-4 w-4 transition-transform ${isManuallyCollapsed ? 'rotate-180' : ''}`} />
+          </button>
+        ) : null}
       </div>
 
       {/* Contenu principal = menu du haut + administration séparée */}
