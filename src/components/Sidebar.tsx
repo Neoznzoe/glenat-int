@@ -1,5 +1,5 @@
 import * as LucideIcons from 'lucide-react';
-import { Pin, PinOff } from 'lucide-react';
+import { PanelLeft, Pin, PinOff } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
@@ -7,7 +7,7 @@ import LogoG from '../assets/logos/glenat/glenat_G.svg';
 import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
 import { useSidebarModules } from '@/hooks/useModules';
 import { computeEffectivePermissions } from '@/lib/mockDb';
-import type { PermissionKey } from '@/lib/access-control';
+import type { PermissionDefinition, PermissionKey } from '@/lib/access-control';
 import { useDecryptedLocation } from '@/lib/secureRouting';
 import { SecureNavLink } from '@/components/routing/SecureLink';
 import { useAuth } from '@/context/AuthContext';
@@ -79,6 +79,57 @@ function resolveBoolean(value: unknown, fallback = true): boolean {
     }
   }
   return fallback;
+}
+
+function createModuleFingerprint(modules: PermissionDefinition[]): string {
+  const relevantMetadataKeys = [
+    'id',
+    'slug',
+    'path',
+    'externalPath',
+    'permissionKey',
+    'isActive',
+    'section',
+    'order',
+    'version',
+    'updatedAt',
+  ];
+
+  const normalized = modules
+    .filter((definition) => definition.type === 'module' || definition.type === undefined)
+    .map((definition) => {
+      const metadata =
+        definition.metadata && typeof definition.metadata === 'object'
+          ? (definition.metadata as Record<string, unknown>)
+          : undefined;
+
+      const sanitizedMetadata = metadata
+        ? relevantMetadataKeys.reduce((accumulator, key) => {
+            if (key in metadata) {
+              const value = metadata[key];
+              if (value !== undefined) {
+                accumulator[key] = value;
+              }
+            }
+            return accumulator;
+          }, {} as Record<string, unknown>)
+        : undefined;
+
+      return {
+        key: definition.key ?? null,
+        type: definition.type ?? null,
+        parentKey: definition.parentKey ?? null,
+        label: definition.label ?? null,
+        metadata: sanitizedMetadata,
+      };
+    })
+    .sort((left, right) => {
+      const leftKey = toNonEmptyString(left.key) ?? '';
+      const rightKey = toNonEmptyString(right.key) ?? '';
+      return leftKey.localeCompare(rightKey, 'fr', { sensitivity: 'base' });
+    });
+
+  return JSON.stringify(normalized);
 }
 
 function toNumericId(value?: string): number | undefined {
@@ -446,10 +497,12 @@ function SidebarSkeletonList({ count, isExpanded }: { count: number; isExpanded:
 }
 
 export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
-  const [isPinned, setIsPinned] = useState(false);
+  const [isPinned, setIsPinned] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
+  const [isManuallyCollapsed, setIsManuallyCollapsed] = useState(false);
+  const previousPinnedStateRef = useRef(true);
 
-  const isExpanded = isPinned || isHovered;
+  const isExpanded = !isManuallyCollapsed && (isPinned || isHovered);
 
   useEffect(() => {
     onExpandChange?.(isExpanded);
@@ -464,7 +517,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   );
   const currentUserId = toNumericId(currentUser?.id);
   const sidebarUserId = internalUserId ?? currentUserId;
-  const lastModuleSnapshotRef = useRef<string | null>(null);
+  const lastModuleFingerprintRef = useRef<string | null>(null);
   useEffect(() => {
     if (internalUserId !== undefined) {
       console.log('Identifiant utilisateur interne détecté :', internalUserId);
@@ -487,21 +540,21 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   } = useSidebarModules(sidebarUserId);
   const waitingForModules = loadingModules || fetchingModules || sidebarUserId === undefined;
   useEffect(() => {
-    lastModuleSnapshotRef.current = null;
+    lastModuleFingerprintRef.current = null;
   }, [sidebarUserId]);
   useEffect(() => {
     if (!moduleDefinitions || waitingForModules || hasModuleError) {
       return;
     }
 
-    const serialized = JSON.stringify(moduleDefinitions);
+    const fingerprint = createModuleFingerprint(moduleDefinitions);
 
-    if (lastModuleSnapshotRef.current === null) {
-      lastModuleSnapshotRef.current = serialized;
+    if (lastModuleFingerprintRef.current === null) {
+      lastModuleFingerprintRef.current = fingerprint;
       return;
     }
 
-    if (lastModuleSnapshotRef.current !== serialized) {
+    if (lastModuleFingerprintRef.current !== fingerprint) {
       console.info(
         "Changement détecté dans les modules — rechargement de la page pour refléter l'état de la base de données.",
       );
@@ -640,16 +693,40 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
         ) : (
           <img src={LogoG} alt="Logo Glénat" className="h-8 w-auto flex-shrink-0" />
         )}
-        
-        <button
-          onClick={() => setIsPinned(!isPinned)}
-          className={`p-1 rounded hover:bg-white/20 transition-all duration-300 ${
-            isExpanded ? 'opacity-100' : 'opacity-0'
-          }`}
-          title={isPinned ? 'Déverrouiller la sidebar' : 'Verrouiller la sidebar'}
-        >
-          {isPinned ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
-        </button>
+
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() =>
+              setIsManuallyCollapsed((previous) => {
+                const next = !previous;
+                if (next) {
+                  previousPinnedStateRef.current = isPinned;
+                  setIsPinned(false);
+                  setIsHovered(false);
+                } else {
+                  setIsPinned(previousPinnedStateRef.current);
+                }
+                return next;
+              })
+            }
+            className="p-1 rounded hover:bg-white/20 transition-all duration-300"
+            title={isManuallyCollapsed ? 'Déplier la sidebar' : 'Replier la sidebar'}
+          >
+            <PanelLeft
+              className={`h-4 w-4 transition-transform ${isManuallyCollapsed ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          <button
+            onClick={() => setIsPinned(!isPinned)}
+            className={`p-1 rounded hover:bg-white/20 transition-all duration-300 ${
+              isExpanded ? 'opacity-100' : 'opacity-0'
+            }`}
+            title={isPinned ? 'Déverrouiller la sidebar' : 'Verrouiller la sidebar'}
+          >
+            {isPinned ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
 
       {/* Contenu principal = menu du haut + administration séparée */}
