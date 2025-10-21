@@ -1,9 +1,8 @@
 import * as LucideIcons from 'lucide-react';
 import { PanelLeft, Pin, PinOff } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, type FocusEvent } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
-import LogoG from '../assets/logos/glenat/glenat_G.svg';
 import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
 import { useSidebarModules } from '@/hooks/useModules';
 import { computeEffectivePermissions } from '@/lib/mockDb';
@@ -502,7 +501,44 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const [isManuallyCollapsed, setIsManuallyCollapsed] = useState(false);
   const previousPinnedStateRef = useRef(true);
 
-  const isExpanded = !isManuallyCollapsed && (isPinned || isHovered);
+  const isExpanded = isManuallyCollapsed ? isHovered : isPinned || isHovered;
+
+  const handleSidebarMouseEnter = () => {
+    if (!isManuallyCollapsed) {
+      setIsHovered(true);
+    }
+  };
+
+  const handleSidebarMouseLeave = () => {
+    setIsHovered(false);
+  };
+
+  const handlePinnedControlsHover = () => {
+    if (isManuallyCollapsed) {
+      setIsHovered(true);
+    }
+  };
+
+  const handleSidebarBlur = (event: FocusEvent<HTMLDivElement>) => {
+    if (!isManuallyCollapsed) {
+      return;
+    }
+
+    const nextFocused = event.relatedTarget;
+    if (!nextFocused) {
+      setIsHovered(false);
+      return;
+    }
+
+    if (!(nextFocused instanceof Node)) {
+      setIsHovered(false);
+      return;
+    }
+
+    if (!event.currentTarget.contains(nextFocused)) {
+      setIsHovered(false);
+    }
+  };
 
   useEffect(() => {
     onExpandChange?.(isExpanded);
@@ -683,16 +719,23 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       className={`bg-primary text-primary-foreground flex flex-col h-screen transition-all duration-300 ease-in-out relative ${
         isExpanded ? 'w-64' : 'w-16'
       }`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={handleSidebarMouseEnter}
+      onMouseLeave={handleSidebarMouseLeave}
+      onBlurCapture={handleSidebarBlur}
     >
       {/* Header */}
-      <div className="h-16 p-4 border-b border-red-400/50 flex items-center justify-between min-h-[64px]">
-        {isExpanded ? (
-          <img src={Logo} alt="Logo Glénat" className="h-8 w-auto flex-shrink-0" />
-        ) : (
-          <img src={LogoG} alt="Logo Glénat" className="h-8 w-auto flex-shrink-0" />
-        )}
+      <div
+        className="h-16 p-4 border-b border-red-400/50 flex items-center justify-between min-h-[64px]"
+        onMouseEnter={handlePinnedControlsHover}
+        onFocusCapture={handlePinnedControlsHover}
+      >
+        <img
+          src={Logo}
+          alt="Logo Glénat"
+          className={`h-8 w-auto flex-shrink-0 transition-opacity duration-200 ${
+            isExpanded ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
 
         <div className="flex items-center space-x-2">
           <button
