@@ -1,8 +1,16 @@
 import * as LucideIcons from 'lucide-react';
-import { PanelLeft, Pin, PinOff } from 'lucide-react';
+import { PanelLeft } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useState, useEffect, useMemo, useRef, type FocusEvent } from 'react';
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  type FocusEvent,
+  type KeyboardEvent,
+} from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
+import LogoCompact from '../assets/logos/glenat/glenat_G.svg';
 import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
 import { useSidebarModules } from '@/hooks/useModules';
 import { computeEffectivePermissions } from '@/lib/mockDb';
@@ -496,12 +504,10 @@ function SidebarSkeletonList({ count, isExpanded }: { count: number; isExpanded:
 }
 
 export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
-  const [isPinned, setIsPinned] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
   const [isManuallyCollapsed, setIsManuallyCollapsed] = useState(false);
-  const previousPinnedStateRef = useRef(true);
 
-  const isExpanded = isManuallyCollapsed ? isHovered : isPinned || isHovered;
+  const isExpanded = !isManuallyCollapsed || isHovered;
 
   const handleSidebarMouseEnter = () => {
     if (!isManuallyCollapsed) {
@@ -513,8 +519,19 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     setIsHovered(false);
   };
 
-  const handlePinnedControlsHover = () => {
+  const handleCollapsedTriggerHover = () => {
     if (isManuallyCollapsed) {
+      setIsHovered(true);
+    }
+  };
+
+  const handleCollapsedTriggerKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!isManuallyCollapsed) {
+      return;
+    }
+
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
       setIsHovered(true);
     }
   };
@@ -724,52 +741,48 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       onBlurCapture={handleSidebarBlur}
     >
       {/* Header */}
-      <div
-        className="h-16 p-4 border-b border-red-400/50 flex items-center justify-between min-h-[64px]"
-        onMouseEnter={handlePinnedControlsHover}
-        onFocusCapture={handlePinnedControlsHover}
-      >
-        <img
-          src={Logo}
-          alt="Logo Glénat"
-          className={`h-8 w-auto flex-shrink-0 transition-opacity duration-200 ${
-            isExpanded ? 'opacity-100' : 'opacity-0'
+      <div className="h-16 px-4 border-b border-red-400/50 flex items-center justify-between min-h-[64px]">
+        <div
+          className={`relative flex items-center gap-2 overflow-hidden ${
+            isManuallyCollapsed ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/60 rounded-md' : ''
           }`}
-        />
-
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() =>
-              setIsManuallyCollapsed((previous) => {
-                const next = !previous;
-                if (next) {
-                  previousPinnedStateRef.current = isPinned;
-                  setIsPinned(false);
-                  setIsHovered(false);
-                } else {
-                  setIsPinned(previousPinnedStateRef.current);
-                }
-                return next;
-              })
-            }
-            className="p-1 rounded hover:bg-white/20 transition-all duration-300"
-            title={isManuallyCollapsed ? 'Déplier la sidebar' : 'Replier la sidebar'}
-          >
-            <PanelLeft
-              className={`h-4 w-4 transition-transform ${isManuallyCollapsed ? 'rotate-180' : ''}`}
-            />
-          </button>
-
-          <button
-            onClick={() => setIsPinned(!isPinned)}
-            className={`p-1 rounded hover:bg-white/20 transition-all duration-300 ${
-              isExpanded ? 'opacity-100' : 'opacity-0'
+          onMouseEnter={handleCollapsedTriggerHover}
+          onFocus={handleCollapsedTriggerHover}
+          onKeyDown={handleCollapsedTriggerKeyDown}
+          role={isManuallyCollapsed ? 'button' : undefined}
+          tabIndex={isManuallyCollapsed ? 0 : -1}
+          aria-label={
+            isManuallyCollapsed ? 'Afficher temporairement la barre latérale' : undefined
+          }
+        >
+          <img
+            src={LogoCompact}
+            alt="Monogramme Glénat"
+            className={`h-10 w-10 flex-shrink-0 transition-opacity duration-200 ${
+              isExpanded ? 'opacity-0' : 'opacity-100'
             }`}
-            title={isPinned ? 'Déverrouiller la sidebar' : 'Verrouiller la sidebar'}
-          >
-            {isPinned ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
-          </button>
+            aria-hidden={isExpanded}
+          />
+          <img
+            src={Logo}
+            alt="Logo Glénat"
+            className={`h-8 w-auto flex-shrink-0 transition-all duration-200 ${
+              isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'
+            }`}
+            aria-hidden={!isExpanded}
+          />
         </div>
+
+        <button
+          onClick={() => {
+            setIsManuallyCollapsed((previous) => !previous);
+            setIsHovered(false);
+          }}
+          className="p-1 rounded hover:bg-white/20 transition-all duration-300"
+          title={isManuallyCollapsed ? 'Déplier la sidebar' : 'Replier la sidebar'}
+        >
+          <PanelLeft className={`h-4 w-4 transition-transform ${isManuallyCollapsed ? 'rotate-180' : ''}`} />
+        </button>
       </div>
 
       {/* Contenu principal = menu du haut + administration séparée */}
