@@ -145,7 +145,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (!activeAccount) {
-          await instance.loginRedirect(loginRequest);
+          setUser(null);
+          setError(null);
           return;
         }
 
@@ -168,10 +169,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(null);
       } catch (authError) {
         if (authError instanceof InteractionRequiredAuthError) {
-          await instance.loginRedirect(loginRequest);
+          console.info('Interaction supplémentaire requise pour la connexion.');
+          setUser(null);
+          setError(null);
           return;
         }
         console.error('Erreur MSAL :', authError);
+        setUser(null);
         setError("Une erreur est survenue lors de l'authentification.");
       } finally {
         setLoading(false);
@@ -187,6 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       error,
       login: async () => {
+        setError(null);
         await instance.loginRedirect(loginRequest);
       },
       logout: async () => {
@@ -195,7 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       },
     }),
-    [error, instance, loading, user],
+    [error, instance, loading, setError, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

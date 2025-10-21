@@ -16,12 +16,13 @@ export function useJobOffers() {
   });
 }
 
-export function usePublishedJobOfferCount() {
+export function usePublishedJobOfferCount(enabled = true) {
   return useQuery<number>({
     queryKey: JOB_OFFER_COUNT_QUERY_KEY,
     queryFn: fetchPublishedJobOfferCount,
     staleTime: 5 * 60 * 1000,
     retry: 1,
+    enabled,
   });
 }
 
