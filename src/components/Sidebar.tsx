@@ -446,7 +446,7 @@ function SidebarSkeletonList({ count, isExpanded }: { count: number; isExpanded:
 }
 
 export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
-  const [isPinned, setIsPinned] = useState(false);
+  const [isPinned, setIsPinned] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
 
   const isExpanded = isPinned || isHovered;
@@ -630,26 +630,53 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       className={`bg-primary text-primary-foreground flex flex-col h-screen transition-all duration-300 ease-in-out relative ${
         isExpanded ? 'w-64' : 'w-16'
       }`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseLeave={() => {
+        if (!isPinned) {
+          setIsHovered(false);
+        }
+      }}
     >
       {/* Header */}
-      <div className="h-16 p-4 border-b border-red-400/50 flex items-center justify-between min-h-[64px]">
-        {isExpanded ? (
-          <img src={Logo} alt="Logo Glénat" className="h-8 w-auto flex-shrink-0" />
-        ) : (
-          <img src={LogoG} alt="Logo Glénat" className="h-8 w-auto flex-shrink-0" />
-        )}
-        
+      <div
+        className={`h-16 p-4 border-b border-red-400/50 flex items-center min-h-[64px] ${
+          isExpanded ? 'justify-between' : 'justify-center'
+        }`}
+        onMouseEnter={() => {
+          if (!isPinned) {
+            setIsHovered(true);
+          }
+        }}
+      >
         <button
-          onClick={() => setIsPinned(!isPinned)}
-          className={`p-1 rounded hover:bg-white/20 transition-all duration-300 ${
-            isExpanded ? 'opacity-100' : 'opacity-0'
-          }`}
-          title={isPinned ? 'Déverrouiller la sidebar' : 'Verrouiller la sidebar'}
+          type="button"
+          onClick={() => {
+            if (isPinned) {
+              setIsPinned(false);
+              setIsHovered(false);
+            } else {
+              setIsPinned(true);
+            }
+          }}
+          className="flex items-center justify-center flex-shrink-0"
+          aria-label={isPinned ? 'Réduire la sidebar' : 'Déployer la sidebar'}
         >
-          {isPinned ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
+          {isExpanded ? (
+            <img src={Logo} alt="Logo Glénat" className="h-8 w-auto flex-shrink-0" />
+          ) : (
+            <img src={LogoG} alt="Logo Glénat" className="h-8 w-auto flex-shrink-0" />
+          )}
         </button>
+
+        {isExpanded ? (
+          <button
+            onClick={() => setIsPinned(!isPinned)}
+            className="p-1 rounded hover:bg-white/20 transition-all duration-300"
+            title={isPinned ? 'Déverrouiller la sidebar' : 'Verrouiller la sidebar'}
+            aria-label={isPinned ? 'Déverrouiller la sidebar' : 'Verrouiller la sidebar'}
+          >
+            {isPinned ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
+          </button>
+        ) : null}
       </div>
 
       {/* Contenu principal = menu du haut + administration séparée */}
