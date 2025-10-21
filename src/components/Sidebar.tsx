@@ -506,6 +506,7 @@ function SidebarSkeletonList({ count, isExpanded }: { count: number; isExpanded:
 export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isManuallyCollapsed, setIsManuallyCollapsed] = useState(false);
+  const collapsedTriggerRef = useRef<HTMLDivElement | null>(null);
 
   const isExpanded = !isManuallyCollapsed || isHovered;
 
@@ -560,6 +561,27 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       setIsHovered(false);
     }
   };
+
+  useEffect(() => {
+    const triggerNode = collapsedTriggerRef.current;
+    if (!triggerNode) {
+      return;
+    }
+
+    const handlePointerEnter = () => {
+      if (isManuallyCollapsed) {
+        setIsHovered(true);
+      }
+    };
+
+    triggerNode.addEventListener('mouseenter', handlePointerEnter);
+    triggerNode.addEventListener('focusin', handlePointerEnter);
+
+    return () => {
+      triggerNode.removeEventListener('mouseenter', handlePointerEnter);
+      triggerNode.removeEventListener('focusin', handlePointerEnter);
+    };
+  }, [isManuallyCollapsed]);
 
   useEffect(() => {
     onExpandChange?.(isExpanded);
@@ -753,7 +775,8 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
         onFocus={handleCollapsedHeaderHover}
       >
         <div
-          className={`relative flex items-center gap-2 overflow-hidden ${
+          ref={collapsedTriggerRef}
+          className={`flex items-center gap-2 overflow-hidden ${
             isManuallyCollapsed ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/60 rounded-md' : ''
           }`}
           onMouseEnter={handleCollapsedTriggerHover}
@@ -765,22 +788,19 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
             isManuallyCollapsed ? 'Afficher temporairement la barre latérale' : undefined
           }
         >
-          <img
-            src={LogoCompact}
-            alt="Monogramme Glénat"
-            className={`h-10 w-10 flex-shrink-0 transition-opacity duration-200 ${
-              isExpanded ? 'opacity-0' : 'opacity-100'
-            }`}
-            aria-hidden={isExpanded}
-          />
-          <img
-            src={Logo}
-            alt="Logo Glénat"
-            className={`h-8 w-auto flex-shrink-0 transition-all duration-200 ${
-              isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'
-            }`}
-            aria-hidden={!isExpanded}
-          />
+          {isExpanded ? (
+            <img
+              src={Logo}
+              alt="Logo Glénat"
+              className="h-8 w-auto flex-shrink-0 transition-opacity duration-200"
+            />
+          ) : (
+            <img
+              src={LogoCompact}
+              alt="Monogramme Glénat"
+              className="h-10 w-10 flex-shrink-0 transition-transform duration-200"
+            />
+          )}
         </div>
 
         {isExpanded ? (
