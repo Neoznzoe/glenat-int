@@ -778,8 +778,14 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
             setIsManuallyCollapsed((previous) => !previous);
             setIsHovered(false);
           }}
-          className="p-1 rounded hover:bg-white/20 transition-all duration-300"
+          className={`p-1 rounded transition-all duration-300 ${
+            isExpanded
+              ? 'opacity-100 hover:bg-white/20 pointer-events-auto'
+              : 'opacity-0 pointer-events-none'
+          }`}
           title={isManuallyCollapsed ? 'Déplier la sidebar' : 'Replier la sidebar'}
+          aria-hidden={!isExpanded}
+          tabIndex={isExpanded ? 0 : -1}
         >
           <PanelLeft className={`h-4 w-4 transition-transform ${isManuallyCollapsed ? 'rotate-180' : ''}`} />
         </button>
