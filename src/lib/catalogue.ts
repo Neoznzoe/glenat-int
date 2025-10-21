@@ -542,8 +542,8 @@ const resolveCoverageEndpoints = (): string[] => {
 
 const CATALOGUE_COVERAGE_ENDPOINTS = resolveCoverageEndpoints();
 
-const NEXT_OFFICES_SQL_QUERY = `;WITH next_offices AS (
-    SELECT TOP (4)
+const NEXT_OFFICES_SQL_QUERY = `;WITH office_min_dates AS (
+    SELECT
            office,
            MIN(dateMev) AS nextDate
     FROM dbo.catalogBooks
@@ -552,7 +552,13 @@ const NEXT_OFFICES_SQL_QUERY = `;WITH next_offices AS (
       AND dateMev < DATEADD(year, 5, CONVERT(date, GETDATE()))
       AND office <> '0000'
     GROUP BY office
-    ORDER BY MIN(dateMev) ASC, office ASC
+),
+next_offices AS (
+    SELECT TOP (4)
+           office,
+           nextDate
+    FROM office_min_dates
+    ORDER BY nextDate ASC, office ASC
 )
 SELECT c.*
 FROM dbo.catalogBooks AS c
