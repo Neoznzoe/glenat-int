@@ -14,7 +14,8 @@ import LogoCompact from '../assets/logos/glenat/glenat_G.svg';
 import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
 import { useSidebarModules } from '@/hooks/useModules';
 import { computeEffectivePermissions } from '@/lib/mockDb';
-import type { PermissionDefinition, PermissionKey } from '@/lib/access-control';
+import type { PermissionKey } from '@/lib/access-control';
+import { createModuleFingerprint } from '@/lib/moduleFingerprint';
 import { useDecryptedLocation } from '@/lib/secureRouting';
 import { SecureNavLink } from '@/components/routing/SecureLink';
 import { useAuth } from '@/context/AuthContext';
@@ -86,57 +87,6 @@ function resolveBoolean(value: unknown, fallback = true): boolean {
     }
   }
   return fallback;
-}
-
-function createModuleFingerprint(modules: PermissionDefinition[]): string {
-  const relevantMetadataKeys = [
-    'id',
-    'slug',
-    'path',
-    'externalPath',
-    'permissionKey',
-    'isActive',
-    'section',
-    'order',
-    'version',
-    'updatedAt',
-  ];
-
-  const normalized = modules
-    .filter((definition) => definition.type === 'module' || definition.type === undefined)
-    .map((definition) => {
-      const metadata =
-        definition.metadata && typeof definition.metadata === 'object'
-          ? (definition.metadata as Record<string, unknown>)
-          : undefined;
-
-      const sanitizedMetadata = metadata
-        ? relevantMetadataKeys.reduce((accumulator, key) => {
-            if (key in metadata) {
-              const value = metadata[key];
-              if (value !== undefined) {
-                accumulator[key] = value;
-              }
-            }
-            return accumulator;
-          }, {} as Record<string, unknown>)
-        : undefined;
-
-      return {
-        key: definition.key ?? null,
-        type: definition.type ?? null,
-        parentKey: definition.parentKey ?? null,
-        label: definition.label ?? null,
-        metadata: sanitizedMetadata,
-      };
-    })
-    .sort((left, right) => {
-      const leftKey = toNonEmptyString(left.key) ?? '';
-      const rightKey = toNonEmptyString(right.key) ?? '';
-      return leftKey.localeCompare(rightKey, 'fr', { sensitivity: 'base' });
-    });
-
-  return JSON.stringify(normalized);
 }
 
 function toNumericId(value?: string): number | undefined {
