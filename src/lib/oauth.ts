@@ -364,13 +364,7 @@ export async function fetchWithOAuth(
     console.log('[OAuth] Authorization envoyé vers callDatabase :', authorizationHeader);
   }
 
-  const response = await fetch(input, authorizedInit);
-
-  if (response.status === 401 || response.status === 403) {
-    invalidateCachedOAuthToken();
-  }
-
-  return response;
+  return fetch(input, authorizedInit);
 }
 
 export function invalidateCachedOAuthToken(): void {
