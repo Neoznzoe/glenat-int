@@ -64,7 +64,9 @@ VITE_OAUTH_REFRESH_LEEWAY=30                # marge (en secondes) avant expirati
 VITE_OAUTH_FALLBACK_TTL=3600                # durée de vie par défaut (en secondes) si l'API ne fournit pas expires_in
 ```
 
-Seuls `VITE_OAUTH_CLIENT_ID` et `VITE_OAUTH_CLIENT_SECRET` sont indispensables ; les autres paramètres peuvent être adaptés à l'implémentation du fournisseur OAuth. Si un secret client est fourni, il est envoyé à la fois dans le corps de la requête et dans un header `Authorization: Basic …` pour couvrir les serveurs OAuth qui exigent cette variante de l'échange client credentials.
+Seuls `VITE_OAUTH_CLIENT_ID` et `VITE_OAUTH_CLIENT_SECRET` sont indispensables ; les autres paramètres peuvent être adaptés à l'implémentation du fournisseur OAuth.
+
+> ℹ️ Depuis la dernière mise à jour du service, c'est la valeur `code_exchange` de la réponse `/OAuth/authorize` qui doit être relayée dans l'en-tête `Authorization: Bearer …` pour les appels `callDatabase`. La récupération et l'injection de cette valeur sont gérées automatiquement par `src/lib/oauth.ts`.
 
 Le jeton est mis en cache côté client et régénéré automatiquement en cas d'expiration ou de réponse HTTP 401/403.
 

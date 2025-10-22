@@ -22,6 +22,8 @@ const REFRESH_LEEWAY_MS = Math.max(0, REFRESH_LEEWAY_SECONDS) * 1000;
 interface OAuthTokenResponse {
   access_token?: string;
   accessToken?: string;
+  code_exchange?: string;
+  codeExchange?: string;
   token_type?: string;
   tokenType?: string;
   expires_in?: number | string;
@@ -97,26 +99,7 @@ function buildAuthorizeBody(): string {
 function buildAuthorizeHeaders(): HeadersInit {
   const headers = new Headers();
   headers.set('Content-Type', 'application/x-www-form-urlencoded');
-
-  if (CLIENT_ID && CLIENT_SECRET) {
-    const credentials = `${CLIENT_ID}:${CLIENT_SECRET}`;
-    const encodedCredentials = toBase64(credentials);
-    headers.set('Authorization', `Basic ${encodedCredentials}`);
-  }
-
   return headers;
-}
-
-function toBase64(value: string): string {
-  if (typeof btoa === 'function') {
-    return btoa(value);
-  }
-
-  if (typeof Buffer === 'function') {
-    return Buffer.from(value, 'utf-8').toString('base64');
-  }
-
-  throw new Error("Impossible d'encoder les identifiants OAuth en Base64 dans cet environnement.");
 }
 
 async function requestNewToken(): Promise<OAuthAccessToken> {
@@ -169,9 +152,12 @@ async function requestNewToken(): Promise<OAuthAccessToken> {
     throw new Error('Réponse OAuth invalide : impossible de lire le JSON.');
   }
 
-  const accessToken = payload.access_token ?? payload.accessToken;
+  const codeExchange = payload.code_exchange ?? payload.codeExchange;
+  const accessToken = payload.access_token ?? payload.accessToken ?? codeExchange;
   if (!accessToken || typeof accessToken !== 'string') {
-    throw new Error("La réponse OAuth ne contient pas de champ 'access_token'.");
+    throw new Error(
+      "La réponse OAuth ne contient pas de champ 'access_token' ou 'code_exchange'.",
+    );
   }
 
   const tokenType = payload.token_type ?? payload.tokenType ?? 'Bearer';
