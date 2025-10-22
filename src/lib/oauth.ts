@@ -38,9 +38,16 @@ export interface OAuthAccessToken {
   scope?: string;
 }
 
+const STORAGE_KEY = 'glenat.oauth.token';
+
+interface PersistedOAuthToken extends OAuthAccessToken {
+  refreshTimestamp: number;
+}
+
 let cachedToken: OAuthAccessToken | null = null;
 let refreshTimestamp = 0;
 let pendingTokenRequest: Promise<OAuthAccessToken> | null = null;
+let storageHydrated = false;
 
 function parsePositiveInteger(value: unknown, fallback: number): number {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -55,6 +62,99 @@ function parsePositiveInteger(value: unknown, fallback: number): number {
   return fallback;
 }
 
+function getStorage(): Storage | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function hydrateTokenFromStorage(): void {
+  if (storageHydrated) {
+    return;
+  }
+
+  storageHydrated = true;
+
+  const storage = getStorage();
+  if (!storage) {
+    return;
+  }
+
+  try {
+    const raw = storage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return;
+    }
+
+    const parsed = JSON.parse(raw) as PersistedOAuthToken | null;
+    if (!parsed || typeof parsed !== 'object') {
+      storage.removeItem(STORAGE_KEY);
+      return;
+    }
+
+    if (!parsed.token || typeof parsed.token !== 'string') {
+      storage.removeItem(STORAGE_KEY);
+      return;
+    }
+
+    if (typeof parsed.refreshTimestamp !== 'number') {
+      storage.removeItem(STORAGE_KEY);
+      return;
+    }
+
+    cachedToken = {
+      token: parsed.token,
+      tokenType: typeof parsed.tokenType === 'string' && parsed.tokenType.trim()
+        ? parsed.tokenType
+        : 'Bearer',
+      scope: typeof parsed.scope === 'string' ? parsed.scope : undefined,
+    };
+    refreshTimestamp = parsed.refreshTimestamp;
+  } catch {
+    const storage = getStorage();
+    storage?.removeItem(STORAGE_KEY);
+  }
+}
+
+function persistTokenInStorage(token: OAuthAccessToken, refreshAt: number): void {
+  const storage = getStorage();
+  if (!storage) {
+    return;
+  }
+
+  const payload: PersistedOAuthToken = {
+    token: token.token,
+    tokenType: token.tokenType,
+    scope: token.scope,
+    refreshTimestamp: refreshAt,
+  };
+
+  try {
+    storage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // ignore quota errors or unavailable storage
+  }
+}
+
+function clearPersistedToken(): void {
+  const storage = getStorage();
+  if (!storage) {
+    return;
+  }
+
+  try {
+    storage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 function shouldReuseToken(forceRefresh: boolean): boolean {
   if (forceRefresh) {
     return false;
@@ -64,7 +164,12 @@ function shouldReuseToken(forceRefresh: boolean): boolean {
     return false;
   }
 
-  return Date.now() < refreshTimestamp;
+  if (Date.now() < refreshTimestamp) {
+    return true;
+  }
+
+  invalidateCachedOAuthToken();
+  return false;
 }
 
 function buildAuthorizeBody(): string {
@@ -167,7 +272,10 @@ async function requestNewToken(): Promise<OAuthAccessToken> {
   }
 
   const tokenType = payload.token_type ?? payload.tokenType ?? 'Bearer';
-  const expiresIn = parsePositiveInteger(payload.expires_in ?? payload.expiresIn, FALLBACK_TTL_SECONDS);
+  const expiresIn = parsePositiveInteger(
+    payload.expires_in ?? payload.expiresIn ?? payload.maxAge ?? payload.max_age,
+    FALLBACK_TTL_SECONDS,
+  );
   const refreshAt = Date.now() + expiresIn * 1000 - REFRESH_LEEWAY_MS;
   refreshTimestamp = Math.max(Date.now() + 1000, refreshAt);
 
@@ -177,10 +285,14 @@ async function requestNewToken(): Promise<OAuthAccessToken> {
     scope: typeof payload.scope === 'string' ? payload.scope : undefined,
   };
 
+  persistTokenInStorage(cachedToken, refreshTimestamp);
+
   return cachedToken;
 }
 
 export async function fetchAccessToken(forceRefresh = false): Promise<OAuthAccessToken> {
+  hydrateTokenFromStorage();
+
   if (shouldReuseToken(forceRefresh) && cachedToken) {
     return cachedToken;
   }
@@ -290,4 +402,5 @@ export function invalidateCachedOAuthToken(): void {
   cachedToken = null;
   refreshTimestamp = 0;
   pendingTokenRequest = null;
+  clearPersistedToken();
 }

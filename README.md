@@ -68,7 +68,7 @@ Seuls `VITE_OAUTH_CLIENT_ID` et `VITE_OAUTH_CLIENT_SECRET` sont indispensables 
 
 > ℹ️ Depuis la dernière mise à jour du service, c'est la valeur `code_exchange` de la réponse `/OAuth/authorize` qui doit être relayée telle quelle dans l'en-tête `Authorization` pour les appels `callDatabase`. La récupération et l'injection de cette valeur sont gérées automatiquement par `src/lib/oauth.ts`.
 
-Le jeton est mis en cache côté client et régénéré automatiquement en cas d'expiration ou de réponse HTTP 401/403.
+Le jeton est mis en cache côté client, persisté dans le `localStorage` pour être réutilisé pendant toute sa durée de vie (`maxAge`/`expires_in`, 1 heure par défaut) et régénéré automatiquement en cas d'expiration ou de réponse HTTP 401/403.
 
 ## 🧠 Technologies principales
 - **React** pour la construction des interfaces.
