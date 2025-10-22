@@ -64,6 +64,15 @@ function parsePositiveInteger(value: unknown, fallback: number): number {
   return fallback;
 }
 
+function toTrimmedString(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+}
+
 function getStorage(): Storage | null {
   if (typeof window === 'undefined') {
     return null;
@@ -259,21 +268,23 @@ async function requestNewToken(): Promise<OAuthAccessToken> {
     throw new Error('Réponse OAuth invalide : impossible de lire le JSON.');
   }
 
-  const codeExchange = payload.code_exchange ?? payload.codeExchange;
-  const accessToken = payload.access_token ?? payload.accessToken ?? codeExchange;
-  if (!accessToken || typeof accessToken !== 'string') {
+  const codeExchange = toTrimmedString(payload.code_exchange ?? payload.codeExchange);
+  const accessToken = toTrimmedString(payload.access_token ?? payload.accessToken);
+  const resolvedToken = codeExchange ?? accessToken;
+
+  if (!resolvedToken) {
     throw new Error(
       "La réponse OAuth ne contient pas de champ 'access_token' ou 'code_exchange'.",
     );
   }
 
-  if (typeof codeExchange === 'string' && codeExchange) {
+  if (codeExchange) {
     console.log('[OAuth] code_exchange reçu via /OAuth/authorize :', codeExchange);
   } else {
-    console.log('[OAuth] jeton reçu via /OAuth/authorize :', accessToken);
+    console.log('[OAuth] jeton reçu via /OAuth/authorize :', resolvedToken);
   }
 
-  const tokenType = payload.token_type ?? payload.tokenType ?? 'Bearer';
+  const tokenType = toTrimmedString(payload.token_type ?? payload.tokenType) ?? 'Bearer';
   const expiresIn = parsePositiveInteger(
     payload.expires_in ?? payload.expiresIn ?? payload.maxAge ?? payload.max_age,
     FALLBACK_TTL_SECONDS,
@@ -282,8 +293,8 @@ async function requestNewToken(): Promise<OAuthAccessToken> {
   refreshTimestamp = Math.max(Date.now() + 1000, refreshAt);
 
   cachedToken = {
-    token: accessToken,
-    tokenType: tokenType || 'Bearer',
+    token: resolvedToken,
+    tokenType,
     scope: typeof payload.scope === 'string' ? payload.scope : undefined,
   };
 
