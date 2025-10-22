@@ -1,3 +1,5 @@
+import { fetchWithOAuth } from './oauth';
+
 const JOB_OFFERS_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
   : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
@@ -210,7 +212,7 @@ function normalizeJobOffer(raw: RawJobOfferRecord): JobOfferRecord | null {
 
 export async function fetchJobOffers(): Promise<JobOfferRecord[]> {
   const payload = { query: JOB_OFFERS_QUERY };
-  const response = await fetch(JOB_OFFERS_ENDPOINT, {
+  const response = await fetchWithOAuth(JOB_OFFERS_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -252,7 +254,7 @@ export const JOB_OFFERS_QUERY_KEY = ['job-offers'] as const;
 
 export async function fetchPublishedJobOfferCount(): Promise<number> {
   const payload = { query: JOB_OFFER_COUNT_QUERY };
-  const response = await fetch(JOB_OFFERS_ENDPOINT, {
+  const response = await fetchWithOAuth(JOB_OFFERS_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -1,0 +1,246 @@
+const DEFAULT_AUTHORIZE_ENDPOINT =
+  'https://api-dev.groupe-glenat.com/Api/v1.0/OAuth/authorize';
+
+const AUTHORIZE_ENDPOINT =
+  import.meta.env.VITE_OAUTH_AUTHORIZE_ENDPOINT ?? DEFAULT_AUTHORIZE_ENDPOINT;
+const CLIENT_ID = import.meta.env.VITE_OAUTH_CLIENT_ID;
+const CLIENT_SECRET = import.meta.env.VITE_OAUTH_CLIENT_SECRET;
+const REQUEST_SCOPE = import.meta.env.VITE_OAUTH_SCOPE;
+const REQUEST_AUDIENCE = import.meta.env.VITE_OAUTH_AUDIENCE;
+const GRANT_TYPE = import.meta.env.VITE_OAUTH_GRANT_TYPE ?? 'client_credentials';
+
+const FALLBACK_TTL_SECONDS = parsePositiveInteger(
+  import.meta.env.VITE_OAUTH_FALLBACK_TTL,
+  3600,
+);
+const REFRESH_LEEWAY_SECONDS = parsePositiveInteger(
+  import.meta.env.VITE_OAUTH_REFRESH_LEEWAY,
+  30,
+);
+const REFRESH_LEEWAY_MS = Math.max(0, REFRESH_LEEWAY_SECONDS) * 1000;
+
+interface OAuthTokenResponse {
+  access_token?: string;
+  accessToken?: string;
+  token_type?: string;
+  tokenType?: string;
+  expires_in?: number | string;
+  expiresIn?: number | string;
+  scope?: string;
+  [key: string]: unknown;
+}
+
+export interface OAuthAccessToken {
+  token: string;
+  tokenType: string;
+  scope?: string;
+}
+
+let cachedToken: OAuthAccessToken | null = null;
+let refreshTimestamp = 0;
+let pendingTokenRequest: Promise<OAuthAccessToken> | null = null;
+
+function parsePositiveInteger(value: unknown, fallback: number): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value > 0 ? value : fallback;
+  }
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return fallback;
+}
+
+function shouldReuseToken(forceRefresh: boolean): boolean {
+  if (forceRefresh) {
+    return false;
+  }
+
+  if (!cachedToken) {
+    return false;
+  }
+
+  return Date.now() < refreshTimestamp;
+}
+
+function buildAuthorizeBody(): string {
+  if (!CLIENT_ID) {
+    throw new Error(
+      'La variable VITE_OAUTH_CLIENT_ID doit être configurée pour récupérer un jeton OAuth.',
+    );
+  }
+
+  const payload = new URLSearchParams();
+  payload.set('client_id', CLIENT_ID);
+
+  if (CLIENT_SECRET) {
+    payload.set('client_secret', CLIENT_SECRET);
+  }
+
+  if (GRANT_TYPE) {
+    payload.set('grant_type', GRANT_TYPE);
+  }
+
+  if (REQUEST_SCOPE) {
+    payload.set('scope', REQUEST_SCOPE);
+  }
+
+  if (REQUEST_AUDIENCE) {
+    payload.set('audience', REQUEST_AUDIENCE);
+  }
+
+  return payload.toString();
+}
+
+async function requestNewToken(): Promise<OAuthAccessToken> {
+  const body = buildAuthorizeBody();
+  let response: Response;
+
+  try {
+    response = await fetch(AUTHORIZE_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body,
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'erreur réseau inconnue';
+    throw new Error(`Impossible de contacter le service OAuth : ${detail}`);
+  }
+
+  if (!response.ok) {
+    let detail: string | undefined;
+    try {
+      const payload = (await response.json()) as { [key: string]: unknown };
+      const errorDescription = payload.error_description ?? payload.errorDescription;
+      const message = payload.message ?? payload.error;
+      if (typeof errorDescription === 'string' && errorDescription.trim()) {
+        detail = errorDescription;
+      } else if (typeof message === 'string' && message.trim()) {
+        detail = message;
+      }
+    } catch {
+      try {
+        const text = await response.text();
+        detail = text.trim() || undefined;
+      } catch {
+        // ignore secondary parsing errors
+      }
+    }
+
+    const statusMessage = response.statusText || 'Réponse invalide';
+    const suffix = detail ? ` ${detail}` : '';
+    throw new Error(
+      `Récupération du jeton OAuth échouée (${response.status}) ${statusMessage}${suffix}`,
+    );
+  }
+
+  let payload: OAuthTokenResponse;
+  try {
+    payload = (await response.json()) as OAuthTokenResponse;
+  } catch {
+    throw new Error('Réponse OAuth invalide : impossible de lire le JSON.');
+  }
+
+  const accessToken = payload.access_token ?? payload.accessToken;
+  if (!accessToken || typeof accessToken !== 'string') {
+    throw new Error("La réponse OAuth ne contient pas de champ 'access_token'.");
+  }
+
+  const tokenType = payload.token_type ?? payload.tokenType ?? 'Bearer';
+  const expiresIn = parsePositiveInteger(payload.expires_in ?? payload.expiresIn, FALLBACK_TTL_SECONDS);
+  const refreshAt = Date.now() + expiresIn * 1000 - REFRESH_LEEWAY_MS;
+  refreshTimestamp = Math.max(Date.now() + 1000, refreshAt);
+
+  cachedToken = {
+    token: accessToken,
+    tokenType: tokenType || 'Bearer',
+    scope: typeof payload.scope === 'string' ? payload.scope : undefined,
+  };
+
+  return cachedToken;
+}
+
+export async function fetchAccessToken(forceRefresh = false): Promise<OAuthAccessToken> {
+  if (shouldReuseToken(forceRefresh) && cachedToken) {
+    return cachedToken;
+  }
+
+  if (!forceRefresh && pendingTokenRequest) {
+    return pendingTokenRequest;
+  }
+
+  const request = requestNewToken();
+  pendingTokenRequest = request;
+
+  try {
+    const token = await request;
+    return token;
+  } finally {
+    pendingTokenRequest = null;
+  }
+}
+
+function withAuthorizationHeader(init: RequestInit | undefined, token: OAuthAccessToken): RequestInit {
+  const headers = new Headers(init?.headers ?? undefined);
+  const headerValue = `${token.tokenType || 'Bearer'} ${token.token}`.trim();
+  headers.set('Authorization', headerValue);
+
+  return {
+    ...init,
+    headers,
+  };
+}
+
+function shouldRetryWithFreshToken(response: Response, attempt: number): boolean {
+  if (attempt > 0) {
+    return false;
+  }
+
+  return response.status === 401 || response.status === 403;
+}
+
+export async function fetchWithOAuth(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const forceRefresh = attempt > 0;
+
+    try {
+      const token = await fetchAccessToken(forceRefresh);
+      const authorizedInit = withAuthorizationHeader(init, token);
+      const response = await fetch(input, authorizedInit);
+
+      if (shouldRetryWithFreshToken(response, attempt)) {
+        // Consume the body to avoid locking the stream before retrying.
+        try {
+          await response.arrayBuffer();
+        } catch {
+          // ignore body read errors during retry preparation
+        }
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt >= 1) {
+        throw error instanceof Error ? error : new Error('Requête OAuth échouée');
+      }
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Requête OAuth échouée');
+}
+
+export function invalidateCachedOAuthToken(): void {
+  cachedToken = null;
+  refreshTimestamp = 0;
+  pendingTokenRequest = null;
+}
