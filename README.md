@@ -64,7 +64,9 @@ VITE_OAUTH_REFRESH_LEEWAY=30                # marge (en secondes) avant expirati
 VITE_OAUTH_FALLBACK_TTL=3600                # durée de vie par défaut (en secondes) si l'API ne fournit pas expires_in
 ```
 
-Seuls `VITE_OAUTH_CLIENT_ID` et `VITE_OAUTH_CLIENT_SECRET` sont indispensables ; les autres paramètres peuvent être adaptés à l'implémentation du fournisseur OAuth. Le jeton est mis en cache côté client et régénéré automatiquement en cas d'expiration ou de réponse HTTP 401/403.
+Seuls `VITE_OAUTH_CLIENT_ID` et `VITE_OAUTH_CLIENT_SECRET` sont indispensables ; les autres paramètres peuvent être adaptés à l'implémentation du fournisseur OAuth. Si un secret client est fourni, il est envoyé à la fois dans le corps de la requête et dans un header `Authorization: Basic …` pour couvrir les serveurs OAuth qui exigent cette variante de l'échange client credentials.
+
+Le jeton est mis en cache côté client et régénéré automatiquement en cas d'expiration ou de réponse HTTP 401/403.
 
 ## 🧠 Technologies principales
 - **React** pour la construction des interfaces.

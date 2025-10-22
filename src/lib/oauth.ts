@@ -94,16 +94,40 @@ function buildAuthorizeBody(): string {
   return payload.toString();
 }
 
+function buildAuthorizeHeaders(): HeadersInit {
+  const headers = new Headers();
+  headers.set('Content-Type', 'application/x-www-form-urlencoded');
+
+  if (CLIENT_ID && CLIENT_SECRET) {
+    const credentials = `${CLIENT_ID}:${CLIENT_SECRET}`;
+    const encodedCredentials = toBase64(credentials);
+    headers.set('Authorization', `Basic ${encodedCredentials}`);
+  }
+
+  return headers;
+}
+
+function toBase64(value: string): string {
+  if (typeof btoa === 'function') {
+    return btoa(value);
+  }
+
+  if (typeof Buffer === 'function') {
+    return Buffer.from(value, 'utf-8').toString('base64');
+  }
+
+  throw new Error("Impossible d'encoder les identifiants OAuth en Base64 dans cet environnement.");
+}
+
 async function requestNewToken(): Promise<OAuthAccessToken> {
   const body = buildAuthorizeBody();
+  const headers = buildAuthorizeHeaders();
   let response: Response;
 
   try {
     response = await fetch(AUTHORIZE_ENDPOINT, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+      headers,
       body,
     });
   } catch (error) {
