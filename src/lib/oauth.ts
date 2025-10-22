@@ -1,13 +1,23 @@
 const DEFAULT_AUTHORIZE_ENDPOINT =
   'https://api-dev.groupe-glenat.com/Api/v1.0/OAuth/authorize';
+const DEFAULT_TOKEN_ENDPOINT = 'https://api-dev.groupe-glenat.com/Api/v1.0/OAuth/token';
 
 const AUTHORIZE_ENDPOINT =
   import.meta.env.VITE_OAUTH_AUTHORIZE_ENDPOINT ?? DEFAULT_AUTHORIZE_ENDPOINT;
+const TOKEN_ENDPOINT =
+  import.meta.env.VITE_OAUTH_TOKEN_ENDPOINT ?? DEFAULT_TOKEN_ENDPOINT;
 const CLIENT_ID = import.meta.env.VITE_OAUTH_CLIENT_ID;
 const CLIENT_SECRET = import.meta.env.VITE_OAUTH_CLIENT_SECRET;
 const REQUEST_SCOPE = import.meta.env.VITE_OAUTH_SCOPE;
 const REQUEST_AUDIENCE = import.meta.env.VITE_OAUTH_AUDIENCE;
-const GRANT_TYPE = import.meta.env.VITE_OAUTH_GRANT_TYPE ?? 'client_credentials';
+const AUTHORIZE_GRANT_TYPE =
+  import.meta.env.VITE_OAUTH_AUTHORIZE_GRANT_TYPE ??
+  import.meta.env.VITE_OAUTH_GRANT_TYPE ??
+  '';
+const TOKEN_GRANT_TYPE =
+  import.meta.env.VITE_OAUTH_TOKEN_GRANT_TYPE ?? 'authorization_code';
+const REFRESH_GRANT_TYPE =
+  import.meta.env.VITE_OAUTH_REFRESH_GRANT_TYPE ?? 'refresh_token';
 
 const FALLBACK_TTL_SECONDS = parsePositiveInteger(
   import.meta.env.VITE_OAUTH_FALLBACK_TTL,
@@ -22,8 +32,11 @@ const REFRESH_LEEWAY_MS = Math.max(0, REFRESH_LEEWAY_SECONDS) * 1000;
 interface OAuthTokenResponse {
   access_token?: string;
   accessToken?: string;
+  refresh_token?: string;
+  refreshToken?: string;
   code_exchange?: string;
   codeExchange?: string;
+  code?: string;
   token_type?: string;
   tokenType?: string;
   expires_in?: number | string;
@@ -38,6 +51,7 @@ export interface OAuthAccessToken {
   token: string;
   tokenType: string;
   scope?: string;
+  refreshToken?: string;
 }
 
 const STORAGE_KEY = 'glenat.oauth.token';
@@ -121,10 +135,15 @@ function hydrateTokenFromStorage(): void {
 
     cachedToken = {
       token: parsed.token,
-      tokenType: typeof parsed.tokenType === 'string' && parsed.tokenType.trim()
-        ? parsed.tokenType
-        : 'Bearer',
+      tokenType:
+        typeof parsed.tokenType === 'string' && parsed.tokenType.trim()
+          ? parsed.tokenType
+          : 'Bearer',
       scope: typeof parsed.scope === 'string' ? parsed.scope : undefined,
+      refreshToken:
+        typeof parsed.refreshToken === 'string' && parsed.refreshToken.trim()
+          ? parsed.refreshToken
+          : undefined,
     };
     refreshTimestamp = parsed.refreshTimestamp;
   } catch {
@@ -143,6 +162,7 @@ function persistTokenInStorage(token: OAuthAccessToken, refreshAt: number): void
     token: token.token,
     tokenType: token.tokenType,
     scope: token.scope,
+    refreshToken: token.refreshToken,
     refreshTimestamp: refreshAt,
   };
 
@@ -175,12 +195,11 @@ function shouldReuseToken(forceRefresh: boolean): boolean {
     return false;
   }
 
-  if (Date.now() < refreshTimestamp) {
+  if (!refreshTimestamp) {
     return true;
   }
 
-  invalidateCachedOAuthToken();
-  return false;
+  return Date.now() < refreshTimestamp;
 }
 
 function buildAuthorizeBody(): string {
@@ -197,8 +216,9 @@ function buildAuthorizeBody(): string {
     payload.set('client_secret', CLIENT_SECRET);
   }
 
-  if (GRANT_TYPE) {
-    payload.set('grant_type', GRANT_TYPE);
+  const grantType = toTrimmedString(AUTHORIZE_GRANT_TYPE);
+  if (grantType) {
+    payload.set('grant_type', grantType);
   }
 
   if (REQUEST_SCOPE) {
@@ -218,7 +238,33 @@ function buildAuthorizeHeaders(): HeadersInit {
   return headers;
 }
 
-async function requestNewToken(): Promise<OAuthAccessToken> {
+async function parseOAuthError(response: Response): Promise<string | undefined> {
+  try {
+    const payload = (await response.json()) as { [key: string]: unknown };
+    const errorDescription = payload.error_description ?? payload.errorDescription;
+    const message = payload.message ?? payload.error;
+    if (typeof errorDescription === 'string' && errorDescription.trim()) {
+      return errorDescription;
+    }
+    if (typeof message === 'string' && message.trim()) {
+      return message;
+    }
+  } catch {
+    try {
+      const text = await response.text();
+      const trimmed = text.trim();
+      if (trimmed) {
+        return trimmed;
+      }
+    } catch {
+      // ignore secondary parsing errors
+    }
+  }
+
+  return undefined;
+}
+
+async function requestAuthorizationCode(): Promise<string> {
   const body = buildAuthorizeBody();
   const headers = buildAuthorizeHeaders();
   let response: Response;
@@ -235,29 +281,11 @@ async function requestNewToken(): Promise<OAuthAccessToken> {
   }
 
   if (!response.ok) {
-    let detail: string | undefined;
-    try {
-      const payload = (await response.json()) as { [key: string]: unknown };
-      const errorDescription = payload.error_description ?? payload.errorDescription;
-      const message = payload.message ?? payload.error;
-      if (typeof errorDescription === 'string' && errorDescription.trim()) {
-        detail = errorDescription;
-      } else if (typeof message === 'string' && message.trim()) {
-        detail = message;
-      }
-    } catch {
-      try {
-        const text = await response.text();
-        detail = text.trim() || undefined;
-      } catch {
-        // ignore secondary parsing errors
-      }
-    }
-
+    const detail = await parseOAuthError(response);
     const statusMessage = response.statusText || 'Réponse invalide';
     const suffix = detail ? ` ${detail}` : '';
     throw new Error(
-      `Récupération du jeton OAuth échouée (${response.status}) ${statusMessage}${suffix}`,
+      `Récupération du code d'autorisation échouée (${response.status}) ${statusMessage}${suffix}`,
     );
   }
 
@@ -269,19 +297,56 @@ async function requestNewToken(): Promise<OAuthAccessToken> {
   }
 
   const codeExchange = toTrimmedString(payload.code_exchange ?? payload.codeExchange);
-  const accessToken = toTrimmedString(payload.access_token ?? payload.accessToken);
-  const resolvedToken = codeExchange ?? accessToken;
+  const fallbackCode = toTrimmedString(payload.code);
+  const resolvedCode = codeExchange ?? fallbackCode;
 
-  if (!resolvedToken) {
+  if (!resolvedCode) {
     throw new Error(
-      "La réponse OAuth ne contient pas de champ 'access_token' ou 'code_exchange'.",
+      "La réponse /OAuth/authorize ne contient pas de champ 'code_exchange' ni 'code'.",
     );
   }
 
   if (codeExchange) {
     console.log('[OAuth] code_exchange reçu via /OAuth/authorize :', codeExchange);
   } else {
-    console.log('[OAuth] jeton reçu via /OAuth/authorize :', resolvedToken);
+    console.log('[OAuth] code reçu via /OAuth/authorize :', resolvedCode);
+  }
+
+  return resolvedCode;
+}
+
+function buildTokenRequestHeaders(): HeadersInit {
+  const headers = new Headers();
+  headers.set('Content-Type', 'application/json');
+  return headers;
+}
+
+function ensureClientCredentials(): void {
+  if (!CLIENT_ID) {
+    throw new Error(
+      'La variable VITE_OAUTH_CLIENT_ID doit être configurée pour échanger un code OAuth.',
+    );
+  }
+
+  if (!CLIENT_SECRET) {
+    throw new Error(
+      'La variable VITE_OAUTH_CLIENT_SECRET doit être configurée pour échanger un code OAuth.',
+    );
+  }
+}
+
+function computeRefreshDeadline(expiresInSeconds: number): number {
+  const refreshAt = Date.now() + expiresInSeconds * 1000 - REFRESH_LEEWAY_MS;
+  return Math.max(Date.now() + 1000, refreshAt);
+}
+
+function cacheTokenFromResponse(payload: OAuthTokenResponse): OAuthAccessToken {
+  const accessToken = toTrimmedString(payload.access_token ?? payload.accessToken);
+
+  if (!accessToken) {
+    throw new Error(
+      "La réponse OAuth ne contient pas de champ 'access_token'.",
+    );
   }
 
   const tokenType = toTrimmedString(payload.token_type ?? payload.tokenType) ?? 'Bearer';
@@ -289,18 +354,111 @@ async function requestNewToken(): Promise<OAuthAccessToken> {
     payload.expires_in ?? payload.expiresIn ?? payload.maxAge ?? payload.max_age,
     FALLBACK_TTL_SECONDS,
   );
-  const refreshAt = Date.now() + expiresIn * 1000 - REFRESH_LEEWAY_MS;
-  refreshTimestamp = Math.max(Date.now() + 1000, refreshAt);
+  const refreshAt = computeRefreshDeadline(expiresIn);
+  refreshTimestamp = refreshAt;
 
   cachedToken = {
-    token: resolvedToken,
+    token: accessToken,
     tokenType,
     scope: typeof payload.scope === 'string' ? payload.scope : undefined,
+    refreshToken: toTrimmedString(payload.refresh_token ?? payload.refreshToken),
   };
 
   persistTokenInStorage(cachedToken, refreshTimestamp);
 
   return cachedToken;
+}
+
+async function requestTokenEndpoint(payload: Record<string, string>): Promise<OAuthAccessToken> {
+  const headers = buildTokenRequestHeaders();
+  let response: Response;
+
+  try {
+    response = await fetch(TOKEN_ENDPOINT, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'erreur réseau inconnue';
+    throw new Error(`Impossible de contacter l'endpoint /OAuth/token : ${detail}`);
+  }
+
+  if (!response.ok) {
+    const detail = await parseOAuthError(response);
+    const statusMessage = response.statusText || 'Réponse invalide';
+    const suffix = detail ? ` ${detail}` : '';
+    throw new Error(
+      `Échange du jeton OAuth échoué (${response.status}) ${statusMessage}${suffix}`,
+    );
+  }
+
+  let payloadResponse: OAuthTokenResponse;
+  try {
+    payloadResponse = (await response.json()) as OAuthTokenResponse;
+  } catch {
+    throw new Error('Réponse /OAuth/token invalide : impossible de lire le JSON.');
+  }
+
+  return cacheTokenFromResponse(payloadResponse);
+}
+
+async function exchangeAuthorizationCodeForToken(code: string): Promise<OAuthAccessToken> {
+  ensureClientCredentials();
+
+  const payload: Record<string, string> = {
+    client_id: CLIENT_ID!,
+    client_secret: CLIENT_SECRET!,
+    grant_type: TOKEN_GRANT_TYPE,
+    code,
+  };
+
+  if (REQUEST_SCOPE) {
+    payload.scope = REQUEST_SCOPE;
+  }
+
+  return requestTokenEndpoint(payload);
+}
+
+async function refreshAccessTokenWithRefreshToken(
+  refreshToken: string,
+): Promise<OAuthAccessToken> {
+  ensureClientCredentials();
+
+  const payload: Record<string, string> = {
+    client_id: CLIENT_ID!,
+    client_secret: CLIENT_SECRET!,
+    grant_type: REFRESH_GRANT_TYPE,
+    refresh_token: refreshToken,
+  };
+
+  if (REQUEST_SCOPE) {
+    payload.scope = REQUEST_SCOPE;
+  }
+
+  return requestTokenEndpoint(payload);
+}
+
+async function requestNewToken(forceRefresh: boolean): Promise<OAuthAccessToken> {
+  if (!forceRefresh) {
+    const refreshToken = cachedToken?.refreshToken;
+
+    if (refreshToken) {
+      try {
+        const refreshed = await refreshAccessTokenWithRefreshToken(refreshToken);
+        return refreshed;
+      } catch (error) {
+        console.warn(
+          '[OAuth] Impossible de rafraîchir le jeton, tentative de régénération complète :',
+          error,
+        );
+        invalidateCachedOAuthToken();
+      }
+    }
+  }
+
+  const code = await requestAuthorizationCode();
+  return exchangeAuthorizationCodeForToken(code);
 }
 
 export async function fetchAccessToken(forceRefresh = false): Promise<OAuthAccessToken> {
@@ -314,7 +472,7 @@ export async function fetchAccessToken(forceRefresh = false): Promise<OAuthAcces
     return pendingTokenRequest;
   }
 
-  const request = requestNewToken();
+  const request = requestNewToken(forceRefresh);
   pendingTokenRequest = request;
 
   try {
