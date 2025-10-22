@@ -202,7 +202,7 @@ export async function fetchAccessToken(forceRefresh = false): Promise<OAuthAcces
 
 function withAuthorizationHeader(init: RequestInit | undefined, token: OAuthAccessToken): RequestInit {
   const headers = new Headers(init?.headers ?? undefined);
-  const headerValue = `${token.tokenType || 'Bearer'} ${token.token}`.trim();
+  const headerValue = `${token.token}`.trim();
   headers.set('Authorization', headerValue);
 
   return {
