@@ -160,6 +160,12 @@ async function requestNewToken(): Promise<OAuthAccessToken> {
     );
   }
 
+  if (typeof codeExchange === 'string' && codeExchange) {
+    console.log('[OAuth] code_exchange reçu via /OAuth/authorize :', codeExchange);
+  } else {
+    console.log('[OAuth] jeton reçu via /OAuth/authorize :', accessToken);
+  }
+
   const tokenType = payload.token_type ?? payload.tokenType ?? 'Bearer';
   const expiresIn = parsePositiveInteger(payload.expires_in ?? payload.expiresIn, FALLBACK_TTL_SECONDS);
   const refreshAt = Date.now() + expiresIn * 1000 - REFRESH_LEEWAY_MS;
@@ -205,6 +211,22 @@ function withAuthorizationHeader(init: RequestInit | undefined, token: OAuthAcce
   };
 }
 
+function normalizeRequestUrl(input: RequestInfo | URL): string | undefined {
+  if (typeof input === 'string') {
+    return input;
+  }
+
+  if (input instanceof URL) {
+    return input.toString();
+  }
+
+  if (typeof Request !== 'undefined' && input instanceof Request) {
+    return input.url;
+  }
+
+  return undefined;
+}
+
 function shouldRetryWithFreshToken(response: Response, attempt: number): boolean {
   if (attempt > 0) {
     return false;
@@ -225,6 +247,21 @@ export async function fetchWithOAuth(
     try {
       const token = await fetchAccessToken(forceRefresh);
       const authorizedInit = withAuthorizationHeader(init, token);
+      const requestUrl = normalizeRequestUrl(input);
+
+      if (requestUrl?.includes('/Api/v1.0/Intranet/callDatabase')) {
+        let authorizationHeader: string | null = null;
+        const { headers } = authorizedInit;
+
+        if (headers instanceof Headers) {
+          authorizationHeader = headers.get('Authorization');
+        } else if (headers) {
+          authorizationHeader = new Headers(headers).get('Authorization');
+        }
+
+        console.log('[OAuth] Authorization envoyé vers callDatabase :', authorizationHeader);
+      }
+
       const response = await fetch(input, authorizedInit);
 
       if (shouldRetryWithFreshToken(response, attempt)) {
