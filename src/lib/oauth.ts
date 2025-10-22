@@ -28,6 +28,8 @@ interface OAuthTokenResponse {
   tokenType?: string;
   expires_in?: number | string;
   expiresIn?: number | string;
+  maxAge?: number | string;
+  max_age?: number | string;
   scope?: string;
   [key: string]: unknown;
 }
@@ -314,7 +316,9 @@ export async function fetchAccessToken(forceRefresh = false): Promise<OAuthAcces
 
 function withAuthorizationHeader(init: RequestInit | undefined, token: OAuthAccessToken): RequestInit {
   const headers = new Headers(init?.headers ?? undefined);
-  const headerValue = `${token.token}`.trim();
+  const tokenType = typeof token.tokenType === 'string' ? token.tokenType.trim() : '';
+  const prefix = tokenType ? `${tokenType} ` : '';
+  const headerValue = `${prefix}${token.token}`.trim();
   headers.set('Authorization', headerValue);
 
   return {
@@ -339,63 +343,34 @@ function normalizeRequestUrl(input: RequestInfo | URL): string | undefined {
   return undefined;
 }
 
-function shouldRetryWithFreshToken(response: Response, attempt: number): boolean {
-  if (attempt > 0) {
-    return false;
-  }
-
-  return response.status === 401 || response.status === 403;
-}
-
 export async function fetchWithOAuth(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {
-  let lastError: unknown;
+  const token = await fetchAccessToken();
+  const authorizedInit = withAuthorizationHeader(init, token);
+  const requestUrl = normalizeRequestUrl(input);
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    const forceRefresh = attempt > 0;
+  if (requestUrl?.includes('/Api/v1.0/Intranet/callDatabase')) {
+    let authorizationHeader: string | null = null;
+    const { headers } = authorizedInit;
 
-    try {
-      const token = await fetchAccessToken(forceRefresh);
-      const authorizedInit = withAuthorizationHeader(init, token);
-      const requestUrl = normalizeRequestUrl(input);
-
-      if (requestUrl?.includes('/Api/v1.0/Intranet/callDatabase')) {
-        let authorizationHeader: string | null = null;
-        const { headers } = authorizedInit;
-
-        if (headers instanceof Headers) {
-          authorizationHeader = headers.get('Authorization');
-        } else if (headers) {
-          authorizationHeader = new Headers(headers).get('Authorization');
-        }
-
-        console.log('[OAuth] Authorization envoyé vers callDatabase :', authorizationHeader);
-      }
-
-      const response = await fetch(input, authorizedInit);
-
-      if (shouldRetryWithFreshToken(response, attempt)) {
-        // Consume the body to avoid locking the stream before retrying.
-        try {
-          await response.arrayBuffer();
-        } catch {
-          // ignore body read errors during retry preparation
-        }
-        continue;
-      }
-
-      return response;
-    } catch (error) {
-      lastError = error;
-      if (attempt >= 1) {
-        throw error instanceof Error ? error : new Error('Requête OAuth échouée');
-      }
+    if (headers instanceof Headers) {
+      authorizationHeader = headers.get('Authorization');
+    } else if (headers) {
+      authorizationHeader = new Headers(headers).get('Authorization');
     }
+
+    console.log('[OAuth] Authorization envoyé vers callDatabase :', authorizationHeader);
   }
 
-  throw lastError instanceof Error ? lastError : new Error('Requête OAuth échouée');
+  const response = await fetch(input, authorizedInit);
+
+  if (response.status === 401 || response.status === 403) {
+    invalidateCachedOAuthToken();
+  }
+
+  return response;
 }
 
 export function invalidateCachedOAuthToken(): void {
