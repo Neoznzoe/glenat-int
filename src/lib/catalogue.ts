@@ -542,8 +542,8 @@ const resolveCoverageEndpoints = (): string[] => {
 
 const CATALOGUE_COVERAGE_ENDPOINTS = resolveCoverageEndpoints();
 
-const NEXT_OFFICES_SQL_QUERY = `;WITH next_offices AS (
-    SELECT TOP (4)
+const NEXT_OFFICES_SQL_QUERY = `;WITH office_min_dates AS (
+    SELECT
            office,
            MIN(dateMev) AS nextDate
     FROM dbo.catalogBooks
@@ -552,7 +552,13 @@ const NEXT_OFFICES_SQL_QUERY = `;WITH next_offices AS (
       AND dateMev < DATEADD(year, 5, CONVERT(date, GETDATE()))
       AND office <> '0000'
     GROUP BY office
-    ORDER BY MIN(dateMev) ASC, office ASC
+),
+next_offices AS (
+    SELECT TOP (4)
+           office,
+           nextDate
+    FROM office_min_dates
+    ORDER BY nextDate ASC, office ASC
 )
 SELECT c.*
 FROM dbo.catalogBooks AS c
@@ -1122,6 +1128,7 @@ const buildCatalogueOfficeGroups = async (
 
   const today = new Date();
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const startOfTodayTime = startOfToday.getTime();
 
   const groups = await Promise.all(
     Array.from(groupsMap.values())
@@ -1140,18 +1147,24 @@ const buildCatalogueOfficeGroups = async (
           return a.order - b.order;
         }
 
-        const isPastA = dateA.getTime() < startOfToday.getTime();
-        const isPastB = dateB.getTime() < startOfToday.getTime();
+        const timeA = dateA.getTime();
+        const timeB = dateB.getTime();
+        const isFutureA = timeA >= startOfTodayTime;
+        const isFutureB = timeB >= startOfTodayTime;
 
-        if (isPastA !== isPastB) {
-          return isPastA ? 1 : -1;
+        if (isFutureA !== isFutureB) {
+          return isFutureA ? -1 : 1;
         }
 
-        const diffA = Math.abs(dateA.getTime() - startOfToday.getTime());
-        const diffB = Math.abs(dateB.getTime() - startOfToday.getTime());
+        if (isFutureA && isFutureB) {
+          if (timeA !== timeB) {
+            return timeA - timeB;
+          }
+          return a.order - b.order;
+        }
 
-        if (diffA !== diffB) {
-          return diffA - diffB;
+        if (timeA !== timeB) {
+          return timeB - timeA;
         }
 
         return a.order - b.order;

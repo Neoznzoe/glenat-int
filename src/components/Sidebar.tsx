@@ -1,13 +1,21 @@
 import * as LucideIcons from 'lucide-react';
-import { Pin, PinOff } from 'lucide-react';
+import { PanelLeft } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  type FocusEvent,
+  type KeyboardEvent,
+} from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
-import LogoG from '../assets/logos/glenat/glenat_G.svg';
+import LogoCompact from '../assets/logos/glenat/glenat_G.svg';
 import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
 import { useSidebarModules } from '@/hooks/useModules';
 import { computeEffectivePermissions } from '@/lib/mockDb';
 import type { PermissionKey } from '@/lib/access-control';
+import { createModuleFingerprint } from '@/lib/moduleFingerprint';
 import { useDecryptedLocation } from '@/lib/secureRouting';
 import { SecureNavLink } from '@/components/routing/SecureLink';
 import { useAuth } from '@/context/AuthContext';
@@ -446,10 +454,84 @@ function SidebarSkeletonList({ count, isExpanded }: { count: number; isExpanded:
 }
 
 export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
-  const [isPinned, setIsPinned] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isManuallyCollapsed, setIsManuallyCollapsed] = useState(false);
+  const collapsedTriggerRef = useRef<HTMLDivElement | null>(null);
 
-  const isExpanded = isPinned || isHovered;
+  const isExpanded = !isManuallyCollapsed || isHovered;
+
+  const handleSidebarMouseEnter = () => {
+    setIsHovered(true);
+  };
+
+  const handleSidebarMouseLeave = () => {
+    setIsHovered(false);
+  };
+
+  const handleCollapsedTriggerHover = () => {
+    if (isManuallyCollapsed) {
+      setIsHovered(true);
+    }
+  };
+
+  const handleCollapsedHeaderHover = () => {
+    if (isManuallyCollapsed) {
+      setIsHovered(true);
+    }
+  };
+
+  const handleCollapsedTriggerKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!isManuallyCollapsed) {
+      return;
+    }
+
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      setIsHovered(true);
+    }
+  };
+
+  const handleSidebarBlur = (event: FocusEvent<HTMLDivElement>) => {
+    if (!isManuallyCollapsed) {
+      return;
+    }
+
+    const nextFocused = event.relatedTarget;
+    if (!nextFocused) {
+      setIsHovered(false);
+      return;
+    }
+
+    if (!(nextFocused instanceof Node)) {
+      setIsHovered(false);
+      return;
+    }
+
+    if (!event.currentTarget.contains(nextFocused)) {
+      setIsHovered(false);
+    }
+  };
+
+  useEffect(() => {
+    const triggerNode = collapsedTriggerRef.current;
+    if (!triggerNode) {
+      return;
+    }
+
+    const handlePointerEnter = () => {
+      if (isManuallyCollapsed) {
+        setIsHovered(true);
+      }
+    };
+
+    triggerNode.addEventListener('mouseenter', handlePointerEnter);
+    triggerNode.addEventListener('focusin', handlePointerEnter);
+
+    return () => {
+      triggerNode.removeEventListener('mouseenter', handlePointerEnter);
+      triggerNode.removeEventListener('focusin', handlePointerEnter);
+    };
+  }, [isManuallyCollapsed]);
 
   useEffect(() => {
     onExpandChange?.(isExpanded);
@@ -464,7 +546,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   );
   const currentUserId = toNumericId(currentUser?.id);
   const sidebarUserId = internalUserId ?? currentUserId;
-  const lastModuleSnapshotRef = useRef<string | null>(null);
+  const lastModuleFingerprintRef = useRef<string | null>(null);
   useEffect(() => {
     if (internalUserId !== undefined) {
       console.log('Identifiant utilisateur interne détecté :', internalUserId);
@@ -487,21 +569,21 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   } = useSidebarModules(sidebarUserId);
   const waitingForModules = loadingModules || fetchingModules || sidebarUserId === undefined;
   useEffect(() => {
-    lastModuleSnapshotRef.current = null;
+    lastModuleFingerprintRef.current = null;
   }, [sidebarUserId]);
   useEffect(() => {
     if (!moduleDefinitions || waitingForModules || hasModuleError) {
       return;
     }
 
-    const serialized = JSON.stringify(moduleDefinitions);
+    const fingerprint = createModuleFingerprint(moduleDefinitions);
 
-    if (lastModuleSnapshotRef.current === null) {
-      lastModuleSnapshotRef.current = serialized;
+    if (lastModuleFingerprintRef.current === null) {
+      lastModuleFingerprintRef.current = fingerprint;
       return;
     }
 
-    if (lastModuleSnapshotRef.current !== serialized) {
+    if (lastModuleFingerprintRef.current !== fingerprint) {
       console.info(
         "Changement détecté dans les modules — rechargement de la page pour refléter l'état de la base de données.",
       );
@@ -630,26 +712,59 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       className={`bg-primary text-primary-foreground flex flex-col h-screen transition-all duration-300 ease-in-out relative ${
         isExpanded ? 'w-64' : 'w-16'
       }`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={handleSidebarMouseEnter}
+      onMouseLeave={handleSidebarMouseLeave}
+      onBlurCapture={handleSidebarBlur}
     >
       {/* Header */}
-      <div className="h-16 p-4 border-b border-red-400/50 flex items-center justify-between min-h-[64px]">
-        {isExpanded ? (
-          <img src={Logo} alt="Logo Glénat" className="h-8 w-auto flex-shrink-0" />
-        ) : (
-          <img src={LogoG} alt="Logo Glénat" className="h-8 w-auto flex-shrink-0" />
-        )}
-        
-        <button
-          onClick={() => setIsPinned(!isPinned)}
-          className={`p-1 rounded hover:bg-white/20 transition-all duration-300 ${
-            isExpanded ? 'opacity-100' : 'opacity-0'
+      <div
+        className={`h-16 px-4 border-b border-red-400/50 flex items-center ${
+          isExpanded ? 'justify-between' : 'justify-center'
+        } min-h-[64px]`}
+        onMouseEnter={handleCollapsedHeaderHover}
+        onFocus={handleCollapsedHeaderHover}
+      >
+        <div
+          ref={collapsedTriggerRef}
+          className={`flex items-center gap-2 overflow-hidden ${
+            isManuallyCollapsed ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/60 rounded-md' : ''
           }`}
-          title={isPinned ? 'Déverrouiller la sidebar' : 'Verrouiller la sidebar'}
+          onMouseEnter={handleCollapsedTriggerHover}
+          onFocus={handleCollapsedTriggerHover}
+          onKeyDown={handleCollapsedTriggerKeyDown}
+          role={isManuallyCollapsed ? 'button' : undefined}
+          tabIndex={isManuallyCollapsed ? 0 : -1}
+          aria-label={
+            isManuallyCollapsed ? 'Afficher temporairement la barre latérale' : undefined
+          }
         >
-          {isPinned ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
-        </button>
+          {isExpanded ? (
+            <img
+              src={Logo}
+              alt="Logo Glénat"
+              className="h-8 w-auto flex-shrink-0 transition-opacity duration-200"
+            />
+          ) : (
+            <img
+              src={LogoCompact}
+              alt="Monogramme Glénat"
+              className="h-10 w-10 flex-shrink-0 transition-transform duration-200"
+            />
+          )}
+        </div>
+
+        {isExpanded ? (
+          <button
+            onClick={() => {
+              setIsManuallyCollapsed((previous) => !previous);
+              setIsHovered(false);
+            }}
+            className="p-1 rounded transition-all duration-300 hover:bg-white/20"
+            title={isManuallyCollapsed ? 'Déplier la sidebar' : 'Replier la sidebar'}
+          >
+            <PanelLeft className={`h-4 w-4 transition-transform ${isManuallyCollapsed ? 'rotate-180' : ''}`} />
+          </button>
+        ) : null}
       </div>
 
       {/* Contenu principal = menu du haut + administration séparée */}
