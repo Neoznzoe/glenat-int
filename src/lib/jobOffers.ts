@@ -4,7 +4,7 @@ const JOB_OFFERS_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
   : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
 
-const JOB_OFFERS_QUERY = 'SELECT * FROM offres_emploi WHERE publiee = 1;';
+const JOB_OFFERS_QUERY = 'SELECT * FROM jobOffers WHERE publiee = 1;';
 const JOB_OFFER_COUNT_QUERY =
   'SELECT COUNT(*) AS nombre_offres FROM [jobOffers] WHERE publiee = 1;';
 
