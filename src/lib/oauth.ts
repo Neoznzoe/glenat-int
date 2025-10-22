@@ -400,6 +400,8 @@ async function requestTokenEndpoint(payload: Record<string, string>): Promise<OA
     throw new Error('Réponse /OAuth/token invalide : impossible de lire le JSON.');
   }
 
+  console.log('[OAuth] Réponse /OAuth/token :', payloadResponse);
+
   return cacheTokenFromResponse(payloadResponse);
 }
 
@@ -521,6 +523,8 @@ export async function fetchWithOAuth(
   const requestUrl = normalizeRequestUrl(input);
 
   if (requestUrl?.includes('/Api/v1.0/Intranet/callDatabase')) {
+    console.log('[OAuth] access_token utilisé pour callDatabase :', token.token);
+
     let authorizationHeader: string | null = null;
     const { headers } = authorizedInit;
 
