@@ -1,3 +1,5 @@
+import { fetchWithOAuth } from './oauth';
+
 const INTERNAL_USER_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
   : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
@@ -23,7 +25,7 @@ export async function lookupInternalUserByEmail(
     query: `SELECT * FROM users WHERE email = '${escapeSqlLiteral(trimmedEmail)}';`,
   };
 
-  const response = await fetch(INTERNAL_USER_ENDPOINT, {
+  const response = await fetchWithOAuth(INTERNAL_USER_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

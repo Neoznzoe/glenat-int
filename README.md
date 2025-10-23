@@ -49,6 +49,33 @@ VITE_AES_GCM_KEY=<valeur_générée>
 
 En développement, le serveur mock se charge automatiquement de déchiffrer les URLs reçues afin de conserver la même API qu'auparavant.
 
+## 🔑 Authentification OAuth pour les appels API
+
+Les appels vers l'API `callDatabase` nécessitent désormais un jeton OAuth 2.0 obtenu en deux étapes :
+
+1. `/OAuth/authorize` retourne un `code_exchange`.
+2. Ce code est échangé contre un `access_token` (et un `refresh_token`) via `/OAuth/token`.
+
+Configurez les variables d'environnement suivantes dans votre `.env.local` :
+
+```
+VITE_OAUTH_CLIENT_ID=<client_id_fourni>
+VITE_OAUTH_CLIENT_SECRET=<client_secret_fourni>
+VITE_OAUTH_SCOPE=<scope>                    # optionnel selon la configuration du serveur
+VITE_OAUTH_AUDIENCE=<audience>              # optionnel
+VITE_OAUTH_AUTHORIZE_ENDPOINT=https://api-dev.groupe-glenat.com/Api/v1.0/OAuth/authorize
+VITE_OAUTH_TOKEN_ENDPOINT=https://api-dev.groupe-glenat.com/Api/v1.0/OAuth/token
+VITE_OAUTH_AUTHORIZE_GRANT_TYPE=client_credentials  # optionnel, dépend du serveur
+VITE_OAUTH_TOKEN_GRANT_TYPE=authorization_code      # valeur par défaut
+VITE_OAUTH_REFRESH_GRANT_TYPE=refresh_token         # valeur par défaut
+VITE_OAUTH_REFRESH_LEEWAY=30                        # marge (en secondes) avant expiration pour rafraîchir le token
+VITE_OAUTH_FALLBACK_TTL=3600                        # durée de vie par défaut (en secondes) si l'API ne fournit pas expires_in
+```
+
+Seuls `VITE_OAUTH_CLIENT_ID` et `VITE_OAUTH_CLIENT_SECRET` sont indispensables ; les autres paramètres peuvent être adaptés à l'implémentation du fournisseur OAuth.
+
+Le `code_exchange` est enregistré côté client le temps d'obtenir l'`access_token`, puis c'est cet `access_token` qui est systématiquement envoyé dans l'en-tête `Authorization: Bearer <access_token>` pour les appels `callDatabase`. Le jeton est mis en cache côté client, persisté dans le `localStorage` pour être réutilisé pendant toute sa durée de vie (`maxAge`/`expires_in`, 1 heure par défaut) et est automatiquement rafraîchi grâce au `refresh_token` tant qu'il reste valide.
+
 ## 🧠 Technologies principales
 - **React** pour la construction des interfaces.
 - **TypeScript** pour un typage statique robuste.

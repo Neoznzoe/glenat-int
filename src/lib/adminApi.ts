@@ -10,6 +10,7 @@ import {
   type PermissionKey,
 } from './access-control';
 import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
+import { fetchWithOAuth } from './oauth';
 
 const ADMIN_DATABASE_ENDPOINT =
   import.meta.env.VITE_ADMIN_DATABASE_ENDPOINT ??
@@ -385,7 +386,7 @@ function escapeSqlLiteral(value: string): string {
 async function runDatabaseQuery(query: string, context: string): Promise<RawDatabaseUserRecord[]> {
   let response: Response;
   try {
-    response = await fetch(ADMIN_DATABASE_ENDPOINT, {
+    response = await fetchWithOAuth(ADMIN_DATABASE_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

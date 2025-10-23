@@ -18,6 +18,7 @@ import UniversJeune from '@/assets/logos/univers/univers-jeunesse.svg';
 import UniversLivre from '@/assets/logos/univers/univers-livres.svg';
 import UniversManga from '@/assets/logos/univers/univers-manga.svg';
 import type { BookCardProps } from '@/components/BookCard';
+import { fetchWithOAuth } from './oauth';
 
 export interface CatalogueBookDetailEntry {
   label: string;
@@ -1263,7 +1264,7 @@ export async function fetchCatalogueOffices(
   logRequest(endpoint);
 
   try {
-    const response = await fetch(CATALOGUE_OFFICES_ENDPOINT, {
+    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
