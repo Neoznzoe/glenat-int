@@ -6,6 +6,11 @@ import {
   type PermissionDefinition,
   type PermissionKey,
 } from './access-control';
+import {
+  decryptStructuredPayload,
+  encryptStructuredPayload,
+  isUrlEncryptionConfigured,
+} from './urlEncryption';
 
 export type PermissionOverrideMode = 'allow' | 'deny';
 
@@ -99,6 +104,12 @@ export interface UpdateUserAccessPayload {
 const STORAGE_KEY = 'glenat-admin-database-v1';
 const DB_VERSION = 2;
 let inMemoryDb: DatabaseSchema | null = null;
+let persistPromise: Promise<void> | null = null;
+
+interface StoredDatabaseEnvelope {
+  version: number;
+  ciphertext: string;
+}
 
 function deepClone<T>(value: T): T {
   if (typeof structuredClone === 'function') {
@@ -113,17 +124,36 @@ function getStorage(): Storage | null {
   }
   try {
     return window.localStorage;
-  } catch (error) {
-    console.warn('Local storage unavailable, using in-memory database only.', error);
+  } catch {
+    console.warn('Local storage unavailable, using in-memory database only.');
     return null;
   }
 }
 
-function persistDatabase(db: DatabaseSchema) {
+async function persistDatabase(db: DatabaseSchema): Promise<void> {
   inMemoryDb = db;
   const storage = getStorage();
   if (storage) {
-    storage.setItem(STORAGE_KEY, JSON.stringify(db));
+    if (!isUrlEncryptionConfigured()) {
+      storage.removeItem(STORAGE_KEY);
+      return;
+    }
+
+    const encryptAndStore = async () => {
+      try {
+        const ciphertext = await encryptStructuredPayload(db);
+        const envelope: StoredDatabaseEnvelope = {
+          version: DB_VERSION,
+          ciphertext,
+        };
+        storage.setItem(STORAGE_KEY, JSON.stringify(envelope));
+      } catch {
+        storage.removeItem(STORAGE_KEY);
+      }
+    };
+
+    persistPromise = encryptAndStore();
+    await persistPromise;
   }
 }
 
@@ -500,9 +530,13 @@ function createSeedDatabase(): DatabaseSchema {
   };
 }
 
-function readDatabase(): DatabaseSchema {
+async function readDatabase(): Promise<DatabaseSchema> {
   if (inMemoryDb) {
     return inMemoryDb;
+  }
+
+  if (persistPromise) {
+    await persistPromise;
   }
 
   const storage = getStorage();
@@ -510,25 +544,46 @@ function readDatabase(): DatabaseSchema {
     const raw = storage.getItem(STORAGE_KEY);
     if (raw) {
       try {
-        const parsed = JSON.parse(raw) as DatabaseSchema;
-        if (parsed.version === DB_VERSION) {
-          const sanitized = sanitizeDatabase(parsed);
-          persistDatabase(sanitized);
-          return sanitized;
+        const parsed = JSON.parse(raw) as unknown;
+        if (
+          parsed &&
+          typeof parsed === 'object' &&
+          'ciphertext' in parsed &&
+          typeof (parsed as StoredDatabaseEnvelope).ciphertext === 'string'
+        ) {
+          if (isUrlEncryptionConfigured()) {
+            const decrypted = await decryptStructuredPayload<DatabaseSchema>(
+              (parsed as StoredDatabaseEnvelope).ciphertext,
+            );
+            if (decrypted.version === DB_VERSION) {
+              const sanitized = sanitizeDatabase(decrypted);
+              await persistDatabase(sanitized);
+              return sanitized;
+            }
+          } else {
+            storage.removeItem(STORAGE_KEY);
+          }
+        } else if (parsed && typeof parsed === 'object' && 'version' in parsed) {
+          const legacy = parsed as DatabaseSchema;
+          if (legacy.version === DB_VERSION) {
+            const sanitized = sanitizeDatabase(legacy);
+            await persistDatabase(sanitized);
+            return sanitized;
+          }
         }
-      } catch (error) {
-        console.warn('Invalid database in localStorage, seeding a fresh copy.', error);
+      } catch {
+        console.warn('Invalid database in localStorage, seeding a fresh copy.');
       }
     }
   }
 
   const seeded = createSeedDatabase();
-  persistDatabase(seeded);
+  await persistDatabase(seeded);
   return seeded;
 }
 
-export function ensureDatabaseSeeded() {
-  readDatabase();
+export async function ensureDatabaseSeeded(): Promise<void> {
+  await readDatabase();
 }
 
 function simulateLatency<T>(value: T, delay = 200): Promise<T> {
@@ -538,7 +593,7 @@ function simulateLatency<T>(value: T, delay = 200): Promise<T> {
 }
 
 export async function listUsers(): Promise<UserAccount[]> {
-  const db = readDatabase();
+  const db = await readDatabase();
   const sorted = [...db.users].sort((left, right) => {
     const leftLastName = left.lastName?.trim() ?? '';
     const rightLastName = right.lastName?.trim() ?? '';
@@ -552,17 +607,17 @@ export async function listUsers(): Promise<UserAccount[]> {
 }
 
 export async function listGroups(): Promise<GroupDefinition[]> {
-  const db = readDatabase();
+  const db = await readDatabase();
   return simulateLatency(db.groups.map((group) => ({ ...group })));
 }
 
 export async function listPermissions(): Promise<PermissionDefinition[]> {
-  const db = readDatabase();
+  const db = await readDatabase();
   return simulateLatency(db.permissions.map((permission) => ({ ...permission })));
 }
 
 export async function listAuditLog(limit = 25): Promise<AuditLogEntry[]> {
-  const db = readDatabase();
+  const db = await readDatabase();
   const entries = [...db.auditLog]
     .sort((left, right) => right.timestamp.localeCompare(left.timestamp))
     .slice(0, limit);
@@ -570,13 +625,13 @@ export async function listAuditLog(limit = 25): Promise<AuditLogEntry[]> {
 }
 
 export async function getUserById(userId: string): Promise<UserAccount | undefined> {
-  const db = readDatabase();
+  const db = await readDatabase();
   const user = db.users.find((candidate) => candidate.id === userId);
   return simulateLatency(user ?? undefined);
 }
 
 export async function getCurrentUser(): Promise<UserAccount> {
-  const db = readDatabase();
+  const db = await readDatabase();
   const user = db.users.find((candidate) => candidate.id === db.currentUserId);
   if (!user) {
     throw new Error('Current user not found in database');
@@ -765,7 +820,7 @@ export function computeEffectivePermissions(
 }
 
 export async function updateUserAccess(payload: UpdateUserAccessPayload): Promise<UserAccount> {
-  const db = readDatabase();
+  const db = await readDatabase();
   const userIndex = db.users.findIndex((candidate) => candidate.id === payload.userId);
   if (userIndex === -1) {
     throw new Error('Utilisateur introuvable');
@@ -802,12 +857,12 @@ export async function updateUserAccess(payload: UpdateUserAccessPayload): Promis
   });
   db.auditLog = db.auditLog.slice(0, 100);
 
-  persistDatabase(db);
+  await persistDatabase(db);
   return simulateLatency(updated);
 }
 
 export async function resetDatabase(): Promise<DatabaseSchema> {
   const seeded = createSeedDatabase();
-  persistDatabase(seeded);
+  await persistDatabase(seeded);
   return simulateLatency(seeded);
 }

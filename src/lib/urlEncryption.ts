@@ -72,9 +72,50 @@ async function importKey(): Promise<CryptoKey> {
     }
 
     keyPromise = crypto.subtle.importKey('raw', keyBytes, 'AES-GCM', false, ['encrypt', 'decrypt']);
-  }
+}
 
   return keyPromise;
+}
+
+async function encryptBytes(plaintext: Uint8Array): Promise<string> {
+  const crypto = getCrypto();
+  const key = await importKey();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext as BufferSource);
+
+  const combined = new Uint8Array(iv.byteLength + ciphertext.byteLength);
+  combined.set(iv, 0);
+  combined.set(new Uint8Array(ciphertext), iv.byteLength);
+
+  return base64UrlEncode(combined);
+}
+
+async function decryptBytes(token: string): Promise<Uint8Array> {
+  const crypto = getCrypto();
+  const key = await importKey();
+  const combined = base64UrlDecode(token);
+
+  if (combined.byteLength <= 12) {
+    throw new Error('Jeton chiffré invalide.');
+  }
+
+  const iv = combined.slice(0, 12);
+  const ciphertext = combined.slice(12);
+  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+
+  return new Uint8Array(plaintext);
+}
+
+export async function encryptStructuredPayload<T>(payload: T): Promise<string> {
+  const plaintext = TEXT_ENCODER.encode(JSON.stringify(payload));
+  return encryptBytes(plaintext);
+}
+
+export async function decryptStructuredPayload<T>(token: string): Promise<T> {
+  const plaintext = await decryptBytes(token);
+  const json = TEXT_DECODER.decode(plaintext);
+  return JSON.parse(json) as T;
 }
 
 export interface EncryptedUrlPayload {
@@ -89,10 +130,6 @@ export async function encryptUrlPayload(payload: {
   search?: string;
   method: string;
 }): Promise<string> {
-  const crypto = getCrypto();
-  const key = await importKey();
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-
   const data: EncryptedUrlPayload = {
     ...payload,
     search: payload.search && payload.search.length > 0 ? payload.search : undefined,
@@ -100,31 +137,11 @@ export async function encryptUrlPayload(payload: {
     issuedAt: Date.now(),
   };
 
-  const plaintext = TEXT_ENCODER.encode(JSON.stringify(data));
-  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
-
-  const combined = new Uint8Array(iv.byteLength + ciphertext.byteLength);
-  combined.set(iv, 0);
-  combined.set(new Uint8Array(ciphertext), iv.byteLength);
-
-  return base64UrlEncode(combined);
+  return encryptStructuredPayload(data);
 }
 
 export async function decryptUrlToken(token: string): Promise<EncryptedUrlPayload> {
-  const crypto = getCrypto();
-  const key = await importKey();
-  const combined = base64UrlDecode(token);
-
-  if (combined.byteLength <= 12) {
-    throw new Error('Jeton chiffré invalide.');
-  }
-
-  const iv = combined.slice(0, 12);
-  const ciphertext = combined.slice(12);
-  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
-
-  const json = TEXT_DECODER.decode(plaintext);
-  const payload = JSON.parse(json) as EncryptedUrlPayload;
+  const payload = await decryptStructuredPayload<EncryptedUrlPayload>(token);
 
   if (!payload?.path) {
     throw new Error('Le jeton chiffré ne contient pas de chemin.');

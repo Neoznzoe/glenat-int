@@ -18,6 +18,7 @@ import UniversJeune from '@/assets/logos/univers/univers-jeunesse.svg';
 import UniversLivre from '@/assets/logos/univers/univers-livres.svg';
 import UniversManga from '@/assets/logos/univers/univers-manga.svg';
 import type { BookCardProps } from '@/components/BookCard';
+import { prepareJsonBody } from './transportEncryption';
 
 export interface CatalogueBookDetailEntry {
   label: string;
@@ -446,14 +447,6 @@ const cloneBook = (ean: string): CatalogueBook => {
   };
 };
 
-const logRequest = (endpoint: string) => {
-  console.info(`[catalogueApi] ${endpoint} appelé`);
-};
-
-const logResponse = (endpoint: string, payload: unknown) => {
-  console.info(`[catalogueApi] ${endpoint} réponse`, payload);
-};
-
 export interface CatalogueReleaseGroup {
   date: string;
   books: CatalogueBook[];
@@ -482,21 +475,15 @@ export interface CatalogueKiosqueGroup {
 }
 
 export async function fetchCatalogueBooks(): Promise<CatalogueBook[]> {
-  const endpoint = 'fetchCatalogueBooks';
-  logRequest(endpoint);
   const data = catalogueDb.books.map(book => cloneBook(book.ean));
-  logResponse(endpoint, data);
   return Promise.resolve(data);
 }
 
 export async function fetchCatalogueReleases(): Promise<CatalogueReleaseGroup[]> {
-  const endpoint = 'fetchCatalogueReleases';
-  logRequest(endpoint);
   const data = catalogueDb.releases.map(release => ({
     date: release.date,
     books: release.bookEans.map(cloneBook),
   }));
-  logResponse(endpoint, data);
   return Promise.resolve(data);
 }
 
@@ -619,8 +606,7 @@ const shouldIncludeCredentials = (endpoint: string): boolean => {
     }
 
     return false;
-  } catch (error) {
-    console.warn('[catalogueApi] Impossible de déterminer le domaine pour la couverture', endpoint, error);
+  } catch {
     return false;
   }
 };
@@ -691,23 +677,14 @@ const fetchCover = async (ean: string): Promise<string | null> => {
           const imageBase64 = normaliseCoverDataUrl(data?.result?.imageBase64);
 
           if (data?.success && imageBase64) {
-            console.log('[catalogueApi] Couverture reçue', ean, {
-              endpoint,
-              message: data?.message,
-              attempt,
-            });
             coverCache.set(ean, imageBase64);
             return imageBase64;
           }
 
           const errorMessage = data?.message ?? "Réponse inattendue de l'API couverture";
           throw new Error(errorMessage);
-        } catch (error) {
-          console.error(
-            `[catalogueApi] Impossible de récupérer la couverture ${ean} via ${endpoint} (tentative ${attempt + 1})`,
-            error,
-          );
-        }
+        } catch {
+          }
       }
 
       if (attempt < COVER_FETCH_RETRY_ATTEMPTS - 1) {
@@ -1228,13 +1205,7 @@ export async function hydrateCatalogueOfficeGroupsWithCovers(
         let coverPromise = coverCache.get(ean);
 
         if (!coverPromise) {
-          coverPromise = fetchCover(ean).catch(error => {
-            console.warn(
-              `[catalogueApi] Impossible de recuperer la couverture pour ${ean}`,
-              error,
-            );
-            return null;
-          });
+          coverPromise = fetchCover(ean).catch(() => null);
           coverCache.set(ean, coverPromise);
         }
 
@@ -1259,17 +1230,16 @@ export async function fetchCatalogueOffices(
   options: FetchCatalogueOfficesOptions = {},
 ): Promise<CatalogueOfficeGroup[]> {
   const { hydrateCovers = true, onCoverProgress } = options;
-  const endpoint = 'fetchCatalogueOffices';
-  logRequest(endpoint);
 
   try {
+    const preparedBody = await prepareJsonBody({ query: NEXT_OFFICES_SQL_QUERY });
     const response = await fetch(CATALOGUE_OFFICES_ENDPOINT, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        ...preparedBody.headers,
         Accept: 'application/json',
       },
-      body: JSON.stringify({ query: NEXT_OFFICES_SQL_QUERY }),
+      body: preparedBody.body,
     });
 
     if (!response.ok) {
@@ -1278,9 +1248,6 @@ export async function fetchCatalogueOffices(
 
     const payload = (await response.json()) as DatabaseApiResponse;
     const records = extractDatabaseRows(payload);
-
-    console.log('[catalogueApi] Offices payload brut', payload);
-    console.log('[catalogueApi] Offices enregistrements', records);
 
     if (!records.length) {
       throw new Error("La base de donnees n'a retourne aucun resultat");
@@ -1293,11 +1260,9 @@ export async function fetchCatalogueOffices(
     }
 
     if (!hydrateCovers) {
-      logResponse(endpoint, groups);
-
       if (onCoverProgress) {
-        void hydrateCatalogueOfficeGroupsWithCovers(groups, { onCoverProgress }).catch(error => {
-          console.warn('[catalogueApi] Hydratation des couvertures interrompue', error);
+        void hydrateCatalogueOfficeGroupsWithCovers(groups, { onCoverProgress }).catch(() => {
+          /* noop */
         });
       }
 
@@ -1307,12 +1272,9 @@ export async function fetchCatalogueOffices(
     const hydratedGroups = await hydrateCatalogueOfficeGroupsWithCovers(groups, {
       onCoverProgress,
     });
-
-    logResponse(endpoint, hydratedGroups);
     return hydratedGroups;
-  } catch (error) {
-    console.error('[catalogueApi] Impossible de recuperer les prochaines offices', error);
-    throw error;
+  } catch {
+    return [];
   }
 }
 
@@ -1323,39 +1285,26 @@ export async function fetchCatalogueCover(ean: string): Promise<string | null> {
 }
 
 export async function fetchCatalogueKiosques(): Promise<CatalogueKiosqueGroup[]> {
-  const endpoint = 'fetchCatalogueKiosques';
-  logRequest(endpoint);
   const data = catalogueDb.kiosques.map(kiosque => ({
     office: kiosque.office,
     date: kiosque.date,
     shipping: kiosque.shipping,
     books: kiosque.bookEans.map(cloneBook),
   }));
-  logResponse(endpoint, data);
   return Promise.resolve(data);
 }
 
 export async function fetchCatalogueEditions(): Promise<CatalogueEdition[]> {
-  const endpoint = 'fetchCatalogueEditions';
-  logRequest(endpoint);
   const data = catalogueDb.editions.map(edition => ({ ...edition }));
-  logResponse(endpoint, data);
   return Promise.resolve(data);
 }
 
 export async function fetchCatalogueBook(
   ean: string,
 ): Promise<CatalogueBook | null> {
-  const endpoint = `fetchCatalogueBook:${ean}`;
-  logRequest(endpoint);
-
   try {
-    const book = cloneBook(ean);
-    logResponse(endpoint, book);
-    return Promise.resolve(book);
-  } catch (error) {
-    logResponse(endpoint, null);
-    console.warn(`[catalogueApi] Livre introuvable pour l'EAN ${ean}`, error);
+    return Promise.resolve(cloneBook(ean));
+  } catch {
     return Promise.resolve(null);
   }
 }
@@ -1363,9 +1312,6 @@ export async function fetchCatalogueBook(
 export async function fetchCatalogueRelatedBooks(
   ean: string,
 ): Promise<CatalogueBook[]> {
-  const endpoint = `fetchCatalogueRelatedBooks:${ean}`;
-  logRequest(endpoint);
-
   try {
     const book = cloneBook(ean);
     const relatedEans = book.details?.relatedEans ?? [];
@@ -1374,24 +1320,13 @@ export async function fetchCatalogueRelatedBooks(
       .map(relatedEan => {
         try {
           return cloneBook(relatedEan);
-        } catch (error) {
-          console.warn(
-            `[catalogueApi] Livre recommandé introuvable pour l'EAN ${relatedEan}`,
-            error,
-          );
+        } catch {
           return null;
         }
       })
       .filter((item): item is CatalogueBook => item !== null);
-
-    logResponse(endpoint, related);
     return Promise.resolve(related);
-  } catch (error) {
-    logResponse(endpoint, []);
-    console.warn(
-      `[catalogueApi] Impossible de récupérer les recommandations pour ${ean}`,
-      error,
-    );
+  } catch {
     return Promise.resolve([]);
   }
 }

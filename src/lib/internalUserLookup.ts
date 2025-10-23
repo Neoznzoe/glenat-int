@@ -1,3 +1,5 @@
+import { prepareJsonBody } from './transportEncryption';
+
 const INTERNAL_USER_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
   : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
@@ -19,16 +21,14 @@ export async function lookupInternalUserByEmail(
     return null;
   }
 
-  const payload = {
+  const preparedBody = await prepareJsonBody({
     query: `SELECT * FROM users WHERE email = '${escapeSqlLiteral(trimmedEmail)}';`,
-  };
+  });
 
   const response = await fetch(INTERNAL_USER_ENDPOINT, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
+    headers: preparedBody.headers,
+    body: preparedBody.body,
   });
 
   if (!response.ok) {
@@ -36,10 +36,8 @@ export async function lookupInternalUserByEmail(
   }
 
   try {
-    console.log("Réponse brute :", response);
     return (await response.json()) as DatabaseUserLookupResponse;
-  } catch (error) {
-    console.warn('Réponse inattendue lors de la récupération utilisateur :', error);
+  } catch {
     return null;
   }
 }

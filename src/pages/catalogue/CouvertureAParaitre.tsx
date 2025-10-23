@@ -97,7 +97,6 @@ export function CouvertureAParaitre() {
 
             if ((data?.success ?? false) && imageBase64) {
               if (controller.signal.aborted) return;
-              console.log('Couverture reçue:', ean, data);
               setStates((prev) =>
                 prev.map((item) =>
                   item.ean === ean
@@ -123,8 +122,6 @@ export function CouvertureAParaitre() {
 
             const message =
               error instanceof Error ? error.message : 'Erreur inconnue lors de la récupération';
-
-            console.error(`Erreur lors de la récupération de la couverture ${ean}:`, error);
             setStates((prev) =>
               prev.map((item) =>
                 item.ean === ean

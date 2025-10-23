@@ -95,7 +95,7 @@ async function handleAdminRequest(request: Request): Promise<Response | undefine
 }
 
 export async function startMockServer(): Promise<void> {
-  ensureDatabaseSeeded();
+  await ensureDatabaseSeeded();
 
   if (typeof window === 'undefined' || mockServerStarted) {
     return;

@@ -36,13 +36,13 @@ export function CatalogueAll() {
     let isActive = true;
 
     fetchCatalogueBooks()
-      .then(data => {
+      .then((data) => {
         if (isActive) {
           setBooks(data);
         }
       })
-      .catch(error => {
-        console.error('Impossible de récupérer le catalogue', error);
+      .catch(() => {
+        console.error('Impossible de récupérer le catalogue.');
       });
 
     return () => {

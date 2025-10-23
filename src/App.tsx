@@ -6,10 +6,8 @@ import { Toaster } from '@/components/ui/sonner';
 import AppRoutes, { LAZY_ROUTE_PRELOADERS, ROUTES_CONFIG } from './routes';
 import { usePublishedJobOfferCount } from '@/hooks/useJobOffers';
 import { SecureRoutingProvider } from './lib/secureRouting';
-import { useAuth } from '@/context/AuthContext';
 
 function App() {
-  const { user } = useAuth();
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const { data: publishedJobCount, isLoading: loadingJobCount } = usePublishedJobOfferCount();
   const jobCount = loadingJobCount ? undefined : publishedJobCount;
@@ -21,12 +19,6 @@ function App() {
       });
     });
   }, []);
-
-  useEffect(() => {
-    if (user) {
-      console.log('Utilisateur connecté :', user);
-    }
-  }, [user]);
 
   return (
     <SidebarContext.Provider value={isSidebarExpanded}>

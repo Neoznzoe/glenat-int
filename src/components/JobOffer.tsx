@@ -182,8 +182,7 @@ function parseJobOfferSections(html?: string): ParsedSections {
       avantagesHtml: sections.avantages.join('').trim(),
       remunerationHtml: sections.remuneration.join('').trim(),
     };
-  } catch (error) {
-    console.warn("Impossible de parser le contenu de l'offre :", error);
+  } catch {
     return empty;
   }
 }

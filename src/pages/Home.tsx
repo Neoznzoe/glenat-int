@@ -462,8 +462,8 @@ function HomeContent() {
             sortable
             showMore={!showAllAbsents && absentsToday.length > absentLimit}
             showLess={showAllAbsents && absentsToday.length > absentLimit}
-            onSearch={(value) => console.log('search absent', value)}
-            onSort={(value) => console.log('sort absent', value)}
+            onSearch={() => {}}
+            onSort={() => {}}
             onShowMore={() => setShowAllAbsents(true)}
             onShowLess={() => setShowAllAbsents(false)}
             emptyMessage="aucun absent aujourd'hui"
@@ -482,8 +482,8 @@ function HomeContent() {
             sortable
             showMore={!showAllTelework && teleworkToday.length > teleworkLimit}
             showLess={showAllTelework && teleworkToday.length > teleworkLimit}
-            onSearch={(value) => console.log('search telework', value)}
-            onSort={(value) => console.log('sort telework', value)}
+            onSearch={() => {}}
+            onSort={() => {}}
             onShowMore={() => setShowAllTelework(true)}
             onShowLess={() => setShowAllTelework(false)}
             emptyMessage="aucun télétravail aujourd'hui"
@@ -526,7 +526,7 @@ function HomeContent() {
               sortKeys={['name']}
               showMore={!showAllTraveling && travelingToday.length > 2}
               showLess={showAllTraveling && travelingToday.length > 2}
-              onSort={(value) => console.log('sort traveling', value)}
+              onSort={() => {}}
               onShowMore={() => setShowAllTraveling(true)}
               onShowLess={() => setShowAllTraveling(false)}
               emptyMessage="aucun déplacement aujourd'hui"
@@ -546,7 +546,7 @@ function HomeContent() {
               sortKeys={['date', 'name']}
               showMore={!showAllPlanned && plannedTravel.length > 2}
               showLess={showAllPlanned && plannedTravel.length > 2}
-              onSort={(value) => console.log('sort planned', value)}
+              onSort={() => {}}
               onShowMore={() => setShowAllPlanned(true)}
               onShowLess={() => setShowAllPlanned(false)}
               emptyMessage="aucun déplacement prévu"

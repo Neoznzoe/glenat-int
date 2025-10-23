@@ -46,13 +46,13 @@ export function Nouveautes() {
     let isActive = true;
 
     fetchCatalogueReleases()
-      .then(data => {
+      .then((data) => {
         if (isActive) {
           setReleases(data);
         }
       })
-      .catch(error => {
-        console.error('Impossible de récupérer les nouveautés', error);
+      .catch(() => {
+        console.error('Impossible de récupérer les nouveautés.');
       });
 
     return () => {

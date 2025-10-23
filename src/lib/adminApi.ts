@@ -10,6 +10,7 @@ import {
   type PermissionKey,
 } from './access-control';
 import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
+import { prepareJsonBody } from './transportEncryption';
 
 const ADMIN_DATABASE_ENDPOINT =
   import.meta.env.VITE_ADMIN_DATABASE_ENDPOINT ??
@@ -384,13 +385,12 @@ function escapeSqlLiteral(value: string): string {
 
 async function runDatabaseQuery(query: string, context: string): Promise<RawDatabaseUserRecord[]> {
   let response: Response;
+  const preparedBody = await prepareJsonBody({ query });
   try {
     response = await fetch(ADMIN_DATABASE_ENDPOINT, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query }),
+      headers: preparedBody.headers,
+      body: preparedBody.body,
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
@@ -932,6 +932,36 @@ async function loadUserGroupIds(userId: number): Promise<string[]> {
   return groupIds;
 }
 
+async function applyBodyEncryption(
+  body: string | undefined,
+  headers: Headers,
+): Promise<string | undefined> {
+  if (!body || !body.trim()) {
+    return body;
+  }
+
+  if (headers.has('X-Encrypted-Payload')) {
+    return body;
+  }
+
+  const contentType = headers.get('Content-Type');
+  if (!contentType || !contentType.toLowerCase().includes('application/json')) {
+    return body;
+  }
+
+  try {
+    const parsed = JSON.parse(body) as unknown;
+    const encrypted = await prepareJsonBody(parsed);
+    headers.set('Content-Type', encrypted.headers['Content-Type']);
+    if (encrypted.headers['X-Encrypted-Payload']) {
+      headers.set('X-Encrypted-Payload', encrypted.headers['X-Encrypted-Payload']);
+    }
+    return encrypted.body;
+  } catch {
+    return body;
+  }
+}
+
 async function withEncryptedUrl(
   input: RequestInfo | URL,
   init?: RequestInit,
@@ -969,10 +999,13 @@ async function withEncryptedUrl(
       headers.append(key, value);
     });
 
+    const encryptedBody =
+      typeof body === 'string' ? await applyBodyEncryption(body, headers) : body ?? undefined;
+
     const encryptedInit: RequestInit = {
       method,
       headers,
-      body,
+      body: encryptedBody,
       cache: input.cache,
       credentials: input.credentials,
       integrity: input.integrity,
@@ -996,7 +1029,18 @@ async function withEncryptedUrl(
   const method = methodFromInit(init);
   const token = await encryptUrlPayload({ path: url.pathname, search: url.search, method });
 
-  return { input: `/secure/${token}`, init };
+  let nextInit = init;
+  if (init?.body && typeof init.body === 'string') {
+    const headers = new Headers(init.headers ?? {});
+    const encryptedBody = await applyBodyEncryption(init.body, headers);
+    nextInit = {
+      ...init,
+      body: encryptedBody,
+      headers,
+    };
+  }
+
+  return { input: `/secure/${token}`, init: nextInit };
 }
 
 async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
@@ -1027,8 +1071,8 @@ export async function fetchUsers(): Promise<UserAccount[]> {
       'membres des groupes utilisateurs',
     );
     membershipsByUser = buildGroupMembershipMap(membershipRecords);
-  } catch (error) {
-    console.error('Impossible de récupérer les appartenances aux groupes.', error);
+  } catch {
+    console.error('Impossible de récupérer les appartenances aux groupes.');
   }
 
   let modulePermissionMaps: ModulePermissionMaps | null = null;
@@ -1041,8 +1085,8 @@ export async function fetchUsers(): Promise<UserAccount[]> {
       "exceptions d'accès individuelles",
     );
     moduleOverridesByUser = buildModuleOverrideMap(permissionRecords, maps.keyByModuleId);
-  } catch (error) {
-    console.error("Impossible de récupérer les permissions individuelles des utilisateurs.", error);
+  } catch {
+    console.error("Impossible de récupérer les permissions individuelles des utilisateurs.");
   }
 
   const moduleIdByKey = modulePermissionMaps?.moduleIdByKey ?? new Map<PermissionKey, string>();
@@ -1083,12 +1127,6 @@ function buildSidebarModulesQuery(userId?: number): string {
   const hasValidId = typeof userId === 'number' && Number.isFinite(userId);
   const sanitizedId = hasValidId ? Math.trunc(userId) : null;
   const userIdLiteral = sanitizedId === null ? 'CAST(NULL AS INT)' : String(sanitizedId);
-
-  if (sanitizedId !== null) {
-    console.log(`Requête SQL modules – DECLARE @userId INT = ${sanitizedId};`);
-  } else {
-    console.warn('Requête SQL modules – aucun identifiant utilisateur valide fourni.');
-  }
 
   return [
     'SET NOCOUNT ON;',
@@ -1257,11 +1295,8 @@ export async function fetchCurrentUser(): Promise<UserAccount> {
         ),
       };
     }
-  } catch (error) {
-    console.error(
-      "Impossible de récupérer les permissions individuelles pour l'utilisateur courant.",
-      error,
-    );
+  } catch {
+    console.error("Impossible de récupérer les permissions individuelles pour l'utilisateur courant.");
   }
 
   return nextUser;
@@ -1327,14 +1362,16 @@ export async function persistUserAccess(
 
   if (numericUserId === null) {
     const { userId, ...body } = payload;
+    const preparedBody = await prepareJsonBody({
+      ...body,
+      permissionOverrides: sanitizedOverrides,
+    });
     const updated = await requestJson<UserAccount>(
       `/api/admin/users/${encodeURIComponent(userId)}/access`,
       {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ...body, permissionOverrides: sanitizedOverrides }),
+        headers: preparedBody.headers,
+        body: preparedBody.body,
       },
     );
 
@@ -1377,18 +1414,17 @@ export async function persistModuleOverrideChange(
   const numericUserId = toDatabaseIntegerId(payload.userId);
 
   if (numericUserId === null) {
+    const preparedBody = await prepareJsonBody({
+      groups: payload.groups,
+      permissionOverrides: sanitizedAllOverrides,
+      actorId: payload.actorId,
+    });
     const updated = await requestJson<UserAccount>(
       `/api/admin/users/${encodeURIComponent(payload.userId)}/access`,
       {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          groups: payload.groups,
-          permissionOverrides: sanitizedAllOverrides,
-          actorId: payload.actorId,
-        }),
+        headers: preparedBody.headers,
+        body: preparedBody.body,
       },
     );
 
@@ -1467,8 +1503,8 @@ export async function persistModuleOverrideChange(
   let refreshedGroups: string[];
   try {
     refreshedGroups = await loadUserGroupIds(numericUserId);
-  } catch (error) {
-    console.warn('Failed to reload user groups after module override update.', { userId: payload.userId, error });
+  } catch {
+    console.warn('Failed to reload user groups after module override update.');
     refreshedGroups = [...payload.groups];
   }
   updatedUser.groups = refreshedGroups;

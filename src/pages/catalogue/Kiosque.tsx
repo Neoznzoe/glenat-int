@@ -58,13 +58,13 @@ export function Kiosque() {
     let isActive = true;
 
     fetchCatalogueKiosques()
-      .then(data => {
+      .then((data) => {
         if (isActive) {
           setKiosques(data);
         }
       })
-      .catch(error => {
-        console.error('Impossible de récupérer le kiosque', error);
+      .catch(() => {
+        console.error('Impossible de récupérer le kiosque.');
       });
 
     return () => {

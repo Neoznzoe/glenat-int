@@ -22,13 +22,13 @@ export function Catalogue() {
     let isActive = true;
 
     fetchCatalogueEditions()
-      .then(data => {
+      .then((data) => {
         if (isActive) {
           setEditions(data);
         }
       })
-      .catch(error => {
-        console.error('Impossible de récupérer les éditions', error);
+      .catch(() => {
+        console.error('Impossible de récupérer les éditions.');
       });
 
     return () => {

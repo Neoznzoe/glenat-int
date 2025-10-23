@@ -547,19 +547,6 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const currentUserId = toNumericId(currentUser?.id);
   const sidebarUserId = internalUserId ?? currentUserId;
   const lastModuleFingerprintRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (internalUserId !== undefined) {
-      console.log('Identifiant utilisateur interne détecté :', internalUserId);
-    }
-  }, [internalUserId]);
-  useEffect(() => {
-    if (internalUserId === undefined && currentUserId !== undefined) {
-      console.log(
-        "Identifiant utilisateur récupéré depuis l'API d'administration :",
-        currentUserId,
-      );
-    }
-  }, [currentUserId, internalUserId]);
   const {
     data: moduleDefinitions,
     isLoading: loadingModules,
@@ -584,9 +571,6 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     }
 
     if (lastModuleFingerprintRef.current !== fingerprint) {
-      console.info(
-        "Changement détecté dans les modules — rechargement de la page pour refléter l'état de la base de données.",
-      );
       if (typeof window !== 'undefined') {
         window.location.reload();
       }
