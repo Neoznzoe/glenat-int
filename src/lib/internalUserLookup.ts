@@ -1,5 +1,5 @@
 import { fetchWithOAuth } from './oauth';
-import { stringifyEncryptedPayload } from './securePayload';
+import { prepareSecureJsonPayload } from './securePayload';
 
 const INTERNAL_USER_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
@@ -26,15 +26,16 @@ export async function lookupInternalUserByEmail(
     query: `SELECT * FROM users WHERE email = '${escapeSqlLiteral(trimmedEmail)}';`,
   };
 
-  const encryptedBody = await stringifyEncryptedPayload(payload);
+  const securePayload = await prepareSecureJsonPayload(payload);
+  const headers = new Headers({ 'Content-Type': 'application/json' });
+  if (securePayload.encrypted) {
+    headers.set('X-Content-Encryption', 'hybrid-aes256gcm+rsa');
+  }
 
   const response = await fetchWithOAuth(INTERNAL_USER_ENDPOINT, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Content-Encryption': 'hybrid-aes256gcm+rsa',
-    },
-    body: encryptedBody,
+    headers,
+    body: securePayload.body,
   });
 
   if (!response.ok) {

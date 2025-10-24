@@ -72,6 +72,7 @@ VITE_OAUTH_REFRESH_LEEWAY=30                        # marge (en secondes) avant 
 VITE_OAUTH_FALLBACK_TTL=3600                        # durée de vie par défaut (en secondes) si l'API ne fournit pas expires_in
 VITE_OAUTH_STORAGE_KEY=<cle_base64url_32_octets>    # clé AES-256 pour chiffrer le cache local
 VITE_SECURE_API_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"  # clé publique RSA/OAEP du serveur
+VITE_SECURE_API_MODE=optional                                 # disabled | optional | required
 ```
 
 Seuls `VITE_OAUTH_CLIENT_ID` et `VITE_OAUTH_CLIENT_SECRET` sont indispensables ; les autres paramètres peuvent être adaptés à l'implémentation du fournisseur OAuth.
@@ -80,7 +81,13 @@ Le `code_exchange` est enregistré côté client le temps d'obtenir l'`access_to
 
 ### Chiffrement hybride des payloads API
 
-Toutes les requêtes POST adressées aux proxys internes (`callDatabase`, catalogue, annuaire, modules administratifs) sont encapsulées dans une enveloppe JSON chiffrée en AES-256-GCM dont la clé est protégée via RSA-OAEP. La clé publique exposée par l'API doit être fournie dans `VITE_SECURE_API_PUBLIC_KEY`, tandis que `VITE_OAUTH_STORAGE_KEY` sert à chiffrer le cache local des jetons OAuth. Chaque message transporte également un timestamp et un nonce aléatoire pour faciliter les contrôles anti-rejeu côté serveur.
+Toutes les requêtes POST adressées aux proxys internes (`callDatabase`, catalogue, annuaire, modules administratifs) peuvent être encapsulées dans une enveloppe JSON chiffrée en AES-256-GCM dont la clé est protégée via RSA-OAEP. La clé publique exposée par l'API doit être fournie dans `VITE_SECURE_API_PUBLIC_KEY`, tandis que `VITE_OAUTH_STORAGE_KEY` sert à chiffrer le cache local des jetons OAuth. Le mode d'envoi est contrôlé par `VITE_SECURE_API_MODE` :
+
+* `disabled` : les payloads sont envoyés en clair (mode par défaut pour préserver la compatibilité si le serveur n'est pas encore prêt).
+* `optional` : le client tente de chiffrer les payloads ; en cas d'erreur locale, il revient automatiquement au clair.
+* `required` : le chiffrement est imposé et toute erreur de configuration bloque l'appel.
+
+Chaque message chiffré transporte également un timestamp et un nonce aléatoire pour faciliter les contrôles anti-rejeu côté serveur.
 
 ## 🧠 Technologies principales
 - **React** pour la construction des interfaces.

@@ -1,5 +1,5 @@
 import { fetchWithOAuth } from './oauth';
-import { stringifyEncryptedPayload } from './securePayload';
+import { prepareSecureJsonPayload } from './securePayload';
 
 const JOB_OFFERS_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
@@ -213,14 +213,16 @@ function normalizeJobOffer(raw: RawJobOfferRecord): JobOfferRecord | null {
 
 export async function fetchJobOffers(): Promise<JobOfferRecord[]> {
   const payload = { query: JOB_OFFERS_QUERY };
-  const encryptedBody = await stringifyEncryptedPayload(payload);
+  const securePayload = await prepareSecureJsonPayload(payload);
+  const headers = new Headers({ 'Content-Type': 'application/json' });
+  if (securePayload.encrypted) {
+    headers.set('X-Content-Encryption', 'hybrid-aes256gcm+rsa');
+  }
+
   const response = await fetchWithOAuth(JOB_OFFERS_ENDPOINT, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Content-Encryption': 'hybrid-aes256gcm+rsa',
-    },
-    body: encryptedBody,
+    headers,
+    body: securePayload.body,
   });
 
   if (!response.ok) {
@@ -257,14 +259,16 @@ export const JOB_OFFERS_QUERY_KEY = ['job-offers'] as const;
 
 export async function fetchPublishedJobOfferCount(): Promise<number> {
   const payload = { query: JOB_OFFER_COUNT_QUERY };
-  const encryptedBody = await stringifyEncryptedPayload(payload);
+  const securePayload = await prepareSecureJsonPayload(payload);
+  const headers = new Headers({ 'Content-Type': 'application/json' });
+  if (securePayload.encrypted) {
+    headers.set('X-Content-Encryption', 'hybrid-aes256gcm+rsa');
+  }
+
   const response = await fetchWithOAuth(JOB_OFFERS_ENDPOINT, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Content-Encryption': 'hybrid-aes256gcm+rsa',
-    },
-    body: encryptedBody,
+    headers,
+    body: securePayload.body,
   });
 
   if (!response.ok) {

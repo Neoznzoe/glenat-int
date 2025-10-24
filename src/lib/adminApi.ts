@@ -11,7 +11,7 @@ import {
 } from './access-control';
 import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
 import { fetchWithOAuth } from './oauth';
-import { stringifyEncryptedPayload } from './securePayload';
+import { prepareSecureJsonPayload } from './securePayload';
 
 const ADMIN_DATABASE_ENDPOINT =
   import.meta.env.VITE_ADMIN_DATABASE_ENDPOINT ??
@@ -385,23 +385,20 @@ function escapeSqlLiteral(value: string): string {
 }
 
 async function runDatabaseQuery(query: string, context: string): Promise<RawDatabaseUserRecord[]> {
-  let encryptedBody: string;
-  try {
-    encryptedBody = await stringifyEncryptedPayload({ query });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : 'erreur inconnue';
-    throw new Error(`Impossible de chiffrer la requête ${context} : ${detail}`);
-  }
+  const securePayload = await prepareSecureJsonPayload({ query });
 
   let response: Response;
   try {
+    const headers = new Headers({ 'Content-Type': 'application/json' });
+
+    if (securePayload.encrypted) {
+      headers.set('X-Content-Encryption', 'hybrid-aes256gcm+rsa');
+    }
+
     response = await fetchWithOAuth(ADMIN_DATABASE_ENDPOINT, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Content-Encryption': 'hybrid-aes256gcm+rsa',
-      },
-      body: encryptedBody,
+      headers,
+      body: securePayload.body,
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
@@ -1028,18 +1025,18 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Pro
         );
       }
 
-      try {
-        const encryptedBody = await stringifyEncryptedPayload(parsedBody);
+      const securePayload = await prepareSecureJsonPayload(parsedBody);
+      if (securePayload.encrypted) {
         headers.set('X-Content-Encryption', 'hybrid-aes256gcm+rsa');
-        requestInit = {
-          ...init,
-          body: encryptedBody,
-          headers,
-        };
-      } catch (error) {
-        const detail = error instanceof Error ? error.message : 'erreur inconnue';
-        throw new Error(`Impossible de chiffrer le corps JSON de la requête : ${detail}`);
+      } else {
+        headers.delete('X-Content-Encryption');
       }
+
+      requestInit = {
+        ...init,
+        body: securePayload.body,
+        headers,
+      };
     }
   }
 

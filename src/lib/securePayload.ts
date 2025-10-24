@@ -1,8 +1,19 @@
 import { encodeText, fromBase64, toArrayBuffer, toBase64 } from './base64';
 
-const PUBLIC_KEY_PEM = import.meta.env.VITE_SECURE_API_PUBLIC_KEY as string | undefined;
+type SecurePayloadMode = 'disabled' | 'optional' | 'required';
 
+const PUBLIC_KEY_PEM = import.meta.env.VITE_SECURE_API_PUBLIC_KEY as string | undefined;
+const RAW_MODE = (import.meta.env.VITE_SECURE_API_MODE as string | undefined)?.toLowerCase();
+const SECURE_PAYLOAD_MODE: SecurePayloadMode =
+  RAW_MODE === 'required' || RAW_MODE === 'mandatory'
+    ? 'required'
+    : RAW_MODE === 'optional' || RAW_MODE === 'hybrid'
+      ? 'optional'
+      : 'disabled';
+
+let runtimeDisabled = SECURE_PAYLOAD_MODE === 'disabled';
 let publicKeyPromise: Promise<CryptoKey> | null = null;
+let loggedDisabledWarning = false;
 
 function getCrypto(): Crypto {
   if (typeof globalThis === 'undefined' || typeof globalThis.crypto === 'undefined') {
@@ -52,11 +63,54 @@ export interface EncryptedRequestPayload {
   timestamp: number;
 }
 
+export interface PreparedSecureJsonPayload {
+  body: string;
+  encrypted: boolean;
+}
+
+function isEncryptionEnabled(): boolean {
+  return !runtimeDisabled && Boolean(PUBLIC_KEY_PEM);
+}
+
+function ensureFallbackLogged(): void {
+  if (!loggedDisabledWarning && SECURE_PAYLOAD_MODE !== 'disabled') {
+    loggedDisabledWarning = true;
+    console.warn(
+      "[securePayload] Le chiffrement des corps JSON est désactivé : mode optionnel ou clé publique manquante.",
+    );
+  }
+}
+
+export function isSecurePayloadRequired(): boolean {
+  return SECURE_PAYLOAD_MODE === 'required';
+}
+
+export function disableSecurePayload(reason?: unknown): void {
+  if (runtimeDisabled) {
+    return;
+  }
+
+  runtimeDisabled = true;
+
+  if (SECURE_PAYLOAD_MODE === 'required') {
+    const detail = reason instanceof Error ? reason.message : undefined;
+    throw new Error(
+      detail
+        ? `Le chiffrement des requêtes est requis mais a échoué : ${detail}`
+        : 'Le chiffrement des requêtes est requis mais a été désactivé.',
+    );
+  }
+
+  if (reason) {
+    console.warn('[securePayload] Chiffrement des corps JSON désactivé.', reason);
+  }
+}
+
 function toUint8Array(buffer: ArrayBuffer): Uint8Array {
   return buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
 }
 
-export async function encryptJsonPayload(payload: unknown): Promise<EncryptedRequestPayload> {
+async function encryptJsonPayload(payload: unknown): Promise<EncryptedRequestPayload> {
   const crypto = getCrypto();
   const publicKey = await importPublicKey();
   const aesKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, [
@@ -95,7 +149,26 @@ export async function encryptJsonPayload(payload: unknown): Promise<EncryptedReq
   };
 }
 
-export async function stringifyEncryptedPayload(payload: unknown): Promise<string> {
-  const envelope = await encryptJsonPayload(payload);
-  return JSON.stringify(envelope);
+export async function prepareSecureJsonPayload(
+  payload: unknown,
+): Promise<PreparedSecureJsonPayload> {
+  if (!isEncryptionEnabled()) {
+    if (SECURE_PAYLOAD_MODE === 'required') {
+      throw new Error(
+        'Le chiffrement des requêtes est requis mais aucune clé publique valide est disponible.',
+      );
+    }
+
+    ensureFallbackLogged();
+    return { body: JSON.stringify(payload), encrypted: false };
+  }
+
+  try {
+    const envelope = await encryptJsonPayload(payload);
+    return { body: JSON.stringify(envelope), encrypted: true };
+  } catch (error) {
+    disableSecurePayload(error instanceof Error ? error : undefined);
+    ensureFallbackLogged();
+    return { body: JSON.stringify(payload), encrypted: false };
+  }
 }
