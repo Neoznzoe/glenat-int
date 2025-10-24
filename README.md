@@ -84,7 +84,7 @@ Le `code_exchange` est enregistré côté client le temps d'obtenir l'`access_to
 
 Toutes les requêtes POST adressées aux proxys internes (`callDatabase`, catalogue, annuaire, modules administratifs) peuvent être encapsulées dans une enveloppe JSON chiffrée en AES-256-GCM dont la clé est protégée via RSA-OAEP. La clé publique exposée par l'API doit être fournie dans `VITE_SECURE_API_PUBLIC_KEY`, tandis que `VITE_OAUTH_STORAGE_KEY` sert à chiffrer le cache local des jetons OAuth. Le mode d'envoi est contrôlé par `VITE_SECURE_API_MODE` :
 
-* `disabled` : les payloads sont envoyés en clair (mode par défaut pour préserver la compatibilité si le serveur n'est pas encore prêt).
+* `disabled` : les payloads sont envoyés en clair. C'est le mode par défaut lorsque aucune clé publique n'est fournie.
 * `optional` : le client tente de chiffrer les payloads ; en cas d'erreur locale, il revient automatiquement au clair.
 * `required` : le chiffrement est imposé et toute erreur de configuration bloque l'appel.
 

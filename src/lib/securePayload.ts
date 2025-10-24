@@ -8,12 +8,13 @@ type SecurePayloadMode = 'disabled' | 'optional' | 'required';
 
 const PUBLIC_KEY_PEM = import.meta.env.VITE_SECURE_API_PUBLIC_KEY as string | undefined;
 const RAW_MODE = (import.meta.env.VITE_SECURE_API_MODE as string | undefined)?.toLowerCase();
+const DEFAULT_MODE: SecurePayloadMode = PUBLIC_KEY_PEM ? 'optional' : 'disabled';
 const SECURE_PAYLOAD_MODE: SecurePayloadMode =
   RAW_MODE === 'required' || RAW_MODE === 'mandatory'
     ? 'required'
     : RAW_MODE === 'optional' || RAW_MODE === 'hybrid'
       ? 'optional'
-      : 'disabled';
+      : DEFAULT_MODE;
 
 const SHOULD_ANNOUNCE_ENCRYPTION =
   (import.meta.env.VITE_SECURE_API_SEND_ENCRYPTION_HEADER as string | undefined)?.toLowerCase() ===
