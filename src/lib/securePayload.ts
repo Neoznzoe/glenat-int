@@ -160,15 +160,24 @@ export async function prepareSecureJsonPayload(
     }
 
     ensureFallbackLogged();
-    return { body: JSON.stringify(payload), encrypted: false };
+    return {
+      body: JSON.stringify({ encrypt: false, data: payload }),
+      encrypted: false,
+    };
   }
 
   try {
     const envelope = await encryptJsonPayload(payload);
-    return { body: JSON.stringify(envelope), encrypted: true };
+    return {
+      body: JSON.stringify({ encrypt: true, data: envelope }),
+      encrypted: true,
+    };
   } catch (error) {
     disableSecurePayload(error instanceof Error ? error : undefined);
     ensureFallbackLogged();
-    return { body: JSON.stringify(payload), encrypted: false };
+    return {
+      body: JSON.stringify({ encrypt: false, data: payload }),
+      encrypted: false,
+    };
   }
 }
