@@ -151,7 +151,6 @@ async function encryptJsonPayload(payload: unknown): Promise<EncryptedRequestPay
   }
 
   const authTag = ciphertext.slice(ciphertext.byteLength - 16);
-  const sealedCiphertext = ciphertext.slice(0, ciphertext.byteLength - 16);
   const rawKey = await crypto.subtle.exportKey('raw', aesKey);
   const encryptedKeyBuffer = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, publicKey, rawKey);
 
@@ -161,7 +160,7 @@ async function encryptJsonPayload(payload: unknown): Promise<EncryptedRequestPay
     keyAlgorithm: 'RSA-OAEP-256',
     encryptedKey: toBase64(toUint8Array(encryptedKeyBuffer)),
     iv: toBase64(iv),
-    ciphertext: toBase64(sealedCiphertext),
+    ciphertext: toBase64(ciphertext),
     authTag: toBase64(authTag),
     nonce: toBase64(nonce),
     timestamp: Date.now(),
