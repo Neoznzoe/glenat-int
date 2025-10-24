@@ -549,15 +549,12 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   const lastModuleFingerprintRef = useRef<string | null>(null);
   useEffect(() => {
     if (internalUserId !== undefined) {
-      console.log('Identifiant utilisateur interne détecté :', internalUserId);
+      console.debug('Identifiant utilisateur interne détecté.');
     }
   }, [internalUserId]);
   useEffect(() => {
     if (internalUserId === undefined && currentUserId !== undefined) {
-      console.log(
-        "Identifiant utilisateur récupéré depuis l'API d'administration :",
-        currentUserId,
-      );
+      console.debug("Identifiant utilisateur récupéré via l'API d'administration.");
     }
   }, [currentUserId, internalUserId]);
   const {

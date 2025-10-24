@@ -70,11 +70,27 @@ VITE_OAUTH_TOKEN_GRANT_TYPE=authorization_code      # valeur par défaut
 VITE_OAUTH_REFRESH_GRANT_TYPE=refresh_token         # valeur par défaut
 VITE_OAUTH_REFRESH_LEEWAY=30                        # marge (en secondes) avant expiration pour rafraîchir le token
 VITE_OAUTH_FALLBACK_TTL=3600                        # durée de vie par défaut (en secondes) si l'API ne fournit pas expires_in
+VITE_OAUTH_STORAGE_KEY=<cle_base64url_32_octets>    # clé AES-256 pour chiffrer le cache local
+VITE_SECURE_API_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"  # clé publique RSA/OAEP du serveur
+VITE_SECURE_API_MODE=optional                                 # disabled | optional | required
+VITE_SECURE_API_SEND_ENCRYPTION_HEADER=false                  # true pour ajouter l'en-tête X-Content-Encryption
 ```
 
 Seuls `VITE_OAUTH_CLIENT_ID` et `VITE_OAUTH_CLIENT_SECRET` sont indispensables ; les autres paramètres peuvent être adaptés à l'implémentation du fournisseur OAuth.
 
-Le `code_exchange` est enregistré côté client le temps d'obtenir l'`access_token`, puis c'est cet `access_token` qui est systématiquement envoyé dans l'en-tête `Authorization: Bearer <access_token>` pour les appels `callDatabase`. Le jeton est mis en cache côté client, persisté dans le `localStorage` pour être réutilisé pendant toute sa durée de vie (`maxAge`/`expires_in`, 1 heure par défaut) et est automatiquement rafraîchi grâce au `refresh_token` tant qu'il reste valide.
+Le `code_exchange` est enregistré côté client le temps d'obtenir l'`access_token`, puis c'est cet `access_token` qui est systématiquement envoyé dans l'en-tête `Authorization: Bearer <access_token>` pour les appels `callDatabase`. Les jetons sont désormais chiffrés en AES-256-GCM avant d'être persistés dans le `localStorage`, ce qui évite toute lecture directe via les outils de développement. Ils sont automatiquement rafraîchis grâce au `refresh_token` tant qu'il reste valide.
+
+### Chiffrement hybride des payloads API
+
+Toutes les requêtes POST adressées aux proxys internes (`callDatabase`, catalogue, annuaire, modules administratifs) peuvent être encapsulées dans une enveloppe JSON chiffrée en AES-256-GCM dont la clé est protégée via RSA-OAEP. La clé publique exposée par l'API doit être fournie dans `VITE_SECURE_API_PUBLIC_KEY`, tandis que `VITE_OAUTH_STORAGE_KEY` sert à chiffrer le cache local des jetons OAuth. Le mode d'envoi est contrôlé par `VITE_SECURE_API_MODE` :
+
+* `disabled` : les payloads sont envoyés en clair. C'est le mode par défaut lorsque aucune clé publique n'est fournie.
+* `optional` : le client tente de chiffrer les payloads ; en cas d'erreur locale, il revient automatiquement au clair.
+* `required` : le chiffrement est imposé et toute erreur de configuration bloque l'appel.
+
+Chaque message chiffré transporte également un timestamp et un nonce aléatoire pour faciliter les contrôles anti-rejeu côté serveur.
+
+Quel que soit le mode, le corps POST suit la structure `{ "encrypt": <bool>, "data": <payload> }` afin que le serveur puisse cibler la section `data`. L'en-tête optionnel `X-Content-Encryption: hybrid-aes256gcm+rsa` n'est ajouté que si `VITE_SECURE_API_SEND_ENCRYPTION_HEADER=true` **et** que le champ `data` transporte un bloc chiffré, ce qui évite les rejets CORS sur la requête de preflight lorsque le backend n'autorise pas cet en-tête personnalisé.
 
 ## 🧠 Technologies principales
 - **React** pour la construction des interfaces.

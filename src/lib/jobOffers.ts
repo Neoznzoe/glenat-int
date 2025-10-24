@@ -1,4 +1,5 @@
 import { fetchWithOAuth } from './oauth';
+import { applySecurePayloadHeaders, logSecurePayloadRequest, prepareSecureJsonPayload } from './securePayload';
 
 const JOB_OFFERS_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
@@ -211,13 +212,21 @@ function normalizeJobOffer(raw: RawJobOfferRecord): JobOfferRecord | null {
 }
 
 export async function fetchJobOffers(): Promise<JobOfferRecord[]> {
-  const payload = { query: JOB_OFFERS_QUERY };
+  const requestPayload = { query: JOB_OFFERS_QUERY };
+  const securePayload = await prepareSecureJsonPayload(requestPayload);
+  const headers = new Headers({ 'Content-Type': 'application/json' });
+  applySecurePayloadHeaders(headers, securePayload.encrypted);
+  logSecurePayloadRequest(
+    JOB_OFFERS_ENDPOINT,
+    requestPayload,
+    securePayload.body,
+    securePayload.encrypted,
+  );
+
   const response = await fetchWithOAuth(JOB_OFFERS_ENDPOINT, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
+    headers,
+    body: securePayload.body,
   });
 
   if (!response.ok) {
@@ -253,13 +262,21 @@ export async function fetchJobOffers(): Promise<JobOfferRecord[]> {
 export const JOB_OFFERS_QUERY_KEY = ['job-offers'] as const;
 
 export async function fetchPublishedJobOfferCount(): Promise<number> {
-  const payload = { query: JOB_OFFER_COUNT_QUERY };
+  const requestPayload = { query: JOB_OFFER_COUNT_QUERY };
+  const securePayload = await prepareSecureJsonPayload(requestPayload);
+  const headers = new Headers({ 'Content-Type': 'application/json' });
+  applySecurePayloadHeaders(headers, securePayload.encrypted);
+  logSecurePayloadRequest(
+    JOB_OFFERS_ENDPOINT,
+    requestPayload,
+    securePayload.body,
+    securePayload.encrypted,
+  );
+
   const response = await fetchWithOAuth(JOB_OFFERS_ENDPOINT, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
+    headers,
+    body: securePayload.body,
   });
 
   if (!response.ok) {
