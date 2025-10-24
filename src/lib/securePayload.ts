@@ -87,6 +87,33 @@ export function applySecurePayloadHeaders(headers: Headers, encrypted: boolean):
   headers.set(SECURE_PAYLOAD_ENCRYPTION_HEADER, SECURE_PAYLOAD_ENCRYPTION_SCHEME);
 }
 
+function normalizeRequestTarget(target: RequestInfo | URL): string | undefined {
+  if (typeof target === 'string') {
+    return target;
+  }
+
+  if (target instanceof URL) {
+    return target.toString();
+  }
+
+  if (typeof Request !== 'undefined' && target instanceof Request) {
+    return target.url;
+  }
+
+  return undefined;
+}
+
+export function logSecurePayloadRequest(target: RequestInfo | URL, encrypted: boolean): void {
+  const label = encrypted ? 'appelcrypté: appel encrypté' : 'appel: non crypté';
+  const url = normalizeRequestTarget(target);
+
+  if (url) {
+    console.log(`[securePayload] ${label}`, url);
+  } else {
+    console.log(`[securePayload] ${label}`);
+  }
+}
+
 function isEncryptionEnabled(): boolean {
   return !runtimeDisabled && Boolean(PUBLIC_KEY_PEM);
 }

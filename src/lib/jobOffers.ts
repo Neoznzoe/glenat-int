@@ -1,5 +1,5 @@
 import { fetchWithOAuth } from './oauth';
-import { applySecurePayloadHeaders, prepareSecureJsonPayload } from './securePayload';
+import { applySecurePayloadHeaders, logSecurePayloadRequest, prepareSecureJsonPayload } from './securePayload';
 
 const JOB_OFFERS_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
@@ -216,6 +216,7 @@ export async function fetchJobOffers(): Promise<JobOfferRecord[]> {
   const securePayload = await prepareSecureJsonPayload(payload);
   const headers = new Headers({ 'Content-Type': 'application/json' });
   applySecurePayloadHeaders(headers, securePayload.encrypted);
+  logSecurePayloadRequest(JOB_OFFERS_ENDPOINT, securePayload.encrypted);
 
   const response = await fetchWithOAuth(JOB_OFFERS_ENDPOINT, {
     method: 'POST',
@@ -260,6 +261,7 @@ export async function fetchPublishedJobOfferCount(): Promise<number> {
   const securePayload = await prepareSecureJsonPayload(payload);
   const headers = new Headers({ 'Content-Type': 'application/json' });
   applySecurePayloadHeaders(headers, securePayload.encrypted);
+  logSecurePayloadRequest(JOB_OFFERS_ENDPOINT, securePayload.encrypted);
 
   const response = await fetchWithOAuth(JOB_OFFERS_ENDPOINT, {
     method: 'POST',

@@ -19,7 +19,7 @@ import UniversLivre from '@/assets/logos/univers/univers-livres.svg';
 import UniversManga from '@/assets/logos/univers/univers-manga.svg';
 import type { BookCardProps } from '@/components/BookCard';
 import { fetchWithOAuth } from './oauth';
-import { applySecurePayloadHeaders, prepareSecureJsonPayload } from './securePayload';
+import { applySecurePayloadHeaders, logSecurePayloadRequest, prepareSecureJsonPayload } from './securePayload';
 
 export interface CatalogueBookDetailEntry {
   label: string;
@@ -1270,6 +1270,7 @@ export async function fetchCatalogueOffices(
     });
 
     applySecurePayloadHeaders(headers, securePayload.encrypted);
+    logSecurePayloadRequest(CATALOGUE_OFFICES_ENDPOINT, securePayload.encrypted);
     const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
       method: 'POST',
       headers,

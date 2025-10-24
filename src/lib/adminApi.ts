@@ -13,6 +13,7 @@ import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
 import { fetchWithOAuth } from './oauth';
 import {
   applySecurePayloadHeaders,
+  logSecurePayloadRequest,
   prepareSecureJsonPayload,
   SECURE_PAYLOAD_ENCRYPTION_HEADER,
 } from './securePayload';
@@ -396,6 +397,7 @@ async function runDatabaseQuery(query: string, context: string): Promise<RawData
     const headers = new Headers({ 'Content-Type': 'application/json' });
 
     applySecurePayloadHeaders(headers, securePayload.encrypted);
+    logSecurePayloadRequest(ADMIN_DATABASE_ENDPOINT, securePayload.encrypted);
 
     response = await fetchWithOAuth(ADMIN_DATABASE_ENDPOINT, {
       method: 'POST',
