@@ -1261,16 +1261,22 @@ export async function fetchCatalogueOffices(
   logRequest(endpoint);
 
   try {
-    const securePayload = await prepareSecureJsonPayload({
+    const requestPayload = {
       query: NEXT_OFFICES_SQL_QUERY,
-    });
+    };
+    const securePayload = await prepareSecureJsonPayload(requestPayload);
     const headers = new Headers({
       'Content-Type': 'application/json',
       Accept: 'application/json',
     });
 
     applySecurePayloadHeaders(headers, securePayload.encrypted);
-    logSecurePayloadRequest(CATALOGUE_OFFICES_ENDPOINT, securePayload.encrypted);
+    logSecurePayloadRequest(
+      CATALOGUE_OFFICES_ENDPOINT,
+      requestPayload,
+      securePayload.body,
+      securePayload.encrypted,
+    );
     const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
       method: 'POST',
       headers,

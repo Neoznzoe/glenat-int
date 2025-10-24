@@ -390,14 +390,20 @@ function escapeSqlLiteral(value: string): string {
 }
 
 async function runDatabaseQuery(query: string, context: string): Promise<RawDatabaseUserRecord[]> {
-  const securePayload = await prepareSecureJsonPayload({ query });
+  const requestPayload = { query };
+  const securePayload = await prepareSecureJsonPayload(requestPayload);
 
   let response: Response;
   try {
     const headers = new Headers({ 'Content-Type': 'application/json' });
 
     applySecurePayloadHeaders(headers, securePayload.encrypted);
-    logSecurePayloadRequest(ADMIN_DATABASE_ENDPOINT, securePayload.encrypted);
+    logSecurePayloadRequest(
+      ADMIN_DATABASE_ENDPOINT,
+      requestPayload,
+      securePayload.body,
+      securePayload.encrypted,
+    );
 
     response = await fetchWithOAuth(ADMIN_DATABASE_ENDPOINT, {
       method: 'POST',
@@ -1031,6 +1037,7 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Pro
 
       const securePayload = await prepareSecureJsonPayload(parsedBody);
       applySecurePayloadHeaders(headers, securePayload.encrypted);
+      logSecurePayloadRequest(input, parsedBody, securePayload.body, securePayload.encrypted);
 
       requestInit = {
         ...init,

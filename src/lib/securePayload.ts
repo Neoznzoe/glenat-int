@@ -103,15 +103,39 @@ function normalizeRequestTarget(target: RequestInfo | URL): string | undefined {
   return undefined;
 }
 
-export function logSecurePayloadRequest(target: RequestInfo | URL, encrypted: boolean): void {
-  const label = encrypted ? 'appelcrypté: appel encrypté' : 'appel: non crypté';
+function logWithOptionalTarget(
+  label: string,
+  target: RequestInfo | URL,
+  value: unknown,
+): void {
   const url = normalizeRequestTarget(target);
 
   if (url) {
-    console.log(`[securePayload] ${label}`, url);
+    console.log(`[securePayload] ${label}`, url, value);
   } else {
-    console.log(`[securePayload] ${label}`);
+    console.log(`[securePayload] ${label}`, value);
   }
+}
+
+export function logSecurePayloadRequest(
+  target: RequestInfo | URL,
+  rawPayload: unknown,
+  preparedBody: string,
+  encrypted: boolean,
+): void {
+  if (typeof rawPayload !== 'undefined') {
+    logWithOptionalTarget('appel: non crypté', target, rawPayload);
+  }
+
+  let parsedBody: unknown = preparedBody;
+  try {
+    parsedBody = JSON.parse(preparedBody);
+  } catch {
+    // On garde la chaîne telle quelle si le JSON est invalide
+  }
+
+  const label = encrypted ? 'appelcrypté: appel encrypté' : 'appel: non crypté';
+  logWithOptionalTarget(label, target, parsedBody);
 }
 
 function isEncryptionEnabled(): boolean {

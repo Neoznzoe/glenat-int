@@ -22,14 +22,19 @@ export async function lookupInternalUserByEmail(
     return null;
   }
 
-  const payload = {
+  const requestPayload = {
     query: `SELECT * FROM users WHERE email = '${escapeSqlLiteral(trimmedEmail)}';`,
   };
 
-  const securePayload = await prepareSecureJsonPayload(payload);
+  const securePayload = await prepareSecureJsonPayload(requestPayload);
   const headers = new Headers({ 'Content-Type': 'application/json' });
   applySecurePayloadHeaders(headers, securePayload.encrypted);
-  logSecurePayloadRequest(INTERNAL_USER_ENDPOINT, securePayload.encrypted);
+  logSecurePayloadRequest(
+    INTERNAL_USER_ENDPOINT,
+    requestPayload,
+    securePayload.body,
+    securePayload.encrypted,
+  );
 
   const response = await fetchWithOAuth(INTERNAL_USER_ENDPOINT, {
     method: 'POST',
