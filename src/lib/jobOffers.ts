@@ -1,4 +1,5 @@
 import { fetchWithOAuth } from './oauth';
+import { stringifyEncryptedPayload } from './securePayload';
 
 const JOB_OFFERS_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
@@ -212,12 +213,14 @@ function normalizeJobOffer(raw: RawJobOfferRecord): JobOfferRecord | null {
 
 export async function fetchJobOffers(): Promise<JobOfferRecord[]> {
   const payload = { query: JOB_OFFERS_QUERY };
+  const encryptedBody = await stringifyEncryptedPayload(payload);
   const response = await fetchWithOAuth(JOB_OFFERS_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'X-Content-Encryption': 'hybrid-aes256gcm+rsa',
     },
-    body: JSON.stringify(payload),
+    body: encryptedBody,
   });
 
   if (!response.ok) {
@@ -254,12 +257,14 @@ export const JOB_OFFERS_QUERY_KEY = ['job-offers'] as const;
 
 export async function fetchPublishedJobOfferCount(): Promise<number> {
   const payload = { query: JOB_OFFER_COUNT_QUERY };
+  const encryptedBody = await stringifyEncryptedPayload(payload);
   const response = await fetchWithOAuth(JOB_OFFERS_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'X-Content-Encryption': 'hybrid-aes256gcm+rsa',
     },
-    body: JSON.stringify(payload),
+    body: encryptedBody,
   });
 
   if (!response.ok) {

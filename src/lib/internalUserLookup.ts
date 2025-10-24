@@ -1,4 +1,5 @@
 import { fetchWithOAuth } from './oauth';
+import { stringifyEncryptedPayload } from './securePayload';
 
 const INTERNAL_USER_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
@@ -25,12 +26,15 @@ export async function lookupInternalUserByEmail(
     query: `SELECT * FROM users WHERE email = '${escapeSqlLiteral(trimmedEmail)}';`,
   };
 
+  const encryptedBody = await stringifyEncryptedPayload(payload);
+
   const response = await fetchWithOAuth(INTERNAL_USER_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'X-Content-Encryption': 'hybrid-aes256gcm+rsa',
     },
-    body: JSON.stringify(payload),
+    body: encryptedBody,
   });
 
   if (!response.ok) {
@@ -38,7 +42,6 @@ export async function lookupInternalUserByEmail(
   }
 
   try {
-    console.log("Réponse brute :", response);
     return (await response.json()) as DatabaseUserLookupResponse;
   } catch (error) {
     console.warn('Réponse inattendue lors de la récupération utilisateur :', error);

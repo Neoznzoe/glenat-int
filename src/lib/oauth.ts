@@ -1,3 +1,5 @@
+import { decryptFromStorage, encryptForStorage } from './storageEncryption';
+
 const DEFAULT_AUTHORIZE_ENDPOINT =
   'https://api-dev.groupe-glenat.com/Api/v1.0/OAuth/authorize';
 const DEFAULT_TOKEN_ENDPOINT = 'https://api-dev.groupe-glenat.com/Api/v1.0/OAuth/token';
@@ -64,6 +66,7 @@ let cachedToken: OAuthAccessToken | null = null;
 let refreshTimestamp = 0;
 let pendingTokenRequest: Promise<OAuthAccessToken> | null = null;
 let storageHydrated = false;
+let storageHydrationPromise: Promise<void> | null = null;
 
 function parsePositiveInteger(value: unknown, fallback: number): number {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -99,25 +102,42 @@ function getStorage(): Storage | null {
   }
 }
 
-function hydrateTokenFromStorage(): void {
+async function hydrateTokenFromStorage(): Promise<void> {
   if (storageHydrated) {
     return;
   }
 
-  storageHydrated = true;
-
-  const storage = getStorage();
-  if (!storage) {
+  if (storageHydrationPromise) {
+    await storageHydrationPromise;
     return;
   }
 
-  try {
+  storageHydrationPromise = (async () => {
+    storageHydrated = true;
+
+    const storage = getStorage();
+    if (!storage) {
+      return;
+    }
+
     const raw = storage.getItem(STORAGE_KEY);
     if (!raw) {
       return;
     }
 
-    const parsed = JSON.parse(raw) as PersistedOAuthToken | null;
+    let decrypted: unknown;
+    try {
+      decrypted = await decryptFromStorage(raw);
+    } catch (error) {
+      storage.removeItem(STORAGE_KEY);
+      console.warn(
+        "[OAuth] Impossible de déchiffrer le jeton persistant, nettoyage du stockage.",
+        error,
+      );
+      return;
+    }
+
+    const parsed = decrypted as PersistedOAuthToken | null;
     if (!parsed || typeof parsed !== 'object') {
       storage.removeItem(STORAGE_KEY);
       return;
@@ -146,13 +166,19 @@ function hydrateTokenFromStorage(): void {
           : undefined,
     };
     refreshTimestamp = parsed.refreshTimestamp;
-  } catch {
-    const storage = getStorage();
-    storage?.removeItem(STORAGE_KEY);
+  })();
+
+  try {
+    await storageHydrationPromise;
+  } finally {
+    storageHydrationPromise = null;
   }
 }
 
-function persistTokenInStorage(token: OAuthAccessToken, refreshAt: number): void {
+async function persistTokenInStorage(
+  token: OAuthAccessToken,
+  refreshAt: number,
+): Promise<void> {
   const storage = getStorage();
   if (!storage) {
     return;
@@ -167,9 +193,10 @@ function persistTokenInStorage(token: OAuthAccessToken, refreshAt: number): void
   };
 
   try {
-    storage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  } catch {
-    // ignore quota errors or unavailable storage
+    const encrypted = await encryptForStorage(payload);
+    storage.setItem(STORAGE_KEY, encrypted);
+  } catch (error) {
+    console.warn('[OAuth] Impossible de persister le jeton chiffré.', error);
   }
 }
 
@@ -307,9 +334,9 @@ async function requestAuthorizationCode(): Promise<string> {
   }
 
   if (codeExchange) {
-    console.log('[OAuth] code_exchange reçu via /OAuth/authorize :', codeExchange);
+    console.debug('[OAuth] code_exchange reçu via /OAuth/authorize.');
   } else {
-    console.log('[OAuth] code reçu via /OAuth/authorize :', resolvedCode);
+    console.debug('[OAuth] code reçu via /OAuth/authorize.');
   }
 
   return resolvedCode;
@@ -364,7 +391,7 @@ function cacheTokenFromResponse(payload: OAuthTokenResponse): OAuthAccessToken {
     refreshToken: toTrimmedString(payload.refresh_token ?? payload.refreshToken),
   };
 
-  persistTokenInStorage(cachedToken, refreshTimestamp);
+  void persistTokenInStorage(cachedToken, refreshTimestamp);
 
   return cachedToken;
 }
@@ -400,7 +427,7 @@ async function requestTokenEndpoint(payload: Record<string, string>): Promise<OA
     throw new Error('Réponse /OAuth/token invalide : impossible de lire le JSON.');
   }
 
-  console.log('[OAuth] Réponse /OAuth/token :', payloadResponse);
+  console.debug('[OAuth] Réponse /OAuth/token reçue.');
 
   return cacheTokenFromResponse(payloadResponse);
 }
@@ -464,7 +491,7 @@ async function requestNewToken(forceRefresh: boolean): Promise<OAuthAccessToken>
 }
 
 export async function fetchAccessToken(forceRefresh = false): Promise<OAuthAccessToken> {
-  hydrateTokenFromStorage();
+  await hydrateTokenFromStorage();
 
   if (shouldReuseToken(forceRefresh) && cachedToken) {
     return cachedToken;
@@ -523,18 +550,7 @@ export async function fetchWithOAuth(
   const requestUrl = normalizeRequestUrl(input);
 
   if (requestUrl?.includes('/Api/v1.0/Intranet/callDatabase')) {
-    console.log('[OAuth] access_token utilisé pour callDatabase :', token.token);
-
-    let authorizationHeader: string | null = null;
-    const { headers } = authorizedInit;
-
-    if (headers instanceof Headers) {
-      authorizationHeader = headers.get('Authorization');
-    } else if (headers) {
-      authorizationHeader = new Headers(headers).get('Authorization');
-    }
-
-    console.log('[OAuth] Authorization envoyé vers callDatabase :', authorizationHeader);
+    console.debug('[OAuth] Jeton OAuth appliqué pour un appel callDatabase.');
   }
 
   return fetch(input, authorizedInit);

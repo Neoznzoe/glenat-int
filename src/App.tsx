@@ -24,7 +24,7 @@ function App() {
 
   useEffect(() => {
     if (user) {
-      console.log('Utilisateur connecté :', user);
+      console.debug('[App] Session utilisateur active.');
     }
   }, [user]);
 

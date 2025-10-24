@@ -11,6 +11,7 @@ import {
 } from './access-control';
 import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
 import { fetchWithOAuth } from './oauth';
+import { stringifyEncryptedPayload } from './securePayload';
 
 const ADMIN_DATABASE_ENDPOINT =
   import.meta.env.VITE_ADMIN_DATABASE_ENDPOINT ??
@@ -384,14 +385,23 @@ function escapeSqlLiteral(value: string): string {
 }
 
 async function runDatabaseQuery(query: string, context: string): Promise<RawDatabaseUserRecord[]> {
+  let encryptedBody: string;
+  try {
+    encryptedBody = await stringifyEncryptedPayload({ query });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'erreur inconnue';
+    throw new Error(`Impossible de chiffrer la requête ${context} : ${detail}`);
+  }
+
   let response: Response;
   try {
     response = await fetchWithOAuth(ADMIN_DATABASE_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-Content-Encryption': 'hybrid-aes256gcm+rsa',
       },
-      body: JSON.stringify({ query }),
+      body: encryptedBody,
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
@@ -1001,7 +1011,39 @@ async function withEncryptedUrl(
 }
 
 async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
-  const encrypted = await withEncryptedUrl(input, init);
+  let requestInit = init;
+
+  if (init?.body && typeof init.body === 'string') {
+    const headers = new Headers(init.headers ?? undefined);
+    const contentType = headers.get('Content-Type');
+    const alreadyEncrypted = headers.has('X-Content-Encryption');
+
+    if (!alreadyEncrypted && contentType?.toLowerCase().includes('application/json')) {
+      let parsedBody: unknown;
+      try {
+        parsedBody = JSON.parse(init.body);
+      } catch (error) {
+        throw new Error(
+          "Impossible de préparer le corps JSON pour chiffrement avant l'envoi.",
+        );
+      }
+
+      try {
+        const encryptedBody = await stringifyEncryptedPayload(parsedBody);
+        headers.set('X-Content-Encryption', 'hybrid-aes256gcm+rsa');
+        requestInit = {
+          ...init,
+          body: encryptedBody,
+          headers,
+        };
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : 'erreur inconnue';
+        throw new Error(`Impossible de chiffrer le corps JSON de la requête : ${detail}`);
+      }
+    }
+  }
+
+  const encrypted = await withEncryptedUrl(input, requestInit);
   const response = await fetch(encrypted.input, encrypted.init);
   if (!response.ok) {
     let detail = response.statusText;
@@ -1086,7 +1128,7 @@ function buildSidebarModulesQuery(userId?: number): string {
   const userIdLiteral = sanitizedId === null ? 'CAST(NULL AS INT)' : String(sanitizedId);
 
   if (sanitizedId !== null) {
-    console.log(`Requête SQL modules – DECLARE @userId INT = ${sanitizedId};`);
+    console.debug('Requête SQL modules préparée pour un utilisateur authentifié.');
   } else {
     console.warn('Requête SQL modules – aucun identifiant utilisateur valide fourni.');
   }

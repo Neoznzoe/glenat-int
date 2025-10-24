@@ -97,7 +97,6 @@ export function CouvertureAParaitre() {
 
             if ((data?.success ?? false) && imageBase64) {
               if (controller.signal.aborted) return;
-              console.log('Couverture reçue:', ean, data);
               setStates((prev) =>
                 prev.map((item) =>
                   item.ean === ean
