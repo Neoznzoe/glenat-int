@@ -1,5 +1,5 @@
 import { fetchWithOAuth } from './oauth';
-import { prepareSecureJsonPayload } from './securePayload';
+import { applySecurePayloadHeaders, prepareSecureJsonPayload } from './securePayload';
 
 const INTERNAL_USER_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
@@ -28,9 +28,7 @@ export async function lookupInternalUserByEmail(
 
   const securePayload = await prepareSecureJsonPayload(payload);
   const headers = new Headers({ 'Content-Type': 'application/json' });
-  if (securePayload.encrypted) {
-    headers.set('X-Content-Encryption', 'hybrid-aes256gcm+rsa');
-  }
+  applySecurePayloadHeaders(headers, securePayload.encrypted);
 
   const response = await fetchWithOAuth(INTERNAL_USER_ENDPOINT, {
     method: 'POST',

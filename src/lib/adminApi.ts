@@ -11,7 +11,11 @@ import {
 } from './access-control';
 import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
 import { fetchWithOAuth } from './oauth';
-import { prepareSecureJsonPayload } from './securePayload';
+import {
+  applySecurePayloadHeaders,
+  prepareSecureJsonPayload,
+  SECURE_PAYLOAD_ENCRYPTION_HEADER,
+} from './securePayload';
 
 const ADMIN_DATABASE_ENDPOINT =
   import.meta.env.VITE_ADMIN_DATABASE_ENDPOINT ??
@@ -391,9 +395,7 @@ async function runDatabaseQuery(query: string, context: string): Promise<RawData
   try {
     const headers = new Headers({ 'Content-Type': 'application/json' });
 
-    if (securePayload.encrypted) {
-      headers.set('X-Content-Encryption', 'hybrid-aes256gcm+rsa');
-    }
+    applySecurePayloadHeaders(headers, securePayload.encrypted);
 
     response = await fetchWithOAuth(ADMIN_DATABASE_ENDPOINT, {
       method: 'POST',
@@ -1013,7 +1015,7 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Pro
   if (init?.body && typeof init.body === 'string') {
     const headers = new Headers(init.headers ?? undefined);
     const contentType = headers.get('Content-Type');
-    const alreadyEncrypted = headers.has('X-Content-Encryption');
+    const alreadyEncrypted = headers.has(SECURE_PAYLOAD_ENCRYPTION_HEADER);
 
     if (!alreadyEncrypted && contentType?.toLowerCase().includes('application/json')) {
       let parsedBody: unknown;
@@ -1026,11 +1028,7 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Pro
       }
 
       const securePayload = await prepareSecureJsonPayload(parsedBody);
-      if (securePayload.encrypted) {
-        headers.set('X-Content-Encryption', 'hybrid-aes256gcm+rsa');
-      } else {
-        headers.delete('X-Content-Encryption');
-      }
+      applySecurePayloadHeaders(headers, securePayload.encrypted);
 
       requestInit = {
         ...init,

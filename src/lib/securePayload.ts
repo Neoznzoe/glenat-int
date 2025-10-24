@@ -1,5 +1,10 @@
 import { encodeText, fromBase64, toArrayBuffer, toBase64 } from './base64';
 
+export const SECURE_PAYLOAD_ENVELOPE_HEADER = 'X-Encrypted-Body-Key';
+export const SECURE_PAYLOAD_ENVELOPE_KEY = 'data';
+export const SECURE_PAYLOAD_ENCRYPTION_HEADER = 'X-Content-Encryption';
+export const SECURE_PAYLOAD_ENCRYPTION_SCHEME = 'hybrid-aes256gcm+rsa';
+
 type SecurePayloadMode = 'disabled' | 'optional' | 'required';
 
 const PUBLIC_KEY_PEM = import.meta.env.VITE_SECURE_API_PUBLIC_KEY as string | undefined;
@@ -66,6 +71,16 @@ export interface EncryptedRequestPayload {
 export interface PreparedSecureJsonPayload {
   body: string;
   encrypted: boolean;
+}
+
+export function applySecurePayloadHeaders(headers: Headers, encrypted: boolean): void {
+  headers.set(SECURE_PAYLOAD_ENVELOPE_HEADER, SECURE_PAYLOAD_ENVELOPE_KEY);
+
+  if (encrypted) {
+    headers.set(SECURE_PAYLOAD_ENCRYPTION_HEADER, SECURE_PAYLOAD_ENCRYPTION_SCHEME);
+  } else {
+    headers.delete(SECURE_PAYLOAD_ENCRYPTION_HEADER);
+  }
 }
 
 function isEncryptionEnabled(): boolean {
@@ -161,7 +176,7 @@ export async function prepareSecureJsonPayload(
 
     ensureFallbackLogged();
     return {
-      body: JSON.stringify({ encrypt: false, data: payload }),
+      body: JSON.stringify({ encrypt: false, [SECURE_PAYLOAD_ENVELOPE_KEY]: payload }),
       encrypted: false,
     };
   }
@@ -169,14 +184,14 @@ export async function prepareSecureJsonPayload(
   try {
     const envelope = await encryptJsonPayload(payload);
     return {
-      body: JSON.stringify({ encrypt: true, data: envelope }),
+      body: JSON.stringify({ encrypt: true, [SECURE_PAYLOAD_ENVELOPE_KEY]: envelope }),
       encrypted: true,
     };
   } catch (error) {
     disableSecurePayload(error instanceof Error ? error : undefined);
     ensureFallbackLogged();
     return {
-      body: JSON.stringify({ encrypt: false, data: payload }),
+      body: JSON.stringify({ encrypt: false, [SECURE_PAYLOAD_ENVELOPE_KEY]: payload }),
       encrypted: false,
     };
   }

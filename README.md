@@ -89,6 +89,8 @@ Toutes les requêtes POST adressées aux proxys internes (`callDatabase`, catalo
 
 Chaque message chiffré transporte également un timestamp et un nonce aléatoire pour faciliter les contrôles anti-rejeu côté serveur.
 
+Quel que soit le mode, le corps POST suit la structure `{ "encrypt": <bool>, "data": <payload> }` afin que le serveur puisse cibler la section `data`. Un en-tête `X-Encrypted-Body-Key: data` accompagne systématiquement la requête, tandis que `X-Content-Encryption: hybrid-aes256gcm+rsa` n'est ajouté que lorsque le champ `data` contient un bloc chiffré.
+
 ## 🧠 Technologies principales
 - **React** pour la construction des interfaces.
 - **TypeScript** pour un typage statique robuste.
