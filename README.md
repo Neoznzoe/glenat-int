@@ -73,6 +73,7 @@ VITE_OAUTH_FALLBACK_TTL=3600                        # durée de vie par défaut 
 VITE_OAUTH_STORAGE_KEY=<cle_base64url_32_octets>    # clé AES-256 pour chiffrer le cache local
 VITE_SECURE_API_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"  # clé publique RSA/OAEP du serveur
 VITE_SECURE_API_MODE=optional                                 # disabled | optional | required
+VITE_SECURE_API_SEND_ENCRYPTION_HEADER=false                  # true pour ajouter l'en-tête X-Content-Encryption
 ```
 
 Seuls `VITE_OAUTH_CLIENT_ID` et `VITE_OAUTH_CLIENT_SECRET` sont indispensables ; les autres paramètres peuvent être adaptés à l'implémentation du fournisseur OAuth.
@@ -89,7 +90,7 @@ Toutes les requêtes POST adressées aux proxys internes (`callDatabase`, catalo
 
 Chaque message chiffré transporte également un timestamp et un nonce aléatoire pour faciliter les contrôles anti-rejeu côté serveur.
 
-Quel que soit le mode, le corps POST suit la structure `{ "encrypt": <bool>, "data": <payload> }` afin que le serveur puisse cibler la section `data`. Un en-tête `X-Encrypted-Body-Key: data` accompagne systématiquement la requête, tandis que `X-Content-Encryption: hybrid-aes256gcm+rsa` n'est ajouté que lorsque le champ `data` contient un bloc chiffré.
+Quel que soit le mode, le corps POST suit la structure `{ "encrypt": <bool>, "data": <payload> }` afin que le serveur puisse cibler la section `data`. L'en-tête optionnel `X-Content-Encryption: hybrid-aes256gcm+rsa` n'est ajouté que si `VITE_SECURE_API_SEND_ENCRYPTION_HEADER=true` **et** que le champ `data` transporte un bloc chiffré, ce qui évite les rejets CORS sur la requête de preflight lorsque le backend n'autorise pas cet en-tête personnalisé.
 
 ## 🧠 Technologies principales
 - **React** pour la construction des interfaces.

@@ -1,6 +1,5 @@
 import { encodeText, fromBase64, toArrayBuffer, toBase64 } from './base64';
 
-export const SECURE_PAYLOAD_ENVELOPE_HEADER = 'X-Encrypted-Body-Key';
 export const SECURE_PAYLOAD_ENVELOPE_KEY = 'data';
 export const SECURE_PAYLOAD_ENCRYPTION_HEADER = 'X-Content-Encryption';
 export const SECURE_PAYLOAD_ENCRYPTION_SCHEME = 'hybrid-aes256gcm+rsa';
@@ -15,6 +14,10 @@ const SECURE_PAYLOAD_MODE: SecurePayloadMode =
     : RAW_MODE === 'optional' || RAW_MODE === 'hybrid'
       ? 'optional'
       : 'disabled';
+
+const SHOULD_ANNOUNCE_ENCRYPTION =
+  (import.meta.env.VITE_SECURE_API_SEND_ENCRYPTION_HEADER as string | undefined)?.toLowerCase() ===
+  'true';
 
 let runtimeDisabled = SECURE_PAYLOAD_MODE === 'disabled';
 let publicKeyPromise: Promise<CryptoKey> | null = null;
@@ -74,13 +77,13 @@ export interface PreparedSecureJsonPayload {
 }
 
 export function applySecurePayloadHeaders(headers: Headers, encrypted: boolean): void {
-  headers.set(SECURE_PAYLOAD_ENVELOPE_HEADER, SECURE_PAYLOAD_ENVELOPE_KEY);
+  headers.delete(SECURE_PAYLOAD_ENCRYPTION_HEADER);
 
-  if (encrypted) {
-    headers.set(SECURE_PAYLOAD_ENCRYPTION_HEADER, SECURE_PAYLOAD_ENCRYPTION_SCHEME);
-  } else {
-    headers.delete(SECURE_PAYLOAD_ENCRYPTION_HEADER);
+  if (!encrypted || !SHOULD_ANNOUNCE_ENCRYPTION) {
+    return;
   }
+
+  headers.set(SECURE_PAYLOAD_ENCRYPTION_HEADER, SECURE_PAYLOAD_ENCRYPTION_SCHEME);
 }
 
 function isEncryptionEnabled(): boolean {
