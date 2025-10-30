@@ -19,6 +19,7 @@ import UniversLivre from '@/assets/logos/univers/univers-livres.svg';
 import UniversManga from '@/assets/logos/univers/univers-manga.svg';
 import type { BookCardProps } from '@/components/BookCard';
 import { fetchWithOAuth } from './oauth';
+import { applySecurePayloadHeaders, logSecurePayloadRequest, prepareSecureJsonPayload } from './securePayload';
 
 export interface CatalogueBookDetailEntry {
   label: string;
@@ -692,11 +693,7 @@ const fetchCover = async (ean: string): Promise<string | null> => {
           const imageBase64 = normaliseCoverDataUrl(data?.result?.imageBase64);
 
           if (data?.success && imageBase64) {
-            console.log('[catalogueApi] Couverture reçue', ean, {
-              endpoint,
-              message: data?.message,
-              attempt,
-            });
+            console.debug('[catalogueApi] Couverture récupérée via le service distant.');
             coverCache.set(ean, imageBase64);
             return imageBase64;
           }
@@ -1264,13 +1261,26 @@ export async function fetchCatalogueOffices(
   logRequest(endpoint);
 
   try {
+    const requestPayload = {
+      query: NEXT_OFFICES_SQL_QUERY,
+    };
+    const securePayload = await prepareSecureJsonPayload(requestPayload);
+    const headers = new Headers({
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    });
+
+    applySecurePayloadHeaders(headers, securePayload.encrypted);
+    logSecurePayloadRequest(
+      CATALOGUE_OFFICES_ENDPOINT,
+      requestPayload,
+      securePayload.body,
+      securePayload.encrypted,
+    );
     const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({ query: NEXT_OFFICES_SQL_QUERY }),
+      headers,
+      body: securePayload.body,
     });
 
     if (!response.ok) {
@@ -1280,8 +1290,7 @@ export async function fetchCatalogueOffices(
     const payload = (await response.json()) as DatabaseApiResponse;
     const records = extractDatabaseRows(payload);
 
-    console.log('[catalogueApi] Offices payload brut', payload);
-    console.log('[catalogueApi] Offices enregistrements', records);
+    console.debug('[catalogueApi] Offices récupérés depuis la base.');
 
     if (!records.length) {
       throw new Error("La base de donnees n'a retourne aucun resultat");
