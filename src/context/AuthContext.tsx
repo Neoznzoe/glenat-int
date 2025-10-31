@@ -151,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const profile = await fetchUserProfile(instance, activeAccount);
-                let internalUser: DatabaseUserLookupResponse | null = null;
+        let internalUser: DatabaseUserLookupResponse | null = null;
         const email = profile.mail ?? profile.userPrincipalName;
 
         if (email) {
