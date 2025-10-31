@@ -117,8 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         instance.setActiveAccount(event.payload.account);
       }
 
-      if (event.eventType === EventType.HANDLE_REDIRECT_END) {
-        setLoading(false);
+      if (event.eventType === EventType.HANDLE_REDIRECT_START) {
+        setLoading(true);
       }
     });
 
@@ -145,12 +145,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (!activeAccount) {
-          await instance.loginRedirect(loginRequest);
+          setUser(null);
+          setError(null);
           return;
         }
 
         const profile = await fetchUserProfile(instance, activeAccount);
-                let internalUser: DatabaseUserLookupResponse | null = null;
+        let internalUser: DatabaseUserLookupResponse | null = null;
         const email = profile.mail ?? profile.userPrincipalName;
 
         if (email) {
@@ -168,11 +169,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(null);
       } catch (authError) {
         if (authError instanceof InteractionRequiredAuthError) {
-          await instance.loginRedirect(loginRequest);
-          return;
+          console.warn('Interaction MSAL requise :', authError);
+          setUser(null);
+          setError('Votre session a expiré. Veuillez vous reconnecter.');
+        } else {
+          console.error('Erreur MSAL :', authError);
+          setError("Une erreur est survenue lors de l'authentification.");
         }
-        console.error('Erreur MSAL :', authError);
-        setError("Une erreur est survenue lors de l'authentification.");
       } finally {
         setLoading(false);
       }
