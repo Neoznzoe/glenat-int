@@ -117,8 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         instance.setActiveAccount(event.payload.account);
       }
 
-      if (event.eventType === EventType.HANDLE_REDIRECT_END) {
-        setLoading(false);
+      if (event.eventType === EventType.HANDLE_REDIRECT_START) {
+        setLoading(true);
       }
     });
 
