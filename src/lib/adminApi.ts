@@ -1029,7 +1029,7 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Pro
       let parsedBody: unknown;
       try {
         parsedBody = JSON.parse(init.body);
-      } catch (error) {
+      } catch {
         throw new Error(
           "Impossible de préparer le corps JSON pour chiffrement avant l'envoi.",
         );
