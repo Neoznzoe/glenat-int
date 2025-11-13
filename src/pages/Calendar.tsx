@@ -1,14 +1,22 @@
 import { useMemo, useState } from 'react';
-import type { CSSProperties } from 'react';
-import { format, isSameDay } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import {
-  CalendarDays,
-  Clock,
-  Link as LinkIcon,
-  Loader2,
-  MapPin,
-} from 'lucide-react';
+  addMonths,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isAfter,
+  isBefore,
+  isSameDay,
+  isSameMonth,
+  isToday,
+  parseISO,
+  startOfDay,
+  startOfMonth,
+  startOfWeek,
+} from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { AlertCircle, CalendarPlus, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 
 import {
   Breadcrumb,
@@ -18,118 +26,46 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { Badge } from '@/components/ui/badge';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
 import {
   useCalendarEventColors,
   useCalendarEvents,
   type CalendarEventRecord,
 } from '@/hooks/useCalendarEvents';
 
-interface EnrichedCalendarEvent extends CalendarEventRecord {
-  reasonKey?: string;
-  colorHex?: string;
+const WEEK_DAYS = ['Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.'];
+const MAX_EVENTS_PER_DAY = 3;
+
+interface CalendarDisplayEvent extends CalendarEventRecord {
+  startDateValue: Date | null;
+  endDateValue: Date | null;
+  backgroundColor: string;
+  textColor: string;
+  borderColor: string;
   colorLabel?: string;
 }
 
-interface MonthGroup {
-  key: string;
-  label: string;
-  events: EnrichedCalendarEvent[];
-}
+type CategoryFilter = 'all' | 'Actuel ou futur' | 'Ancien (2 ans)';
 
-function normalizeReasonKey(value?: string | null): string | undefined {
-  if (!value) {
-    return undefined;
-  }
-  const trimmed = value.trim();
-  return trimmed ? trimmed.toUpperCase() : undefined;
-}
-
-function parseIsoDate(value?: string): Date | null {
+function parseDate(value?: string | null): Date | null {
   if (!value) {
     return null;
   }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
+  try {
+    return parseISO(value);
+  } catch {
     const timestamp = Date.parse(value);
     if (Number.isNaN(timestamp)) {
       return null;
     }
     return new Date(timestamp);
   }
-  return parsed;
-}
-
-function hasTimeComponent(date: Date): boolean {
-  return date.getHours() !== 0 || date.getMinutes() !== 0 || date.getSeconds() !== 0;
-}
-
-function formatDisplayDate(date: Date, options?: { withWeekday?: boolean; withTime?: boolean }) {
-  const withWeekday = options?.withWeekday ?? true;
-  const withTime = options?.withTime ?? hasTimeComponent(date);
-  const basePattern = withWeekday ? 'EEEE d MMMM yyyy' : 'd MMMM yyyy';
-  if (withTime && hasTimeComponent(date)) {
-    return format(date, `${basePattern} 'à' HH:mm`, { locale: fr });
-  }
-  return format(date, basePattern, { locale: fr });
-}
-
-function formatDateRange(startIso: string, endIso?: string | null): string {
-  const startDate = parseIsoDate(startIso);
-  if (!startDate) {
-    return 'Date à confirmer';
-  }
-  const endDate = endIso ? parseIsoDate(endIso) : null;
-  if (!endDate) {
-    return formatDisplayDate(startDate);
-  }
-
-  if (isSameDay(startDate, endDate)) {
-    const hasStartTime = hasTimeComponent(startDate);
-    const hasEndTime = hasTimeComponent(endDate);
-    if (hasStartTime || hasEndTime) {
-      const dayLabel = formatDisplayDate(startDate, { withTime: false });
-      if (hasStartTime && hasEndTime) {
-        return `${dayLabel} de ${format(startDate, 'HH:mm', { locale: fr })} à ${format(endDate, 'HH:mm', { locale: fr })}`;
-      }
-      const timeLabel = hasStartTime
-        ? format(startDate, 'HH:mm', { locale: fr })
-        : format(endDate, 'HH:mm', { locale: fr });
-      return `${dayLabel} à ${timeLabel}`;
-    }
-    return formatDisplayDate(startDate);
-  }
-
-  const startLabel = formatDisplayDate(startDate);
-  const endLabel = formatDisplayDate(endDate);
-  return `Du ${startLabel} au ${endLabel}`;
-}
-
-function formatOptionalDate(value?: string | null): string | null {
-  if (!value) {
-    return null;
-  }
-  const date = parseIsoDate(value);
-  if (!date) {
-    return null;
-  }
-  return formatDisplayDate(date);
 }
 
 function hexToRgb(hex?: string): [number, number, number] | null {
@@ -159,533 +95,373 @@ function hexToRgb(hex?: string): [number, number, number] | null {
   return [red, green, blue];
 }
 
-function rgbaString(rgb: [number, number, number], alpha: number): string {
-  return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
+function lightenRgb(rgb: [number, number, number], ratio = 0.75): [number, number, number] {
+  const clamp = (value: number) => Math.min(255, Math.max(0, value));
+  const blend = (value: number) => clamp(Math.round(value + (255 - value) * ratio));
+  return [blend(rgb[0]), blend(rgb[1]), blend(rgb[2])];
 }
 
-function getReadableTextColor(hex?: string): string {
+function rgbToCss(rgb: [number, number, number]): string {
+  return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+}
+
+function getEventColorStyles(hex?: string) {
+  const defaultStyles = {
+    backgroundColor: 'hsl(213 27% 95%)',
+    textColor: 'hsl(222.2 47.4% 11.2%)',
+    borderColor: 'hsl(213 27% 80%)',
+  };
+
   const rgb = hexToRgb(hex);
   if (!rgb) {
-    return 'var(--card-foreground)';
+    return defaultStyles;
   }
-  const [r, g, b] = rgb;
-  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return luminance > 160 ? '#0f172a' : '#f8fafc';
+
+  const lightRgb = lightenRgb(rgb, 0.72);
+  const backgroundColor = rgbToCss(lightRgb);
+  const brightness = (lightRgb[0] * 299 + lightRgb[1] * 587 + lightRgb[2] * 114) / 1000;
+  const textColor = brightness > 150 ? '#0f172a' : '#ffffff';
+  const borderColor = rgbToCss(rgb);
+
+  return { backgroundColor, textColor, borderColor };
 }
 
-function getCardStyles(color?: string): CSSProperties {
-  const rgb = hexToRgb(color);
-  if (!rgb) {
-    return {};
+function normalizeReasonKey(value?: string | null): string | undefined {
+  if (!value) {
+    return undefined;
   }
-  const borderColor = rgbaString(rgb, 0.5);
-  const backgroundColor = rgbaString(rgb, 0.08);
-  return {
-    borderColor,
-    backgroundColor,
-  } satisfies CSSProperties;
+  const trimmed = value.trim();
+  return trimmed ? trimmed.toUpperCase() : undefined;
 }
 
-function sortByStartDateAsc(a: EnrichedCalendarEvent, b: EnrichedCalendarEvent): number {
-  const aDate = parseIsoDate(a.startDate)?.getTime() ?? 0;
-  const bDate = parseIsoDate(b.startDate)?.getTime() ?? 0;
-  return aDate - bDate;
+function getCalendarWeeks(currentMonth: Date) {
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+
+  const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+  const weeks: Date[][] = [];
+
+  for (let index = 0; index < days.length; index += 7) {
+    weeks.push(days.slice(index, index + 7));
+  }
+
+  return { weeks, calendarStart, calendarEnd };
 }
 
-function sortByStartDateDesc(a: EnrichedCalendarEvent, b: EnrichedCalendarEvent): number {
-  return sortByStartDateAsc(b, a);
-}
+function getEventsForInterval(
+  events: CalendarEventRecord[] | undefined,
+  colorsMap: Map<string, { color: string; label: string }>,
+  intervalStart: Date,
+  intervalEnd: Date,
+): Map<string, CalendarDisplayEvent[]> {
+  const byDay = new Map<string, CalendarDisplayEvent[]>();
 
-function groupEventsByMonth(events: EnrichedCalendarEvent[]): MonthGroup[] {
-  const groups = new Map<string, MonthGroup>();
+  if (!events?.length) {
+    return byDay;
+  }
 
   for (const event of events) {
-    const startDate = parseIsoDate(event.startDate) ?? new Date(event.startDate);
-    const monthKey = format(startDate, 'yyyy-MM');
-    const monthLabel = format(startDate, 'LLLL yyyy', { locale: fr });
-    if (!groups.has(monthKey)) {
-      groups.set(monthKey, { key: monthKey, label: monthLabel, events: [] });
+    const startDate = parseDate(event.startDate);
+    const endDate = parseDate(event.endDate) ?? startDate;
+    if (!startDate) {
+      continue;
     }
-    groups.get(monthKey)!.events.push(event);
+
+    const effectiveEnd = endDate && !isBefore(endDate, startDate) ? endDate : startDate;
+    const eventStart = isBefore(startDate, intervalStart) ? intervalStart : startDate;
+    const eventEnd = effectiveEnd ? (isAfter(effectiveEnd, intervalEnd) ? intervalEnd : effectiveEnd) : intervalEnd;
+
+    const normalizedReason = normalizeReasonKey(event.reason);
+    const colorEntry = normalizedReason ? colorsMap.get(normalizedReason) : undefined;
+    const { backgroundColor, textColor, borderColor } = getEventColorStyles(colorEntry?.color);
+
+    const daysInInterval = eachDayOfInterval({ start: startOfDay(eventStart), end: startOfDay(eventEnd) });
+
+    for (const day of daysInInterval) {
+      if (isBefore(day, intervalStart) || isAfter(day, intervalEnd)) {
+        continue;
+      }
+      const key = format(day, 'yyyy-MM-dd');
+      const dayEvents = byDay.get(key) ?? [];
+      dayEvents.push({
+        ...event,
+        startDateValue: startDate,
+        endDateValue: effectiveEnd,
+        backgroundColor,
+        textColor,
+        borderColor,
+        colorLabel: colorEntry?.label ?? event.reason ?? undefined,
+      });
+      byDay.set(key, dayEvents);
+    }
   }
 
-  return Array.from(groups.values()).sort((a, b) => a.key.localeCompare(b.key));
+  return byDay;
 }
 
-export function Calendar() {
-  const [selectedReason, setSelectedReason] = useState<string>('all');
-  const {
-    data: colors,
-    isLoading: colorsLoading,
-    isError: colorsError,
-    error: colorsErrorValue,
-  } = useCalendarEventColors();
+function sortEvents(events: CalendarDisplayEvent[]) {
+  return [...events].sort((a, b) => {
+    const dateA = a.startDateValue?.getTime() ?? parseDate(a.startDate)?.getTime() ?? 0;
+    const dateB = b.startDateValue?.getTime() ?? parseDate(b.startDate)?.getTime() ?? 0;
+    if (dateA !== dateB) {
+      return dateA - dateB;
+    }
+    return a.title.localeCompare(b.title, 'fr');
+  });
+}
+
+const CATEGORY_OPTIONS: { label: string; value: CategoryFilter }[] = [
+  { label: 'Toutes les catégories', value: 'all' },
+  { label: 'Actuel ou futur', value: 'Actuel ou futur' },
+  { label: 'Ancien (2 ans)', value: 'Ancien (2 ans)' },
+];
+
+export default function CalendarPage() {
+  const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
+  const [category, setCategory] = useState<CategoryFilter>('all');
+  const { data: colors, isLoading: isLoadingColors, error: colorsError } = useCalendarEventColors();
   const {
     data: events,
-    isLoading: eventsLoading,
-    isError: eventsError,
-    error: eventsErrorValue,
-    refetch: refetchEvents,
-    isFetching: eventsFetching,
+    isLoading: isLoadingEvents,
+    error: eventsError,
   } = useCalendarEvents();
 
-  const colorMap = useMemo(() => {
-    const map = new Map<string, { hex: string; label: string }>();
-    colors?.forEach((color) => {
-      const reasonKey = normalizeReasonKey(color.reason);
-      if (reasonKey) {
-        map.set(reasonKey, {
-          hex: color.color,
-          label: color.name || color.reason,
-        });
+  const colorsMap = useMemo(() => {
+    const map = new Map<string, { color: string; label: string }>();
+    colors?.forEach((entry) => {
+      const key = normalizeReasonKey(entry.reason);
+      if (key) {
+        map.set(key, { color: entry.color, label: entry.name });
       }
     });
     return map;
   }, [colors]);
 
-  const enrichedEvents: EnrichedCalendarEvent[] = useMemo(() => {
-    if (!events) {
+  const filteredEvents = useMemo(() => {
+    if (!events?.length) {
       return [];
     }
-    return events.map((event) => {
-      const reasonKey = normalizeReasonKey(event.reason);
-      const colorInfo = reasonKey ? colorMap.get(reasonKey) : undefined;
-      return {
-        ...event,
-        reasonKey,
-        colorHex: colorInfo?.hex,
-        colorLabel: colorInfo?.label ?? event.reason ?? 'Sans code couleur',
-      };
-    });
-  }, [colorMap, events]);
-
-  const reasonOptions = useMemo(() => {
-    const options = new Map<string, string>();
-    enrichedEvents.forEach((event) => {
-      if (event.reasonKey) {
-        options.set(event.reasonKey, event.colorLabel ?? event.reasonKey);
-      }
-    });
-    const sorted = Array.from(options.entries()).sort((a, b) =>
-      a[1].localeCompare(b[1], 'fr', { sensitivity: 'base' }),
-    );
-    const list = sorted.map(([value, label]) => ({ value, label }));
-    if (enrichedEvents.some((event) => !event.reasonKey)) {
-      list.push({ value: 'none', label: 'Sans code couleur' });
+    if (category === 'all') {
+      return events;
     }
-    return list;
-  }, [enrichedEvents]);
+    return events.filter((event) => event.category === category);
+  }, [events, category]);
 
-  const filteredEvents = useMemo(() => {
-    if (selectedReason === 'all') {
-      return enrichedEvents;
-    }
-    if (selectedReason === 'none') {
-      return enrichedEvents.filter((event) => !event.reasonKey);
-    }
-    return enrichedEvents.filter((event) => event.reasonKey === selectedReason);
-  }, [enrichedEvents, selectedReason]);
-
-  const { upcomingEvents, archivedEvents } = useMemo(() => {
-    const groups = new Map<string, EnrichedCalendarEvent[]>();
-    for (const event of filteredEvents) {
-      const category = event.category || 'Actuel ou futur';
-      if (!groups.has(category)) {
-        groups.set(category, []);
-      }
-      groups.get(category)!.push(event);
-    }
-
-    groups.forEach((categoryEvents, category) => {
-      const sorter = category.toLowerCase().includes('ancien')
-        ? sortByStartDateDesc
-        : sortByStartDateAsc;
-      categoryEvents.sort(sorter);
-    });
-
-    return {
-      upcomingEvents: groups.get('Actuel ou futur') ?? [],
-      archivedEvents: groups.get('Ancien (2 ans)') ?? [],
-    };
-  }, [filteredEvents]);
-
-  const upcomingGroups = useMemo(() => groupEventsByMonth(upcomingEvents), [upcomingEvents]);
-  const archivedGroups = useMemo(
-    () => groupEventsByMonth(archivedEvents).sort((a, b) => b.key.localeCompare(a.key)),
-    [archivedEvents],
+  const { weeks, calendarStart, calendarEnd } = useMemo(
+    () => getCalendarWeeks(currentMonth),
+    [currentMonth],
   );
 
-  const totalEvents = enrichedEvents.length;
-  const loading = colorsLoading || eventsLoading || eventsFetching;
-  const hasError = colorsError || eventsError;
-  const errorMessage =
-    (colorsErrorValue instanceof Error ? colorsErrorValue.message : undefined) ||
-    (eventsErrorValue instanceof Error ? eventsErrorValue.message : undefined) ||
-    "Une erreur est survenue lors du chargement du calendrier.";
+  const eventsByDay = useMemo(
+    () => getEventsForInterval(filteredEvents, colorsMap, calendarStart, calendarEnd),
+    [filteredEvents, colorsMap, calendarStart, calendarEnd],
+  );
+
+  const handlePreviousMonth = () => {
+    setCurrentMonth((previous) => addMonths(previous, -1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth((previous) => addMonths(previous, 1));
+  };
+
+  const handleResetToToday = () => {
+    setCurrentMonth(startOfMonth(new Date()));
+  };
+
+  const monthLabel = format(currentMonth, 'MMMM yyyy', { locale: fr });
+  const isLoading = isLoadingColors || isLoadingEvents;
 
   return (
-    <div className="p-6 space-y-6">
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/">Accueil</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Calendrier</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
-      <div className="flex flex-col gap-6 xl:flex-row">
-        <div className="flex-1 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Calendrier des évènements</CardTitle>
-              <CardDescription>
-                Visualisez l'ensemble des rendez-vous institutionnels et commerciaux, classés par
-                catégorie. Utilisez les filtres pour affiner l'affichage et retrouver rapidement une
-                information.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <CalendarDays className="h-4 w-4" aria-hidden="true" />
-                  <span>
-                    {upcomingEvents.length > 0
-                      ? `${upcomingEvents.length} évènement${upcomingEvents.length > 1 ? 's' : ''} à venir`
-                      : 'Aucun évènement à venir'}
-                  </span>
-                  <Separator orientation="vertical" className="hidden h-4 lg:block" />
-                  <span className="hidden lg:inline">
-                    {archivedEvents.length > 0
-                      ? `${archivedEvents.length} évènement${archivedEvents.length > 1 ? 's' : ''} archivés`
-                      : 'Aucun évènement archivé sur les deux dernières années'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium">Couleur</span>
-                  <Select value={selectedReason} onValueChange={setSelectedReason}>
-                    <SelectTrigger className="w-[220px]">
-                      <SelectValue placeholder="Toutes les couleurs" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Toutes les couleurs</SelectItem>
-                      {reasonOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {loading ? (
-                <div className="flex min-h-[180px] items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-                  <span>Chargement des données du calendrier…</span>
-                </div>
-              ) : hasError ? (
-                <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-destructive">
-                  <p className="font-semibold">Impossible d'afficher le calendrier.</p>
-                  <p className="text-sm opacity-80">{errorMessage}</p>
-                  <button
-                    type="button"
-                    onClick={() => refetchEvents()}
-                    className="mt-3 inline-flex items-center rounded-md bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground transition hover:bg-destructive/90"
-                  >
-                    Réessayer
-                  </button>
-                </div>
-              ) : totalEvents === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Aucun évènement n'a été trouvé. Modifiez vos filtres ou réessayez plus tard.
-                </p>
-              ) : (
-                <Tabs defaultValue="Actuel ou futur" className="space-y-4">
-                  <TabsList>
-                    <TabsTrigger value="Actuel ou futur">
-                      Actuel ou futur ({upcomingEvents.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="Ancien (2 ans)">
-                      Ancien (2 ans) ({archivedEvents.length})
-                    </TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="Actuel ou futur" className="space-y-4">
-                    {upcomingGroups.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        Aucun évènement futur ne correspond à vos filtres.
-                      </p>
-                    ) : (
-                      upcomingGroups.map((group) => (
-                        <section key={group.key} className="space-y-3">
-                          <h3 className="text-base font-semibold capitalize text-foreground">
-                            {group.label}
-                          </h3>
-                          <div className="grid gap-4">
-                            {group.events.map((event) => (
-                              <Card
-                                key={event.id}
-                                className="border"
-                                style={getCardStyles(event.colorHex)}
-                              >
-                                <CardHeader className="space-y-2">
-                                  <div className="flex flex-wrap items-center justify-between gap-3">
-                                    <CardTitle className="text-xl font-semibold leading-tight">
-                                      {event.title}
-                                    </CardTitle>
-                                    <Badge
-                                      style={{
-                                        backgroundColor: event.colorHex ?? 'var(--accent)',
-                                        color: getReadableTextColor(event.colorHex),
-                                        borderColor: event.colorHex ?? 'transparent',
-                                      }}
-                                    >
-                                      {event.colorLabel}
-                                    </Badge>
-                                  </div>
-                                  {event.subtitle ? (
-                                    <CardDescription className="text-sm text-muted-foreground">
-                                      {event.subtitle}
-                                    </CardDescription>
-                                  ) : null}
-                                </CardHeader>
-                                <CardContent className="space-y-3 text-sm">
-                                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
-                                    <div className="flex items-start gap-2 text-muted-foreground">
-                                      <CalendarDays className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
-                                      <span className="text-foreground">
-                                        {formatDateRange(event.startDate, event.endDate)}
-                                      </span>
-                                    </div>
-                                    {event.registrationDeadline ? (
-                                      <div className="flex items-start gap-2 text-muted-foreground">
-                                        <Clock className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
-                                        <span>
-                                          Inscription jusqu'au{' '}
-                                          {formatOptionalDate(event.registrationDeadline)}
-                                        </span>
-                                      </div>
-                                    ) : null}
-                                    {event.location ? (
-                                      <div className="flex items-start gap-2 text-muted-foreground">
-                                        <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
-                                        <span>{event.location}</span>
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                  {event.description ? (
-                                    <p className="text-sm leading-relaxed text-muted-foreground">
-                                      {event.description}
-                                    </p>
-                                  ) : null}
-                                  {event.link ? (
-                                    <a
-                                      href={event.link}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
-                                    >
-                                      <LinkIcon className="h-4 w-4" aria-hidden="true" />
-                                      En savoir plus
-                                    </a>
-                                  ) : null}
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </div>
-                        </section>
-                      ))
-                    )}
-                  </TabsContent>
-                  <TabsContent value="Ancien (2 ans)" className="space-y-4">
-                    {archivedGroups.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        Aucun évènement passé ne correspond à vos filtres sur les deux dernières années.
-                      </p>
-                    ) : (
-                      archivedGroups.map((group) => (
-                        <section key={group.key} className="space-y-3">
-                          <h3 className="text-base font-semibold capitalize text-foreground">
-                            {group.label}
-                          </h3>
-                          <div className="grid gap-4">
-                            {group.events.map((event) => (
-                              <Card
-                                key={event.id}
-                                className="border"
-                                style={getCardStyles(event.colorHex)}
-                              >
-                                <CardHeader className="space-y-2">
-                                  <div className="flex flex-wrap items-center justify-between gap-3">
-                                    <CardTitle className="text-xl font-semibold leading-tight">
-                                      {event.title}
-                                    </CardTitle>
-                                    <Badge
-                                      style={{
-                                        backgroundColor: event.colorHex ?? 'var(--accent)',
-                                        color: getReadableTextColor(event.colorHex),
-                                        borderColor: event.colorHex ?? 'transparent',
-                                      }}
-                                    >
-                                      {event.colorLabel}
-                                    </Badge>
-                                  </div>
-                                  {event.subtitle ? (
-                                    <CardDescription className="text-sm text-muted-foreground">
-                                      {event.subtitle}
-                                    </CardDescription>
-                                  ) : null}
-                                </CardHeader>
-                                <CardContent className="space-y-3 text-sm">
-                                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
-                                    <div className="flex items-start gap-2 text-muted-foreground">
-                                      <CalendarDays className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
-                                      <span className="text-foreground">
-                                        {formatDateRange(event.startDate, event.endDate)}
-                                      </span>
-                                    </div>
-                                    {event.registrationDeadline ? (
-                                      <div className="flex items-start gap-2 text-muted-foreground">
-                                        <Clock className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
-                                        <span>
-                                          Inscription jusqu'au{' '}
-                                          {formatOptionalDate(event.registrationDeadline)}
-                                        </span>
-                                      </div>
-                                    ) : null}
-                                    {event.location ? (
-                                      <div className="flex items-start gap-2 text-muted-foreground">
-                                        <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
-                                        <span>{event.location}</span>
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                  {event.description ? (
-                                    <p className="text-sm leading-relaxed text-muted-foreground">
-                                      {event.description}
-                                    </p>
-                                  ) : null}
-                                  {event.link ? (
-                                    <a
-                                      href={event.link}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
-                                    >
-                                      <LinkIcon className="h-4 w-4" aria-hidden="true" />
-                                      Consulter l'archive
-                                    </a>
-                                  ) : null}
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </div>
-                        </section>
-                      ))
-                    )}
-                  </TabsContent>
-                </Tabs>
-              )}
-            </CardContent>
-          </Card>
+    <div className="flex flex-1 flex-col gap-6">
+      <div className="flex flex-col gap-4">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/">Accueil</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Agenda</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Agenda</h1>
+            <p className="text-muted-foreground">
+              Visualisez les évènements prévus et retrouvez les informations importantes en un coup d&apos;œil.
+            </p>
+          </div>
         </div>
+      </div>
+      <Card className="border-none shadow-none">
+        <CardHeader className="px-0">
+          <CardTitle className="text-2xl">Calendrier des évènements</CardTitle>
+          <CardDescription>
+            Naviguez mois par mois, filtrez les catégories et accédez facilement aux détails des évènements.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="px-0">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-card/60 p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button variant="outline" onClick={handleResetToToday} disabled={isLoading}>
+                Aujourd&apos;hui
+              </Button>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" onClick={handlePreviousMonth} disabled={isLoading}>
+                  <ChevronLeft className="h-4 w-4" />
+                  <span className="sr-only">Mois précédent</span>
+                </Button>
+                <Button variant="ghost" size="icon" onClick={handleNextMonth} disabled={isLoading}>
+                  <ChevronRight className="h-4 w-4" />
+                  <span className="sr-only">Mois suivant</span>
+                </Button>
+              </div>
+              <h2 className="text-lg font-semibold capitalize">{monthLabel}</h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <Select value={category} onValueChange={(value: CategoryFilter) => setCategory(value)} disabled={isLoading}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Filtrer par catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORY_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button className="gap-2" variant="default" disabled>
+                <CalendarPlus className="h-4 w-4" />
+                Nouvel évènement
+              </Button>
+            </div>
+          </div>
+          <Separator className="my-6" />
 
-        <aside className="w-full space-y-6 xl:w-80">
-          <Card>
-            <CardHeader>
-              <CardTitle>Indicateurs clés</CardTitle>
-              <CardDescription>
-                Vue synthétique de l'activité sur les deux dernières années et au-delà.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Total des évènements</span>
-                <span className="text-base font-semibold text-foreground">{totalEvents}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">À venir</span>
-                <span className="text-base font-semibold text-foreground">{upcomingEvents.length}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Archivés (2 ans)</span>
-                <span className="text-base font-semibold text-foreground">{archivedEvents.length}</span>
-              </div>
-              <Separator />
-              <div className="space-y-2 text-xs text-muted-foreground">
-                <p>
-                  Les évènements archivés restent consultables pendant deux ans. Les prochains
-                  évènements sont affichés sans limite vers le futur.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          {(colorsError || eventsError) && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Impossible de charger l&apos;agenda</AlertTitle>
+              <AlertDescription>
+                {eventsError?.message || colorsError?.message || 'Une erreur inattendue est survenue.'}
+              </AlertDescription>
+            </Alert>
+          )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Légende des couleurs</CardTitle>
-              <CardDescription>
-                Correspondance entre les codes du calendrier et les familles d'évènements.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {loading ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  <span>Mise à jour de la légende…</span>
-                </div>
-              ) : colorsError ? (
-                <p className="text-sm text-muted-foreground">
-                  Impossible de charger la légende des couleurs pour le moment.
-                </p>
-              ) : colors && colors.length > 0 ? (
-                <div className="space-y-2">
+          <div className="space-y-6">
+            <div className="overflow-hidden rounded-lg border">
+              <div className="grid grid-cols-7 bg-muted/60 text-sm font-medium text-muted-foreground">
+                {WEEK_DAYS.map((day) => (
+                  <div key={day} className="px-4 py-3 text-left">
+                    {day}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-px bg-muted/40">
+                {weeks.map((week, weekIndex) =>
+                  week.map((day) => {
+                    const dayKey = format(day, 'yyyy-MM-dd');
+                    const dayEvents = sortEvents(eventsByDay.get(dayKey) ?? []);
+                    const extraEvents = dayEvents.length - MAX_EVENTS_PER_DAY;
+
+                    return (
+                      <div
+                        key={`${weekIndex}-${dayKey}`}
+                        className={cn(
+                          'min-h-[140px] bg-background p-3 text-sm transition-colors',
+                          !isSameMonth(day, currentMonth) && 'bg-muted/20 text-muted-foreground',
+                          isToday(day) && 'ring-1 ring-primary/50',
+                        )}
+                      >
+                        <div className="flex items-center justify-between text-xs font-medium">
+                          <span className={cn(!isSameMonth(day, currentMonth) && 'text-muted-foreground/80')}>
+                            {format(day, 'd', { locale: fr })}
+                          </span>
+                          {isToday(day) && <Badge variant="secondary">Aujourd&apos;hui</Badge>}
+                        </div>
+                        <div className="mt-2 space-y-1 text-xs">
+                          {dayEvents.slice(0, MAX_EVENTS_PER_DAY).map((event) => {
+                            const showStartTime =
+                              event.startDateValue &&
+                              isSameDay(day, event.startDateValue) &&
+                              (event.startDateValue.getHours() !== 0 || event.startDateValue.getMinutes() !== 0);
+                            const timeLabel = showStartTime
+                              ? format(event.startDateValue as Date, 'HH:mm', { locale: fr })
+                              : null;
+
+                            return (
+                              <div
+                                key={`${dayKey}-${event.id}`}
+                                className="flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1 transition hover:opacity-90"
+                                style={{
+                                  backgroundColor: event.backgroundColor,
+                                  color: event.textColor,
+                                  borderColor: event.borderColor,
+                                }}
+                                title={event.title}
+                              >
+                                {timeLabel && <span className="shrink-0 text-[11px] font-semibold uppercase">{timeLabel}</span>}
+                                <span className="truncate font-medium">{event.title}</span>
+                              </div>
+                            );
+                          })}
+                          {extraEvents > 0 && (
+                            <div className="text-muted-foreground">+ {extraEvents} autre{extraEvents > 1 ? 's' : ''}</div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }),
+                )}
+              </div>
+            </div>
+
+            {!!colors?.length && (
+              <div className="rounded-lg border bg-muted/10 p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Légende des couleurs
+                </h3>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {colors.map((color) => {
-                    const reasonKey = normalizeReasonKey(color.reason);
-                    const rgb = hexToRgb(color.color);
-                    const background = rgb ? rgbaString(rgb, 0.12) : 'var(--muted)';
+                    const styles = getEventColorStyles(color.color);
                     return (
                       <div
                         key={color.reason}
-                        className="flex items-center justify-between rounded-md border px-3 py-2"
-                        style={{
-                          borderColor: rgb ? rgbaString(rgb, 0.4) : 'var(--border)',
-                          backgroundColor: background,
-                        }}
+                        className="flex items-center gap-3 rounded-md border bg-background p-3"
+                        style={{ borderColor: styles.borderColor }}
                       >
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-foreground">{color.name}</span>
-                          <span className="text-xs text-muted-foreground uppercase tracking-wide">
-                            {reasonKey}
-                          </span>
-                        </div>
-                        <Badge
+                        <span
+                          className="h-9 w-9 rounded-full border"
                           style={{
-                            backgroundColor: color.color,
-                            color: getReadableTextColor(color.color),
-                            borderColor: color.color,
+                            backgroundColor: styles.backgroundColor,
+                            borderColor: styles.borderColor,
                           }}
-                        >
-                          {color.color}
-                        </Badge>
+                        />
+                        <div>
+                          <p className="text-sm font-medium leading-tight">{color.name}</p>
+                          <p className="text-xs text-muted-foreground">Code : {color.reason}</p>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Aucune couleur n'a été définie pour les évènements du calendrier.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </aside>
-      </div>
+              </div>
+            )}
+          </div>
+
+          {isLoading && (
+            <div className="flex items-center gap-2 pt-6 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Chargement des évènements…
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
-
-export default Calendar;
