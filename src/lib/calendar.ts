@@ -228,6 +228,13 @@ function normalizeReason(record: RawRecord): string | undefined {
 
 function normalizeTitle(record: RawRecord): string {
   const candidates = [
+    record['lastName'],
+    record['LastName'],
+    record['lastname'],
+    record['LASTNAME'],
+    record['nom'],
+    record['Nom'],
+    record['NOM'],
     record['titre'],
     record['Titre'],
     record['title'],
@@ -420,21 +427,26 @@ function collectMetadata(record: RawRecord): Record<string, unknown> | undefined
 function normalizeCalendarEvent(record: RawRecord): CalendarEventRecord | null {
   const title = normalizeTitle(record);
   const id = normalizeIdentifier(record) ?? `${normalizeReason(record) ?? 'event'}-${title}`;
-  const startDate =
-    toOptionalIsoDate(
-      record['DATE_DEBUT'] ??
-        record['DateDebut'] ??
-        record['dateDebut'] ??
-        record['date_debut'] ??
-        record['startDate'] ??
-        record['StartDate'],
-    ) ?? new Date().toISOString();
+  const startDate = toOptionalIsoDate(
+    record['DATE_DEBUT'] ??
+      record['DateDebut'] ??
+      record['dateDebut'] ??
+      record['date_debut'] ??
+      record['DATEDEBUT'] ??
+      record['startDate'] ??
+      record['StartDate'],
+  );
+
+  if (!startDate) {
+    return null;
+  }
 
   const endDate = toOptionalIsoDate(
     record['DATE_FIN'] ??
       record['DateFin'] ??
       record['dateFin'] ??
       record['date_fin'] ??
+      record['DATEFIN'] ??
       record['endDate'] ??
       record['EndDate'],
   );
