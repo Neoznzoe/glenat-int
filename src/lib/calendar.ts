@@ -125,22 +125,69 @@ function toOptionalIsoDate(value: unknown): string | undefined {
   if (!value && value !== 0) {
     return undefined;
   }
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return new Date(value).toISOString();
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
+
+  const formatLocalDateTime = (date: Date) => {
+    const pad = (component: number) => component.toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    const seconds = pad(date.getSeconds());
+    const hasTime =
+      date.getHours() !== 0 ||
+      date.getMinutes() !== 0 ||
+      date.getSeconds() !== 0 ||
+      date.getMilliseconds() !== 0;
+
+    return hasTime ? `${year}-${month}-${day}T${hours}:${minutes}:${seconds}` : `${year}-${month}-${day}`;
+  };
+
+  const normalizeDateLikeString = (input: string): string | undefined => {
+    if (!input) {
+      return undefined;
+    }
+
+    const trimmed = input.trim();
     if (!trimmed) {
       return undefined;
     }
-    const timestamp = Date.parse(trimmed);
-    if (!Number.isNaN(timestamp)) {
-      return new Date(timestamp).toISOString();
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return trimmed;
     }
+
+    const dateTimeMatch = trimmed.match(
+      /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})(?::(\d{2}))?(?:\.\d+)?$/,
+    );
+    if (dateTimeMatch) {
+      const [, datePart, timePart, secondsPart] = dateTimeMatch;
+      const normalisedSeconds = secondsPart ?? '00';
+      return `${datePart}T${timePart}:${normalisedSeconds}`;
+    }
+
+    const hasTimezone = /[zZ]|[+-]\d{2}:?\d{2}$/.test(trimmed);
+    const timestamp = Date.parse(trimmed);
+    if (Number.isNaN(timestamp)) {
+      return undefined;
+    }
+
+    const parsedDate = new Date(timestamp);
+    return hasTimezone ? parsedDate.toISOString() : formatLocalDateTime(parsedDate);
+  };
+
+  if (value instanceof Date) {
+    return formatLocalDateTime(value);
   }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return formatLocalDateTime(new Date(value));
+  }
+
+  if (typeof value === 'string') {
+    return normalizeDateLikeString(value);
+  }
+
   return undefined;
 }
 

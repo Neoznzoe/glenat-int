@@ -275,8 +275,8 @@ export default function CalendarPage() {
   const isLoading = isLoadingColors || isLoadingEvents;
 
   return (
-    <div className="flex flex-1 flex-col gap-6">
-      <div className="flex flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-6 p-6">
+      <div className="flex flex-col gap-2">
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -297,14 +297,14 @@ export default function CalendarPage() {
           </div>
         </div>
       </div>
-      <Card className="border-none shadow-none">
-        <CardHeader className="px-0">
+      <Card>
+        <CardHeader>
           <CardTitle className="text-2xl">Calendrier des évènements</CardTitle>
           <CardDescription>
             Naviguez mois par mois, filtrez les catégories et accédez facilement aux détails des évènements.
           </CardDescription>
         </CardHeader>
-        <CardContent className="px-0">
+        <CardContent className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-card/60 p-4">
             <div className="flex flex-wrap items-center gap-3">
               <Button variant="outline" onClick={handleResetToToday} disabled={isLoading}>
