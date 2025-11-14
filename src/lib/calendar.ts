@@ -25,6 +25,7 @@ WHERE YEAR([DATE_DEBUT]) >= YEAR(GETDATE());`;
 export interface CalendarEventColorRecord {
   reason: string;
   name: string;
+  lastName: string;
   color: string;
   createdAt?: string;
   updatedAt?: string;
@@ -124,6 +125,15 @@ function toNonEmptyString(value: unknown): string | undefined {
 function toOptionalIsoDate(value: unknown): string | undefined {
   if (!value && value !== 0) {
     return undefined;
+  }
+
+  // Gérer les objets date PHP/SQL Server avec structure {date: string, timezone_type: number, timezone: string}
+  if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+    const dateObj = value as Record<string, unknown>;
+    if (typeof dateObj.date === 'string') {
+      // Extraire la chaîne de date de l'objet
+      value = dateObj.date;
+    }
   }
 
   const formatLocalDateTime = (date: Date) => {
@@ -232,6 +242,8 @@ function normalizeTitle(record: RawRecord): string {
     record['LastName'],
     record['lastname'],
     record['LASTNAME'],
+    record['last_name'],
+    record['LAST_NAME'],
     record['nom'],
     record['Nom'],
     record['NOM'],
@@ -427,6 +439,7 @@ function collectMetadata(record: RawRecord): Record<string, unknown> | undefined
 function normalizeCalendarEvent(record: RawRecord): CalendarEventRecord | null {
   const title = normalizeTitle(record);
   const id = normalizeIdentifier(record) ?? `${normalizeReason(record) ?? 'event'}-${title}`;
+
   const startDate = toOptionalIsoDate(
     record['DATE_DEBUT'] ??
       record['DateDebut'] ??
@@ -491,7 +504,19 @@ function normalizeCalendarEventColor(record: RawRecord): CalendarEventColorRecor
     toNonEmptyString(record['Name']) ??
     toNonEmptyString(record['label']) ??
     toNonEmptyString(record['Label']);
+  const lastNameCandidate =
+    toNonEmptyString(record['lastName']) ??
+    toNonEmptyString(record['LastName']) ??
+    toNonEmptyString(record['LASTNAME']) ??
+    toNonEmptyString(record['last_name']) ??
+    toNonEmptyString(record['LAST_NAME']) ??
+    toNonEmptyString(record['nom']) ??
+    toNonEmptyString(record['Nom']) ??
+    toNonEmptyString(record['NOM']);
   const colorCandidate =
+    toNonEmptyString(record['COULEUR']) ??
+    toNonEmptyString(record['couleur']) ??
+    toNonEmptyString(record['Couleur']) ??
     toNonEmptyString(record['color']) ??
     toNonEmptyString(record['Color']) ??
     toNonEmptyString(record['hex']) ??
@@ -502,10 +527,12 @@ function normalizeCalendarEventColor(record: RawRecord): CalendarEventColorRecor
   }
 
   const name = nameCandidate ?? reason;
+  const lastName = lastNameCandidate ?? name;
 
   return {
     reason,
     name,
+    lastName,
     color: colorCandidate,
     createdAt: toOptionalIsoDate(record['createdAt'] ?? record['CreatedAt']),
     updatedAt: toOptionalIsoDate(record['updatedAt'] ?? record['UpdatedAt']),

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  addDays,
   addMonths,
   eachDayOfInterval,
   endOfMonth,
@@ -7,7 +8,6 @@ import {
   format,
   isAfter,
   isBefore,
-  isSameDay,
   isSameMonth,
   isToday,
   parseISO,
@@ -16,7 +16,7 @@ import {
   startOfWeek,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { AlertCircle, CalendarPlus, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 
 import {
   Breadcrumb,
@@ -27,7 +27,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -40,7 +40,12 @@ import {
 } from '@/hooks/useCalendarEvents';
 
 const WEEK_DAYS = ['Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.'];
-const MAX_EVENTS_PER_DAY = 3;
+const HOURS = Array.from({ length: 15 }, (_, i) => i + 7);
+function getParisTime(): Date {
+  const now = new Date();
+  const parisTimeString = now.toLocaleString('en-US', { timeZone: 'Europe/Paris' });
+  return new Date(parisTimeString);
+}
 
 interface CalendarDisplayEvent extends CalendarEventRecord {
   startDateValue: Date | null;
@@ -51,20 +56,26 @@ interface CalendarDisplayEvent extends CalendarEventRecord {
   colorLabel?: string;
 }
 
-type CategoryFilter = 'all' | 'Actuel ou futur' | 'Ancien (2 ans)';
+type CalendarView = 'month' | 'week' | 'day';
 
 function parseDate(value?: string | null): Date | null {
   if (!value) {
     return null;
   }
   try {
-    return parseISO(value);
+    const parsed = parseISO(value);
+    // Convertir au fuseau horaire de Paris
+    const parisTimeString = parsed.toLocaleString('en-US', { timeZone: 'Europe/Paris' });
+    return new Date(parisTimeString);
   } catch {
     const timestamp = Date.parse(value);
     if (Number.isNaN(timestamp)) {
       return null;
     }
-    return new Date(timestamp);
+    const date = new Date(timestamp);
+    // Convertir au fuseau horaire de Paris
+    const parisTimeString = date.toLocaleString('en-US', { timeZone: 'Europe/Paris' });
+    return new Date(parisTimeString);
   }
 }
 
@@ -170,6 +181,16 @@ function getEventsForInterval(
     }
 
     const effectiveEnd = endDate && !isBefore(endDate, startDate) ? endDate : startDate;
+
+    // Filtrer: ne garder que les événements qui commencent OU se terminent dans l'intervalle visible
+    const startInInterval = !isBefore(startDate, intervalStart) && !isAfter(startDate, intervalEnd);
+    const endInInterval = effectiveEnd && !isBefore(effectiveEnd, intervalStart) && !isAfter(effectiveEnd, intervalEnd);
+    const spansInterval = isBefore(startDate, intervalStart) && isAfter(effectiveEnd, intervalEnd);
+
+    if (!startInInterval && !endInInterval && !spansInterval) {
+      continue;
+    }
+
     const eventStart = isBefore(startDate, intervalStart) ? intervalStart : startDate;
     const eventEnd = effectiveEnd ? (isAfter(effectiveEnd, intervalEnd) ? intervalEnd : effectiveEnd) : intervalEnd;
 
@@ -212,15 +233,47 @@ function sortEvents(events: CalendarDisplayEvent[]) {
   });
 }
 
-const CATEGORY_OPTIONS: { label: string; value: CategoryFilter }[] = [
-  { label: 'Toutes les catégories', value: 'all' },
-  { label: 'Actuel ou futur', value: 'Actuel ou futur' },
-  { label: 'Ancien (2 ans)', value: 'Ancien (2 ans)' },
+function getCurrentTimePosition(): number {
+  const now = new Date(); // Utiliser l'heure locale du PC
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const DISPLAY_START_HOUR = 7;
+  const DISPLAY_END_HOUR = 21;
+  const TOTAL_DISPLAY_HOURS = DISPLAY_END_HOUR - DISPLAY_START_HOUR + 1;
+
+  // Calculer la position relative aux heures affichées (7h-21h)
+  const currentTimeInMinutes = hours * 60 + minutes;
+  const displayStartInMinutes = DISPLAY_START_HOUR * 60;
+  const displayTotalMinutes = TOTAL_DISPLAY_HOURS * 60;
+
+  return (currentTimeInMinutes - displayStartInMinutes) / displayTotalMinutes;
+}
+
+function getEventHourSpan(event: CalendarDisplayEvent): { startHour: number; endHour: number; endMinutes: number; isAllDay: boolean } {
+  const startDate = event.startDateValue;
+  const endDate = event.endDateValue;
+
+  // Si l'événement a une heure précise
+  if (startDate && (startDate.getHours() !== 0 || startDate.getMinutes() !== 0)) {
+    const startHour = Math.max(7, startDate.getHours()); // Minimum 7h
+    const endHour = endDate ? Math.min(21, endDate.getHours()) : Math.min(21, startHour + 1); // Maximum 21h
+    const endMinutes = endDate ? endDate.getMinutes() : 0;
+    return { startHour, endHour, endMinutes, isAllDay: false };
+  }
+
+  // Sinon, événement sur toute la journée de travail (9h-17h30)
+  return { startHour: 9, endHour: 17, endMinutes: 30, isAllDay: true };
+}
+
+const VIEW_OPTIONS: { label: string; value: CalendarView }[] = [
+  { label: 'Vue mensuelle', value: 'month' },
+  { label: 'Vue hebdomadaire', value: 'week' },
+  { label: 'Vue journalière', value: 'day' },
 ];
 
 export default function CalendarPage() {
-  const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
-  const [category, setCategory] = useState<CategoryFilter>('all');
+  const [currentMonth, setCurrentMonth] = useState(startOfMonth(getParisTime()));
+  const [view, setView] = useState<CalendarView>('month');
   const { data: colors, isLoading: isLoadingColors, error: colorsError } = useCalendarEventColors();
   const {
     data: events,
@@ -243,35 +296,98 @@ export default function CalendarPage() {
     if (!events?.length) {
       return [];
     }
-    if (category === 'all') {
-      return events;
-    }
-    return events.filter((event) => event.category === category);
-  }, [events, category]);
+    // Afficher tous les événements, pas de filtre par catégorie
+    return events;
+  }, [events]);
 
-  const { weeks, calendarStart, calendarEnd } = useMemo(
-    () => getCalendarWeeks(currentMonth),
-    [currentMonth],
-  );
+  const { weeks, calendarStart, calendarEnd } = useMemo(() => {
+    if (view === 'month') {
+      return getCalendarWeeks(currentMonth);
+    }
+
+    if (view === 'week') {
+      // Vue hebdomadaire: afficher la semaine contenant currentMonth
+      const weekStart = startOfWeek(currentMonth, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(currentMonth, { weekStartsOn: 1 });
+      const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
+      return {
+        weeks: [days],
+        calendarStart: weekStart,
+        calendarEnd: weekEnd,
+      };
+    }
+
+    // Vue journalière: afficher uniquement le jour de currentMonth
+    const dayStart = startOfDay(currentMonth);
+    return {
+      weeks: [[dayStart]],
+      calendarStart: dayStart,
+      calendarEnd: dayStart,
+    };
+  }, [currentMonth, view]);
 
   const eventsByDay = useMemo(
     () => getEventsForInterval(filteredEvents, colorsMap, calendarStart, calendarEnd),
     [filteredEvents, colorsMap, calendarStart, calendarEnd],
   );
 
-  const handlePreviousMonth = () => {
-    setCurrentMonth((previous) => addMonths(previous, -1));
+  const handlePrevious = () => {
+    setCurrentMonth((previous) => {
+      if (view === 'month') {
+        return addMonths(previous, -1);
+      }
+      if (view === 'week') {
+        return addDays(previous, -7);
+      }
+      return addDays(previous, -1);
+    });
   };
 
-  const handleNextMonth = () => {
-    setCurrentMonth((previous) => addMonths(previous, 1));
+  const handleNext = () => {
+    setCurrentMonth((previous) => {
+      if (view === 'month') {
+        return addMonths(previous, 1);
+      }
+      if (view === 'week') {
+        return addDays(previous, 7);
+      }
+      return addDays(previous, 1);
+    });
   };
 
   const handleResetToToday = () => {
-    setCurrentMonth(startOfMonth(new Date()));
+    if (view === 'month') {
+      setCurrentMonth(startOfMonth(getParisTime()));
+    } else {
+      setCurrentMonth(getParisTime());
+    }
   };
 
-  const monthLabel = format(currentMonth, 'MMMM yyyy', { locale: fr });
+  const handleViewChange = (newView: CalendarView) => {
+    const today = getParisTime();
+    const isCurrentMonth = isSameMonth(currentMonth, today);
+
+    // Si on change vers une vue hebdomadaire ou journalière et qu'on est dans le mois courant,
+    // on utilise la date du jour. Sinon, on garde currentMonth.
+    if ((newView === 'week' || newView === 'day') && view === 'month' && isCurrentMonth) {
+      setCurrentMonth(today);
+    }
+
+    setView(newView);
+  };
+
+  const dateLabel = useMemo(() => {
+    if (view === 'month') {
+      return format(currentMonth, 'MMMM yyyy', { locale: fr });
+    }
+    if (view === 'week') {
+      const weekStart = startOfWeek(currentMonth, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(currentMonth, { weekStartsOn: 1 });
+      return `${format(weekStart, 'd MMM', { locale: fr })} - ${format(weekEnd, 'd MMM yyyy', { locale: fr })}`;
+    }
+    return format(currentMonth, 'EEEE d MMMM yyyy', { locale: fr });
+  }, [currentMonth, view]);
+
   const isLoading = isLoadingColors || isLoadingEvents;
 
   return (
@@ -288,21 +404,10 @@ export default function CalendarPage() {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Agenda</h1>
-            <p className="text-muted-foreground">
-              Visualisez les évènements prévus et retrouvez les informations importantes en un coup d&apos;œil.
-            </p>
-          </div>
-        </div>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Calendrier des évènements</CardTitle>
-          <CardDescription>
-            Naviguez mois par mois, filtrez les catégories et accédez facilement aux détails des évènements.
-          </CardDescription>
+          <CardTitle className="text-3xl">Agenda</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-card/60 p-4">
@@ -311,34 +416,30 @@ export default function CalendarPage() {
                 Aujourd&apos;hui
               </Button>
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" onClick={handlePreviousMonth} disabled={isLoading}>
+                <Button variant="ghost" size="icon" onClick={handlePrevious} disabled={isLoading}>
                   <ChevronLeft className="h-4 w-4" />
-                  <span className="sr-only">Mois précédent</span>
+                  <span className="sr-only">Période précédente</span>
                 </Button>
-                <Button variant="ghost" size="icon" onClick={handleNextMonth} disabled={isLoading}>
+                <Button variant="ghost" size="icon" onClick={handleNext} disabled={isLoading}>
                   <ChevronRight className="h-4 w-4" />
-                  <span className="sr-only">Mois suivant</span>
+                  <span className="sr-only">Période suivante</span>
                 </Button>
               </div>
-              <h2 className="text-lg font-semibold capitalize">{monthLabel}</h2>
+              <h2 className="text-lg font-semibold capitalize">{dateLabel}</h2>
             </div>
             <div className="flex items-center gap-3">
-              <Select value={category} onValueChange={(value: CategoryFilter) => setCategory(value)} disabled={isLoading}>
+              <Select value={view} onValueChange={handleViewChange} disabled={isLoading}>
                 <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Filtrer par catégorie" />
+                  <SelectValue placeholder="Sélectionner la vue" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORY_OPTIONS.map((option) => (
+                  {VIEW_OPTIONS.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Button className="gap-2" variant="default" disabled>
-                <CalendarPlus className="h-4 w-4" />
-                Nouvel évènement
-              </Button>
             </div>
           </div>
           <Separator className="my-6" />
@@ -354,98 +455,394 @@ export default function CalendarPage() {
           )}
 
           <div className="space-y-6">
-            <div className="overflow-hidden rounded-lg border">
-              <div className="grid grid-cols-7 bg-muted/60 text-sm font-medium text-muted-foreground">
-                {WEEK_DAYS.map((day) => (
-                  <div key={day} className="px-4 py-3 text-left">
-                    {day}
+            {/* Vue mensuelle */}
+            {view === 'month' && (
+              <div className="overflow-hidden rounded-lg border">
+                <div className="grid grid-cols-7 bg-muted/60 text-sm font-medium text-muted-foreground">
+                  {WEEK_DAYS.map((day) => (
+                    <div key={day} className="px-4 py-3 text-left border-r border-b">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+                <div className="relative">
+                  {/* Grille de fond */}
+                  <div className="grid grid-cols-7 border-l border-t">
+                    {weeks.map((week, weekIndex) =>
+                      week.map((day) => {
+                        const dayKey = format(day, 'yyyy-MM-dd');
+                        const dayOfWeek = day.getDay(); // 0 = Dimanche, 6 = Samedi
+                        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Dimanche ou Samedi
+                        const isOutsideMonth = !isSameMonth(day, currentMonth);
+
+                        return (
+                          <div
+                            key={`${weekIndex}-${dayKey}`}
+                            className={cn(
+                              'p-3 text-sm transition-colors border-r border-b min-h-[140px] relative',
+                              'text-muted-foreground',
+                              (isOutsideMonth || isWeekend) && 'bg-[#F7F7F7] dark:bg-[#171716]'
+                            )}
+                          >
+                            <div className="flex items-center justify-between text-xs font-medium mb-8">
+                              <span className={cn((isOutsideMonth || isWeekend) && 'text-muted-foreground/80')}>
+                                {format(day, 'd', { locale: fr })}
+                              </span>
+                            </div>
+                            {isToday(day) && (
+                              <div className="absolute top-1 right-1">
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5">Aujourd&apos;hui</Badge>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }),
+                    )}
                   </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-7 gap-px bg-muted/40">
-                {weeks.map((week, weekIndex) =>
-                  week.map((day) => {
-                    const dayKey = format(day, 'yyyy-MM-dd');
-                    const dayEvents = sortEvents(eventsByDay.get(dayKey) ?? []);
-                    const extraEvents = dayEvents.length - MAX_EVENTS_PER_DAY;
+                  {/* Événements en position absolue */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    {weeks.map((week, weekIndex) => {
+                      const processedEvents = new Set<string>();
+                      return week.map((day, dayIndex) => {
+                        const dayKey = format(day, 'yyyy-MM-dd');
+                        const dayEvents = sortEvents(eventsByDay.get(dayKey) ?? []);
 
-                    return (
-                      <div
-                        key={`${weekIndex}-${dayKey}`}
-                        className={cn(
-                          'min-h-[140px] bg-background p-3 text-sm transition-colors',
-                          !isSameMonth(day, currentMonth) && 'bg-muted/20 text-muted-foreground',
-                          isToday(day) && 'ring-1 ring-primary/50',
-                        )}
-                      >
-                        <div className="flex items-center justify-between text-xs font-medium">
-                          <span className={cn(!isSameMonth(day, currentMonth) && 'text-muted-foreground/80')}>
-                            {format(day, 'd', { locale: fr })}
-                          </span>
-                          {isToday(day) && <Badge variant="secondary">Aujourd&apos;hui</Badge>}
-                        </div>
-                        <div className="mt-2 space-y-1 text-xs">
-                          {dayEvents.slice(0, MAX_EVENTS_PER_DAY).map((event) => {
-                            const showStartTime =
-                              event.startDateValue &&
-                              isSameDay(day, event.startDateValue) &&
-                              (event.startDateValue.getHours() !== 0 || event.startDateValue.getMinutes() !== 0);
-                            const timeLabel = showStartTime
-                              ? format(event.startDateValue as Date, 'HH:mm', { locale: fr })
-                              : null;
+                        return dayEvents.map((event, eventIndex) => {
+                          // Éviter de dupliquer les événements multi-jours
+                          if (processedEvents.has(event.id)) return null;
 
-                            return (
+                          const isMultiDay = event.startDateValue && event.endDateValue &&
+                            format(event.startDateValue, 'yyyy-MM-dd') !== format(event.endDateValue, 'yyyy-MM-dd');
+
+                          let colspan = 1;
+                          if (isMultiDay && event.startDateValue && event.endDateValue) {
+                            // Calculer combien de jours l'événement couvre dans cette semaine
+                            const eventStartDay = format(event.startDateValue, 'yyyy-MM-dd');
+                            if (dayKey === eventStartDay) {
+                              processedEvents.add(event.id);
+                              // Compter les jours jusqu'à la fin de la semaine ou la fin de l'événement
+                              for (let i = dayIndex; i < week.length; i++) {
+                                const checkDay = format(week[i], 'yyyy-MM-dd');
+                                const eventEndDay = format(event.endDateValue, 'yyyy-MM-dd');
+                                if (checkDay <= eventEndDay) {
+                                  colspan = i - dayIndex + 1;
+                                }
+                              }
+                            } else {
+                              return null; // Ne pas afficher si ce n'est pas le jour de début
+                            }
+                          }
+
+                          const topOffset = 28 + eventIndex * 30; // 28px pour l'en-tête + 30px par événement
+
+                          return (
+                            <div
+                              key={`${dayKey}-${event.id}`}
+                              className="absolute pointer-events-auto cursor-pointer hover:opacity-90 transition-opacity"
+                              style={{
+                                left: `${(dayIndex / 7) * 100}%`,
+                                width: `${(colspan / 7) * 100}%`,
+                                top: `${weekIndex * 140 + topOffset}px`,
+                                minHeight: '28px',
+                              }}
+                            >
                               <div
-                                key={`${dayKey}-${event.id}`}
-                                className="flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1 transition hover:opacity-90"
+                                className="mx-1 h-full rounded-sm px-3 py-1.5 flex items-center text-xs font-medium line-clamp-2"
                                 style={{
                                   backgroundColor: event.backgroundColor,
                                   color: event.textColor,
-                                  borderColor: event.borderColor,
+                                  borderLeft: `3px solid ${event.borderColor}`,
                                 }}
                                 title={event.title}
                               >
-                                {timeLabel && <span className="shrink-0 text-[11px] font-semibold uppercase">{timeLabel}</span>}
-                                <span className="truncate font-medium">{event.title}</span>
+                                {event.title}
                               </div>
-                            );
-                          })}
-                          {extraEvents > 0 && (
-                            <div className="text-muted-foreground">+ {extraEvents} autre{extraEvents > 1 ? 's' : ''}</div>
-                          )}
+                            </div>
+                          );
+                        });
+                      });
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Vue hebdomadaire */}
+            {view === 'week' && (
+              <div className="overflow-hidden rounded-lg border">
+                <div className="grid grid-cols-[60px_repeat(7,1fr)]">
+                  <div className="border-r border-b bg-muted/60" />
+                  {weeks[0]?.map((day) => {
+                    const dayOfWeek = day.getDay(); // 0 = Dimanche, 6 = Samedi
+                    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                    return (
+                      <div
+                        key={format(day, 'yyyy-MM-dd')}
+                        className={cn(
+                          "border-r border-b px-2 py-3 text-center text-sm font-medium",
+                          isWeekend && 'bg-[#F7F7F7] dark:bg-[#171716]'
+                        )}
+                      >
+                        <div>{format(day, 'EEE', { locale: fr })}</div>
+                        <div className={cn("text-lg", isToday(day) && "bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center mx-auto")}>
+                          {format(day, 'd')}
                         </div>
                       </div>
                     );
-                  }),
-                )}
+                  })}
+                </div>
+                <div className="relative" style={{ height: '600px' }}>
+                  <div className="grid grid-cols-[60px_repeat(7,1fr)]">
+                    {/* Lignes horaires */}
+                    {HOURS.map((hour) => (
+                      <div key={hour} className="contents">
+                        <div className="border-r border-b px-2 py-1 text-xs text-muted-foreground text-right sticky left-0 bg-background">
+                          {hour.toString().padStart(2, '0')}:00
+                        </div>
+                        {weeks[0]?.map((day) => {
+                          const dayOfWeek = day.getDay(); // 0 = Dimanche, 6 = Samedi
+                          const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                          return (
+                            <div
+                              key={`${format(day, 'yyyy-MM-dd')}-${hour}`}
+                              className={cn(
+                                "border-r border-b",
+                                isWeekend && 'bg-[#F7F7F7] dark:bg-[#171716]'
+                              )}
+                              style={{
+                                height: '40px',
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                  {/* Événements positionnés en absolu */}
+                  <div className="absolute inset-0 grid grid-cols-[60px_repeat(7,1fr)] pointer-events-none">
+                    <div />
+                    {weeks[0]?.map((day) => {
+                      const dayKey = format(day, 'yyyy-MM-dd');
+                      const dayEvents = sortEvents(eventsByDay.get(dayKey) ?? []);
+
+                      // Grouper les événements par tranche horaire qui se chevauchent
+                      const eventGroups: CalendarDisplayEvent[][] = [];
+                      dayEvents.forEach((event) => {
+                        const { startHour, endHour, endMinutes } = getEventHourSpan(event);
+                        const endTime = endHour + endMinutes / 60;
+
+                        // Trouver un groupe où cet événement ne chevauche aucun autre
+                        let placed = false;
+                        for (const group of eventGroups) {
+                          const hasOverlap = group.some((existingEvent) => {
+                            const existing = getEventHourSpan(existingEvent);
+                            const existingEnd = existing.endHour + existing.endMinutes / 60;
+                            return !(endTime <= existing.startHour || startHour >= existingEnd);
+                          });
+                          if (!hasOverlap) {
+                            group.push(event);
+                            placed = true;
+                            break;
+                          }
+                        }
+                        if (!placed) {
+                          eventGroups.push([event]);
+                        }
+                      });
+
+                      const maxConcurrent = eventGroups.length;
+
+                      return (
+                        <div key={dayKey} className="relative pointer-events-auto">
+                          {eventGroups.map((group, groupIndex) =>
+                            group.map((event) => {
+                              const { startHour, endHour, endMinutes } = getEventHourSpan(event);
+                              const DISPLAY_START_HOUR = 7;
+                              const DISPLAY_END_HOUR = 21;
+                              const TOTAL_DISPLAY_HOURS = DISPLAY_END_HOUR - DISPLAY_START_HOUR + 1;
+                              const topPosition = ((startHour - DISPLAY_START_HOUR) / TOTAL_DISPLAY_HOURS) * 100;
+                              const endTime = endHour + endMinutes / 60;
+                              const height = ((endTime - startHour) / TOTAL_DISPLAY_HOURS) * 100;
+
+                              // Vérifier si l'événement est multi-jours
+                              const isMultiDay = event.startDateValue && event.endDateValue &&
+                                format(event.startDateValue, 'yyyy-MM-dd') !== format(event.endDateValue, 'yyyy-MM-dd');
+                              const isFirstDay = isMultiDay && event.startDateValue && format(day, 'yyyy-MM-dd') === format(event.startDateValue, 'yyyy-MM-dd');
+                              const isLastDay = isMultiDay && event.endDateValue && format(day, 'yyyy-MM-dd') === format(event.endDateValue, 'yyyy-MM-dd');
+                              const isMiddleDay = isMultiDay && !isFirstDay && !isLastDay;
+
+                              const widthPercent = 100 / maxConcurrent;
+                              const leftPercent = (groupIndex * widthPercent);
+
+                              return (
+                                <div
+                                  key={event.id}
+                                  className={cn(
+                                    "absolute px-1 py-1 cursor-pointer hover:opacity-90 overflow-hidden",
+                                    !isMultiDay && "rounded",
+                                    isFirstDay && "rounded-l",
+                                    isLastDay && "rounded-r",
+                                    isMiddleDay && "rounded-none"
+                                  )}
+                                  style={{
+                                    top: `${topPosition}%`,
+                                    height: `${height}%`,
+                                    left: `${leftPercent}%`,
+                                    width: `${widthPercent}%`,
+                                    backgroundColor: event.backgroundColor,
+                                    color: event.textColor,
+                                    borderLeft: `3px solid ${event.borderColor}`,
+                                  }}
+                                  title={`${event.title}${isMultiDay ? ' (événement multi-jours)' : ''}`}
+                                >
+                                  <div className="text-xs font-semibold line-clamp-2">
+                                    {event.title}
+                                    {isMultiDay && isFirstDay && ' →'}
+                                    {isMultiDay && isMiddleDay && ' ↔'}
+                                    {isMultiDay && isLastDay && ' ←'}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Barre d'heure actuelle */}
+                  {weeks[0]?.some(day => isToday(day)) && (
+                    <div
+                      className="absolute left-[60px] right-0 h-0.5 bg-red-500 z-20 pointer-events-none"
+                      style={{ top: `${getCurrentTimePosition() * 100}%` }}
+                    >
+                      <div className="absolute -left-1 -top-1 w-2 h-2 bg-red-500 rounded-full" />
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Vue journalière */}
+            {view === 'day' && weeks[0]?.[0] && (
+              <div className="overflow-hidden rounded-lg border">
+                <div className="border-b bg-muted/60 px-4 py-3 text-center font-semibold">
+                  {format(weeks[0][0], 'EEEE d MMMM yyyy', { locale: fr })}
+                </div>
+                <div className="relative" style={{ height: '600px' }}>
+                  <div className="grid grid-cols-[80px_1fr]">
+                    {HOURS.map((hour) => (
+                      <div key={hour} className="contents">
+                        <div className="border-r border-b px-3 py-2 text-sm text-muted-foreground text-right sticky left-0 bg-background">
+                          {hour.toString().padStart(2, '0')}:00
+                        </div>
+                        <div className="border-r border-b bg-background" style={{ height: '40px' }} />
+                      </div>
+                    ))}
+                  </div>
+                  {/* Événements positionnés en absolu */}
+                  <div className="absolute inset-0 grid grid-cols-[80px_1fr] pointer-events-none">
+                    <div />
+                    <div className="relative pointer-events-auto px-2">
+                      {(() => {
+                        const day = weeks[0][0];
+                        const dayKey = format(day, 'yyyy-MM-dd');
+                        const dayEvents = sortEvents(eventsByDay.get(dayKey) ?? []);
+
+                        // Grouper les événements par tranche horaire qui se chevauchent
+                        const eventGroups: CalendarDisplayEvent[][] = [];
+                        dayEvents.forEach((event) => {
+                          const { startHour, endHour, endMinutes } = getEventHourSpan(event);
+                          const endTime = endHour + endMinutes / 60;
+
+                          // Trouver un groupe où cet événement ne chevauche aucun autre
+                          let placed = false;
+                          for (const group of eventGroups) {
+                            const hasOverlap = group.some((existingEvent) => {
+                              const existing = getEventHourSpan(existingEvent);
+                              const existingEnd = existing.endHour + existing.endMinutes / 60;
+                              return !(endTime <= existing.startHour || startHour >= existingEnd);
+                            });
+                            if (!hasOverlap) {
+                              group.push(event);
+                              placed = true;
+                              break;
+                            }
+                          }
+                          if (!placed) {
+                            eventGroups.push([event]);
+                          }
+                        });
+
+                        const maxConcurrent = eventGroups.length;
+
+                        return eventGroups.map((group, groupIndex) =>
+                          group.map((event) => {
+                            const { startHour, endHour, endMinutes } = getEventHourSpan(event);
+                            const DISPLAY_START_HOUR = 7;
+                            const DISPLAY_END_HOUR = 21;
+                            const TOTAL_DISPLAY_HOURS = DISPLAY_END_HOUR - DISPLAY_START_HOUR + 1;
+                            const topPosition = ((startHour - DISPLAY_START_HOUR) / TOTAL_DISPLAY_HOURS) * 100;
+                            const endTime = endHour + endMinutes / 60;
+                            const height = ((endTime - startHour) / TOTAL_DISPLAY_HOURS) * 100;
+
+                            const widthPercent = 100 / maxConcurrent;
+                            const leftPercent = (groupIndex * widthPercent);
+
+                            return (
+                              <div
+                                key={event.id}
+                                className="absolute rounded px-3 py-2 cursor-pointer hover:opacity-90 overflow-hidden"
+                                style={{
+                                  top: `${topPosition}%`,
+                                  height: `${height}%`,
+                                  left: `${leftPercent}%`,
+                                  width: `${widthPercent}%`,
+                                  backgroundColor: event.backgroundColor,
+                                  color: event.textColor,
+                                  borderLeft: `4px solid ${event.borderColor}`,
+                                }}
+                                title={event.title}
+                              >
+                                <div className="text-sm font-semibold line-clamp-2">{event.title}</div>
+                              </div>
+                            );
+                          })
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  {/* Barre d'heure actuelle */}
+                  {isToday(weeks[0][0]) && (
+                    <div
+                      className="absolute left-[80px] right-0 h-0.5 bg-red-500 z-20 pointer-events-none"
+                      style={{ top: `${getCurrentTimePosition() * 100}%` }}
+                    >
+                      <div className="absolute -left-1 -top-1 w-2 h-2 bg-red-500 rounded-full" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {!!colors?.length && (
               <div className="rounded-lg border bg-muted/10 p-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Légende des couleurs
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                  Légende
                 </h3>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="flex flex-wrap gap-4">
                   {colors.map((color) => {
-                    const styles = getEventColorStyles(color.color);
                     return (
                       <div
                         key={color.reason}
-                        className="flex items-center gap-3 rounded-md border bg-background p-3"
-                        style={{ borderColor: styles.borderColor }}
+                        className="flex items-center gap-2"
                       >
                         <span
-                          className="h-9 w-9 rounded-full border"
+                          className="h-5 w-5 rounded-full"
                           style={{
-                            backgroundColor: styles.backgroundColor,
-                            borderColor: styles.borderColor,
+                            backgroundColor: color.color,
                           }}
                         />
-                        <div>
-                          <p className="text-sm font-medium leading-tight">{color.name}</p>
-                          <p className="text-xs text-muted-foreground">Code : {color.reason}</p>
-                        </div>
+                        <span className="text-sm">{color.lastName}</span>
                       </div>
                     );
                   })}
