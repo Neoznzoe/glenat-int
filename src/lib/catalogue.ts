@@ -568,6 +568,30 @@ JOIN next_offices AS n
   ON n.office = c.office
 ORDER BY n.nextDate ASC, n.office ASC, c.dateMev ASC;`;
 
+const NEXT_OFFICE_SQL_QUERY = `;WITH office_min_dates AS (
+    SELECT
+           office,
+           MIN(dateMev) AS nextDate
+    FROM dbo.catalogBooks
+    WHERE dateMev >= CONVERT(date, GETDATE())
+      AND dateMev >= '20000101'
+      AND dateMev < DATEADD(year, 5, CONVERT(date, GETDATE()))
+      AND office <> '0000'
+    GROUP BY office
+),
+next_office AS (
+    SELECT TOP (1)
+           office,
+           nextDate
+    FROM office_min_dates
+    ORDER BY nextDate ASC, office ASC
+)
+SELECT c.*
+FROM dbo.catalogBooks AS c
+JOIN next_office AS n
+  ON n.office = c.office
+ORDER BY n.nextDate ASC, n.office ASC, c.dateMev ASC;`;
+
 const FALLBACK_COVER_DATA_URL =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
@@ -1403,5 +1427,85 @@ export async function fetchCatalogueRelatedBooks(
       error,
     );
     return Promise.resolve([]);
+  }
+}
+
+export async function fetchNextCatalogueOffice(
+  options: FetchCatalogueOfficesOptions = {},
+): Promise<CatalogueOfficeGroup | null> {
+  const { hydrateCovers = true, onCoverProgress } = options;
+  const endpoint = 'fetchNextCatalogueOffice';
+  logRequest(endpoint);
+
+  try {
+    const requestPayload = {
+      query: NEXT_OFFICE_SQL_QUERY,
+    };
+    const securePayload = await prepareSecureJsonPayload(requestPayload);
+    const headers = new Headers({
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    });
+
+    applySecurePayloadHeaders(headers, securePayload.encrypted);
+    logSecurePayloadRequest(
+      CATALOGUE_OFFICES_ENDPOINT,
+      requestPayload,
+      securePayload.body,
+      securePayload.encrypted,
+    );
+    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
+      method: 'POST',
+      headers,
+      body: securePayload.body,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+
+    const payload = (await response.json()) as DatabaseApiResponse;
+    const records = extractDatabaseRows(payload);
+
+    console.debug('[catalogueApi] Prochaine office récupérée depuis la base.');
+
+    if (!records.length) {
+      throw new Error("La base de donnees n'a retourne aucun resultat");
+    }
+
+    const groups = await buildCatalogueOfficeGroups(records);
+
+    if (!groups.length) {
+      throw new Error('Impossible de construire l\'office a partir des donnees recues');
+    }
+
+    const nextOffice = groups[0] ?? null;
+
+    if (!nextOffice) {
+      return null;
+    }
+
+    if (!hydrateCovers) {
+      logResponse(endpoint, nextOffice);
+
+      if (onCoverProgress) {
+        void hydrateCatalogueOfficeGroupsWithCovers([nextOffice], { onCoverProgress }).catch(error => {
+          console.warn('[catalogueApi] Hydratation des couvertures interrompue', error);
+        });
+      }
+
+      return nextOffice;
+    }
+
+    const hydratedGroups = await hydrateCatalogueOfficeGroupsWithCovers([nextOffice], {
+      onCoverProgress,
+    });
+
+    const hydratedOffice = hydratedGroups[0] ?? null;
+    logResponse(endpoint, hydratedOffice);
+    return hydratedOffice;
+  } catch (error) {
+    console.error('[catalogueApi] Impossible de recuperer la prochaine office', error);
+    throw error;
   }
 }

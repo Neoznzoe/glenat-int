@@ -8,22 +8,10 @@ import { PresenceList } from '@/components/PresenceList';
 import { LinksCard } from '@/components/LinksCard';
 import type { LinkItem } from '@/components/LinksCard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/context/AuthContext';
+import { fetchNextCatalogueOffice, type CatalogueOfficeGroup } from '@/lib/catalogue';
 
-const asset = (p: string) => new URL(p, import.meta.url).href;
 const noop = () => undefined;
-
-const covers = [
-  { src: asset('../assets/images/aladin.webp'), href: '' },
-  { src: asset('../assets/images/eclipse_humaine.webp'), href: '' },
-  { src: asset('../assets/images/jaime_la_mode.webp'), href: '' },
-  { src: asset('../assets/images/le_combat_dune_vie.webp'), href: '' },
-  { src: asset('../assets/images/les_licorniers.webp'), href: '' },
-  { src: asset('../assets/images/montagne_europe.webp'), href: '' },
-  { src: asset('../assets/images/naya_pika.webp'), href: '' },
-  { src: asset('../assets/images/odyssee.webp'), href: '' },
-  { src: asset('../assets/images/jules_matrat.webp'), href: '' },
-  { src: asset('../assets/images/onepiece_110.webp'), href: '' },
-];
 
 function HomeSkeletonPresenceTable({
   rows = 4,
@@ -162,7 +150,45 @@ function HomeSkeleton() {
 }
 
 function HomeContent() {
-  const userName = 'Victor';
+  const { user } = useAuth();
+  const userName = user?.givenName || user?.displayName || 'utilisateur';
+
+  const [nextOffice, setNextOffice] = useState<CatalogueOfficeGroup | null>(null);
+  const [isLoadingOffice, setIsLoadingOffice] = useState(true);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const handleProgress = (groups: CatalogueOfficeGroup[]) => {
+      if (isActive && groups.length > 0) {
+        setNextOffice(groups[0] ?? null);
+      }
+    };
+
+    fetchNextCatalogueOffice({ hydrateCovers: false, onCoverProgress: handleProgress })
+      .then(office => {
+        if (isActive) {
+          setNextOffice(office);
+        }
+      })
+      .catch(error => {
+        console.error('Impossible de récupérer la prochaine office', error);
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoadingOffice(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const covers = nextOffice?.books.map(book => ({
+    src: book.cover,
+    href: `/catalogue/book?ean=${book.ean}`,
+  })) ?? [];
 
   const absentsToday = [
     { name: 'David Bernard', email: 'david@example.com', retour: '12/09/2024' },
@@ -428,11 +454,27 @@ function HomeContent() {
           {/* Colonne droite : Prochaine office + Carrousel */}
           <div className="lg:col-span-8">
             <div className="flex items-baseline justify-between mb-3">
-              <span className="text-sm lg:text-base text-muted-foreground">
-                Prochaine office 255001 : 08/01/2025
-              </span>
+              {isLoadingOffice ? (
+                <Skeleton className="h-4 w-60" />
+              ) : nextOffice ? (
+                <span className="text-sm lg:text-base text-muted-foreground">
+                  Prochaine office {nextOffice.office} : {nextOffice.date}
+                </span>
+              ) : (
+                <span className="text-sm lg:text-base text-muted-foreground">
+                  Aucune office prévue
+                </span>
+              )}
             </div>
-            <InfiniteCarousel covers={covers} speedSeconds={30} />
+            {isLoadingOffice ? (
+              <Skeleton className="h-48 w-full rounded-xl" />
+            ) : covers.length > 0 ? (
+              <InfiniteCarousel covers={covers} speedSeconds={30} />
+            ) : (
+              <div className="h-48 w-full rounded-xl bg-muted flex items-center justify-center">
+                <p className="text-muted-foreground">Aucune couverture disponible</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

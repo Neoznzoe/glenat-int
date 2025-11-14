@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { SecureLink } from '@/components/routing/SecureLink';
 
 type Cover = {
   src: string;
@@ -15,7 +16,7 @@ export function InfiniteCarousel({
   covers,
   speedSeconds = 60,
 }: InfiniteCarouselProps) {
-  // Duplique la liste pour l’effet boucle
+  // Duplique la liste pour l'effet boucle
   const track = useMemo(() => [...covers, ...covers], [covers]);
 
   return (
@@ -30,11 +31,9 @@ export function InfiniteCarousel({
       <div className="relative overflow-hidden">
         <div className="marquee-track flex items-center gap-4 will-change-transform group-hover:[animation-play-state:paused]">
           {track.map((c, i) => (
-            <a
+            <SecureLink
               key={i}
-              href={c.href}
-              target="_blank"
-              rel="noopener noreferrer"
+              to={c.href}
               className="block shrink-0 hover:opacity-90 transition-opacity"
             >
               <img
@@ -42,7 +41,7 @@ export function InfiniteCarousel({
                 className="h-40 w-28 rounded-md object-cover shadow"
                 draggable={false}
               />
-            </a>
+            </SecureLink>
           ))}
         </div>
       </div>
