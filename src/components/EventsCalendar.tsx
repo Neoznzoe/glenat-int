@@ -1,80 +1,133 @@
 import * as React from 'react';
-import { addDays, format, isSameDay, isWithinInterval } from 'date-fns';
+import { addDays, format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { useTheme } from 'next-themes';
+import { useCalendarEvents, useCalendarEventColors } from '@/hooks/useCalendarEvents';
+import { Loader2 } from 'lucide-react';
+
+// Fonction pour parser une date ISO en format Date
+function parseDate(value?: string | null): Date | null {
+  if (!value) {
+    return null;
+  }
+  try {
+    return parseISO(value);
+  } catch {
+    const timestamp = Date.parse(value);
+    if (Number.isNaN(timestamp)) {
+      return null;
+    }
+    return new Date(timestamp);
+  }
+}
 
 export function EventsCalendar() {
   const today = new Date();
   const [month, setMonth] = React.useState<Date>(today);
-  const year = today.getFullYear();
-  const currentMonth = today.getMonth();
   const daySpacing = 6; // spacing between days in pixels
 
-  const holidays = [
-    new Date(year, 0, 1),
-    new Date(year, 4, 1),
-    new Date(year, 4, 8),
-    new Date(year, 6, 14),
-    new Date(year, 7, 15),
-    new Date(year, 10, 1),
-    new Date(year, 10, 11),
-    new Date(year, 11, 25),
-  ];
+  // Récupération des données du calendrier
+  const { data: events, isLoading: isLoadingEvents } = useCalendarEvents();
+  const { data: colors, isLoading: isLoadingColors } = useCalendarEventColors();
 
-  const months = Array.from({ length: 3 }, (_, i) => {
-    const m = (currentMonth + i) % 12;
-    const y = year + Math.floor((currentMonth + i) / 12);
-    return { month: m, year: y };
-  });
+  const isLoading = isLoadingEvents || isLoadingColors;
 
-  const getNthWeekday = (
-    y: number,
-    m: number,
-    n: number,
-    weekday: number
-  ) => {
-    const date = new Date(y, m, 1);
-    while (date.getDay() !== weekday) {
-      date.setDate(date.getDate() + 1);
+  // Créer une map des couleurs par raison
+  const colorsMap = React.useMemo(() => {
+    const map = new Map<string, { color: string; label: string }>();
+    colors?.forEach((entry) => {
+      const key = entry.reason?.trim().toUpperCase();
+      if (key) {
+        map.set(key, { color: entry.color, label: entry.lastName });
+      }
+    });
+    return map;
+  }, [colors]);
+
+  // Créer une map des événements par date pour les tooltips
+  const eventsByDate = React.useMemo(() => {
+    const map = new Map<string, Array<{ title: string; label: string; color: string }>>();
+
+    if (!events?.length) return map;
+
+    events.forEach((event) => {
+      const startDate = parseDate(event.startDate);
+      const endDate = parseDate(event.endDate) || startDate;
+
+      if (!startDate) return;
+
+      const reason = event.reason?.trim().toUpperCase();
+      const colorInfo = reason ? colorsMap.get(reason) : undefined;
+
+      // Créer une entrée pour chaque jour de l'événement
+      let currentDate = new Date(startDate);
+      const end = endDate || startDate;
+
+      while (currentDate <= end) {
+        const dateKey = format(currentDate, 'yyyy-MM-dd');
+        const dayEvents = map.get(dateKey) || [];
+
+        dayEvents.push({
+          title: event.title,
+          label: colorInfo?.label || event.reason || 'Événement',
+          color: colorInfo?.color || '#3b82f6',
+        });
+
+        map.set(dateKey, dayEvents);
+        currentDate = addDays(currentDate, 1);
+      }
+    });
+
+    return map;
+  }, [events, colorsMap]);
+
+  // Organiser les événements par catégorie
+  const categorizedEvents = React.useMemo(() => {
+    if (!events?.length) {
+      return { holidays: [], institution: [], other: [] };
     }
-    date.setDate(date.getDate() + (n - 1) * 7);
-    return date;
-  };
 
-  const singleDay = months.map(({ month, year }) =>
-    getNthWeekday(year, month, 1, 2)
-  ); // first Tuesday
+    const holidays: Date[] = [];
+    const institutionRanges: { from: Date; to: Date }[] = [];
+    const otherRanges: { from: Date; to: Date }[] = [];
 
-  const institutionEvents = months.flatMap(({ month, year }, idx) => {
-    const events = [] as { from: Date; to: Date }[];
-    if (idx === 0) {
-      const start = getNthWeekday(year, month, 1, 5); // first Friday
-      events.push({ from: start, to: addDays(start, 1) }); // Fri-Sat
-    } else {
-      const start = getNthWeekday(year, month, 2, 1); // second Monday
-      events.push({ from: start, to: addDays(start, 1) }); // Mon-Tue
-    }
-    const extraStart = getNthWeekday(year, month, 4, 4); // fourth Thursday
-    events.push({ from: extraStart, to: addDays(extraStart, 1) }); // Thu-Fri
-    const singleInst = getNthWeekday(year, month, 3, 2); // third Tuesday
-    events.push({ from: singleInst, to: singleInst }); // single-day event
-    return events;
-  });
+    events.forEach((event) => {
+      const startDate = parseDate(event.startDate);
+      const endDate = parseDate(event.endDate) || startDate;
 
-  const otherEvents = months.flatMap(({ month, year }) => {
-    const startOne = getNthWeekday(year, month, 2, 2); // second Tuesday
-    const startTwo = getNthWeekday(year, month, 3, 3); // third Wednesday
-    const singleOther = getNthWeekday(year, month, 1, 4); // first Thursday
-    return [
-      { from: startOne, to: addDays(startOne, 2) }, // Tue-Thu
-      { from: startTwo, to: addDays(startTwo, 2) }, // Wed-Fri
-      { from: singleOther, to: singleOther }, // single-day event
-    ];
-  });
+      if (!startDate) return;
 
+      const reason = event.reason?.trim().toUpperCase();
+
+      // Déterminer la catégorie en fonction du reason
+      if (reason === 'FERME') {
+        // Jours fériés - ce sont généralement des jours uniques
+        holidays.push(startDate);
+      } else if (reason === 'INST' || reason === 'INSTITUTION') {
+        // Institutions représentatives du personnel
+        institutionRanges.push({ from: startDate, to: endDate || startDate });
+      } else {
+        // Autres événements
+        otherRanges.push({ from: startDate, to: endDate || startDate });
+      }
+    });
+
+    return { holidays, institution: institutionRanges, other: otherRanges };
+  }, [events]);
+
+
+  // Afficher un loader pendant le chargement
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <p className="mt-2 text-sm text-muted-foreground">Chargement du calendrier...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col lg:flex-row lg:space-x-6 pt-2">
@@ -114,9 +167,8 @@ export function EventsCalendar() {
             day_hidden: 'invisible',
           }}
           modifiers={{
-            holiday: holidays,
-            single: singleDay,
-            institution: institutionEvents.flatMap(range => {
+            holiday: categorizedEvents.holidays,
+            institution: categorizedEvents.institution.flatMap(range => {
               const dates = [];
               const current = new Date(range.from);
               while (current <= range.to) {
@@ -125,7 +177,7 @@ export function EventsCalendar() {
               }
               return dates;
             }),
-            other: otherEvents.flatMap(range => {
+            other: categorizedEvents.other.flatMap(range => {
               const dates = [];
               const current = new Date(range.from);
               while (current <= range.to) {
@@ -146,10 +198,6 @@ export function EventsCalendar() {
               backgroundColor: 'var(--calendar-holiday-bg)',
               color: 'var(--primary-foreground)',
             },
-            single: {
-              backgroundColor: 'var(--calendar-single-bg)',
-              color: 'var(--primary-foreground)',
-            },
           }}
           components={{
             Day: (
@@ -158,21 +206,41 @@ export function EventsCalendar() {
             ) => {
               const { theme } = useTheme();
 
+              // Récupérer la couleur pour un jour donné
+              const getColorForDay = (d: Date): { bg: string; type: string } | null => {
+                const dateKey = format(d, 'yyyy-MM-dd');
+                const dayEvents = eventsByDate.get(dateKey);
+
+                if (!dayEvents || dayEvents.length === 0) return null;
+
+                // Prendre le premier événement pour déterminer la couleur
+                const firstEvent = dayEvents[0];
+
+                // Fonction pour alléger une couleur hex
+                const lightenColor = (hex: string, percent: number = 0.85): string => {
+                  const sanitized = hex.replace(/^#/, '');
+                  const num = parseInt(sanitized, 16);
+                  const r = (num >> 16) & 255;
+                  const g = (num >> 8) & 255;
+                  const b = num & 255;
+
+                  const lighten = (c: number) => Math.round(c + (255 - c) * percent);
+                  const newR = lighten(r);
+                  const newG = lighten(g);
+                  const newB = lighten(b);
+
+                  return `rgb(${newR}, ${newG}, ${newB})`;
+                };
+
+                const bg = lightenColor(firstEvent.color);
+
+                return { bg, type: 'event' };
+              };
+
               const getDayType = (d: Date) => {
-                if (
-                  institutionEvents.some(range =>
-                    isWithinInterval(d, { start: range.from, end: range.to })
-                  )
-                )
-                  return 'institution';
-                if (
-                  otherEvents.some(range =>
-                    isWithinInterval(d, { start: range.from, end: range.to })
-                  )
-                )
-                  return 'other';
-                if (holidays.some(h => isSameDay(h, d))) return 'holiday';
                 if (d.getDay() === 0 || d.getDay() === 6) return 'weekend';
+                const colorInfo = getColorForDay(d);
+                if (colorInfo) return 'event';
                 return 'none';
               };
 
@@ -180,6 +248,10 @@ export function EventsCalendar() {
               const prevType = getDayType(addDays(date, -1));
               const nextType = getDayType(addDays(date, 1));
               const isOutside = date.getMonth() !== displayMonth.getMonth();
+
+              const currentColorInfo = getColorForDay(date);
+              const prevColorInfo = getColorForDay(addDays(date, -1));
+              const nextColorInfo = getColorForDay(addDays(date, 1));
 
               let customStyle: React.CSSProperties = {
                 width: '100%',
@@ -216,27 +288,20 @@ export function EventsCalendar() {
                 };
               };
 
-              if (type === 'institution') {
+              if (type === 'event' && currentColorInfo) {
+                // Appliquer la couleur de l'événement depuis l'API
+                const prevIsSameEvent = prevType === 'event' && prevColorInfo?.bg === currentColorInfo.bg;
+                const nextIsSameEvent = nextType === 'event' && nextColorInfo?.bg === currentColorInfo.bg;
+
+                // Toujours utiliser du noir pour les événements (meilleur contraste avec les couleurs allégées)
+                const textColor = '#0f172a';
+
                 applyRangeStyle(
-                  'var(--calendar-institution-bg)',
-                  'var(--calendar-institution-fg)',
-                  prevType === 'institution',
-                  nextType === 'institution'
+                  currentColorInfo.bg,
+                  textColor,
+                  prevIsSameEvent,
+                  nextIsSameEvent
                 );
-              } else if (type === 'other') {
-                applyRangeStyle(
-                  'var(--calendar-other-bg)',
-                  'var(--calendar-other-fg)',
-                  prevType === 'other',
-                  nextType === 'other'
-                );
-              } else if (type === 'holiday') {
-                customStyle = {
-                  ...customStyle,
-                  backgroundColor: 'var(--calendar-holiday-bg)',
-                  color: 'var(--primary-foreground)',
-                  borderRadius: '6px',
-                };
               } else if (type === 'weekend') {
                 applyRangeStyle(
                   theme === 'dark' ? 'var(--background)' : 'var(--secondary)',
@@ -245,7 +310,7 @@ export function EventsCalendar() {
                   nextType === 'weekend'
                 );
               } else if (isOutside) {
-                  customStyle = {
+                customStyle = {
                   ...customStyle,
                   backgroundColor: 'transparent',
                   color:
@@ -258,11 +323,19 @@ export function EventsCalendar() {
                 };
               }
 
+              // Récupérer les événements de ce jour pour le tooltip
+              const dateKey = format(date, 'yyyy-MM-dd');
+              const dayEventsList = eventsByDate.get(dateKey) || [];
+              const tooltipText = dayEventsList.length > 0
+                ? dayEventsList.map(e => `${e.label}: ${e.title}`).join('\n')
+                : '';
+
               return (
                 <div
                   {...props}
                   style={{ ...props.style, ...customStyle }}
                   className={`${props.className} cursor-pointer`}
+                  title={tooltipText}
                 >
                   {date.getDate()}
                 </div>
@@ -272,18 +345,26 @@ export function EventsCalendar() {
         />
       </div>
       <div className="mt-4 lg:mt-0 lg:pl-4 lg:border-l flex items-start justify-start lg:w-64">
-        <div className="text-left">
+        <div className="text-left w-full">
           <p className="font-semibold text-xl capitalize">
             {format(month, 'LLLL yyyy', { locale: fr })}
           </p>
-          <p className="mt-2 text-sm font-medium">Légende</p>
-          <ul className="mt-2 space-y-2 text-sm">
-            <li className="pl-2 border-l-4 border-sky-700">Jours fériés</li>
-            <li className="pl-2 border-l-4 border-lime-200">
-              Institutions représentative du personnel
-            </li>
-            <li className="pl-2 border-l-4 border-yellow-300">Autres évènements</li>
-          </ul>
+          {colors && colors.length > 0 && (
+            <>
+              <p className="mt-4 text-sm font-medium">Légende</p>
+              <ul className="mt-2 space-y-2 text-sm">
+                {colors.map((color) => (
+                  <li key={color.reason} className="flex items-center gap-2">
+                    <span
+                      className="h-4 w-4 rounded-sm flex-shrink-0"
+                      style={{ backgroundColor: color.color }}
+                    />
+                    <span className="text-xs">{color.lastName}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </div>
       </div>
     </div>
