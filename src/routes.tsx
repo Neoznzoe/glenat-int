@@ -1,8 +1,10 @@
 import { lazy } from 'react';
+import { Navigate } from 'react-router-dom';
 import { type RouteDefinition, SecureRoutes } from '@/lib/secureRouting';
 
 import { Home } from './pages/Home';
 const Emploi = lazy(() => import('./pages/Emploi'));
+const Calendar = lazy(() => import('./pages/Calendar'));
 const Services = lazy(() => import('./pages/services/Services'));
 const Production = lazy(() => import('./pages/services/Production'));
 const Catalogue = lazy(() => import('./pages/catalogue/Editions'));
@@ -17,6 +19,9 @@ const Administration = lazy(() => import('./pages/administration/Administration'
 export const ROUTES_CONFIG: RouteDefinition[] = [
   { path: '/', element: <Home /> },
   { path: '/emploi', element: <Emploi /> },
+  { path: '/agenda', element: <Calendar /> },
+  { path: '/calendrier', element: <Navigate to="/agenda" replace /> },
+  { path: '/calendar', element: <Navigate to="/agenda" replace /> },
   { path: '/services', element: <Services /> },
   { path: '/services/production', element: <Production /> },
   { path: '/catalogue', element: <Catalogue /> },
@@ -31,6 +36,7 @@ export const ROUTES_CONFIG: RouteDefinition[] = [
 
 export const LAZY_ROUTE_PRELOADERS: Array<() => Promise<unknown>> = [
   () => import('./pages/Emploi'),
+  () => import('./pages/Calendar'),
   () => import('./pages/services/Services'),
   () => import('./pages/services/Production'),
   () => import('./pages/catalogue/Editions'),

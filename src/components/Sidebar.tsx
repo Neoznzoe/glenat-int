@@ -191,7 +191,12 @@ function normalizeRoute(value: string): string {
     return '/';
   }
   const normalized = trimmed.replace(/^\/+/, '');
-  return `/${normalized}`;
+  const route = `/${normalized}`;
+  const normalizedRoute = route.toLowerCase();
+  if (normalizedRoute === '/calendar' || normalizedRoute === '/calendrier') {
+    return '/agenda';
+  }
+  return route;
 }
 
 function extractModulePath(metadata: ModuleMetadata, key: string): string | null {
