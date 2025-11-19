@@ -32,6 +32,22 @@ export interface CatalogueBookStat {
   helper?: string;
 }
 
+export interface CatalogueAuthor {
+  idAuthor: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+  photo?: string;
+  bio?: string;
+  sortOrder?: number;
+  fonction?: string;
+}
+
+export interface CatalogueText {
+  idTypeTexte: string;
+  texte: string;
+}
+
 export interface CatalogueBookDetail {
   subtitle?: string;
   badges?: string[];
@@ -49,6 +65,9 @@ export interface CatalogueBookDetail {
   relatedEans?: string[];
   summary?: string;
   authorBio?: string;
+  authors?: CatalogueAuthor[];
+  universLogo?: string;
+  texts?: CatalogueText[];
 }
 
 export interface CatalogueBookContributor {
@@ -504,7 +523,7 @@ export async function fetchCatalogueReleases(): Promise<CatalogueReleaseGroup[]>
 
 const CATALOGUE_OFFICES_ENDPOINT = import.meta.env.DEV
   ? '/intranet/callDatabase'
-  : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
+  : 'https://api-dev.groupe-glenat.com/Api/v2.0/Dev/callDatabase';
 
 const parseEndpointList = (value: unknown): string[] => {
   if (typeof value !== 'string') {
@@ -543,6 +562,33 @@ const resolveCoverageEndpoints = (): string[] => {
 };
 
 const CATALOGUE_COVERAGE_ENDPOINTS = resolveCoverageEndpoints();
+
+const resolveAuthorPhotoEndpoints = (): string[] => {
+  const overrides = parseEndpointList(import.meta.env.VITE_CATALOGUE_AUTHOR_PHOTO_ENDPOINT);
+  if (overrides.length > 0) {
+    return overrides;
+  }
+
+  if (import.meta.env.DEV) {
+    return ['/extranet/photoAuteur'];
+  }
+
+  const endpoints = new Set<string>();
+
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname.toLowerCase();
+
+    if (hostname.includes('intranet')) {
+      endpoints.add('https://api-dev.groupe-glenat.com/Api/v1.0/Extranet/photoAuteur');
+    }
+  }
+
+  endpoints.add('https://api-recette.groupe-glenat.com/Api/v1.0/Extranet/photoAuteur');
+
+  return Array.from(endpoints);
+};
+
+const CATALOGUE_AUTHOR_PHOTO_ENDPOINTS = resolveAuthorPhotoEndpoints();
 
 const NEXT_OFFICES_SQL_QUERY = `;WITH office_min_dates AS (
     SELECT
@@ -617,8 +663,11 @@ const COVER_FETCH_RETRY_DELAY_MS = 150;
 
 const coverCache = new Map<string, string>();
 const pendingCoverRequests = new Map<string, Promise<string | null>>();
+const authorPhotoCache = new Map<string, string>();
+const pendingAuthorPhotoRequests = new Map<string, Promise<string | null>>();
 
 let lastCoverFetch: Promise<unknown> = Promise.resolve();
+let lastAuthorPhotoFetch: Promise<unknown> = Promise.resolve();
 
 const shouldIncludeCredentials = (endpoint: string): boolean => {
   if (typeof window === 'undefined') {
@@ -749,6 +798,78 @@ const fetchCover = async (ean: string): Promise<string | null> => {
 
   request.finally(() => {
     pendingCoverRequests.delete(ean);
+  });
+
+  return request;
+};
+
+const fetchAuthorPhoto = async (photoFilename: string): Promise<string | null> => {
+  if (!photoFilename) {
+    return null;
+  }
+
+  const cachedPhoto = authorPhotoCache.get(photoFilename);
+  if (cachedPhoto) {
+    return cachedPhoto;
+  }
+
+  const pendingRequest = pendingAuthorPhotoRequests.get(photoFilename);
+  if (pendingRequest) {
+    return pendingRequest;
+  }
+
+  const previousFetch = lastAuthorPhotoFetch;
+  const request = (async () => {
+    await previousFetch.catch(() => {});
+    await wait(3);
+
+    for (let attempt = 0; attempt < COVER_FETCH_RETRY_ATTEMPTS; attempt += 1) {
+      for (const endpoint of CATALOGUE_AUTHOR_PHOTO_ENDPOINTS) {
+        const url = `${endpoint}${endpoint.includes('?') ? '&' : '?'}filename=${encodeURIComponent(photoFilename)}`;
+
+        try {
+          const response = await fetch(url, buildCoverRequestInit(endpoint));
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status} ${response.statusText}`);
+          }
+
+          const data = (await response.json()) as CoverApiResponse;
+          const imageBase64 = normaliseCoverDataUrl(data?.result?.imageBase64);
+
+          if (data?.success && imageBase64) {
+            console.debug('[catalogueApi] Photo auteur récupérée via le service distant.');
+            authorPhotoCache.set(photoFilename, imageBase64);
+            return imageBase64;
+          }
+
+          const errorMessage = data?.message ?? "Réponse inattendue de l'API photo auteur";
+          throw new Error(errorMessage);
+        } catch (error) {
+          console.error(
+            `[catalogueApi] Impossible de récupérer la photo auteur ${photoFilename} via ${endpoint} (tentative ${attempt + 1})`,
+            error,
+          );
+        }
+      }
+
+      if (attempt < COVER_FETCH_RETRY_ATTEMPTS - 1) {
+        await wait(COVER_FETCH_RETRY_DELAY_MS);
+      }
+    }
+
+    return null;
+  })();
+
+  pendingAuthorPhotoRequests.set(photoFilename, request);
+
+  lastAuthorPhotoFetch = request.then(
+    () => undefined,
+    () => undefined,
+  );
+
+  request.finally(() => {
+    pendingAuthorPhotoRequests.delete(photoFilename);
   });
 
   return request;
@@ -990,6 +1111,28 @@ const getColorFromPublisher = (publisher?: string): string => {
   return '--glenat-bd';
 };
 
+const getLogoFromPublisher = (publisher?: string): string => {
+  if (!publisher) {
+    return UniversBD;
+  }
+
+  const normalized = publisher.toLowerCase();
+
+  if (normalized.includes('manga')) {
+    return UniversManga;
+  }
+
+  if (normalized.includes('jeunesse')) {
+    return UniversJeune;
+  }
+
+  if (normalized.includes('livre') || normalized.includes('hugo')) {
+    return UniversLivre;
+  }
+
+  return UniversBD;
+};
+
 const extractShippingMessage = (record: RawCatalogueOfficeRecord): string | undefined => {
   const message = ensureString(
     getField(
@@ -1030,6 +1173,133 @@ const extractShippingMessage = (record: RawCatalogueOfficeRecord): string | unde
   }
 
   return undefined;
+};
+
+const normalizeBookFromDatabaseRecord = async (
+  record: RawCatalogueOfficeRecord,
+  loadCover = true,
+): Promise<CatalogueBook | null> => {
+  const rawEan = ensureString(getField(record, 'iditem', 'ean', 'idarticle'));
+  const sanitizedEan = rawEan?.replace(/[^0-9xX]/g, '')?.toUpperCase();
+  const ean = sanitizedEan && sanitizedEan.length ? sanitizedEan : rawEan;
+
+  if (!ean) {
+    return null;
+  }
+
+  // Champs de base
+  const title = ensureString(getField(record, 'titre', 'title')) ?? `Article ${ean}`;
+  const authors = ensureString(getField(record, 'auteurs', 'auteurssimple', 'createur')) ?? '';
+  const publisher = ensureString(getField(record, 'publisher', 'codepublisher', 'editeur')) ?? '';
+  const publicationDate = formatDisplayDate(getField(record, 'datemev', 'dateparution')) ?? '';
+  const priceHT = formatPrice(getField(record, 'priceht', 'priceh', 'prixht', 'prix'));
+  const stock = ensureNumber(getField(record, 'stocks', 'stock')) ?? 0;
+
+  // Détails avancés
+  const subtitle = ensureString(getField(record, 'soustitre', 'subtitle'));
+  const isbn = ensureString(getField(record, 'isbn'));
+  const idHachette = ensureString(getField(record, 'idhachette'));
+  const typeBook = ensureString(getField(record, 'typebook'));
+  const countPage = ensureNumber(getField(record, 'countpage', 'pagination'));
+  const faconnage = ensureString(getField(record, 'faconnage'));
+  const isNumerique = ensureNumber(getField(record, 'isnumerique')) === 1;
+  const age = ensureString(getField(record, 'age'));
+  const auteursSimple = ensureString(getField(record, 'auteurssimple'));
+  const codePublisher = ensureString(getField(record, 'codepublisher'));
+  const officeCode = ensureString(getField(record, 'office', 'codeoffice'));
+  const priceTTC = formatPrice(getField(record, 'price', 'pricettc'));
+  const hauteur = ensureNumber(getField(record, 'hauteur'));
+  const largeur = ensureNumber(getField(record, 'largeur'));
+  const serie = ensureString(getField(record, 'serie'));
+  const collection = ensureString(getField(record, 'collection'));
+  const sousTitre = ensureString(getField(record, 'soustitre'));
+
+  // Construction des métadonnées
+  const metadata: CatalogueBookDetailEntry[] = [];
+  const specifications: CatalogueBookDetailEntry[] = [];
+  const badges: string[] = [];
+
+  if (publisher) {
+    metadata.push({ label: 'Marque éditoriale', value: publisher });
+    badges.push(publisher);
+  }
+  if (collection) {
+    metadata.push({ label: 'Collection', value: collection });
+    badges.push(collection);
+  }
+  if (serie) {
+    metadata.push({ label: 'Série', value: serie });
+    badges.push(serie);
+  }
+  if (typeBook) {
+    metadata.push({ label: 'Type', value: typeBook });
+  }
+  if (countPage) {
+    specifications.push({ label: 'Nombre de pages', value: `${countPage} pages` });
+  }
+  if (faconnage) {
+    specifications.push({ label: 'Façonnage', value: faconnage });
+  }
+  if (isbn) {
+    specifications.push({ label: 'ISBN', value: isbn });
+  }
+  if (idHachette) {
+    specifications.push({ label: 'Hachette', value: idHachette });
+  }
+  if (hauteur && largeur) {
+    specifications.push({ label: 'Dimensions', value: `${largeur} x ${hauteur} mm` });
+  }
+  if (publicationDate) {
+    specifications.push({ label: 'Date de parution', value: publicationDate });
+  }
+
+  const details: CatalogueBookDetail = {
+    subtitle: sousTitre || subtitle,
+    badges: badges.length > 0 ? badges : undefined,
+    metadata,
+    specifications,
+    stats: [],
+    officeCode,
+    priceTTC,
+    availabilityStatus: 'Disponible',
+    universLogo: getLogoFromPublisher(publisher),
+  };
+
+  if (age) {
+    details.recommendedAge = age;
+  }
+
+  // Récupérer la couverture de manière asynchrone si demandé
+  let cover = FALLBACK_COVER_DATA_URL;
+  if (loadCover && ean) {
+    const coverUrl = await fetchCover(ean);
+    if (coverUrl) {
+      cover = coverUrl;
+    }
+  } else if (ean) {
+    // Charger la couverture en arrière-plan sans bloquer
+    void fetchCover(ean).then(coverUrl => {
+      if (coverUrl) {
+        // La couverture sera mise en cache pour une utilisation future
+      }
+    }).catch(() => {
+      // Ignorer les erreurs silencieusement
+    });
+  }
+
+  return {
+    cover,
+    title,
+    ean,
+    authors: auteursSimple || authors,
+    publisher: publisher || codePublisher || '',
+    publicationDate: publicationDate || 'À confirmer',
+    priceHT,
+    stock,
+    color: getColorFromPublisher(publisher),
+    ribbonText: isNumerique ? 'Numérique' : undefined,
+    details,
+  };
 };
 
 const normalizeBookFromRecord = async (
@@ -1377,6 +1647,244 @@ export async function fetchCatalogueEditions(): Promise<CatalogueEdition[]> {
   return Promise.resolve(data);
 }
 
+const decodeHtmlEntities = (text: string): string => {
+  if (typeof document !== 'undefined') {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+  }
+
+  // Fallback pour le cas où document n'est pas disponible
+  const entities: Record<string, string> = {
+    '&nbsp;': ' ',
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&eacute;': 'é',
+    '&egrave;': 'è',
+    '&ecirc;': 'ê',
+    '&agrave;': 'à',
+    '&acirc;': 'â',
+    '&icirc;': 'î',
+    '&ocirc;': 'ô',
+    '&ucirc;': 'û',
+    '&ccedil;': 'ç',
+    '&rsquo;': '\u2019',
+    '&lsquo;': '\u2018',
+    '&rdquo;': '\u201D',
+    '&ldquo;': '\u201C',
+    '&ndash;': '\u2013',
+    '&mdash;': '\u2014',
+    '&hellip;': '\u2026',
+  };
+
+  let decoded = text;
+  for (const [entity, char] of Object.entries(entities)) {
+    decoded = decoded.replace(new RegExp(entity, 'g'), char);
+  }
+
+  // Décoder les entités numériques comme &#233;
+  decoded = decoded.replace(/&#(\d+);/g, (_, code) => {
+    return String.fromCharCode(parseInt(code, 10));
+  });
+
+  // Décoder les entités hexadécimales comme &#x00E9;
+  decoded = decoded.replace(/&#x([0-9A-Fa-f]+);/g, (_, code) => {
+    return String.fromCharCode(parseInt(code, 16));
+  });
+
+  return decoded;
+};
+
+const stripHtmlTags = (html: string): string => {
+  // Remplacer les balises <p>, <br>, <div> par des sauts de ligne
+  let text = html.replace(/<\/p>/gi, '\n\n');
+  text = text.replace(/<br\s*\/?>/gi, '\n');
+  text = text.replace(/<\/div>/gi, '\n');
+
+  // Supprimer toutes les autres balises HTML
+  text = text.replace(/<[^>]*>/g, '');
+
+  // Nettoyer les sauts de ligne multiples
+  text = text.replace(/\n{3,}/g, '\n\n');
+
+  // Trim les espaces en début et fin
+  text = text.trim();
+
+  return text;
+};
+
+const cleanHtmlText = (html: string): string => {
+  // D'abord supprimer les balises HTML
+  const withoutTags = stripHtmlTags(html);
+
+  // Puis décoder les entités HTML
+  const decoded = decodeHtmlEntities(withoutTags);
+
+  return decoded;
+};
+
+async function fetchCatalogueBookTexts(ean: string): Promise<CatalogueText[]> {
+  try {
+    const requestPayload = {
+      query: `SELECT * FROM [catalogTexts] WHERE idItem = '${ean}' ORDER BY idTypeTexte;`,
+    };
+    const securePayload = await prepareSecureJsonPayload(requestPayload);
+    const headers = new Headers({
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    });
+
+    applySecurePayloadHeaders(headers, securePayload.encrypted);
+    logSecurePayloadRequest(
+      CATALOGUE_OFFICES_ENDPOINT,
+      requestPayload,
+      securePayload.body,
+      securePayload.encrypted,
+    );
+
+    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
+      method: 'POST',
+      headers,
+      body: securePayload.body,
+    });
+
+    if (response.ok) {
+      const payload = (await response.json()) as DatabaseApiResponse;
+      const records = extractDatabaseRows(payload);
+
+      const texts: CatalogueText[] = records
+        .map(record => {
+          const idTypeTexte = ensureString(getField(record, 'idTypeTexte', 'idtypetexte'));
+          const rawText = ensureString(getField(record, 'texte', 'text', 'description', 'resume'));
+
+          if (idTypeTexte && rawText) {
+            const cleanedText = cleanHtmlText(rawText);
+            return {
+              idTypeTexte,
+              texte: cleanedText,
+            };
+          }
+          return null;
+        })
+        .filter((text): text is CatalogueText => text !== null);
+
+      console.debug(`[catalogueApi] ${texts.length} texte(s) récupéré(s) depuis catalogTexts pour`, ean);
+      return texts;
+    }
+
+    console.debug('[catalogueApi] Aucun texte trouvé dans catalogTexts pour', ean);
+    return [];
+  } catch (error) {
+    console.error('[catalogueApi] Erreur lors de la récupération des textes pour', ean, error);
+    return [];
+  }
+}
+
+async function fetchCatalogueBookAuthors(ean: string): Promise<CatalogueAuthor[]> {
+  try {
+    // Requête optimisée avec LEFT JOIN pour récupérer auteurs et biographies en une seule fois
+    const requestPayload = {
+      query: `
+        SELECT
+          a.*,
+          t.texte as bioTexte
+        FROM [catalogAutors] a
+        LEFT JOIN [catalogAutorsTexts] t ON a.idAuthor = t.idAuthor
+        WHERE a.idItem = '${ean}'
+        ORDER BY a.sortOrder ASC;
+      `,
+    };
+    const securePayload = await prepareSecureJsonPayload(requestPayload);
+    const headers = new Headers({
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    });
+
+    applySecurePayloadHeaders(headers, securePayload.encrypted);
+    logSecurePayloadRequest(
+      CATALOGUE_OFFICES_ENDPOINT,
+      requestPayload,
+      securePayload.body,
+      securePayload.encrypted,
+    );
+
+    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
+      method: 'POST',
+      headers,
+      body: securePayload.body,
+    });
+
+    if (response.ok) {
+      const payload = (await response.json()) as DatabaseApiResponse;
+      const records = extractDatabaseRows(payload);
+
+      if (records.length > 0) {
+        const authors = await Promise.all(
+          records.map(async (record) => {
+            const idAuthor = ensureString(getField(record, 'idAuthor', 'idauthor', 'authorid'));
+            if (!idAuthor) {
+              return null;
+            }
+
+            const firstName = ensureString(getField(record, 'firstName', 'firstname', 'prenom'));
+            const lastName = ensureString(getField(record, 'lastName', 'lastname', 'nom'));
+            const fullName = lastName && firstName
+              ? `${firstName} ${lastName}`
+              : ensureString(getField(record, 'fullName', 'fullname', 'name', 'nom'));
+            const photoFilename = ensureString(getField(record, 'photo', 'isPhoto', 'image'));
+            const sortOrder = ensureNumber(getField(record, 'sortOrder', 'order', 'ordre'));
+
+            // Récupérer et nettoyer la biographie depuis la jointure
+            const rawBio = ensureString(getField(record, 'bioTexte', 'texte', 'text', 'bio', 'biographie'));
+            const bio = rawBio ? cleanHtmlText(rawBio) : undefined;
+
+            // Récupérer la photo de l'auteur si disponible
+            let photo: string | undefined = undefined;
+            if (photoFilename && photoFilename !== '0' && photoFilename !== 'NULL') {
+              const photoUrl = await fetchAuthorPhoto(photoFilename);
+              if (photoUrl) {
+                photo = photoUrl;
+              }
+            }
+
+            return {
+              idAuthor,
+              firstName,
+              lastName,
+              fullName,
+              photo,
+              bio,
+              sortOrder,
+            } as CatalogueAuthor;
+          })
+        );
+
+        const validAuthors = authors.filter((author): author is CatalogueAuthor => author !== null);
+
+        // Trier par sortOrder si disponible (déjà trié par la requête SQL mais on garde le fallback)
+        validAuthors.sort((a, b) => {
+          if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
+            return a.sortOrder - b.sortOrder;
+          }
+          return 0;
+        });
+
+        console.debug('[catalogueApi] Auteurs récupérés pour', ean, validAuthors.length);
+        return validAuthors;
+      }
+    }
+
+    console.debug('[catalogueApi] Aucun auteur trouvé dans catalogAutors pour', ean);
+    return [];
+  } catch (error) {
+    console.error('[catalogueApi] Erreur lors de la récupération des auteurs pour', ean, error);
+    return [];
+  }
+}
+
 export async function fetchCatalogueBook(
   ean: string,
 ): Promise<CatalogueBook | null> {
@@ -1384,13 +1892,88 @@ export async function fetchCatalogueBook(
   logRequest(endpoint);
 
   try {
+    // Essayer d'abord de récupérer depuis la base de données
+    const requestPayload = {
+      query: `SELECT * FROM [catalogBooks] WHERE idItem = '${ean}';`,
+    };
+    const securePayload = await prepareSecureJsonPayload(requestPayload);
+    const headers = new Headers({
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    });
+
+    applySecurePayloadHeaders(headers, securePayload.encrypted);
+    logSecurePayloadRequest(
+      CATALOGUE_OFFICES_ENDPOINT,
+      requestPayload,
+      securePayload.body,
+      securePayload.encrypted,
+    );
+
+    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
+      method: 'POST',
+      headers,
+      body: securePayload.body,
+    });
+
+    if (response.ok) {
+      const payload = (await response.json()) as DatabaseApiResponse;
+      const records = extractDatabaseRows(payload);
+
+      if (records.length > 0) {
+        const record = records[0];
+        const book = await normalizeBookFromDatabaseRecord(record);
+        if (book) {
+          // Récupérer les textes depuis catalogTexts
+          const texts = await fetchCatalogueBookTexts(ean);
+          if (texts.length > 0 && book.details) {
+            book.details.texts = texts;
+            // Garder le summary pour la compatibilité (utiliser le premier texte)
+            book.details.summary = texts[0]?.texte;
+          }
+
+          // Récupérer les auteurs depuis catalogAutors
+          const authors = await fetchCatalogueBookAuthors(ean);
+          if (authors.length > 0 && book.details) {
+            book.details.authors = authors;
+
+            // Si on a plusieurs auteurs, combiner leurs biographies pour authorBio
+            const combinedBio = authors
+              .filter(author => author.bio)
+              .map(author => {
+                const name = author.fullName || `${author.firstName || ''} ${author.lastName || ''}`.trim();
+                return name ? `${name}\n\n${author.bio}` : author.bio;
+              })
+              .join('\n\n---\n\n');
+
+            if (combinedBio) {
+              book.details.authorBio = combinedBio;
+            }
+          }
+
+          logResponse(endpoint, book);
+          return book;
+        }
+      }
+    }
+
+    // Fallback vers les données statiques si l'API échoue
+    console.debug('[catalogueApi] Utilisation des données statiques pour', ean);
     const book = cloneBook(ean);
     logResponse(endpoint, book);
     return Promise.resolve(book);
   } catch (error) {
-    logResponse(endpoint, null);
-    console.warn(`[catalogueApi] Livre introuvable pour l'EAN ${ean}`, error);
-    return Promise.resolve(null);
+    // Fallback vers les données statiques
+    try {
+      console.debug('[catalogueApi] Fallback vers données statiques pour', ean);
+      const book = cloneBook(ean);
+      logResponse(endpoint, book);
+      return Promise.resolve(book);
+    } catch (fallbackError) {
+      logResponse(endpoint, null);
+      console.debug(`[catalogueApi] Livre introuvable pour l'EAN ${ean}`);
+      return Promise.resolve(null);
+    }
   }
 }
 
@@ -1409,7 +1992,7 @@ export async function fetchCatalogueRelatedBooks(
         try {
           return cloneBook(relatedEan);
         } catch (error) {
-          console.warn(
+          console.debug(
             `[catalogueApi] Livre recommandé introuvable pour l'EAN ${relatedEan}`,
             error,
           );
@@ -1422,11 +2005,445 @@ export async function fetchCatalogueRelatedBooks(
     return Promise.resolve(related);
   } catch (error) {
     logResponse(endpoint, []);
-    console.warn(
-      `[catalogueApi] Impossible de récupérer les recommandations pour ${ean}`,
-      error,
+    console.debug(
+      `[catalogueApi] Aucune recommandation disponible pour ${ean}`,
     );
     return Promise.resolve([]);
+  }
+}
+
+export async function fetchCataloguePastBooksFromSeries(
+  ean: string,
+): Promise<CatalogueBook[]> {
+  const endpoint = `fetchCataloguePastBooksFromSeries:${ean}`;
+  logRequest(endpoint);
+
+  try {
+    // D'abord récupérer le livre actuel pour obtenir la série
+    const requestPayload = {
+      query: `SELECT * FROM [catalogBooks] WHERE idItem = '${ean}';`,
+    };
+    const securePayload = await prepareSecureJsonPayload(requestPayload);
+    const headers = new Headers({
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    });
+
+    applySecurePayloadHeaders(headers, securePayload.encrypted);
+    logSecurePayloadRequest(
+      CATALOGUE_OFFICES_ENDPOINT,
+      requestPayload,
+      securePayload.body,
+      securePayload.encrypted,
+    );
+
+    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
+      method: 'POST',
+      headers,
+      body: securePayload.body,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+
+    const payload = (await response.json()) as DatabaseApiResponse;
+    const records = extractDatabaseRows(payload);
+
+    if (records.length === 0) {
+      console.debug('[catalogueApi] Livre source introuvable pour', ean);
+      return [];
+    }
+
+    const record = records[0];
+    const serie = ensureString(getField(record, 'serie'));
+
+    if (!serie) {
+      console.debug('[catalogueApi] Aucune série trouvée pour', ean);
+      return [];
+    }
+
+    // Maintenant récupérer les 10 derniers livres parus de la même série
+    const pastRequestPayload = {
+      query: `SELECT TOP 10 * FROM [catalogBooks] WHERE [serie] = '${serie}' AND [dateMev] < GETDATE() AND [idItem] <> '${ean}' ORDER BY [dateMev] DESC;`,
+    };
+    const pastSecurePayload = await prepareSecureJsonPayload(pastRequestPayload);
+    const pastHeaders = new Headers({
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    });
+
+    applySecurePayloadHeaders(pastHeaders, pastSecurePayload.encrypted);
+    logSecurePayloadRequest(
+      CATALOGUE_OFFICES_ENDPOINT,
+      pastRequestPayload,
+      pastSecurePayload.body,
+      pastSecurePayload.encrypted,
+    );
+
+    const pastResponse = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
+      method: 'POST',
+      headers: pastHeaders,
+      body: pastSecurePayload.body,
+    });
+
+    if (!pastResponse.ok) {
+      throw new Error(`HTTP ${pastResponse.status} ${pastResponse.statusText}`);
+    }
+
+    const pastPayload = (await pastResponse.json()) as DatabaseApiResponse;
+    const pastRecords = extractDatabaseRows(pastPayload);
+
+    if (pastRecords.length === 0) {
+      console.debug('[catalogueApi] Aucun livre déjà paru trouvé pour la série', serie);
+      return [];
+    }
+
+    // Normaliser les livres récupérés - charger les couvertures car c'est l'onglet par défaut
+    const books = (
+      await Promise.all(pastRecords.map(record => normalizeBookFromDatabaseRecord(record, true)))
+    ).filter((book): book is CatalogueBook => book !== null);
+
+    console.debug(`[catalogueApi] ${books.length} livre(s) déjà paru(s) trouvé(s) pour la série ${serie}`);
+    logResponse(endpoint, books);
+    return books;
+  } catch (error) {
+    console.error('[catalogueApi] Erreur lors de la récupération des livres déjà parus', error);
+    logResponse(endpoint, []);
+    return [];
+  }
+}
+
+export async function fetchCatalogueSameCollectionBooks(
+  ean: string,
+): Promise<CatalogueBook[]> {
+  const endpoint = `fetchCatalogueSameCollectionBooks:${ean}`;
+  logRequest(endpoint);
+
+  try {
+    // Récupérer le livre actuel pour obtenir la collection, la série et la date
+    const requestPayload = {
+      query: `
+        DECLARE @currentBookDate DATE;
+        DECLARE @currentCollection NVARCHAR(255);
+        DECLARE @currentSerie NVARCHAR(255);
+
+        SELECT @currentBookDate = dateMev, @currentCollection = collection, @currentSerie = serie
+        FROM [catalogBooks]
+        WHERE idItem = '${ean}';
+
+        WITH CTE AS (
+            SELECT  *,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY serie
+                        ORDER BY ABS(DATEDIFF(DAY, dateMev, @currentBookDate))
+                    ) AS rn
+            FROM [catalogBooks]
+            WHERE [collection] = @currentCollection
+              AND LOWER([serie]) <> LOWER(@currentSerie)
+              AND dateMev BETWEEN DATEADD(YEAR, -1, @currentBookDate) AND DATEADD(YEAR, 1, @currentBookDate)
+        )
+        SELECT TOP 10 *
+        FROM CTE
+        WHERE rn = 1
+        ORDER BY serie;
+      `,
+    };
+    const securePayload = await prepareSecureJsonPayload(requestPayload);
+    const headers = new Headers({
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    });
+
+    applySecurePayloadHeaders(headers, securePayload.encrypted);
+    logSecurePayloadRequest(
+      CATALOGUE_OFFICES_ENDPOINT,
+      requestPayload,
+      securePayload.body,
+      securePayload.encrypted,
+    );
+
+    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
+      method: 'POST',
+      headers,
+      body: securePayload.body,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+
+    const payload = (await response.json()) as DatabaseApiResponse;
+    const records = extractDatabaseRows(payload);
+
+    if (records.length === 0) {
+      console.debug('[catalogueApi] Aucun livre de la même collection trouvé');
+      return [];
+    }
+
+    // Normaliser les livres récupérés avec chargement des couvertures
+    const books = (
+      await Promise.all(records.map(record => normalizeBookFromDatabaseRecord(record, true)))
+    ).filter((book): book is CatalogueBook => book !== null);
+
+    console.debug(`[catalogueApi] ${books.length} livre(s) de la même collection trouvé(s)`);
+    logResponse(endpoint, books);
+    return books;
+  } catch (error) {
+    console.error('[catalogueApi] Erreur lors de la récupération des livres de la même collection', error);
+    logResponse(endpoint, []);
+    return [];
+  }
+}
+
+export async function fetchCatalogueUpcomingBooksFromSeries(
+  ean: string,
+): Promise<CatalogueBook[]> {
+  const endpoint = `fetchCatalogueUpcomingBooksFromSeries:${ean}`;
+  logRequest(endpoint);
+
+  try {
+    // D'abord récupérer le livre actuel pour obtenir la série
+    const requestPayload = {
+      query: `SELECT * FROM [catalogBooks] WHERE idItem = '${ean}';`,
+    };
+    const securePayload = await prepareSecureJsonPayload(requestPayload);
+    const headers = new Headers({
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    });
+
+    applySecurePayloadHeaders(headers, securePayload.encrypted);
+    logSecurePayloadRequest(
+      CATALOGUE_OFFICES_ENDPOINT,
+      requestPayload,
+      securePayload.body,
+      securePayload.encrypted,
+    );
+
+    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
+      method: 'POST',
+      headers,
+      body: securePayload.body,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+
+    const payload = (await response.json()) as DatabaseApiResponse;
+    const records = extractDatabaseRows(payload);
+
+    if (records.length === 0) {
+      console.debug('[catalogueApi] Livre source introuvable pour', ean);
+      return [];
+    }
+
+    const record = records[0];
+    const serie = ensureString(getField(record, 'serie'));
+
+    if (!serie) {
+      console.debug('[catalogueApi] Aucune série trouvée pour', ean);
+      return [];
+    }
+
+    // Maintenant récupérer les livres à paraître de la même série (limité à 10)
+    const upcomingRequestPayload = {
+      query: `SELECT TOP 10 * FROM [catalogBooks] WHERE [serie] = '${serie}' AND [dateMev] > GETDATE() AND [idItem] <> '${ean}' ORDER BY [dateMev] ASC;`,
+    };
+    const upcomingSecurePayload = await prepareSecureJsonPayload(upcomingRequestPayload);
+    const upcomingHeaders = new Headers({
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    });
+
+    applySecurePayloadHeaders(upcomingHeaders, upcomingSecurePayload.encrypted);
+    logSecurePayloadRequest(
+      CATALOGUE_OFFICES_ENDPOINT,
+      upcomingRequestPayload,
+      upcomingSecurePayload.body,
+      upcomingSecurePayload.encrypted,
+    );
+
+    const upcomingResponse = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
+      method: 'POST',
+      headers: upcomingHeaders,
+      body: upcomingSecurePayload.body,
+    });
+
+    if (!upcomingResponse.ok) {
+      throw new Error(`HTTP ${upcomingResponse.status} ${upcomingResponse.statusText}`);
+    }
+
+    const upcomingPayload = (await upcomingResponse.json()) as DatabaseApiResponse;
+    const upcomingRecords = extractDatabaseRows(upcomingPayload);
+
+    if (upcomingRecords.length === 0) {
+      console.debug('[catalogueApi] Aucun livre à paraître trouvé pour la série', serie);
+      return [];
+    }
+
+    // Normaliser les livres récupérés avec chargement des couvertures
+    const books = (
+      await Promise.all(upcomingRecords.map(record => normalizeBookFromDatabaseRecord(record, true)))
+    ).filter((book): book is CatalogueBook => book !== null);
+
+    console.debug(`[catalogueApi] ${books.length} livre(s) à paraître trouvé(s) pour la série ${serie}`);
+    logResponse(endpoint, books);
+    return books;
+  } catch (error) {
+    console.error('[catalogueApi] Erreur lors de la récupération des livres à paraître', error);
+    logResponse(endpoint, []);
+    return [];
+  }
+}
+
+export async function fetchCatalogueAuthors(
+  ean: string,
+): Promise<CatalogueAuthor[]> {
+  const endpoint = `fetchCatalogueAuthors:${ean}`;
+  logRequest(endpoint);
+
+  try {
+    const requestPayload = {
+      query: `SELECT * FROM [catalogAutors] WHERE idItem = '${ean}' ORDER BY sortOrder ASC;`,
+    };
+
+    const securePayload = await prepareSecureJsonPayload(requestPayload);
+    const headers = new Headers({
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    });
+
+    applySecurePayloadHeaders(headers, securePayload.encrypted);
+    logSecurePayloadRequest(
+      CATALOGUE_OFFICES_ENDPOINT,
+      requestPayload,
+      securePayload.body,
+      securePayload.encrypted,
+    );
+
+    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
+      method: 'POST',
+      headers,
+      body: securePayload.body,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+
+    const payload = (await response.json()) as DatabaseApiResponse;
+    const records = extractDatabaseRows(payload);
+
+    if (records.length === 0) {
+      console.debug('[catalogueApi] Aucun auteur trouvé pour', ean);
+      return [];
+    }
+
+    // Normaliser les auteurs
+    const authors: CatalogueAuthor[] = records.map(record => ({
+      idAuthor: ensureString(getField(record, 'idauthor', 'id')) ?? '',
+      firstName: ensureString(getField(record, 'firstname', 'prenom')),
+      lastName: ensureString(getField(record, 'lastname', 'nom')),
+      fullName: ensureString(getField(record, 'fullname', 'nomcomplet')),
+      photo: ensureString(getField(record, 'photo', 'isphoto')),
+      bio: ensureString(getField(record, 'bio', 'biographie')),
+      sortOrder: ensureNumber(getField(record, 'sortorder', 'ordre')),
+      fonction: ensureString(getField(record, 'fonction', 'idfonction', 'function')),
+    }));
+
+    console.debug(`[catalogueApi] ${authors.length} auteur(s) trouvé(s) pour ${ean}`);
+    logResponse(endpoint, authors);
+    return authors;
+  } catch (error) {
+    console.error('[catalogueApi] Erreur lors de la récupération des auteurs', error);
+    logResponse(endpoint, []);
+    return [];
+  }
+}
+
+export async function fetchCatalogueBooksByAuthors(
+  currentEan: string,
+  authors: CatalogueAuthor[],
+): Promise<CatalogueBook[]> {
+  const endpoint = 'fetchCatalogueBooksByAuthors';
+  logRequest(endpoint);
+
+  if (authors.length === 0) {
+    console.debug('[catalogueApi] Aucun auteur fourni');
+    logResponse(endpoint, []);
+    return [];
+  }
+
+  try {
+    // Calculate books per author to get ~10 books total
+    const booksPerAuthor = Math.max(1, Math.ceil(10 / authors.length));
+
+    // Fetch books for each author
+    const bookPromises = authors.map(async (author) => {
+      const requestPayload = {
+        query: `
+          SELECT TOP ${booksPerAuthor} cb.*
+          FROM [catalogBooks] cb
+          INNER JOIN [catalogAutors] ca ON cb.idItem = ca.idItem
+          WHERE ca.idAuthor = '${author.idAuthor}'
+            AND cb.idItem <> '${currentEan}'
+            AND cb.dateMev IS NOT NULL
+          ORDER BY cb.dateMev DESC;
+        `,
+      };
+
+      const securePayload = await prepareSecureJsonPayload(requestPayload);
+      const headers = new Headers({
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      });
+
+      applySecurePayloadHeaders(headers, securePayload.encrypted);
+      logSecurePayloadRequest(
+        CATALOGUE_OFFICES_ENDPOINT,
+        requestPayload,
+        securePayload.body,
+        securePayload.encrypted,
+      );
+
+      const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
+        method: 'POST',
+        headers,
+        body: securePayload.body,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+      }
+
+      const payload = (await response.json()) as DatabaseApiResponse;
+      const records = extractDatabaseRows(payload);
+
+      return (
+        await Promise.all(records.map(record => normalizeBookFromDatabaseRecord(record, false)))
+      ).filter((book): book is CatalogueBook => book !== null);
+    });
+
+    const allBooksArrays = await Promise.all(bookPromises);
+    const allBooks = allBooksArrays.flat();
+
+    // Remove duplicates (same book can be by multiple authors)
+    const uniqueBooks = allBooks.filter((book, index, self) =>
+      index === self.findIndex((b) => b.ean === book.ean)
+    );
+
+    // Limit to 10 books maximum
+    const finalBooks = uniqueBooks.slice(0, 10);
+
+    console.debug(`[catalogueApi] ${finalBooks.length} livres récupérés pour ${authors.length} auteur(s)`);
+    logResponse(endpoint, finalBooks);
+    return finalBooks;
+  } catch (error) {
+    console.error('[catalogueApi] Erreur lors de la récupération des livres par auteurs', error);
+    logResponse(endpoint, []);
+    return [];
   }
 }
 

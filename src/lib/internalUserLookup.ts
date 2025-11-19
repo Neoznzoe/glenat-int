@@ -3,7 +3,7 @@ import { applySecurePayloadHeaders, logSecurePayloadRequest, prepareSecureJsonPa
 
 const INTERNAL_USER_ENDPOINT = import.meta.env.DEV
   ? '/intranet/call-database'
-  : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
+  : 'https://api-dev.groupe-glenat.com/Api/v2.0/Dev/callDatabase';
 
 export interface DatabaseUserLookupResponse {
   success?: boolean;

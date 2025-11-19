@@ -1,4 +1,4 @@
-USE INTRANET;
+USE DATAHUB;
 -- Pas de GO pour conserver la portée des variables
 
 -----------------------------

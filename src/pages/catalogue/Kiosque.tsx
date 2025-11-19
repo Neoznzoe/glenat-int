@@ -31,8 +31,10 @@ import {
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
 import { fetchCatalogueKiosques, type CatalogueKiosqueGroup } from '@/lib/catalogue';
+import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 
 export function Kiosque() {
+  useScrollRestoration();
   const publishers = [
     'Hugo',
     'Comix Buro',

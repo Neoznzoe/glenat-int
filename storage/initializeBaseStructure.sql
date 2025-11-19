@@ -1,7 +1,7 @@
 -- SQL Server T-SQL schema for c1extranet (excluding presse & droits dérivés)
 
 GO
-USE INTRANET;
+USE DATAHUB;
 GO
 
 CREATE TABLE [actionHistory] (

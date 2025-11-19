@@ -16,8 +16,10 @@ import BookCard from '@/components/BookCard';
 import { useEffect, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
 import { fetchCatalogueBooks, type CatalogueBook } from '@/lib/catalogue';
+import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 
 export function CatalogueAll() {
+  useScrollRestoration();
   const filters = [
     'Toutes',
     'BD',

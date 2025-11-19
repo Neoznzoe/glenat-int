@@ -22,8 +22,10 @@ import {
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
 import { fetchCatalogueOffices, type CatalogueOfficeGroup } from '@/lib/catalogue';
+import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 
 export function Offices() {
+  useScrollRestoration();
   const publishers = [
     'Hugo',
     'Comix Buro',
@@ -145,11 +147,24 @@ export function Offices() {
 
     const direction = sortDirection === 'asc' ? 1 : -1;
 
-    return offices
+    // Filtrer les offices par publisher si des filtres sont sélectionnés
+    let filteredOffices = offices;
+    if (selectedPublishers.length > 0) {
+      filteredOffices = offices
+        .map(group => ({
+          ...group,
+          books: group.books.filter(book =>
+            selectedPublishers.includes(book.publisher)
+          ),
+        }))
+        .filter(group => group.books.length > 0); // Garder uniquement les offices avec des livres
+    }
+
+    return filteredOffices
       .map((group, index) => ({ group, index }))
       .sort((a, b) => compare(a, b) * direction)
       .map(({ group }) => group);
-  }, [offices, sortDirection]);
+  }, [offices, sortDirection, selectedPublishers]);
 
   return (
     <div className="p-6 space-y-6">

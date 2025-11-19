@@ -9,7 +9,7 @@ const CALENDAR_DATABASE_ENDPOINT =
   import.meta.env.VITE_CALENDAR_DATABASE_ENDPOINT ??
   (import.meta.env.DEV
     ? '/intranet/call-database'
-    : 'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase');
+    : 'https://api-dev.groupe-glenat.com/Api/v2.0/Dev/callDatabase');
 
 const CALENDAR_EVENT_COLORS_QUERY = 'SELECT * FROM [calendarEventColor];';
 const CALENDAR_EVENTS_QUERY = `SELECT *, 'Ancien (2 ans)' AS Categorie

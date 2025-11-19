@@ -1,21 +1,17 @@
 import { decryptFromStorage, encryptForStorage } from './storageEncryption';
 
-const DEFAULT_AUTHORIZE_ENDPOINT =
-  'https://api-dev.groupe-glenat.com/Api/v1.0/OAuth/authorize';
-const DEFAULT_TOKEN_ENDPOINT = 'https://api-dev.groupe-glenat.com/Api/v1.0/OAuth/token';
+const DEFAULT_AUTHORIZE_ENDPOINT = 'https://api-dev.groupe-glenat.com/Api/v2.0/OAuth/authorize?response_type=code&client_id=sys-api-core&client_secret=sys_api_master_secret';
+const DEFAULT_TOKEN_ENDPOINT = 'https://api-dev.groupe-glenat.com/Api/v2.0/OAuth/token';
 
-const AUTHORIZE_ENDPOINT =
-  import.meta.env.VITE_OAUTH_AUTHORIZE_ENDPOINT ?? DEFAULT_AUTHORIZE_ENDPOINT;
-const TOKEN_ENDPOINT =
-  import.meta.env.VITE_OAUTH_TOKEN_ENDPOINT ?? DEFAULT_TOKEN_ENDPOINT;
+
+
+const AUTHORIZE_ENDPOINT = import.meta.env.VITE_OAUTH_AUTHORIZE_ENDPOINT ?? DEFAULT_AUTHORIZE_ENDPOINT;
+const TOKEN_ENDPOINT = import.meta.env.VITE_OAUTH_TOKEN_ENDPOINT ?? DEFAULT_TOKEN_ENDPOINT;
 const CLIENT_ID = import.meta.env.VITE_OAUTH_CLIENT_ID;
 const CLIENT_SECRET = import.meta.env.VITE_OAUTH_CLIENT_SECRET;
 const REQUEST_SCOPE = import.meta.env.VITE_OAUTH_SCOPE;
 const REQUEST_AUDIENCE = import.meta.env.VITE_OAUTH_AUDIENCE;
-const AUTHORIZE_GRANT_TYPE =
-  import.meta.env.VITE_OAUTH_AUTHORIZE_GRANT_TYPE ??
-  import.meta.env.VITE_OAUTH_GRANT_TYPE ??
-  '';
+const AUTHORIZE_GRANT_TYPE =  import.meta.env.VITE_OAUTH_AUTHORIZE_GRANT_TYPE ??  import.meta.env.VITE_OAUTH_GRANT_TYPE ??  '';
 const TOKEN_GRANT_TYPE =
   import.meta.env.VITE_OAUTH_TOKEN_GRANT_TYPE ?? 'authorization_code';
 const REFRESH_GRANT_TYPE =
@@ -229,35 +225,36 @@ function shouldReuseToken(forceRefresh: boolean): boolean {
   return Date.now() < refreshTimestamp;
 }
 
-function buildAuthorizeBody(): string {
+function buildAuthorizeQueryParams(): string {
   if (!CLIENT_ID) {
     throw new Error(
       'La variable VITE_OAUTH_CLIENT_ID doit être configurée pour récupérer un jeton OAuth.',
     );
   }
 
-  const payload = new URLSearchParams();
-  payload.set('client_id', CLIENT_ID);
+  const params = new URLSearchParams();
+  params.set('client_id', CLIENT_ID);
 
   if (CLIENT_SECRET) {
-    payload.set('client_secret', CLIENT_SECRET);
+    params.set('client_secret', CLIENT_SECRET);
   }
 
   const grantType = toTrimmedString(AUTHORIZE_GRANT_TYPE);
   if (grantType) {
-    payload.set('grant_type', grantType);
+    params.set('grant_type', grantType);
   }
 
   if (REQUEST_SCOPE) {
-    payload.set('scope', REQUEST_SCOPE);
+    params.set('scope', REQUEST_SCOPE);
   }
 
   if (REQUEST_AUDIENCE) {
-    payload.set('audience', REQUEST_AUDIENCE);
+    params.set('audience', REQUEST_AUDIENCE);
   }
 
-  return payload.toString();
+  return params.toString();
 }
+
 
 function buildAuthorizeHeaders(): HeadersInit {
   const headers = new Headers();
@@ -292,15 +289,17 @@ async function parseOAuthError(response: Response): Promise<string | undefined> 
 }
 
 async function requestAuthorizationCode(): Promise<string> {
-  const body = buildAuthorizeBody();
+  // const body = buildAuthorizeBody();
+  const body = buildAuthorizeQueryParams();
   const headers = buildAuthorizeHeaders();
   let response: Response;
 
   try {
+    console.log(body)
     response = await fetch(AUTHORIZE_ENDPOINT, {
-      method: 'POST',
+      method: 'GET',
       headers,
-      body,
+      // body,
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'erreur réseau inconnue';
@@ -549,7 +548,7 @@ export async function fetchWithOAuth(
   const authorizedInit = withAuthorizationHeader(init, token);
   const requestUrl = normalizeRequestUrl(input);
 
-  if (requestUrl?.includes('/Api/v1.0/Intranet/callDatabase')) {
+  if (requestUrl?.includes('/Api/v2.0/Dev/callDatabase')) {
     console.debug('[OAuth] Jeton OAuth appliqué pour un appel callDatabase.');
   }
 

@@ -22,8 +22,10 @@ import {
 import { Fragment, useEffect, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
 import { fetchCatalogueReleases, type CatalogueReleaseGroup } from '@/lib/catalogue';
+import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 
 export function Nouveautes() {
+  useScrollRestoration();
   const publishers = [
     'Hugo',
     'Comix Buro',

@@ -14,8 +14,10 @@ import EditionCard from '@/components/EditionCard';
 import { useEffect, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
 import { fetchCatalogueEditions, type CatalogueEdition } from '@/lib/catalogue';
+import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 
 export function Catalogue() {
+  useScrollRestoration();
   const [editions, setEditions] = useState<CatalogueEdition[] | null>(null);
 
   useEffect(() => {

@@ -20,7 +20,7 @@ import {
 
 const ADMIN_DATABASE_ENDPOINT =
   import.meta.env.VITE_ADMIN_DATABASE_ENDPOINT ??
-  'https://api-dev.groupe-glenat.com/Api/v1.0/Intranet/callDatabase';
+  'https://api-dev.groupe-glenat.com/Api/v2.0/Dev/callDatabase';
 
 const ADMIN_USERS_QUERY = 'SELECT * FROM [users];';
 const ADMIN_MODULES_QUERY = 'SET NOCOUNT ON;\nSELECT * FROM [modules];';
