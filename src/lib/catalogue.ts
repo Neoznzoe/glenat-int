@@ -1,25 +1,10 @@
-import OnePiece110 from '@/assets/images/onepiece_110.webp';
-import NayaPika from '@/assets/images/naya_pika.webp';
-import JulesMatrat from '@/assets/images/jules_matrat.webp';
-import CombatVie from '@/assets/images/le_combat_dune_vie.webp';
-import Odysee from '@/assets/images/odyssee.webp';
-import ControNatura from '@/assets/images/contro-natura.webp';
-import Brume01 from '@/assets/images/brume-01.webp';
-import Shangri17 from '@/assets/images/shangri-17.webp';
-import Momie from '@/assets/images/momie-bandelette.webp';
-import Cemotions from '@/assets/images/couleurs-emotions.webp';
-import OnePieceGreen from '@/assets/images/onepiece-green.webp';
-import OnePieceBlue from '@/assets/images/onepiece-blue.webp';
-import OnePieceYellow from '@/assets/images/onepiece-yellow.webp';
-import OnePieceBlueDeep from '@/assets/images/onepiece-bluedeep.webp';
-import OnePieceRed from '@/assets/images/onepiece-red.webp';
+import type { BookCardProps } from '@/components/BookCard';
+import { fetchWithOAuth } from './oauth';
+import { applySecurePayloadHeaders, logSecurePayloadRequest, prepareSecureJsonPayload } from './securePayload';
 import UniversBD from '@/assets/logos/univers/univers-bd.svg';
 import UniversJeune from '@/assets/logos/univers/univers-jeunesse.svg';
 import UniversLivre from '@/assets/logos/univers/univers-livres.svg';
 import UniversManga from '@/assets/logos/univers/univers-manga.svg';
-import type { BookCardProps } from '@/components/BookCard';
-import { fetchWithOAuth } from './oauth';
-import { applySecurePayloadHeaders, logSecurePayloadRequest, prepareSecureJsonPayload } from './securePayload';
 
 export interface CatalogueBookDetailEntry {
   label: string;
@@ -113,359 +98,6 @@ export interface CatalogueDb {
   editions: CatalogueEdition[];
 }
 
-export const catalogueDb: CatalogueDb = {
-  books: [
-    {
-      cover: OnePiece110,
-      title: 'One Piece - Tome 110',
-      ean: '9782380711102',
-      authors: 'E. Oda',
-      publisher: 'Glénat Manga',
-      publicationDate: '01/02/2025',
-      priceHT: '7.49',
-      stock: 86,
-      views: 140,
-      color: '--glenat-manga',
-      ribbonText: 'NOUVEAUTÉ',
-      creationDate: '22/02/2024',
-      details: {
-        subtitle: 'Guide officiel des personnages de la saga des Empereurs',
-        badges: ['Shonen Jump', 'Fiche personnage', 'Best-seller'],
-        contributors: [
-          { name: 'Eiichiro Oda', role: 'Auteur' },
-        ],
-        metadata: [
-          { label: 'Marque éditoriale', value: 'Glénat Manga' },
-          { label: 'Catégorie(s)', value: 'One Piece, Aventure' },
-          { label: 'Série', value: 'One Piece Data Book' },
-          { label: 'Collection', value: 'Shonen' },
-          { label: 'Mot(s) clé', value: 'guide book, humour, aventure, action' },
-          { label: 'Libellé de tomaison', value: 'Green' },
-          { label: 'Nombre de pages', value: '394 pages' },
-          { label: "Éditeur d'origine", value: 'Shueisha' },
-          { label: 'BC', value: 'business central · descriptif technique · suivi fabrication' },
-        ],
-        specifications: [
-          { label: 'EAN', value: '9782380711102' },
-          { label: 'ISBN', value: '978-2-38071-110-2' },
-          { label: 'Format', value: '130 x 180 mm' },
-          { label: 'Pagination', value: '394 pages' },
-          { label: 'Dimensions', value: '13,0 x 18,0 cm' },
-          { label: 'Poids', value: '320 g' },
-          { label: 'Date de parution', value: '01/02/2025' },
-          { label: 'Date de disponibilité', value: '22/01/2025' },
-          { label: 'Distributeur', value: 'Glénat' },
-          { label: 'Hachette', value: '4124558' },
-          { label: 'Façonnage', value: 'Souple' },
-          { label: 'Stock', value: '86 ex' },
-          { label: 'Presse', value: 'Pages à publier' },
-        ],
-        stats: [
-          { label: 'Commandes totales', value: '320', helper: 'Depuis l’ouverture des précommandes' },
-          { label: 'Stock disponible', value: '86 ex', helper: 'Mise à jour en temps réel' },
-          { label: 'Précommandes', value: '48', helper: '7 derniers jours' },
-          { label: 'Dernière commande', value: '22/02/2024', helper: 'Librairie Kabuto' },
-        ],
-        recommendedAge: 'DÈS 10 AN(S)',
-        officeCode: '12594',
-        categories: ['Glénat Manga', 'Shonen', 'Aventure', 'Action'],
-        priceTTC: '7.90',
-        availabilityStatus: 'Disponible',
-        availabilityNote: 'En stock, expédition sous 48h',
-        availabilityDate: '22/01/2025',
-        relatedEans: [
-          '9782723484223',
-          '9782723484230',
-          '9782723484247',
-          '9782723484216',
-          '9782723484209',
-        ],
-        summary:
-          "L’intervention de l’équipage des géants apporte une lueur d’espoir à Luffy et ses amis dans leur tentative de s’évader de l’île futuriste, mais c’était sans compter l’arrivée des cinq doyens venus leur barrer le chemin ! Pendant ce temps, le monde entier frémit à l’écoute du message de Végapunk dont la diffusion vient tout juste de débuter… Les aventures de Luffy à la poursuite du One Piece continuent !",
-        authorBio:
-          "Eiichiro Oda est né le 1er janvier 1975 à Kumamoto (Japon). Dès l’âge de 4 ans, il veut devenir mangaka. En 1992, alors qu’il est encore au lycée, il est récompensé lors du 44e concours Tezuka pour Wanted!. Après avoir été assistant auprès de divers auteurs comme Nobuhiro Watsuki (l’auteur de Kenshin le vagabond), c’est en 1997 qu’Eiichiro Oda publie le premier chapitre de One Piece dans le magazine Weekly Shônen Jump. Grâce aux personnages attachants, aux scènes d’action dynamiques et au scénario émouvant qui la caractérisent, la série fait l’unanimité auprès d’un large public.\n\nEn décembre 2014, One Piece est entré dans le livre des records comme la série dessinée par un seul auteur la plus imprimée au monde (320 866 000 exemplaires). Et, en 2021, ce sont plus de 490 millions de mangas One Piece qui ont déjà été imprimés à travers le monde, chaque nouveau volume étant distribué au Japon à plus de 3 millions d’exemplaires.\n\nSes déclinaisons en série TV, jeux vidéo ou films sont tout aussi populaires que la série originale. One Piece jouit également d’un succès international.",
-      },
-    },
-    {
-      cover: NayaPika,
-      title: 'Naya Pika - Tome 03',
-      ean: '9782344059707',
-      authors: 'Rabat · Rodi · Aneko',
-      publisher: 'Glénat Jeunesse',
-      publicationDate: '03/04/2024',
-      priceHT: '10.95',
-      stock: 42,
-      views: 95,
-      color: '--glenat-jeunesse',
-      creationDate: '15/03/2024',
-    },
-    {
-      cover: JulesMatrat,
-      title: 'Jules Matrat - Tome 03',
-      ean: '9782344059905',
-      authors: 'Corbeyran · Horne',
-      publisher: 'Glénat BD',
-      publicationDate: '17/01/2024',
-      priceHT: '17.90',
-      stock: 58,
-      views: 45,
-      color: '--glenat-bd',
-      ribbonText: 'À paraître',
-      creationDate: '10/01/2024',
-    },
-    {
-      cover: CombatVie,
-      title: "Paul Watson - Le combat d'une vie",
-      ean: '9782344059974',
-      authors: 'Paul Watson',
-      publisher: 'Glénat Livres',
-      publicationDate: '05/06/2024',
-      priceHT: '22.00',
-      stock: 12,
-      views: 60,
-      color: '--glenat-livre',
-      ribbonText: 'NOUVEAUTÉ',
-      creationDate: '18/04/2024',
-    },
-    {
-      cover: Odysee,
-      title: 'Alva Odyssée',
-      ean: '9782344059936',
-      authors: 'Alva',
-      publisher: 'Glénat Livres',
-      publicationDate: '19/06/2024',
-      priceHT: '19.95',
-      stock: 18,
-      views: 30,
-      color: '--glenat-livre',
-      ribbonText: 'PROVISOIRE',
-      creationDate: '02/05/2024',
-    },
-    {
-      cover: Cemotions,
-      title: 'La couleur des émotions - Un livre tout animé',
-      ean: '9791026400134',
-      authors: 'Anna Llenas',
-      publisher: 'Glénat Jeunesse',
-      publicationDate: '10/10/2014',
-      priceHT: '20.76',
-      stock: 14574,
-      views: 250,
-      color: '--glenat-jeunesse',
-      creationDate: '01/01/2014',
-    },
-    {
-      cover: ControNatura,
-      title: 'Contro Natura - Sang bleu',
-      ean: '9782344069080',
-      authors: 'M.Andolfo · I.Bigarella',
-      publisher: 'Glénat BD',
-      publicationDate: '27/08/2025',
-      priceHT: '18.96',
-      stock: 3373,
-      views: 12,
-      color: '--glenat-bd',
-      ribbonText: 'nouveauté',
-      creationDate: '11/06/2025',
-    },
-    {
-      cover: Shangri17,
-      title: 'Shangri-la Frontier - Tome 17',
-      ean: '9782344066379',
-      authors: 'Katarina · R.Fuji',
-      publisher: 'Glénat Manga',
-      publicationDate: '27/08/2025',
-      priceHT: '6.82',
-      stock: 6292,
-      views: 5,
-      color: '--glenat-manga',
-      ribbonText: 'nouveauté',
-      creationDate: '20/07/2025',
-    },
-    {
-      cover: Brume01,
-      title: 'Brume - Tome 01',
-      ean: '9782344051733',
-      authors: 'J.Pélissier · C.Hinder',
-      publisher: 'Glénat BD',
-      publicationDate: '26/04/2023',
-      priceHT: '11.85',
-      stock: 24479,
-      views: 410,
-      color: '--glenat-bd',
-      creationDate: '13/03/2023',
-    },
-    {
-      cover: Momie,
-      title: 'Les bandelettes de Momie Molette',
-      ean: '9782344057049',
-      authors: 'Loïc Clément · Julien Arnal',
-      publisher: 'Glénat Jeunesse',
-      publicationDate: '09/10/2024',
-      priceHT: '11.85',
-      stock: 1952,
-      views: 80,
-      color: '--glenat-jeunesse',
-      creationDate: '25/09/2024',
-    },
-    {
-      cover: OnePieceGreen,
-      title: 'One Piece - Green',
-      ean: '9782723484223',
-      authors: 'E. Oda',
-      publisher: 'Glénat Manga',
-      publicationDate: '24/11/2010',
-      priceHT: '7.90',
-      stock: 420,
-      views: 520,
-      color: '--glenat-manga',
-      ribbonText: 'CLASSIQUE',
-    },
-    {
-      cover: OnePieceBlueDeep,
-      title: 'One Piece - Blue Deep',
-      ean: '9782723484230',
-      authors: 'E. Oda',
-      publisher: 'Glénat Manga',
-      publicationDate: '02/05/2012',
-      priceHT: '7.90',
-      stock: 380,
-      views: 415,
-      color: '--glenat-manga',
-    },
-    {
-      cover: OnePieceYellow,
-      title: 'One Piece - Yellow',
-      ean: '9782723484247',
-      authors: 'E. Oda',
-      publisher: 'Glénat Manga',
-      publicationDate: '13/03/2013',
-      priceHT: '7.90',
-      stock: 255,
-      views: 362,
-      color: '--glenat-manga',
-    },
-    {
-      cover: OnePieceBlue,
-      title: 'One Piece - Blue',
-      ean: '9782723484216',
-      authors: 'E. Oda',
-      publisher: 'Glénat Manga',
-      publicationDate: '06/07/2002',
-      priceHT: '7.90',
-      stock: 310,
-      views: 298,
-      color: '--glenat-manga',
-    },
-    {
-      cover: OnePieceRed,
-      title: 'One Piece - Red',
-      ean: '9782723484209',
-      authors: 'E. Oda',
-      publisher: 'Glénat Manga',
-      publicationDate: '06/07/2002',
-      priceHT: '7.90',
-      stock: 295,
-      views: 340,
-      color: '--glenat-manga',
-    },
-  ],
-  releases: [
-    {
-      date: '22/01/2025',
-      bookEans: ['9782380711102', '9782344059707', '9782344059905'],
-    },
-    {
-      date: '05/06/2024',
-      bookEans: ['9782344059974', '9782344059936', '9791026400134'],
-    },
-  ],
-  offices: [
-    {
-      office: '25503',
-      date: '22/01/2025',
-      shipping: 'Envoi Chronolivre mardi 07/01/2025 à 18h55',
-      bookEans: ['9782380711102', '9782344059707', '9782344059905'],
-    },
-    {
-      office: '25504',
-      date: '05/02/2025',
-      shipping: 'Envoi Chronolivre mardi 21/01/2025 à 18h55',
-      bookEans: ['9782344059974', '9782344059936', '9791026400134'],
-    },
-  ],
-  kiosques: [
-    {
-      office: '25501',
-      date: '05/09/2025',
-      shipping: 'Envoi Chronolivre mardi 02/09/2025 à 18h55',
-      bookEans: ['9782380711102', '9782344059707', '9782344059905'],
-    },
-    {
-      office: '25502',
-      date: '15/09/2025',
-      shipping: 'Envoi Chronolivre mardi 09/09/2025 à 18h55',
-      bookEans: ['9782344059974', '9782344059936', '9791026400134'],
-    },
-    {
-      office: '25503',
-      date: '25/09/2025',
-      shipping: 'Envoi Chronolivre mardi 23/09/2025 à 18h55',
-      bookEans: [
-        '9782344069080',
-        '9782344066379',
-        '9782344051733',
-        '9782344057049',
-      ],
-    },
-  ],
-  editions: [
-    { title: 'Adonis', color: '--glenat-bd', logo: UniversBD },
-    { title: 'Blanche', color: '--glenat-livre', logo: UniversLivre },
-    { title: 'Comix Buro', color: '--glenat-jeunesse', logo: UniversJeune },
-    { title: 'Disney', color: '--glenat-bd', logo: UniversLivre },
-    { title: 'Éditions licences', color: '--glenat-livre', logo: UniversLivre },
-    { title: 'Cheval Magazine', color: '--glenat-livre', logo: UniversLivre },
-    { title: 'Glénat BD', color: '--glenat-bd', logo: UniversBD },
-    { title: 'Glénat Jeunesse', color: '--glenat-jeunesse', logo: UniversJeune },
-    { title: 'Glénat Manga', color: '--glenat-manga', logo: UniversManga },
-    { title: 'Hugo', color: '--glenat-livre', logo: UniversLivre },
-    { title: 'Livres diffusés', color: '--glenat-jeunesse', logo: UniversJeune },
-    { title: 'Rando éditions', color: '--glenat-livre', logo: UniversLivre },
-    { title: 'Glénat Livres', color: '--glenat-livre', logo: UniversLivre },
-    { title: "Vent d'Ouest", color: '--glenat-bd', logo: UniversBD },
-  ],
-};
-
-export default catalogueDb;
-
-
-const cloneBook = (ean: string): CatalogueBook => {
-  const book = catalogueDb.books.find(item => item.ean === ean);
-
-  if (!book) {
-    throw new Error(`Livre introuvable pour l'EAN ${ean}`);
-  }
-
-  const details = book.details
-    ? {
-        ...book.details,
-        badges: book.details.badges ? [...book.details.badges] : undefined,
-        metadata: book.details.metadata?.map(entry => ({ ...entry })) ?? [],
-        specifications:
-          book.details.specifications?.map(entry => ({ ...entry })) ?? [],
-        stats: book.details.stats?.map(stat => ({ ...stat })) ?? [],
-        relatedEans: book.details.relatedEans
-          ? [...book.details.relatedEans]
-          : undefined,
-      }
-    : undefined;
-
-  return {
-    ...book,
-    details,
-  };
-};
 
 const logRequest = (endpoint: string) => {
   console.info(`[catalogueApi] ${endpoint} appelé`);
@@ -502,10 +134,33 @@ export interface CatalogueKiosqueGroup {
   books: CatalogueBook[];
 }
 
+export interface CatalogueBooksPage {
+  books: CatalogueBook[];
+  totalBooks: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+}
+
+export interface FetchCatalogueBooksOptions {
+  seed?: string;
+  signal?: AbortSignal;
+  onProgress?: (page: CatalogueBooksPage) => void;
+}
+
+export interface CatalogueSearchSuggestion {
+  ean: string;
+  title: string;
+  authors: string;
+  cover: string;
+  publisher: string;
+  serie?: string;
+}
+
 export async function fetchCatalogueBooks(): Promise<CatalogueBook[]> {
   const endpoint = 'fetchCatalogueBooks';
   logRequest(endpoint);
-  const data = catalogueDb.books.map(book => cloneBook(book.ean));
+  const data: CatalogueBook[] = [];
   logResponse(endpoint, data);
   return Promise.resolve(data);
 }
@@ -513,12 +168,223 @@ export async function fetchCatalogueBooks(): Promise<CatalogueBook[]> {
 export async function fetchCatalogueReleases(): Promise<CatalogueReleaseGroup[]> {
   const endpoint = 'fetchCatalogueReleases';
   logRequest(endpoint);
-  const data = catalogueDb.releases.map(release => ({
-    date: release.date,
-    books: release.bookEans.map(cloneBook),
-  }));
+  const data: CatalogueReleaseGroup[] = [];
   logResponse(endpoint, data);
   return Promise.resolve(data);
+}
+
+export async function fetchCatalogueBooksWithPagination(
+  page: number = 1,
+  pageSize: number = 50,
+  options: FetchCatalogueBooksOptions = {},
+): Promise<CatalogueBooksPage> {
+  const { seed, signal, onProgress } = options;
+  const endpoint = `fetchCatalogueBooksWithPagination:page=${page}`;
+  logRequest(endpoint);
+
+  try {
+    // Calculer l'offset pour la pagination
+    const offset = (page - 1) * pageSize;
+
+    // Requête pour compter le nombre total de livres
+    const countQuery = `
+      SELECT COUNT(*) as totalCount
+      FROM catalogBooks
+      WHERE dateMev >= '1950-01-01'
+        AND dateMev <= DATEADD(YEAR, 10, GETDATE())
+        AND idItem IS NOT NULL
+        AND idItem <> ''
+        AND LEN(LTRIM(RTRIM(idItem))) > 0;
+    `;
+
+    // Requête pour récupérer les livres paginés (ordre aléatoire avec seed)
+    // Utilise plusieurs colonnes pour mieux disperser les séries
+    const orderByClause = seed
+      ? `ABS(CHECKSUM(CONCAT('${seed}', idItem, ISNULL(titre, ''), ISNULL(serie, ''))))`
+      : 'NEWID()';
+
+    const booksQuery = `
+      SELECT *
+      FROM catalogBooks
+      WHERE dateMev >= '1950-01-01'
+        AND dateMev <= DATEADD(YEAR, 10, GETDATE())
+        AND idItem IS NOT NULL
+        AND idItem <> ''
+        AND LEN(LTRIM(RTRIM(idItem))) > 0
+      ORDER BY ${orderByClause}
+      OFFSET ${offset} ROWS
+      FETCH NEXT ${pageSize} ROWS ONLY;
+    `;
+
+    // Exécuter les deux requêtes en parallèle
+    const [countResult, booksResult] = await Promise.all([
+      (async () => {
+        const countPayload = { query: countQuery };
+        const countSecurePayload = await prepareSecureJsonPayload(countPayload);
+        const countHeaders = new Headers({
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        });
+        applySecurePayloadHeaders(countHeaders, countSecurePayload.encrypted);
+        logSecurePayloadRequest(
+          CATALOGUE_OFFICES_ENDPOINT,
+          countPayload,
+          countSecurePayload.body,
+          countSecurePayload.encrypted,
+        );
+        const countResponse = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
+          method: 'POST',
+          headers: countHeaders,
+          body: countSecurePayload.body,
+        });
+        if (!countResponse.ok) {
+          throw new Error(`HTTP ${countResponse.status} ${countResponse.statusText}`);
+        }
+        return countResponse.json() as Promise<DatabaseApiResponse>;
+      })(),
+      (async () => {
+        const booksPayload = { query: booksQuery };
+        const booksSecurePayload = await prepareSecureJsonPayload(booksPayload);
+        const booksHeaders = new Headers({
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        });
+        applySecurePayloadHeaders(booksHeaders, booksSecurePayload.encrypted);
+        logSecurePayloadRequest(
+          CATALOGUE_OFFICES_ENDPOINT,
+          booksPayload,
+          booksSecurePayload.body,
+          booksSecurePayload.encrypted,
+        );
+        const booksResponse = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
+          method: 'POST',
+          headers: booksHeaders,
+          body: booksSecurePayload.body,
+        });
+        if (!booksResponse.ok) {
+          throw new Error(`HTTP ${booksResponse.status} ${booksResponse.statusText}`);
+        }
+        return booksResponse.json() as Promise<DatabaseApiResponse>;
+      })(),
+    ]);
+
+    // Extraire le nombre total de livres
+    const countRecords = extractDatabaseRows(countResult);
+    const totalBooks = countRecords.length > 0
+      ? (ensureNumber(getField(countRecords[0], 'totalCount', 'totalcount')) ?? 0)
+      : 0;
+
+    // Extraire les livres
+    const bookRecords = extractDatabaseRows(booksResult);
+
+    // Calculer le nombre total de pages
+    const totalPages = Math.ceil(totalBooks / pageSize);
+
+    // D'abord charger les livres sans les couvertures pour affichage immédiat
+    console.info(`[catalogueApi] Chargement initial de ${bookRecords.length} livres sans couvertures...`);
+    const booksWithoutCovers = (
+      await Promise.all(bookRecords.map(record => normalizeBookFromDatabaseRecord(record, false)))
+    ).filter((book): book is CatalogueBook => book !== null);
+
+    const initialResult: CatalogueBooksPage = {
+      books: booksWithoutCovers,
+      totalBooks,
+      totalPages,
+      currentPage: page,
+      pageSize,
+    };
+
+    // Si pas de callback de progression, charger toutes les couvertures avant de retourner
+    if (!onProgress) {
+      console.info(`[catalogueApi] Chargement de toutes les couvertures...`);
+      const loadStartTime = Date.now();
+
+      const booksWithCovers = (
+        await Promise.all(bookRecords.map(record => normalizeBookFromDatabaseRecord(record, true)))
+      ).filter((book): book is CatalogueBook => book !== null);
+
+      const loadEndTime = Date.now();
+      const loadDuration = ((loadEndTime - loadStartTime) / 1000).toFixed(2);
+      console.info(`[catalogueApi] ✓ Chargement terminé en ${loadDuration}s (${booksWithCovers.length} livres)`);
+
+      const result: CatalogueBooksPage = {
+        books: booksWithCovers,
+        totalBooks,
+        totalPages,
+        currentPage: page,
+        pageSize,
+      };
+
+      logResponse(endpoint, result);
+      return result;
+    }
+
+    // Charger les couvertures progressivement en arrière-plan
+    console.info(`[catalogueApi] Début du chargement progressif des couvertures pour ${booksWithoutCovers.length} livres...`);
+    const loadStartTime = Date.now();
+
+    void (async () => {
+      const resultBooks = [...booksWithoutCovers];
+      let loadedCount = 0;
+
+      // Lancer tous les chargements en parallèle
+      const loadPromises = resultBooks.map(async (book, index) => {
+        if (book.ean) {
+          // Vérifier si annulé avant de charger
+          if (signal?.aborted) {
+            return;
+          }
+
+          try {
+            const coverUrl = await fetchCover(book.ean, signal);
+            if (coverUrl && coverUrl !== book.cover) {
+              resultBooks[index] = { ...book, cover: coverUrl };
+            }
+          } catch (error) {
+            // Ignorer les erreurs d'annulation
+            if (error instanceof Error && error.name === 'AbortError') {
+              return;
+            }
+            console.debug(`[catalogueApi] Erreur chargement couverture ${book.ean}`, error);
+          }
+
+          loadedCount++;
+
+          // Ne pas émettre de progression si annulé
+          if (!signal?.aborted && onProgress) {
+            onProgress({
+              books: [...resultBooks],
+              totalBooks,
+              totalPages,
+              currentPage: page,
+              pageSize,
+            });
+          }
+        }
+      });
+
+      await Promise.all(loadPromises);
+
+      if (!signal?.aborted) {
+        const loadEndTime = Date.now();
+        const loadDuration = ((loadEndTime - loadStartTime) / 1000).toFixed(2);
+        console.info(`[catalogueApi] ✓ Chargement progressif terminé en ${loadDuration}s (${loadedCount}/${resultBooks.length} couvertures)`);
+      } else {
+        console.debug('[catalogueApi] Chargement progressif annulé');
+      }
+    })().catch(error => {
+      if (!(error instanceof Error && error.name === 'AbortError')) {
+        console.error('[catalogueApi] Erreur lors du chargement progressif des couvertures', error);
+      }
+    });
+
+    console.debug(`[catalogueApi] Page ${page}/${totalPages} récupérée (${booksWithoutCovers.length} livres)`);
+    logResponse(endpoint, initialResult);
+    return initialResult;
+  } catch (error) {
+    console.error('[catalogueApi] Erreur lors de la récupération des livres paginés', error);
+    throw error;
+  }
 }
 
 const CATALOGUE_OFFICES_ENDPOINT = import.meta.env.DEV
@@ -552,11 +418,14 @@ const resolveCoverageEndpoints = (): string[] => {
     const hostname = window.location.hostname.toLowerCase();
 
     if (hostname.includes('intranet')) {
+      // Essayer d'abord api-dev, puis en fallback api-recette
       endpoints.add('https://api-dev.groupe-glenat.com/Api/v1.0/Extranet/couverture');
+      endpoints.add('https://api-recette.groupe-glenat.com/Api/v1.0/Extranet/couverture');
     }
   }
 
-  endpoints.add('https://api-recette.groupe-glenat.com/Api/v1.0/Extranet/couverture');
+  // Utiliser uniquement api-dev au lieu de api-recette
+  endpoints.add('https://api-dev.groupe-glenat.com/Api/v1.0/Extranet/couverture');
 
   return Array.from(endpoints);
 };
@@ -731,17 +600,26 @@ const normaliseCoverDataUrl = (value: string | undefined): string | null => {
   return `data:image/jpeg;base64,${trimmed}`;
 };
 
-const fetchCover = async (ean: string): Promise<string | null> => {
-  if (!ean) {
+const fetchCover = async (ean: string, signal?: AbortSignal): Promise<string | null> => {
+  // Validation stricte de l'EAN
+  if (!ean || typeof ean !== 'string' || ean.trim().length === 0) {
+    console.warn('[catalogueApi] Tentative de récupération de couverture avec un EAN invalide:', ean);
     return null;
   }
 
-  const cachedCover = coverCache.get(ean);
+  const trimmedEan = ean.trim();
+
+  const cachedCover = coverCache.get(trimmedEan);
   if (cachedCover) {
     return cachedCover;
   }
 
-  const pendingRequest = pendingCoverRequests.get(ean);
+  // Vérifier si la requête a été annulée
+  if (signal?.aborted) {
+    return null;
+  }
+
+  const pendingRequest = pendingCoverRequests.get(trimmedEan);
   if (pendingRequest) {
     return pendingRequest;
   }
@@ -751,12 +629,25 @@ const fetchCover = async (ean: string): Promise<string | null> => {
     await previousFetch.catch(() => {});
     await wait(3);
 
+    // Vérifier si annulé avant de commencer
+    if (signal?.aborted) {
+      return null;
+    }
+
     for (let attempt = 0; attempt < COVER_FETCH_RETRY_ATTEMPTS; attempt += 1) {
       for (const endpoint of CATALOGUE_COVERAGE_ENDPOINTS) {
-        const url = `${endpoint}${endpoint.includes('?') ? '&' : '?'}ean=${encodeURIComponent(ean)}`;
+        // Vérifier si annulé avant chaque tentative
+        if (signal?.aborted) {
+          return null;
+        }
+
+        const url = `${endpoint}${endpoint.includes('?') ? '&' : '?'}ean=${encodeURIComponent(trimmedEan)}`;
 
         try {
-          const response = await fetch(url, buildCoverRequestInit(endpoint));
+          const response = await fetch(url, {
+            ...buildCoverRequestInit(endpoint),
+            signal
+          });
 
           if (!response.ok) {
             throw new Error(`HTTP ${response.status} ${response.statusText}`);
@@ -767,15 +658,35 @@ const fetchCover = async (ean: string): Promise<string | null> => {
 
           if (data?.success && imageBase64) {
             console.debug('[catalogueApi] Couverture récupérée via le service distant.');
-            coverCache.set(ean, imageBase64);
+            coverCache.set(trimmedEan, imageBase64);
             return imageBase64;
           }
 
+          // Si l'image n'est pas trouvée, ne pas retry
           const errorMessage = data?.message ?? "Réponse inattendue de l'API couverture";
+          if (errorMessage.includes('Image non trouvée') || errorMessage.includes('image non trouvée')) {
+            console.debug(`[catalogueApi] Image non trouvée pour ${trimmedEan}, utilisation du fallback`);
+            coverCache.set(trimmedEan, FALLBACK_COVER_DATA_URL);
+            return FALLBACK_COVER_DATA_URL;
+          }
+
           throw new Error(errorMessage);
         } catch (error) {
+          // Ignorer silencieusement les erreurs d'annulation
+          if (error instanceof Error && error.name === 'AbortError') {
+            return null;
+          }
+
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          // Si l'image n'est pas trouvée, ne pas retry
+          if (errorMsg.includes('Image non trouvée') || errorMsg.includes('image non trouvée')) {
+            console.debug(`[catalogueApi] Image non trouvée pour ${trimmedEan}, utilisation du fallback`);
+            coverCache.set(trimmedEan, FALLBACK_COVER_DATA_URL);
+            return FALLBACK_COVER_DATA_URL;
+          }
+
           console.error(
-            `[catalogueApi] Impossible de récupérer la couverture ${ean} via ${endpoint} (tentative ${attempt + 1})`,
+            `[catalogueApi] Impossible de récupérer la couverture ${trimmedEan} via ${endpoint} (tentative ${attempt + 1})`,
             error,
           );
         }
@@ -789,7 +700,7 @@ const fetchCover = async (ean: string): Promise<string | null> => {
     return null;
   })();
 
-  pendingCoverRequests.set(ean, request);
+  pendingCoverRequests.set(trimmedEan, request);
 
   lastCoverFetch = request.then(
     () => undefined,
@@ -797,7 +708,7 @@ const fetchCover = async (ean: string): Promise<string | null> => {
   );
 
   request.finally(() => {
-    pendingCoverRequests.delete(ean);
+    pendingCoverRequests.delete(trimmedEan);
   });
 
   return request;
@@ -1183,7 +1094,9 @@ const normalizeBookFromDatabaseRecord = async (
   const sanitizedEan = rawEan?.replace(/[^0-9xX]/g, '')?.toUpperCase();
   const ean = sanitizedEan && sanitizedEan.length ? sanitizedEan : rawEan;
 
-  if (!ean) {
+  // Validation stricte de l'EAN
+  if (!ean || typeof ean !== 'string' || ean.trim().length === 0) {
+    console.warn('[catalogueApi] Enregistrement ignoré: EAN invalide ou absent', record);
     return null;
   }
 
@@ -1629,12 +1542,7 @@ export async function fetchCatalogueCover(ean: string): Promise<string | null> {
 export async function fetchCatalogueKiosques(): Promise<CatalogueKiosqueGroup[]> {
   const endpoint = 'fetchCatalogueKiosques';
   logRequest(endpoint);
-  const data = catalogueDb.kiosques.map(kiosque => ({
-    office: kiosque.office,
-    date: kiosque.date,
-    shipping: kiosque.shipping,
-    books: kiosque.bookEans.map(cloneBook),
-  }));
+  const data: CatalogueKiosqueGroup[] = [];
   logResponse(endpoint, data);
   return Promise.resolve(data);
 }
@@ -1642,7 +1550,7 @@ export async function fetchCatalogueKiosques(): Promise<CatalogueKiosqueGroup[]>
 export async function fetchCatalogueEditions(): Promise<CatalogueEdition[]> {
   const endpoint = 'fetchCatalogueEditions';
   logRequest(endpoint);
-  const data = catalogueDb.editions.map(edition => ({ ...edition }));
+  const data: CatalogueEdition[] = [];
   logResponse(endpoint, data);
   return Promise.resolve(data);
 }
@@ -1957,23 +1865,14 @@ export async function fetchCatalogueBook(
       }
     }
 
-    // Fallback vers les données statiques si l'API échoue
-    console.debug('[catalogueApi] Utilisation des données statiques pour', ean);
-    const book = cloneBook(ean);
-    logResponse(endpoint, book);
-    return Promise.resolve(book);
+    // Aucune donnée disponible dans l'API
+    console.debug('[catalogueApi] Aucune donnée disponible pour', ean);
+    logResponse(endpoint, null);
+    return Promise.resolve(null);
   } catch (error) {
-    // Fallback vers les données statiques
-    try {
-      console.debug('[catalogueApi] Fallback vers données statiques pour', ean);
-      const book = cloneBook(ean);
-      logResponse(endpoint, book);
-      return Promise.resolve(book);
-    } catch (fallbackError) {
-      logResponse(endpoint, null);
-      console.debug(`[catalogueApi] Livre introuvable pour l'EAN ${ean}`);
-      return Promise.resolve(null);
-    }
+    console.error('[catalogueApi] Erreur lors de la récupération du livre', error);
+    logResponse(endpoint, null);
+    return Promise.resolve(null);
   }
 }
 
@@ -1982,34 +1881,9 @@ export async function fetchCatalogueRelatedBooks(
 ): Promise<CatalogueBook[]> {
   const endpoint = `fetchCatalogueRelatedBooks:${ean}`;
   logRequest(endpoint);
-
-  try {
-    const book = cloneBook(ean);
-    const relatedEans = book.details?.relatedEans ?? [];
-    const related = relatedEans
-      .filter(relatedEan => relatedEan !== ean)
-      .map(relatedEan => {
-        try {
-          return cloneBook(relatedEan);
-        } catch (error) {
-          console.debug(
-            `[catalogueApi] Livre recommandé introuvable pour l'EAN ${relatedEan}`,
-            error,
-          );
-          return null;
-        }
-      })
-      .filter((item): item is CatalogueBook => item !== null);
-
-    logResponse(endpoint, related);
-    return Promise.resolve(related);
-  } catch (error) {
-    logResponse(endpoint, []);
-    console.debug(
-      `[catalogueApi] Aucune recommandation disponible pour ${ean}`,
-    );
-    return Promise.resolve([]);
-  }
+  const data: CatalogueBook[] = [];
+  logResponse(endpoint, data);
+  return Promise.resolve(data);
 }
 
 export async function fetchCataloguePastBooksFromSeries(
@@ -2524,5 +2398,93 @@ export async function fetchNextCatalogueOffice(
   } catch (error) {
     console.error('[catalogueApi] Impossible de recuperer la prochaine office', error);
     throw error;
+  }
+}
+
+export async function fetchCatalogueSearchSuggestions(
+  query: string,
+): Promise<CatalogueSearchSuggestion[]> {
+  const endpoint = `fetchCatalogueSearchSuggestions:${query}`;
+  logRequest(endpoint);
+
+  if (!query || query.trim().length < 2) {
+    return [];
+  }
+
+  const searchTerm = query.trim();
+
+  try {
+    const searchQuery = `
+      SELECT TOP 15
+        idItem,
+        titre,
+        auteurssimple,
+        publisher,
+        serie
+      FROM catalogBooks
+      WHERE (
+        idItem LIKE '%${searchTerm}%'
+        OR titre LIKE '%${searchTerm}%'
+        OR auteurssimple LIKE '%${searchTerm}%'
+        OR serie LIKE '%${searchTerm}%'
+      )
+      AND idItem IS NOT NULL
+      AND idItem <> ''
+      AND LEN(LTRIM(RTRIM(idItem))) > 0
+      ORDER BY
+        CASE
+          WHEN idItem = '${searchTerm}' THEN 0
+          WHEN idItem LIKE '${searchTerm}%' THEN 1
+          WHEN titre LIKE '${searchTerm}%' THEN 2
+          WHEN titre LIKE '%${searchTerm}%' THEN 3
+          WHEN serie LIKE '${searchTerm}%' THEN 4
+          ELSE 5
+        END,
+        titre ASC;
+    `;
+
+    const requestPayload = { query: searchQuery };
+    const securePayload = await prepareSecureJsonPayload(requestPayload);
+    const headers = new Headers({
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    });
+
+    applySecurePayloadHeaders(headers, securePayload.encrypted);
+    logSecurePayloadRequest(
+      CATALOGUE_OFFICES_ENDPOINT,
+      requestPayload,
+      securePayload.body,
+      securePayload.encrypted,
+    );
+
+    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
+      method: 'POST',
+      headers,
+      body: securePayload.body,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+
+    const payload = (await response.json()) as DatabaseApiResponse;
+    const records = extractDatabaseRows(payload);
+
+    const suggestions: CatalogueSearchSuggestion[] = records.map(record => ({
+      ean: ensureString(getField(record, 'idItem', 'iditem')) ?? '',
+      title: ensureString(getField(record, 'titre', 'title')) ?? '',
+      authors: ensureString(getField(record, 'auteurssimple', 'auteurs')) ?? '',
+      publisher: ensureString(getField(record, 'publisher', 'editeur')) ?? '',
+      serie: ensureString(getField(record, 'serie')),
+      cover: FALLBACK_COVER_DATA_URL,
+    }));
+
+    console.debug(`[catalogueApi] ${suggestions.length} suggestions trouvées pour "${query}"`);
+    logResponse(endpoint, suggestions);
+    return suggestions;
+  } catch (error) {
+    console.error('[catalogueApi] Erreur lors de la recherche de suggestions', error);
+    return [];
   }
 }

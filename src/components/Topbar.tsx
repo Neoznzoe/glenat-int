@@ -31,6 +31,7 @@ import { useState } from 'react';
 import NotificationList from './NotificationList';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/context/AuthContext';
+import { CatalogueSearchInput } from './CatalogueSearchInput';
 
 export function Topbar() {
   const itemCount = useAppSelector((state) =>
@@ -74,24 +75,44 @@ export function Topbar() {
       {/* Barre de recherche */}
       <div className="flex-1 max-w-md">
         <div className="flex items-center space-x-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder={`Rechercher dans ${scopeLabels[searchScope as keyof typeof scopeLabels]}`}
-              className="pl-10 pr-36 bg-muted border-input focus:bg-background"
-            />
-            <Select value={searchScope} onValueChange={setSearchScope}>
-              <SelectTrigger className="absolute top-0 right-0 h-full w-36 border-l border-input bg-muted pr-8 pl-2 text-sm focus:ring-0 focus:ring-offset-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="qui-fait-quoi">Qui fait quoi</SelectItem>
-                <SelectItem value="catalogue">Catalogue</SelectItem>
-                <SelectItem value="glenatdoc">Glénat'doc</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {searchScope === 'catalogue' ? (
+            // Recherche catalogue avec autocomplétion
+            <div className="flex items-center gap-2 flex-1">
+              <div className="flex-1">
+                <CatalogueSearchInput />
+              </div>
+              <Select value={searchScope} onValueChange={setSearchScope}>
+                <SelectTrigger className="w-36 bg-muted">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="qui-fait-quoi">Qui fait quoi</SelectItem>
+                  <SelectItem value="catalogue">Catalogue</SelectItem>
+                  <SelectItem value="glenatdoc">Glénat'doc</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            // Recherche normale pour les autres scopes
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder={`Rechercher dans ${scopeLabels[searchScope as keyof typeof scopeLabels]}`}
+                className="pl-10 pr-36 bg-muted border-input focus:bg-background"
+              />
+              <Select value={searchScope} onValueChange={setSearchScope}>
+                <SelectTrigger className="absolute top-0 right-0 h-full w-36 border-l border-input bg-muted pr-8 pl-2 text-sm focus:ring-0 focus:ring-offset-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="qui-fait-quoi">Qui fait quoi</SelectItem>
+                  <SelectItem value="catalogue">Catalogue</SelectItem>
+                  <SelectItem value="glenatdoc">Glénat'doc</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
       </div>
 

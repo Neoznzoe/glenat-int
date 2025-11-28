@@ -13,13 +13,30 @@ import { Button } from '@/components/ui/button';
 import CatalogueLayout from './CatalogueLayout';
 import BookFilters from '@/components/BookFilters';
 import BookCard from '@/components/BookCard';
+import { CataloguePagination } from '@/components/CataloguePagination';
+import { CatalogueSearchInput } from '@/components/CatalogueSearchInput';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { SecureLink } from '@/components/routing/SecureLink';
-import { fetchCatalogueBooks, type CatalogueBook } from '@/lib/catalogue';
+import { fetchCatalogueBooksWithPagination, type CatalogueBooksPage } from '@/lib/catalogue';
 import { useScrollRestoration } from '@/hooks/useScrollRestoration';
+import { Loader2 } from 'lucide-react';
+
+// Générer ou récupérer la seed de session pour l'ordre aléatoire
+const getSessionSeed = (): string => {
+  const SEED_KEY = 'catalogue_random_seed';
+  let seed = sessionStorage.getItem(SEED_KEY);
+  if (!seed) {
+    seed = Math.random().toString(36).substring(2, 15);
+    sessionStorage.setItem(SEED_KEY, seed);
+  }
+  return seed;
+};
 
 export function CatalogueAll() {
   useScrollRestoration();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const filters = [
     'Toutes',
     'BD',
@@ -32,28 +49,68 @@ export function CatalogueAll() {
   ];
 
   const [activeFilter, setActiveFilter] = useState('Toutes');
-  const [books, setBooks] = useState<CatalogueBook[] | null>(null);
+  const [cataloguePage, setCataloguePage] = useState<CatalogueBooksPage | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Récupérer le numéro de page depuis l'URL ou utiliser 1 par défaut
+  const currentPage = parseInt(searchParams.get('page') || '1', 10);
+  const sessionSeed = getSessionSeed();
 
   useEffect(() => {
     let isActive = true;
+    const abortController = new AbortController();
 
-    fetchCatalogueBooks()
-      .then(data => {
+    const loadBooks = async () => {
+      setIsLoading(true);
+      try {
+        const data = await fetchCatalogueBooksWithPagination(currentPage, 50, {
+          seed: sessionSeed,
+          signal: abortController.signal,
+          onProgress: (updatedPage) => {
+            if (isActive) {
+              setCataloguePage(updatedPage);
+            }
+          },
+        });
         if (isActive) {
-          setBooks(data);
+          setCataloguePage(data);
+          setIsLoading(false);
         }
-      })
-      .catch(error => {
+      } catch (error) {
+        // Ignorer les erreurs d'annulation
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.debug('[CatalogueAll] Chargement annulé');
+          return;
+        }
         console.error('Impossible de récupérer le catalogue', error);
-      });
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadBooks();
 
     return () => {
       isActive = false;
+      // Annuler toutes les requêtes en cours
+      abortController.abort();
     };
-  }, []);
+  }, [currentPage, sessionSeed]);
+
+  const handlePageChange = (page: number) => {
+    // Scroller l'élément main AVANT de changer la page
+    const mainElement = document.querySelector('main');
+    if (mainElement) {
+      mainElement.scrollTo({ top: 0, behavior: 'auto' });
+    }
+    // Mettre à jour l'URL avec le nouveau numéro de page
+    setSearchParams({ page: page.toString() });
+  };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6">
+      <div className="space-y-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -77,7 +134,7 @@ export function CatalogueAll() {
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <CardTitle className="text-[2.5rem]">Catalogue</CardTitle>
-          <Input type="search" placeholder="Rechercher..." className="sm:w-64" />
+          <CatalogueSearchInput />
         </CardHeader>
         <div className="px-6 space-y-4">
           <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
@@ -98,17 +155,45 @@ export function CatalogueAll() {
         </div>
         <CardContent className="p-6">
           <CatalogueLayout active="Tout le catalogue">
-            <h3 className="mb-4 font-semibold text-xl">Tout le catalogue</h3>
-            {books && (
-              <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
-                {books.map(book => (
-                  <BookCard key={book.ean} {...book} />
-                ))}
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-xl">Tout le catalogue</h3>
+                {cataloguePage && (
+                  <p className="text-sm text-muted-foreground">
+                    {cataloguePage.totalBooks} livres au total
+                  </p>
+                )}
               </div>
-            )}
+
+              {isLoading ? (
+                <div className="flex items-center justify-center py-32">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <span className="sr-only">Chargement du catalogue...</span>
+                </div>
+              ) : cataloguePage && cataloguePage.books.length > 0 ? (
+                <>
+                  <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+                    {cataloguePage.books.map(book => (
+                      <BookCard key={book.ean} {...book} />
+                    ))}
+                  </div>
+
+                  <CataloguePagination
+                    currentPage={cataloguePage.currentPage}
+                    totalPages={cataloguePage.totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                </>
+              ) : (
+                <div className="flex items-center justify-center py-32 rounded-lg border border-dashed">
+                  <p className="text-muted-foreground">Aucun livre trouvé</p>
+                </div>
+              )}
+            </div>
           </CatalogueLayout>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

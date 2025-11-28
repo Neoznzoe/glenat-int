@@ -300,6 +300,11 @@
 }
 
 /* Styles de base */
+html, body {
+  overflow: hidden;
+  height: 100%;
+}
+
 body {
   font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   background-color: var(--background);
