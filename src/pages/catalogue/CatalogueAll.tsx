@@ -8,7 +8,6 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import CatalogueLayout from './CatalogueLayout';
 import BookFilters from '@/components/BookFilters';

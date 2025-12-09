@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { SidebarContext } from './context/SidebarContext';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
@@ -8,12 +9,32 @@ import { usePublishedJobOfferCount } from '@/hooks/useJobOffers';
 import { SecureRoutingProvider } from './lib/secureRouting';
 import { useAuth } from '@/context/AuthContext';
 import { LoginPage } from '@/pages/Login';
+import AdminApp from './AdminApp';
 
 function App() {
   const { user, loading } = useAuth();
+  const location = useLocation();
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const { data: publishedJobCount, isLoading: loadingJobCount } = usePublishedJobOfferCount();
   const jobCount = loadingJobCount ? undefined : publishedJobCount;
+
+  // Vérifier si on est sur une route admin (supporte à la fois /admin et #/admin)
+  const [isAdminRoute, setIsAdminRoute] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return location.pathname.startsWith('/admin') || window.location.hash.startsWith('#/admin');
+  });
+
+  useEffect(() => {
+    const checkAdminRoute = () => {
+      const isAdmin = location.pathname.startsWith('/admin') ||
+                     (typeof window !== 'undefined' && window.location.hash.startsWith('#/admin'));
+      setIsAdminRoute(isAdmin);
+    };
+
+    checkAdminRoute();
+    window.addEventListener('hashchange', checkAdminRoute);
+    return () => window.removeEventListener('hashchange', checkAdminRoute);
+  }, [location.pathname]);
 
   const loadingScreen = (
     <div className="flex min-h-screen w-full items-center justify-center bg-background text-foreground">
@@ -57,6 +78,17 @@ function App() {
     );
   }
 
+  // Si on est sur une route d'administration, on affiche l'application d'administration
+  if (isAdminRoute) {
+    return (
+      <>
+        <AdminApp />
+        <Toaster />
+      </>
+    );
+  }
+
+  // Sinon, on affiche l'application principale
   return (
     <SidebarContext.Provider value={isSidebarExpanded}>
       <SecureRoutingProvider routes={ROUTES_CONFIG}>

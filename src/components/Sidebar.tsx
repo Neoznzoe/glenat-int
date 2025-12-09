@@ -835,6 +835,39 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
           ) : (
             <ul>
               {adminMenuItems.map((item) => {
+                // Pour l'administration, on ouvre dans un nouvel onglet vers /admin
+                if (item.permission.toLowerCase() === 'administration') {
+                  return (
+                    <li key={item.id}>
+                      <button
+                        onClick={() => {
+                          // Construire l'URL de base (origine + chemin de base de l'application)
+                          const baseUrl = window.location.origin;
+                          // Si on est sur intranet-dev.groupe-glenat.com/quelquechose, on garde juste l'origine
+                          window.open(`${baseUrl}/#/admin`, '_blank', 'noopener,noreferrer');
+                        }}
+                        className={`flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group text-red-100 hover:bg-white/10 hover:text-white ${isExpanded ? 'space-x-3' : 'justify-center'}`}
+                        title={!isExpanded ? item.label : ''}
+                      >
+                        {item.icon ? (
+                          <item.icon className="h-5 w-5 flex-shrink-0" />
+                        ) : (
+                          <span className="h-5 w-5 flex-shrink-0 flex items-center justify-center rounded-full bg-white/20 text-xs font-semibold uppercase">
+                            {item.label.charAt(0)}
+                          </span>
+                        )}
+                        <span
+                          className={`font-medium transition-all duration-300 whitespace-nowrap ${
+                            isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
+                          }`}
+                        >
+                          {item.label}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                }
+
                 const isInternalLink = item.path.startsWith('/');
                 const isActive = isInternalLink
                   ? item.path === '/'

@@ -463,3 +463,35 @@ body {
   }
 }
 
+/* Scrollbar personnalisée pour AdminSidebar - cachée par défaut, visible au hover */
+.scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.scrollbar-hide:hover {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.scrollbar-hide:hover::-webkit-scrollbar {
+  display: block;
+  width: 6px;
+}
+
+.scrollbar-hide:hover::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-hide:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.scrollbar-hide:hover::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+}
