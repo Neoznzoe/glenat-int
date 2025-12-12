@@ -6,6 +6,8 @@ import { PlaceholderPage } from './pages/administration/PlaceholderPage';
 
 const AdminDashboard = lazy(() => import('./pages/administration/Dashboard'));
 const Administration = lazy(() => import('./pages/administration/Administration'));
+const Zones = lazy(() => import('./pages/administration/Zones'));
+const Projects = lazy(() => import('./pages/administration/Projects'));
 
 const loadingScreen = (
   <div className="flex min-h-screen w-full items-center justify-center bg-background text-foreground">
@@ -55,11 +57,7 @@ function AdminContent() {
 
   if (hashPath === '/zones') {
     return <Suspense fallback={loadingScreen}>
-      <PlaceholderPage
-        title="Gestion des Zones"
-        description="Gérez les différentes zones et leurs paramètres."
-        icon={LucideIcons.Globe}
-      />
+      <Zones />
     </Suspense>;
   }
 
@@ -85,11 +83,7 @@ function AdminContent() {
 
   if (hashPath === '/projects') {
     return <Suspense fallback={loadingScreen}>
-      <PlaceholderPage
-        title="Gestion de la table Projet"
-        description="Gérez les informations et les paramètres des projets dans la base de données."
-        icon={LucideIcons.FolderKanban}
-      />
+      <Projects />
     </Suspense>;
   }
 

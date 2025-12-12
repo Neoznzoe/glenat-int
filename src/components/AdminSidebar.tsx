@@ -19,11 +19,11 @@ interface AdminMenuItem {
 
 const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
   // Administration des Sections
+  { id: 'projects', label: 'Projets', path: '/admin/projects', icon: 'FolderKanban', section: 'sections' },
   { id: 'dashboard', label: 'Tableau de bord', path: '/admin', icon: 'LayoutDashboard', section: 'main' },
   { id: 'zones', label: 'Zones', path: '/admin/zones', icon: 'Globe', section: 'sections' },
   { id: 'modules', label: 'Modules', path: '/admin/modules', icon: 'Puzzle', section: 'sections' },
   { id: 'pages', label: 'Pages', path: '/admin/pages', icon: 'FileText', section: 'sections' },
-  { id: 'projects', label: 'Projets', path: '/admin/projects', icon: 'FolderKanban', section: 'sections' },
 
   // Administration des utilisateurs
   { id: 'users', label: 'Utilisateurs', path: '/admin/users', icon: 'Users', section: 'main' },
