@@ -8,6 +8,8 @@ const AdminDashboard = lazy(() => import('./pages/administration/Dashboard'));
 const Administration = lazy(() => import('./pages/administration/Administration'));
 const Zones = lazy(() => import('./pages/administration/Zones'));
 const Projects = lazy(() => import('./pages/administration/Projects'));
+const Modules = lazy(() => import('./pages/administration/Modules'));
+const Pages = lazy(() => import('./pages/administration/Pages'));
 
 const loadingScreen = (
   <div className="flex min-h-screen w-full items-center justify-center bg-background text-foreground">
@@ -63,20 +65,32 @@ function AdminContent() {
 
   if (hashPath === '/modules') {
     return <Suspense fallback={loadingScreen}>
-      <PlaceholderPage
-        title="Gestion des Modules"
-        description="Gérez les modules et leurs configurations."
-        icon={LucideIcons.Puzzle}
-      />
+      <Modules />
     </Suspense>;
   }
 
   if (hashPath === '/pages') {
     return <Suspense fallback={loadingScreen}>
+      <Pages />
+    </Suspense>;
+  }
+
+  if (hashPath === '/blocs') {
+    return <Suspense fallback={loadingScreen}>
       <PlaceholderPage
-        title="Gestion des Pages"
-        description="Gérez les pages et leur contenu."
-        icon={LucideIcons.FileText}
+        title="Gestion des Blocs"
+        description="Gérez les blocs et leurs configurations."
+        icon={LucideIcons.SquareStack}
+      />
+    </Suspense>;
+  }
+
+  if (hashPath === '/elements') {
+    return <Suspense fallback={loadingScreen}>
+      <PlaceholderPage
+        title="Gestion des Éléments"
+        description="Gérez les éléments et leur contenu."
+        icon={LucideIcons.Component}
       />
     </Suspense>;
   }

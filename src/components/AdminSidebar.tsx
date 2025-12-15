@@ -24,6 +24,8 @@ const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
   { id: 'zones', label: 'Zones', path: '/admin/zones', icon: 'Globe', section: 'sections' },
   { id: 'modules', label: 'Modules', path: '/admin/modules', icon: 'Puzzle', section: 'sections' },
   { id: 'pages', label: 'Pages', path: '/admin/pages', icon: 'FileText', section: 'sections' },
+  { id: 'blocs', label: 'Blocs', path: '/admin/blocs', icon: 'SquareStack', section: 'sections' },
+  { id: 'elements', label: 'Éléments', path: '/admin/elements', icon: 'Component', section: 'sections' },
 
   // Administration des utilisateurs
   { id: 'users', label: 'Utilisateurs', path: '/admin/users', icon: 'Users', section: 'main' },

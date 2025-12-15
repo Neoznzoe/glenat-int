@@ -4,7 +4,8 @@
       "Bash(npx tsc:*)",
       "Bash(cat:*)",
       "Bash(npm run build:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(move CmsModules.tsx Modules.tsx)"
     ],
     "deny": [],
     "ask": []
