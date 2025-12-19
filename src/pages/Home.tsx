@@ -10,6 +10,7 @@ import type { LinkItem } from '@/components/LinksCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/context/AuthContext';
 import { fetchNextCatalogueOffice, type CatalogueOfficeGroup } from '@/lib/catalogue';
+import { fetchTodayAbsences, type AbsentPerson, fetchTodayRemoteWorking, type RemoteWorkingPerson } from '@/lib/absencesApi';
 
 const noop = () => undefined;
 
@@ -155,6 +156,8 @@ function HomeContent() {
 
   const [nextOffice, setNextOffice] = useState<CatalogueOfficeGroup | null>(null);
   const [isLoadingOffice, setIsLoadingOffice] = useState(true);
+  const [absentsToday, setAbsentsToday] = useState<AbsentPerson[]>([]);
+  const [teleworkToday, setTeleworkToday] = useState<RemoteWorkingPerson[]>([]);
 
   useEffect(() => {
     let isActive = true;
@@ -185,48 +188,52 @@ function HomeContent() {
     };
   }, []);
 
+  useEffect(() => {
+    let isActive = true;
+
+    console.log('Home: Fetching absences...');
+    fetchTodayAbsences()
+      .then(absences => {
+        console.log('Home: Absences received:', absences);
+        if (isActive) {
+          setAbsentsToday(absences);
+          console.log('Home: State updated with absences:', absences.length);
+        }
+      })
+      .catch(error => {
+        console.error('Impossible de récupérer les absences', error);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    console.log('Home: Fetching remote working...');
+    fetchTodayRemoteWorking()
+      .then(remoteWorking => {
+        console.log('Home: Remote working received:', remoteWorking);
+        if (isActive) {
+          setTeleworkToday(remoteWorking);
+          console.log('Home: State updated with remote working:', remoteWorking.length);
+        }
+      })
+      .catch(error => {
+        console.error('Impossible de récupérer le télétravail', error);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   const covers = nextOffice?.books.map(book => ({
     src: book.cover,
     href: `/catalogue/book?ean=${book.ean}`,
   })) ?? [];
-
-  const absentsToday = [
-    { name: 'David Bernard', email: 'david@example.com', retour: '12/09/2024' },
-    { name: 'Emma Boucher', email: 'emma@example.com', retour: '15/09/2024' },
-    { name: 'Julien Moreau', email: 'julien@example.com', retour: '16/09/2024' },
-    { name: 'Sophie Lambert', email: 'sophie@example.com', retour: '18/09/2024' },
-    { name: 'Thomas Leroy', email: 'thomas@example.com', retour: '19/09/2024' },
-    { name: 'Camille Dupuis', email: 'camille@example.com', retour: '20/09/2024' },
-    { name: 'Hugo Richard', email: 'hugo@example.com', retour: '21/09/2024' },
-    { name: 'Laura Lefevre', email: 'laura@example.com', retour: '22/09/2024' },
-    { name: 'Nicolas Caron', email: 'nicolas@example.com', retour: '23/09/2024' },
-    { name: 'Manon Roux', email: 'manon@example.com', retour: '24/09/2024' },
-    { name: 'Alexandre Garnier', email: 'alexandre@example.com', retour: '25/09/2024' },
-    { name: 'Chloé Marchand', email: 'chloe@example.com', retour: '26/09/2024' },
-    { name: 'Pierre Fontaine', email: 'pierre@example.com', retour: '27/09/2024' },
-    { name: 'Claire Perrot', email: 'claire@example.com', retour: '28/09/2024' },
-    { name: 'Lucas Pelletier', email: 'lucas@example.com', retour: '29/09/2024' },
-  ];
-
-  const teleworkToday = [
-    { name: 'Alice Martin', email: 'alice@example.com' },
-    { name: 'Bob Dupont', email: 'bob@example.com' },
-    { name: 'Paul Girard', email: 'paul@example.com' },
-    { name: 'Julie Robin', email: 'julie@example.com' },
-    { name: 'Hélène Faure', email: 'helene@example.com' },
-    { name: 'Antoine Picard', email: 'antoine@example.com' },
-    { name: 'Marion Noël', email: 'marion@example.com' },
-    { name: 'François Tessier', email: 'francois@example.com' },
-    { name: 'Isabelle Moulin', email: 'isabelle@example.com' },
-    { name: 'Romain Barre', email: 'romain@example.com' },
-    { name: 'Céline Robert', email: 'celine@example.com' },
-    { name: 'Vincent Colin', email: 'vincent@example.com' },
-    { name: 'Aurélie Lucas', email: 'aurelie@example.com' },
-    { name: 'Mathieu Roger', email: 'mathieu@example.com' },
-    { name: 'Elodie Masson', email: 'elodie@example.com' },
-    { name: 'Damien Millet', email: 'damien@example.com' },
-    { name: 'Charlotte Paris', email: 'charlotte@example.com' },
-  ];
 
   const visitingToday = [
     { name: 'Manon Roux', email: 'manon@example.com', date: '24/09/2024' },
@@ -263,8 +270,8 @@ function HomeContent() {
 
   const [absentMetrics, setAbsentMetrics] = useState<{ rowHeight: number; baseHeight: number }>();
   const [teleworkMetrics, setTeleworkMetrics] = useState<{ rowHeight: number; baseHeight: number }>();
-  const [absentLimit, setAbsentLimit] = useState(absentsToday.length);
-  const [teleworkLimit, setTeleworkLimit] = useState(teleworkToday.length);
+  const [absentLimit, setAbsentLimit] = useState(100);
+  const [teleworkLimit, setTeleworkLimit] = useState(100);
 
   const visitingDisplayed = showAllVisiting
     ? visitingToday
@@ -387,16 +394,18 @@ function HomeContent() {
       setMetrics: (m: { rowHeight: number; baseHeight: number }) => void,
       setLimit: (rows: number) => void,
     ) => {
-      if (!element) return;
+      if (!element || totalRows === 0) return;
 
       const apply = ({ rowHeight, baseHeight }: { rowHeight: number; baseHeight: number }) => {
+        if (rowHeight === 0) return; // Ne pas calculer si on ne peut pas mesurer
         const maxRows = Math.floor((rightHeight - baseHeight) / rowHeight) + offset;
-        setLimit(Math.min(totalRows, Math.max(0, maxRows)));
+        setLimit(Math.min(totalRows, Math.max(1, maxRows))); // Au moins 1 ligne si totalRows > 0
       };
 
       if (!metrics) {
         const row = element.querySelector('tbody tr') as HTMLTableRowElement | null;
         const rowHeight = row?.offsetHeight ?? 0;
+        if (rowHeight === 0) return; // Pas de ligne à mesurer, on attend
         const cardHeight = element.scrollHeight;
         const baseHeight = cardHeight - rowHeight * totalRows;
         const data = { rowHeight, baseHeight };
@@ -422,6 +431,14 @@ function HomeContent() {
   const absentsDisplayed = showAllAbsents
     ? absentsToday
     : absentsToday.slice(0, absentLimit);
+
+  console.log('Home render:', {
+    absentsToday: absentsToday.length,
+    absentLimit,
+    absentsDisplayed: absentsDisplayed.length,
+    showAllAbsents
+  });
+
   const teleworkDisplayed = showAllTelework
     ? teleworkToday
     : teleworkToday.slice(0, teleworkLimit);
