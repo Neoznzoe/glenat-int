@@ -7,8 +7,12 @@ import {
   useCurrentUser,
   usePersistModuleOverride,
   useUpdateUserAccess,
+  useCreateUser,
+  useUpdateUser,
+  useDeleteUser,
   type PermissionOverride,
   type UserAccount,
+  type ApiUserRecord,
 } from '@/hooks/useAdminData';
 import { computeEffectivePermissions, evaluatePermission } from '@/lib/mockDb';
 import {
@@ -23,6 +27,8 @@ import {
   UserAccessEditor,
   type PermissionEvaluationRow,
 } from '@/components/admin/UserAccessEditor';
+import { UserDialog } from '@/components/admin/UserDialog';
+import { DeleteUserDialog } from '@/components/admin/DeleteUserDialog';
 import { type DraftAccessState, type PermissionSelectValue } from '@/components/admin/access-types';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -78,9 +84,42 @@ export function Administration() {
   const [showOnlyInactive, setShowOnlyInactive] = useState(false);
   const [draft, setDraft] = useState<DraftAccessState>({ groups: [], permissionOverrides: [] });
   const selectedUserIdRef = useRef<string | null>(null);
+  const [userDialogOpen, setUserDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<ApiUserRecord | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserAccount | null>(null);
 
   const updateUserMutation = useUpdateUserAccess({ actorId: currentUser?.id });
   const moduleOverrideMutation = usePersistModuleOverride({ actorId: currentUser?.id });
+  const createUserMutation = useCreateUser({
+    onSuccess: () => {
+      setUserDialogOpen(false);
+      toast.success('Utilisateur créé', {
+        description: 'L\'utilisateur a été créé avec succès.',
+      });
+    },
+  });
+  const updateUserApiMutation = useUpdateUser({
+    onSuccess: () => {
+      setUserDialogOpen(false);
+      setEditingUser(null);
+      toast.success('Utilisateur mis à jour', {
+        description: 'Les informations ont été mises à jour avec succès.',
+      });
+    },
+  });
+  const deleteUserMutation = useDeleteUser({
+    onSuccess: () => {
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+      if (selectedUserId && userToDelete?.id === selectedUserId) {
+        setSelectedUserId(null);
+      }
+      toast.success('Utilisateur supprimé', {
+        description: 'L\'utilisateur a été supprimé avec succès.',
+      });
+    },
+  });
 
   const lowerSearch = search.trim().toLowerCase();
   const filteredUsers = useMemo(() => {
@@ -354,6 +393,71 @@ export function Administration() {
     }
   };
 
+  const handleCreateUser = () => {
+    setEditingUser(null);
+    setUserDialogOpen(true);
+  };
+
+  const handleSaveUser = async (userData: Partial<ApiUserRecord>) => {
+    try {
+      if (editingUser) {
+        await updateUserApiMutation.mutateAsync({
+          userId: editingUser.UserId,
+          updates: userData,
+        });
+      } else {
+        await createUserMutation.mutateAsync(userData);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erreur inconnue';
+      toast.error(editingUser ? 'Impossible de modifier' : 'Impossible de créer', {
+        description: message,
+      });
+    }
+  };
+
+  const handleEditUser = (user: UserAccount) => {
+    const apiUser: ApiUserRecord = {
+      UserRecordId: Number(user.id),
+      UserId: user.username || user.azureUpn,
+      DisplayName: user.displayName,
+      Email: user.email,
+      Status: user.status === 'active' ? 'ACTIVE' : 'INACTIVE',
+      CreatedAt: user.createdAt,
+      UpdatedAt: user.updatedAt,
+    };
+    setEditingUser(apiUser);
+    setUserDialogOpen(true);
+  };
+
+  const handleDeleteUser = (user: UserAccount) => {
+    setUserToDelete(user);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    const userId = userToDelete.username || userToDelete.azureUpn;
+    if (!userId) {
+      toast.error('Impossible de supprimer', {
+        description: 'Identifiant utilisateur introuvable',
+      });
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+      return;
+    }
+
+    try {
+      await deleteUserMutation.mutateAsync(userId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erreur inconnue';
+      toast.error('Impossible de supprimer', { description: message });
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       <header className="space-y-2">
@@ -420,6 +524,9 @@ export function Administration() {
           groups={groups}
           selectedUserId={selectedUserId}
           onSelectUser={setSelectedUserId}
+          onCreateUser={handleCreateUser}
+          onEditUser={handleEditUser}
+          onDeleteUser={handleDeleteUser}
           isLoading={loadingUsers || loadingGroups}
         />
         <UserAccessEditor
@@ -522,6 +629,22 @@ export function Administration() {
           </div>
         </CardContent>
       </Card>
+
+      <UserDialog
+        open={userDialogOpen}
+        onOpenChange={setUserDialogOpen}
+        user={editingUser}
+        onSave={handleSaveUser}
+        isLoading={createUserMutation.isPending || updateUserApiMutation.isPending}
+      />
+
+      <DeleteUserDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        user={userToDelete}
+        onConfirm={confirmDeleteUser}
+        isLoading={deleteUserMutation.isPending}
+      />
     </div>
   );
 }

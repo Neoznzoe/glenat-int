@@ -10,6 +10,7 @@ import { computeEffectivePermissions, type UserAccount } from '@/lib/mockDb';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { GroupDefinition } from '@/lib/access-control';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 
 interface UserListPanelProps {
   filteredUsers: UserAccount[];
@@ -20,6 +21,9 @@ interface UserListPanelProps {
   groups: GroupDefinition[];
   selectedUserId: string | null;
   onSelectUser: (userId: string) => void;
+  onCreateUser?: () => void;
+  onEditUser?: (user: UserAccount) => void;
+  onDeleteUser?: (user: UserAccount) => void;
   isLoading?: boolean;
 }
 
@@ -32,6 +36,9 @@ export function UserListPanel({
   groups,
   selectedUserId,
   onSelectUser,
+  onCreateUser,
+  onEditUser,
+  onDeleteUser,
   isLoading,
 }: UserListPanelProps) {
   const groupsById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
@@ -39,11 +46,19 @@ export function UserListPanel({
   return (
     <Card className="flex h-full flex-col">
       <CardHeader className="space-y-4">
-        <div>
-          <CardTitle>Collaborateurs</CardTitle>
-          <CardDescription>
-            Sélectionnez un utilisateur pour consulter et modifier ses autorisations.
-          </CardDescription>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle>Collaborateurs</CardTitle>
+            <CardDescription>
+              Sélectionnez un utilisateur pour consulter et modifier ses autorisations.
+            </CardDescription>
+          </div>
+          {onCreateUser && (
+            <Button onClick={onCreateUser} size="sm" className="shrink-0">
+              <Plus className="mr-2 h-4 w-4" />
+              Créer
+            </Button>
+          )}
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Input
@@ -71,6 +86,7 @@ export function UserListPanel({
                 <TableHead>Utilisateur</TableHead>
                 <TableHead>Groupes</TableHead>
                 <TableHead className="text-right">Dernière connexion</TableHead>
+                <TableHead className="text-right w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -86,7 +102,6 @@ export function UserListPanel({
                 if (!detailsParts.length && user.preferredLanguage) {
                   detailsParts.push(`Langue : ${user.preferredLanguage}`);
                 }
-                const profileDetails = detailsParts.join(' · ') || 'Informations non renseignées';
                 const lastConnectionLabel = (() => {
                   if (!user.lastConnection) {
                     return '—';
@@ -112,7 +127,6 @@ export function UserListPanel({
                       <div className="flex flex-col">
                         <span className="font-medium">{user.displayName}</span>
                         <span className="text-xs text-muted-foreground">{user.email}</span>
-                        <span className="text-xs text-muted-foreground">{profileDetails}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -140,19 +154,51 @@ export function UserListPanel({
                         {accessCount} accès
                       </div>
                     </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {onEditUser && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditUser(user);
+                            }}
+                            title="Éditer l'utilisateur"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {onDeleteUser && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteUser(user);
+                            }}
+                            title="Supprimer l'utilisateur"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 );
               })}
               {!filteredUsers.length && !isLoading && (
                 <TableRow>
-                  <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
                     Aucun utilisateur ne correspond à la recherche.
                   </TableCell>
                 </TableRow>
               )}
               {isLoading && !filteredUsers.length && (
                 <TableRow>
-                  <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
                     Chargement des utilisateurs…
                   </TableCell>
                 </TableRow>

@@ -22,7 +22,10 @@ const ADMIN_DATABASE_ENDPOINT =
   import.meta.env.VITE_ADMIN_DATABASE_ENDPOINT ??
   'https://api-dev.groupe-glenat.com/Api/v2.0/Dev/callDatabase';
 
-const ADMIN_USERS_QUERY = 'SELECT * FROM [users];';
+const USER_API_ENDPOINT =
+  import.meta.env.VITE_USER_API_ENDPOINT ??
+  'https://api-dev.groupe-glenat.com/Api/v2.0/User/user';
+
 const ADMIN_MODULES_QUERY = 'SET NOCOUNT ON;\nSELECT * FROM [modules];';
 const ADMIN_PAGES_QUERY = 'SELECT * FROM [pages];';
 const ADMIN_MODULE_PAGES_QUERY = 'SELECT * FROM [modulesPages];';
@@ -41,6 +44,38 @@ interface DatabaseQueryResponse {
   recordsets?: unknown;
   records?: unknown;
   [key: string]: unknown;
+}
+
+export interface ApiUserRecord {
+  UserRecordId: number;
+  UserId: string;
+  DisplayName: string;
+  Email: string;
+  ProjectId?: number;
+  Status: string;
+  CreatedAt: string;
+  UpdatedAt: string;
+}
+
+interface UserApiListResponse {
+  success: boolean;
+  code: number;
+  message: string;
+  users: ApiUserRecord[];
+  pagination: {
+    page: number;
+    perPage: number;
+    total: number;
+    pages: number;
+  };
+}
+
+interface UserApiResponse {
+  success: boolean;
+  code: number;
+  message: string;
+  user?: ApiUserRecord;
+  userBaseInfos?: ApiUserRecord;
 }
 
 type RawDatabaseUserRecord = Record<string, unknown>;
@@ -1064,8 +1099,82 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Pro
   return (await response.json()) as T;
 }
 
+function mapApiUserToUserAccount(apiUser: ApiUserRecord): UserAccount {
+  const id = apiUser.UserRecordId.toString();
+  const displayName = apiUser.DisplayName || apiUser.UserId || `Utilisateur ${id}`;
+  const status = apiUser.Status?.toUpperCase() === 'ACTIVE' ? 'active' : 'inactive';
+
+  const user: UserAccount = {
+    id,
+    firstName: apiUser.DisplayName || displayName,
+    lastName: '',
+    displayName,
+    email: apiUser.Email || '',
+    username: apiUser.UserId,
+    azureOid: id,
+    azureUpn: apiUser.Email || apiUser.UserId || '',
+    jobTitle: '',
+    department: '',
+    location: '',
+    phoneNumber: '',
+    status,
+    lastConnection: apiUser.UpdatedAt || apiUser.CreatedAt || '',
+    createdAt: apiUser.CreatedAt || '',
+    updatedAt: apiUser.UpdatedAt || apiUser.CreatedAt || '',
+    groups: [],
+    permissionOverrides: [],
+  };
+
+  return user;
+}
+
+async function fetchAllUsersFromApi(): Promise<ApiUserRecord[]> {
+  const allUsers: ApiUserRecord[] = [];
+  let currentPage = 1;
+  let totalPages = 1;
+
+  while (currentPage <= totalPages) {
+    const url = `${USER_API_ENDPOINT}?page=${currentPage}&perPage=100`;
+
+    let response: Response;
+    try {
+      response = await fetchWithOAuth(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+      throw new Error(`Impossible de contacter l'API User : ${detail}`);
+    }
+
+    if (!response.ok) {
+      throw new Error(`Requête API User échouée (${response.status}) ${response.statusText}`);
+    }
+
+    let payload: UserApiListResponse;
+    try {
+      payload = (await response.json()) as UserApiListResponse;
+    } catch {
+      throw new Error('Réponse inattendue lors de la récupération des utilisateurs.');
+    }
+
+    if (!payload.success) {
+      const detail = payload.message ?? 'La récupération des utilisateurs a échoué.';
+      throw new Error(detail);
+    }
+
+    allUsers.push(...(payload.users || []));
+    totalPages = payload.pagination?.pages || 1;
+    currentPage += 1;
+  }
+
+  return allUsers;
+}
+
 export async function fetchUsers(): Promise<UserAccount[]> {
-  const userRecords = await runDatabaseQuery(ADMIN_USERS_QUERY, 'utilisateurs');
+  const apiUsers = await fetchAllUsersFromApi();
 
   let membershipsByUser = new Map<string, string[]>();
   try {
@@ -1094,10 +1203,8 @@ export async function fetchUsers(): Promise<UserAccount[]> {
 
   const moduleIdByKey = modulePermissionMaps?.moduleIdByKey ?? new Map<PermissionKey, string>();
 
-  const fallbackTimestamp = '';
-
-  const users = userRecords.map((record, index) => {
-    const user = normalizeUserRecord(record, index, fallbackTimestamp);
+  const users = apiUsers.map((apiUser) => {
+    const user = mapApiUserToUserAccount(apiUser);
     const memberships = membershipsByUser.get(user.id);
     if (memberships) {
       user.groups = memberships;
@@ -1114,6 +1221,240 @@ export async function fetchUsers(): Promise<UserAccount[]> {
   );
 
   return users;
+}
+
+export async function fetchUserById(userId: string): Promise<UserAccount> {
+  const url = `${USER_API_ENDPOINT}/${encodeURIComponent(userId)}`;
+
+  let response: Response;
+  try {
+    response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+    throw new Error(`Impossible de contacter l'API User : ${detail}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`Requête API User échouée (${response.status}) ${response.statusText}`);
+  }
+
+  let payload: UserApiResponse;
+  try {
+    payload = (await response.json()) as UserApiResponse;
+  } catch {
+    throw new Error('Réponse inattendue lors de la récupération de l\'utilisateur.');
+  }
+
+  if (!payload.success) {
+    const detail = payload.message ?? 'La récupération de l\'utilisateur a échoué.';
+    throw new Error(detail);
+  }
+
+  const apiUser = payload.user ?? payload.userBaseInfos;
+  if (!apiUser) {
+    throw new Error('Aucune donnée utilisateur retournée par l\'API.');
+  }
+
+  const user = mapApiUserToUserAccount(apiUser);
+
+  const numericUserId = toDatabaseIntegerId(userId);
+  if (numericUserId !== null) {
+    try {
+      const memberships = await loadUserGroupIds(numericUserId);
+      user.groups = memberships;
+
+      const maps = await loadModulePermissionMaps();
+      const permissionRecords = await runDatabaseQuery(
+        `SET NOCOUNT ON;\nSELECT *\nFROM [userPermissions]\nWHERE [userId] = ${numericUserId}\n  AND UPPER(LTRIM(RTRIM([permissionType]))) = 'MODULE';`,
+        "exceptions d'accès individuelles",
+      );
+      const overridesByUser = buildModuleOverrideMap(permissionRecords, maps.keyByModuleId);
+      const moduleOverrides = overridesByUser.get(userId) ?? [];
+      user.permissionOverrides = sanitizePermissionOverrides(
+        mergeModuleOverrides(user.permissionOverrides, moduleOverrides, maps.moduleIdByKey),
+      );
+    } catch (error) {
+      console.error('Impossible de récupérer les permissions de l\'utilisateur.', error);
+    }
+  }
+
+  return user;
+}
+
+export async function updateUser(
+  userId: string,
+  updates: Partial<ApiUserRecord>,
+): Promise<UserAccount> {
+  const url = `${USER_API_ENDPOINT}/${encodeURIComponent(userId)}`;
+  const apiPayload = mapToApiFormat(updates);
+  console.log('Updating user:', userId, 'with data:', apiPayload);
+
+  let response: Response;
+  try {
+    response = await fetchWithOAuth(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(apiPayload),
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+    throw new Error(`Impossible de contacter l'API User : ${detail}`);
+  }
+
+  if (!response.ok) {
+    let errorDetail = response.statusText;
+    try {
+      const errorData = await response.json();
+      console.error('Update API Error Response:', errorData);
+      errorDetail = errorData.message || errorData.error || errorDetail;
+    } catch {
+      // Ignore JSON parse errors
+    }
+    throw new Error(`Requête API User échouée (${response.status}): ${errorDetail}`);
+  }
+
+  let payload: UserApiResponse;
+  try {
+    payload = (await response.json()) as UserApiResponse;
+    console.log('User update response:', payload);
+  } catch {
+    throw new Error('Réponse inattendue lors de la mise à jour de l\'utilisateur.');
+  }
+
+  if (!payload.success) {
+    const detail = payload.message ?? 'La mise à jour de l\'utilisateur a échoué.';
+    throw new Error(detail);
+  }
+
+  const apiUser = payload.user ?? payload.userBaseInfos;
+  if (!apiUser) {
+    throw new Error('Aucune donnée utilisateur retournée par l\'API.');
+  }
+
+  return mapApiUserToUserAccount(apiUser);
+}
+
+function mapToApiFormat(userData: Partial<ApiUserRecord>): Record<string, unknown> {
+  const payload: Record<string, unknown> = {};
+
+  if (userData.UserId !== undefined) {
+    payload.user_id = userData.UserId;
+  }
+  if (userData.DisplayName !== undefined) {
+    payload.display_name = userData.DisplayName;
+  }
+  if (userData.Email !== undefined) {
+    payload.email = userData.Email;
+  }
+  if (userData.ProjectId !== undefined) {
+    payload.project_id = userData.ProjectId;
+  }
+  if (userData.Status !== undefined) {
+    payload.status = userData.Status;
+  }
+
+  return payload;
+}
+
+export async function createUser(userData: Partial<ApiUserRecord>): Promise<UserAccount> {
+  const apiPayload = mapToApiFormat(userData);
+  console.log('Creating user with data:', apiPayload);
+
+  let response: Response;
+  try {
+    response = await fetchWithOAuth(USER_API_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(apiPayload),
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+    throw new Error(`Impossible de contacter l'API User : ${detail}`);
+  }
+
+  if (!response.ok) {
+    let errorDetail = response.statusText;
+    try {
+      const errorData = await response.json();
+      console.error('API Error Response:', errorData);
+      errorDetail = errorData.message || errorData.error || errorDetail;
+    } catch {
+      // Ignore JSON parse errors
+    }
+    throw new Error(`Requête API User échouée (${response.status}): ${errorDetail}`);
+  }
+
+  let payload: UserApiResponse;
+  try {
+    payload = (await response.json()) as UserApiResponse;
+    console.log('User creation response:', payload);
+  } catch {
+    throw new Error('Réponse inattendue lors de la création de l\'utilisateur.');
+  }
+
+  if (!payload.success) {
+    const detail = payload.message ?? 'La création de l\'utilisateur a échoué.';
+    throw new Error(detail);
+  }
+
+  const apiUser = payload.user ?? payload.userBaseInfos;
+  if (!apiUser) {
+    throw new Error('Aucune donnée utilisateur retournée par l\'API.');
+  }
+
+  return mapApiUserToUserAccount(apiUser);
+}
+
+export async function deleteUser(userId: string): Promise<void> {
+  const url = `${USER_API_ENDPOINT}/${encodeURIComponent(userId)}`;
+  console.log('Deleting user:', userId);
+
+  let response: Response;
+  try {
+    response = await fetchWithOAuth(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+    throw new Error(`Impossible de contacter l'API User : ${detail}`);
+  }
+
+  if (!response.ok) {
+    let errorDetail = response.statusText;
+    try {
+      const errorData = await response.json();
+      console.error('Delete API Error Response:', errorData);
+      errorDetail = errorData.message || errorData.error || errorDetail;
+    } catch {
+      // Ignore JSON parse errors
+    }
+    throw new Error(`Requête API User échouée (${response.status}): ${errorDetail}`);
+  }
+
+  let payload: { success: boolean; message?: string };
+  try {
+    payload = (await response.json()) as { success: boolean; message?: string };
+    console.log('User deletion response:', payload);
+  } catch {
+    throw new Error('Réponse inattendue lors de la suppression de l\'utilisateur.');
+  }
+
+  if (!payload.success) {
+    const detail = payload.message ?? 'La suppression de l\'utilisateur a échoué.';
+    throw new Error(detail);
+  }
 }
 
 export async function fetchGroups(): Promise<GroupDefinition[]> {

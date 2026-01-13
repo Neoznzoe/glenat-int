@@ -7,11 +7,15 @@ import {
   persistUserAccess,
   persistModuleOverrideChange,
   createGroup,
+  createUser,
+  updateUser,
+  deleteUser,
   type UpdateUserAccessPayload,
   type UpdateModuleOverridePayload,
   type UserAccount,
   type PermissionOverride,
   type AuditLogEntry,
+  type ApiUserRecord,
 } from '@/lib/adminApi';
 import { type GroupDefinition, type PermissionDefinition } from '@/lib/access-control';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -139,7 +143,44 @@ export function useCreateGroup(options?: { onSuccess?: () => void }) {
   });
 }
 
-export type { UserAccount, PermissionOverride, AuditLogEntry };
+export function useCreateUser(options?: { onSuccess?: () => void }) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userData: Partial<ApiUserRecord>) => createUser(userData),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
+      options?.onSuccess?.();
+    },
+  });
+}
+
+export function useUpdateUser(options?: { onSuccess?: () => void }) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ userId, updates }: { userId: string; updates: Partial<ApiUserRecord> }) =>
+      updateUser(userId, updates),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
+      options?.onSuccess?.();
+    },
+  });
+}
+
+export function useDeleteUser(options?: { onSuccess?: () => void }) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => deleteUser(userId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
+      options?.onSuccess?.();
+    },
+  });
+}
+
+export type { UserAccount, PermissionOverride, AuditLogEntry, ApiUserRecord };
 export {
   USERS_QUERY_KEY,
   GROUPS_QUERY_KEY,
