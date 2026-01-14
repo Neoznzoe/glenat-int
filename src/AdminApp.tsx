@@ -6,6 +6,7 @@ import { PlaceholderPage } from './pages/administration/PlaceholderPage';
 
 const AdminDashboard = lazy(() => import('./pages/administration/Dashboard'));
 const Administration = lazy(() => import('./pages/administration/Administration'));
+const Groups = lazy(() => import('./pages/administration/Groups'));
 const Zones = lazy(() => import('./pages/administration/Zones'));
 const Projects = lazy(() => import('./pages/administration/Projects'));
 const Modules = lazy(() => import('./pages/administration/Modules'));
@@ -49,11 +50,7 @@ function AdminContent() {
 
   if (hashPath === '/groups') {
     return <Suspense fallback={loadingScreen}>
-      <PlaceholderPage
-        title="Gestion des Groupes d'Utilisateurs"
-        description="Gérez les groupes d'utilisateurs et leurs droits."
-        icon={LucideIcons.UsersRound}
-      />
+      <Groups />
     </Suspense>;
   }
 

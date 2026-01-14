@@ -26,6 +26,10 @@ const USER_API_ENDPOINT =
   import.meta.env.VITE_USER_API_ENDPOINT ??
   'https://api-dev.groupe-glenat.com/Api/v2.0/User/user';
 
+const GROUP_API_ENDPOINT =
+  import.meta.env.VITE_GROUP_API_ENDPOINT ??
+  'https://api-dev.groupe-glenat.com/Api/v2.0/User/group';
+
 const ADMIN_MODULES_QUERY = 'SET NOCOUNT ON;\nSELECT * FROM [modules];';
 const ADMIN_PAGES_QUERY = 'SELECT * FROM [pages];';
 const ADMIN_MODULE_PAGES_QUERY = 'SELECT * FROM [modulesPages];';
@@ -57,6 +61,40 @@ export interface ApiUserRecord {
   UpdatedAt: string;
 }
 
+interface ApiDateObject {
+  date: string;
+  timezone_type: number;
+  timezone: string;
+}
+
+interface ApiGroupRecordRaw {
+  UserGroupId: string | number;
+  ProjectId?: string | number;
+  GroupCode: string;
+  GroupName: string;
+  Description?: string;
+  IsSystem?: number | boolean;
+  IsActive?: number | boolean;
+  CreatedAt?: string | ApiDateObject;
+  CreatedBy?: string;
+  UpdatedAt?: string | ApiDateObject | null;
+  UpdatedBy?: string | null;
+}
+
+export interface ApiGroupRecord {
+  UserGroupId: number;
+  ProjectId?: number;
+  GroupCode: string;
+  GroupName: string;
+  Description?: string;
+  IsSystem?: number | boolean;
+  IsActive?: number | boolean;
+  CreatedAt?: string;
+  CreatedBy?: string;
+  UpdatedAt?: string | null;
+  UpdatedBy?: string | null;
+}
+
 interface UserApiListResponse {
   success: boolean;
   code: number;
@@ -76,6 +114,27 @@ interface UserApiResponse {
   message: string;
   user?: ApiUserRecord;
   userBaseInfos?: ApiUserRecord;
+}
+
+interface GroupApiListResponse {
+  success: boolean;
+  code: number;
+  message: string;
+  groups: ApiGroupRecord[];
+  pagination: {
+    page: number;
+    perPage: number;
+    total: number;
+    pages: number;
+  };
+}
+
+interface GroupApiResponse {
+  success: boolean;
+  code: number;
+  message: string;
+  group?: ApiGroupRecord;
+  groupBaseInfos?: ApiGroupRecord;
 }
 
 type RawDatabaseUserRecord = Record<string, unknown>;
@@ -1455,6 +1514,311 @@ export async function deleteUser(userId: string): Promise<void> {
     const detail = payload.message ?? 'La suppression de l\'utilisateur a échoué.';
     throw new Error(detail);
   }
+}
+
+function sanitizeApiGroupRecord(raw: ApiGroupRecordRaw): ApiGroupRecord {
+  // Normalize CreatedAt
+  let createdAt: string | undefined;
+  if (raw.CreatedAt) {
+    if (typeof raw.CreatedAt === 'string') {
+      createdAt = raw.CreatedAt;
+    } else if (typeof raw.CreatedAt === 'object' && 'date' in raw.CreatedAt) {
+      createdAt = raw.CreatedAt.date;
+    }
+  }
+
+  // Normalize UpdatedAt
+  let updatedAt: string | null | undefined;
+  if (raw.UpdatedAt) {
+    if (typeof raw.UpdatedAt === 'string') {
+      updatedAt = raw.UpdatedAt;
+    } else if (typeof raw.UpdatedAt === 'object' && 'date' in raw.UpdatedAt) {
+      updatedAt = raw.UpdatedAt.date;
+    }
+  } else {
+    updatedAt = raw.UpdatedAt;
+  }
+
+  return {
+    UserGroupId: typeof raw.UserGroupId === 'number' ? raw.UserGroupId : Number(raw.UserGroupId),
+    ProjectId: raw.ProjectId ? (typeof raw.ProjectId === 'number' ? raw.ProjectId : Number(raw.ProjectId)) : undefined,
+    GroupCode: raw.GroupCode,
+    GroupName: raw.GroupName,
+    Description: raw.Description,
+    IsSystem: raw.IsSystem,
+    IsActive: raw.IsActive,
+    CreatedAt: createdAt,
+    CreatedBy: raw.CreatedBy,
+    UpdatedAt: updatedAt,
+    UpdatedBy: raw.UpdatedBy,
+  };
+}
+
+function mapToGroupApiFormat(groupData: Partial<ApiGroupRecord>): Record<string, unknown> {
+  const payload: Record<string, unknown> = {};
+
+  if (groupData.ProjectId !== undefined) {
+    payload.project_id = groupData.ProjectId;
+  }
+  if (groupData.GroupCode !== undefined) {
+    payload.group_code = groupData.GroupCode;
+  }
+  if (groupData.GroupName !== undefined) {
+    payload.group_name = groupData.GroupName;
+  }
+  if (groupData.Description !== undefined) {
+    payload.description = groupData.Description;
+  }
+  if (groupData.IsSystem !== undefined) {
+    payload.is_system = groupData.IsSystem;
+  }
+  if (groupData.IsActive !== undefined) {
+    payload.is_active = groupData.IsActive;
+  }
+
+  return payload;
+}
+
+async function fetchAllGroupsFromApi(): Promise<ApiGroupRecord[]> {
+  const allGroups: ApiGroupRecord[] = [];
+  let currentPage = 1;
+  let totalPages = 1;
+
+  while (currentPage <= totalPages) {
+    const url = `${GROUP_API_ENDPOINT}?page=${currentPage}&perPage=100`;
+
+    let response: Response;
+    try {
+      response = await fetchWithOAuth(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+      throw new Error(`Impossible de contacter l'API Group : ${detail}`);
+    }
+
+    if (!response.ok) {
+      throw new Error(`Requête API Group échouée (${response.status}) ${response.statusText}`);
+    }
+
+    let payload: GroupApiListResponse;
+    try {
+      payload = (await response.json()) as GroupApiListResponse;
+    } catch {
+      throw new Error('Réponse inattendue lors de la récupération des groupes.');
+    }
+
+    if (!payload.success) {
+      const detail = payload.message ?? 'La récupération des groupes a échoué.';
+      throw new Error(detail);
+    }
+
+    // Sanitize group records to normalize date formats
+    const sanitizedGroups = (payload.groups || []).map((group) =>
+      sanitizeApiGroupRecord(group as unknown as ApiGroupRecordRaw)
+    );
+    allGroups.push(...sanitizedGroups);
+    totalPages = payload.pagination?.pages || 1;
+    currentPage += 1;
+  }
+
+  return allGroups;
+}
+
+export async function fetchGroupById(groupId: string): Promise<ApiGroupRecord> {
+  const url = `${GROUP_API_ENDPOINT}/${encodeURIComponent(groupId)}`;
+
+  let response: Response;
+  try {
+    response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+    throw new Error(`Impossible de contacter l'API Group : ${detail}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`Requête API Group échouée (${response.status}) ${response.statusText}`);
+  }
+
+  let payload: GroupApiResponse;
+  try {
+    payload = (await response.json()) as GroupApiResponse;
+  } catch {
+    throw new Error('Réponse inattendue lors de la récupération du groupe.');
+  }
+
+  if (!payload.success) {
+    const detail = payload.message ?? 'La récupération du groupe a échoué.';
+    throw new Error(detail);
+  }
+
+  const apiGroup = payload.group ?? payload.groupBaseInfos;
+  if (!apiGroup) {
+    throw new Error('Aucune donnée groupe retournée par l\'API.');
+  }
+
+  return sanitizeApiGroupRecord(apiGroup as unknown as ApiGroupRecordRaw);
+}
+
+export async function createGroupViaApi(groupData: Partial<ApiGroupRecord>): Promise<ApiGroupRecord> {
+  const apiPayload = mapToGroupApiFormat(groupData);
+  console.log('Creating group with data:', apiPayload);
+
+  let response: Response;
+  try {
+    response = await fetchWithOAuth(GROUP_API_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(apiPayload),
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+    throw new Error(`Impossible de contacter l'API Group : ${detail}`);
+  }
+
+  if (!response.ok) {
+    let errorDetail = response.statusText;
+    try {
+      const errorData = await response.json();
+      console.error('API Error Response:', errorData);
+      errorDetail = errorData.message || errorData.error || errorDetail;
+    } catch {
+      // Ignore JSON parse errors
+    }
+    throw new Error(`Requête API Group échouée (${response.status}): ${errorDetail}`);
+  }
+
+  let payload: GroupApiResponse;
+  try {
+    payload = (await response.json()) as GroupApiResponse;
+    console.log('Group creation response:', payload);
+  } catch {
+    throw new Error('Réponse inattendue lors de la création du groupe.');
+  }
+
+  if (!payload.success) {
+    const detail = payload.message ?? 'La création du groupe a échoué.';
+    throw new Error(detail);
+  }
+
+  const apiGroup = payload.group ?? payload.groupBaseInfos;
+  if (!apiGroup) {
+    throw new Error('Aucune donnée groupe retournée par l\'API.');
+  }
+
+  return sanitizeApiGroupRecord(apiGroup as unknown as ApiGroupRecordRaw);
+}
+
+export async function updateGroup(
+  groupId: string,
+  updates: Partial<ApiGroupRecord>,
+): Promise<ApiGroupRecord> {
+  const url = `${GROUP_API_ENDPOINT}/${encodeURIComponent(groupId)}`;
+  const apiPayload = mapToGroupApiFormat(updates);
+  console.log('Updating group:', groupId, 'with data:', apiPayload);
+
+  let response: Response;
+  try {
+    response = await fetchWithOAuth(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(apiPayload),
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+    throw new Error(`Impossible de contacter l'API Group : ${detail}`);
+  }
+
+  if (!response.ok) {
+    let errorDetail = response.statusText;
+    try {
+      const errorData = await response.json();
+      console.error('Update API Error Response:', errorData);
+      errorDetail = errorData.message || errorData.error || errorDetail;
+    } catch {
+      // Ignore JSON parse errors
+    }
+    throw new Error(`Requête API Group échouée (${response.status}): ${errorDetail}`);
+  }
+
+  let payload: GroupApiResponse;
+  try {
+    payload = (await response.json()) as GroupApiResponse;
+    console.log('Group update response:', payload);
+  } catch {
+    throw new Error('Réponse inattendue lors de la mise à jour du groupe.');
+  }
+
+  if (!payload.success) {
+    const detail = payload.message ?? 'La mise à jour du groupe a échoué.';
+    throw new Error(detail);
+  }
+
+  const apiGroup = payload.group ?? payload.groupBaseInfos;
+  if (!apiGroup) {
+    throw new Error('Aucune donnée groupe retournée par l\'API.');
+  }
+
+  return sanitizeApiGroupRecord(apiGroup as unknown as ApiGroupRecordRaw);
+}
+
+export async function deleteGroup(groupId: string): Promise<void> {
+  const url = `${GROUP_API_ENDPOINT}/${encodeURIComponent(groupId)}`;
+  console.log('Deleting group:', groupId);
+
+  let response: Response;
+  try {
+    response = await fetchWithOAuth(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+    throw new Error(`Impossible de contacter l'API Group : ${detail}`);
+  }
+
+  if (!response.ok) {
+    let errorDetail = response.statusText;
+    try {
+      const errorData = await response.json();
+      console.error('Delete API Error Response:', errorData);
+      errorDetail = errorData.message || errorData.error || errorDetail;
+    } catch {
+      // Ignore JSON parse errors
+    }
+    throw new Error(`Requête API Group échouée (${response.status}): ${errorDetail}`);
+  }
+
+  let payload: { success: boolean; message?: string };
+  try {
+    payload = (await response.json()) as { success: boolean; message?: string };
+    console.log('Group deletion response:', payload);
+  } catch {
+    throw new Error('Réponse inattendue lors de la suppression du groupe.');
+  }
+
+  if (!payload.success) {
+    const detail = payload.message ?? 'La suppression du groupe a échoué.';
+    throw new Error(detail);
+  }
+}
+
+export async function fetchGroupsFromApi(): Promise<ApiGroupRecord[]> {
+  return fetchAllGroupsFromApi();
 }
 
 export async function fetchGroups(): Promise<GroupDefinition[]> {

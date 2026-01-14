@@ -8,6 +8,7 @@
       "Bash(move CmsModules.tsx Modules.tsx)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "includeCoAuthoredBy": false
   }
 }

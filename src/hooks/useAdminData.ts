@@ -10,12 +10,17 @@ import {
   createUser,
   updateUser,
   deleteUser,
+  fetchGroupsFromApi,
+  createGroupViaApi,
+  updateGroup,
+  deleteGroup,
   type UpdateUserAccessPayload,
   type UpdateModuleOverridePayload,
   type UserAccount,
   type PermissionOverride,
   type AuditLogEntry,
   type ApiUserRecord,
+  type ApiGroupRecord,
 } from '@/lib/adminApi';
 import { type GroupDefinition, type PermissionDefinition } from '@/lib/access-control';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -180,10 +185,57 @@ export function useDeleteUser(options?: { onSuccess?: () => void }) {
   });
 }
 
-export type { UserAccount, PermissionOverride, AuditLogEntry, ApiUserRecord };
+const GROUPS_API_QUERY_KEY = ['admin', 'groups-api'] as const;
+
+export function useGroupsFromApi() {
+  return useQuery<ApiGroupRecord[]>({
+    queryKey: GROUPS_API_QUERY_KEY,
+    queryFn: fetchGroupsFromApi,
+  });
+}
+
+export function useCreateGroupViaApi(options?: { onSuccess?: () => void }) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (groupData: Partial<ApiGroupRecord>) => createGroupViaApi(groupData),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: GROUPS_API_QUERY_KEY });
+      options?.onSuccess?.();
+    },
+  });
+}
+
+export function useUpdateGroupViaApi(options?: { onSuccess?: () => void }) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ groupId, updates }: { groupId: string; updates: Partial<ApiGroupRecord> }) =>
+      updateGroup(groupId, updates),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: GROUPS_API_QUERY_KEY });
+      options?.onSuccess?.();
+    },
+  });
+}
+
+export function useDeleteGroupViaApi(options?: { onSuccess?: () => void }) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (groupId: string) => deleteGroup(groupId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: GROUPS_API_QUERY_KEY });
+      options?.onSuccess?.();
+    },
+  });
+}
+
+export type { UserAccount, PermissionOverride, AuditLogEntry, ApiUserRecord, ApiGroupRecord };
 export {
   USERS_QUERY_KEY,
   GROUPS_QUERY_KEY,
+  GROUPS_API_QUERY_KEY,
   PERMISSIONS_QUERY_KEY,
   CURRENT_USER_QUERY_KEY,
   AUDIT_LOG_QUERY_KEY,
