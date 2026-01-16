@@ -148,19 +148,23 @@ export function CmsPermissionsSection({ userId }: CmsPermissionsSectionProps) {
         };
 
         (viewMatrix.MODULE || []).forEach((perm) => {
-          newPermissions.modules.set(perm.target, perm.canView);
+          const targetId = typeof perm.target === 'string' ? parseInt(perm.target, 10) : perm.target;
+          newPermissions.modules.set(targetId, perm.canView);
         });
 
         (viewMatrix.PAGE || []).forEach((perm) => {
-          newPermissions.pages.set(perm.target, perm.canView);
+          const targetId = typeof perm.target === 'string' ? parseInt(perm.target, 10) : perm.target;
+          newPermissions.pages.set(targetId, perm.canView);
         });
 
         (viewMatrix.BLOC || []).forEach((perm) => {
-          newPermissions.blocs.set(perm.target, perm.canView);
+          const targetId = typeof perm.target === 'string' ? parseInt(perm.target, 10) : perm.target;
+          newPermissions.blocs.set(targetId, perm.canView);
         });
 
         (viewMatrix.ELEMENT || []).forEach((perm) => {
-          newPermissions.elements.set(perm.target, perm.canView);
+          const targetId = typeof perm.target === 'string' ? parseInt(perm.target, 10) : perm.target;
+          newPermissions.elements.set(targetId, perm.canView);
         });
 
         setPermissions(newPermissions);

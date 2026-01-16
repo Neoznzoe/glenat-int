@@ -303,7 +303,7 @@ interface CmsElementListResponse {
 }
 
 interface ViewMatrixPermission {
-  target: number; // module ID, page ID, bloc ID, or element ID
+  target: string | number; // module ID, page ID, bloc ID, or element ID (API returns string)
   canView: boolean;
   source: 'USER' | 'GROUP';
 }
@@ -2433,8 +2433,12 @@ export async function fetchUserRights(userId: string): Promise<UserRightsRespons
 export async function fetchModulesWithPermissions(userRecordId?: string): Promise<CmsModuleRecord[]> {
   const modules = await fetchAllModulesFromCms();
 
+  console.debug('[fetchModulesWithPermissions] Called with userRecordId:', userRecordId);
+  console.debug('[fetchModulesWithPermissions] Total modules fetched:', modules.length);
+
   if (!userRecordId) {
     // Return all modules with canView=false by default
+    console.debug('[fetchModulesWithPermissions] No userRecordId, returning all modules');
     return modules;
   }
 
@@ -2442,13 +2446,23 @@ export async function fetchModulesWithPermissions(userRecordId?: string): Promis
     const viewMatrix = await fetchUserViewMatrix(userRecordId);
     const modulePermissions = new Map<number, boolean>();
 
-    // Build permission map from view matrix
+    // Build permission map from view matrix (convert target to number since API returns string)
     (viewMatrix.MODULE || []).forEach(perm => {
-      modulePermissions.set(perm.target, perm.canView);
+      const targetId = typeof perm.target === 'string' ? parseInt(perm.target, 10) : perm.target;
+      modulePermissions.set(targetId, perm.canView);
     });
 
+    console.debug('[fetchModulesWithPermissions] View matrix MODULE entries:', modulePermissions.size);
+
     // Filter modules based on permissions (only return those with canView=true)
-    return modules.filter(module => modulePermissions.get(module.moduleId) === true);
+    const filteredModules = modules.filter(module => {
+      const canView = modulePermissions.get(module.moduleId);
+      console.debug(`[fetchModulesWithPermissions] Module ${module.moduleId} "${module.moduleCode}": canView=${canView}`);
+      return canView === true;
+    });
+
+    console.debug('[fetchModulesWithPermissions] Filtered modules count:', filteredModules.length);
+    return filteredModules;
   } catch (error) {
     console.error('Error fetching user permissions, returning no modules:', error);
     return []; // Return empty if permissions can't be fetched
@@ -2470,9 +2484,10 @@ export async function fetchPagesWithPermissions(userRecordId?: string): Promise<
     const viewMatrix = await fetchUserViewMatrix(userRecordId);
     const pagePermissions = new Map<number, boolean>();
 
-    // Build permission map from view matrix
+    // Build permission map from view matrix (convert target to number since API returns string)
     (viewMatrix.PAGE || []).forEach(perm => {
-      pagePermissions.set(perm.target, perm.canView);
+      const targetId = typeof perm.target === 'string' ? parseInt(perm.target, 10) : perm.target;
+      pagePermissions.set(targetId, perm.canView);
     });
 
     // Filter pages based on permissions (only return those with canView=true)
@@ -2498,9 +2513,10 @@ export async function fetchBlocsWithPermissions(userRecordId?: string): Promise<
     const viewMatrix = await fetchUserViewMatrix(userRecordId);
     const blocPermissions = new Map<number, boolean>();
 
-    // Build permission map from view matrix
+    // Build permission map from view matrix (convert target to number since API returns string)
     (viewMatrix.BLOC || []).forEach(perm => {
-      blocPermissions.set(perm.target, perm.canView);
+      const targetId = typeof perm.target === 'string' ? parseInt(perm.target, 10) : perm.target;
+      blocPermissions.set(targetId, perm.canView);
     });
 
     // Filter blocs based on permissions (only return those with canView=true)
@@ -2526,9 +2542,10 @@ export async function fetchElementsWithPermissions(userRecordId?: string): Promi
     const viewMatrix = await fetchUserViewMatrix(userRecordId);
     const elementPermissions = new Map<number, boolean>();
 
-    // Build permission map from view matrix
+    // Build permission map from view matrix (convert target to number since API returns string)
     (viewMatrix.ELEMENT || []).forEach(perm => {
-      elementPermissions.set(perm.target, perm.canView);
+      const targetId = typeof perm.target === 'string' ? parseInt(perm.target, 10) : perm.target;
+      elementPermissions.set(targetId, perm.canView);
     });
 
     // Filter elements based on permissions (only return those with canView=true)

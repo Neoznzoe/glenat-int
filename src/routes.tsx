@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { type RouteDefinition, SecureRoutes } from '@/lib/secureRouting';
 
 import { Home } from './pages/Home';
+import { AccessDenied } from './pages/AccessDenied';
 const Emploi = lazy(() => import('./pages/Emploi'));
 const Calendar = lazy(() => import('./pages/Calendar'));
 const Services = lazy(() => import('./pages/services/Services'));
@@ -17,6 +18,7 @@ const BookDetails = lazy(() => import('./pages/catalogue/BookDetails'));
 
 export const ROUTES_CONFIG: RouteDefinition[] = [
   { path: '/', element: <Home /> },
+  { path: '/acces-refuse', element: <AccessDenied /> },
   { path: '/emploi', element: <Emploi /> },
   { path: '/agenda', element: <Calendar /> },
   { path: '/calendrier', element: <Navigate to="/agenda" replace /> },

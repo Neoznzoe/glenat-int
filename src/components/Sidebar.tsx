@@ -562,8 +562,11 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       console.debug("Identifiant utilisateur récupéré via l'API d'administration.");
     }
   }, [currentUserId, internalUserId]);
-  // Fetch CMS modules with user permissions
-  const { data: cmsModules } = useCmsModules(currentUser?.id);
+  // Fetch CMS modules with user permissions (use authenticated user's email for view-matrix API)
+  const authUserEmail = authUser?.mail || authUser?.userPrincipalName;
+  console.debug('[Sidebar] authUser email:', authUserEmail);
+  const { data: cmsModules, isLoading: loadingCmsModules } = useCmsModules(authUserEmail);
+  console.debug('[Sidebar] cmsModules:', cmsModules?.length, 'loading:', loadingCmsModules);
 
   const {
     data: moduleDefinitions,
@@ -618,8 +621,9 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
         return;
       }
 
-      // Build module path from moduleCode (e.g., "accueil" -> "/accueil")
-      const path = `/${module.moduleCode.toLowerCase()}`;
+      // Build module path from moduleCode (e.g., "accueil" -> "/accueil", "glenat doc" -> "/glenat-doc")
+      const normalizedCode = module.moduleCode.toLowerCase().replace(/\s+/g, '-');
+      const path = `/${normalizedCode}`;
 
       const id = module.moduleId.toString();
       const label = module.moduleName;
@@ -628,13 +632,19 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       // Try to resolve icon from module code
       const icon = resolveLucideIcon(module.moduleCode);
 
+      // Assign badge for specific modules (e.g., "emploi" gets the job count)
+      let badge: number | string | undefined;
+      if (normalizedCode === 'emploi' && jobCount !== undefined && jobCount > 0) {
+        badge = jobCount;
+      }
+
       const entry: SidebarModuleEntry = {
         id,
         label,
         path,
         permission: permissionKey,
         icon,
-        badge: undefined,
+        badge,
         order: index, // CMS modules should come in order from API
         section: undefined,
       };
@@ -643,7 +653,7 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     });
 
     return items;
-  }, [cmsModules]);
+  }, [cmsModules, jobCount]);
 
   const processedModules = useMemo(() => {
     if (!moduleDefinitions) {
