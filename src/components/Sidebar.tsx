@@ -11,7 +11,7 @@ import {
 } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoCompact from '../assets/logos/glenat/glenat_G.svg';
-import { useCurrentUser, useAdminGroups } from '@/hooks/useAdminData';
+import { useCurrentUser, useAdminGroups, useCmsModules } from '@/hooks/useAdminData';
 import { useSidebarModules } from '@/hooks/useModules';
 import { computeEffectivePermissions } from '@/lib/mockDb';
 import type { PermissionKey } from '@/lib/access-control';
@@ -562,6 +562,9 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       console.debug("Identifiant utilisateur récupéré via l'API d'administration.");
     }
   }, [currentUserId, internalUserId]);
+  // Fetch CMS modules with user permissions
+  const { data: cmsModules } = useCmsModules(currentUser?.id);
+
   const {
     data: moduleDefinitions,
     isLoading: loadingModules,
@@ -601,6 +604,46 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
     }
     return new Set(computeEffectivePermissions(currentUser, groups));
   }, [currentUser, groups]);
+
+  // Process CMS modules into sidebar entries
+  const processedCmsModules = useMemo(() => {
+    if (!cmsModules) {
+      return [];
+    }
+
+    const items: SidebarModuleEntry[] = [];
+
+    cmsModules.forEach((module, index) => {
+      if (!module.isActive) {
+        return;
+      }
+
+      // Build module path from moduleCode (e.g., "accueil" -> "/accueil")
+      const path = `/${module.moduleCode.toLowerCase()}`;
+
+      const id = module.moduleId.toString();
+      const label = module.moduleName;
+      const permissionKey = `module:${module.moduleId}` as PermissionKey;
+
+      // Try to resolve icon from module code
+      const icon = resolveLucideIcon(module.moduleCode);
+
+      const entry: SidebarModuleEntry = {
+        id,
+        label,
+        path,
+        permission: permissionKey,
+        icon,
+        badge: undefined,
+        order: index, // CMS modules should come in order from API
+        section: undefined,
+      };
+
+      items.push(entry);
+    });
+
+    return items;
+  }, [cmsModules]);
 
   const processedModules = useMemo(() => {
     if (!moduleDefinitions) {
@@ -695,12 +738,19 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
 
   const location = useDecryptedLocation();
 
-  const mainMenuItems = processedModules.filter(
-    (item) => !isAdministrationModule(item) && userCanAccess(item.permission),
-  );
-  const adminMenuItems = processedModules.filter(
-    (item) => isAdministrationModule(item) && userCanAccess(item.permission),
-  );
+  // Use CMS modules if available, otherwise fall back to old system
+  const modulesToUse = cmsModules && cmsModules.length > 0 ? processedCmsModules : processedModules;
+
+  // For CMS modules, no need to filter by userCanAccess since they're already filtered by permissions
+  const useCmsFiltering = cmsModules && cmsModules.length > 0;
+
+  const mainMenuItems = useCmsFiltering
+    ? modulesToUse.filter((item) => !isAdministrationModule(item))
+    : modulesToUse.filter((item) => !isAdministrationModule(item) && userCanAccess(item.permission));
+
+  const adminMenuItems = useCmsFiltering
+    ? modulesToUse.filter((item) => isAdministrationModule(item))
+    : modulesToUse.filter((item) => isAdministrationModule(item) && userCanAccess(item.permission));
 
   const moduleErrorMessage =
     hasModuleError && moduleError

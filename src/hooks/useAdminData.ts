@@ -14,6 +14,14 @@ import {
   createGroupViaApi,
   updateGroup,
   deleteGroup,
+  fetchModulesWithPermissions,
+  fetchPagesWithPermissions,
+  fetchBlocsWithPermissions,
+  fetchElementsWithPermissions,
+  fetchUserGroups,
+  fetchUserRights,
+  updateUserViewRights,
+  updateUserGroups,
   type UpdateUserAccessPayload,
   type UpdateModuleOverridePayload,
   type UserAccount,
@@ -21,6 +29,8 @@ import {
   type AuditLogEntry,
   type ApiUserRecord,
   type ApiGroupRecord,
+  type CmsBlocRecord,
+  type CmsElementRecord,
 } from '@/lib/adminApi';
 import { type GroupDefinition, type PermissionDefinition } from '@/lib/access-control';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -231,7 +241,90 @@ export function useDeleteGroupViaApi(options?: { onSuccess?: () => void }) {
   });
 }
 
-export type { UserAccount, PermissionOverride, AuditLogEntry, ApiUserRecord, ApiGroupRecord };
+const CMS_MODULES_QUERY_KEY = ['cms', 'modules'] as const;
+const CMS_PAGES_QUERY_KEY = ['cms', 'pages'] as const;
+const CMS_BLOCS_QUERY_KEY = ['cms', 'blocs'] as const;
+const CMS_ELEMENTS_QUERY_KEY = ['cms', 'elements'] as const;
+const USER_GROUPS_QUERY_KEY = ['user', 'groups'] as const;
+const USER_RIGHTS_QUERY_KEY = ['user', 'rights'] as const;
+
+export function useCmsModules(userRecordId?: string) {
+  return useQuery({
+    queryKey: [...CMS_MODULES_QUERY_KEY, userRecordId],
+    queryFn: () => fetchModulesWithPermissions(userRecordId),
+    enabled: !!userRecordId, // Only fetch if we have a user ID
+  });
+}
+
+export function useCmsPages(userRecordId?: string) {
+  return useQuery({
+    queryKey: [...CMS_PAGES_QUERY_KEY, userRecordId],
+    queryFn: () => fetchPagesWithPermissions(userRecordId),
+    enabled: !!userRecordId, // Only fetch if we have a user ID
+  });
+}
+
+export function useCmsBlocs(userRecordId?: string) {
+  return useQuery({
+    queryKey: [...CMS_BLOCS_QUERY_KEY, userRecordId],
+    queryFn: () => fetchBlocsWithPermissions(userRecordId),
+    enabled: !!userRecordId, // Only fetch if we have a user ID
+  });
+}
+
+export function useCmsElements(userRecordId?: string) {
+  return useQuery({
+    queryKey: [...CMS_ELEMENTS_QUERY_KEY, userRecordId],
+    queryFn: () => fetchElementsWithPermissions(userRecordId),
+    enabled: !!userRecordId, // Only fetch if we have a user ID
+  });
+}
+
+export function useUserGroups(userRecordId?: string) {
+  return useQuery({
+    queryKey: [...USER_GROUPS_QUERY_KEY, userRecordId],
+    queryFn: () => fetchUserGroups(userRecordId!),
+    enabled: !!userRecordId, // Only fetch if we have a user ID
+  });
+}
+
+export function useUserRights(userId?: string) {
+  return useQuery({
+    queryKey: [...USER_RIGHTS_QUERY_KEY, userId],
+    queryFn: () => fetchUserRights(userId!),
+    enabled: !!userId, // Only fetch if we have a user ID
+  });
+}
+
+export function useUpdateViewRights() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ userId, rights }: { userId: string; rights: Array<{ ViewRightTypeCode: 'PAGE' | 'MODULE' | 'BLOC' | 'ELEMENT'; TargetObjectId: number; CanView: boolean }> }) =>
+      updateUserViewRights(userId, rights),
+    onSuccess: async (_data, variables) => {
+      // Invalidate user rights query for this user
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [...USER_RIGHTS_QUERY_KEY, variables.userId] }),
+      ]);
+    },
+  });
+}
+
+export function useUpdateUserGroups() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ userId, groupIds }: { userId: string; groupIds: number[] }) =>
+      updateUserGroups(userId, groupIds),
+    onSuccess: async (_data, _variables) => {
+      // Invalidate user groups queries to refetch updated groups
+      await queryClient.invalidateQueries({ queryKey: USER_GROUPS_QUERY_KEY });
+    },
+  });
+}
+
+export type { UserAccount, PermissionOverride, AuditLogEntry, ApiUserRecord, ApiGroupRecord, CmsBlocRecord, CmsElementRecord };
 export {
   USERS_QUERY_KEY,
   GROUPS_QUERY_KEY,
@@ -239,4 +332,9 @@ export {
   PERMISSIONS_QUERY_KEY,
   CURRENT_USER_QUERY_KEY,
   AUDIT_LOG_QUERY_KEY,
+  CMS_MODULES_QUERY_KEY,
+  CMS_PAGES_QUERY_KEY,
+  CMS_BLOCS_QUERY_KEY,
+  CMS_ELEMENTS_QUERY_KEY,
+  USER_GROUPS_QUERY_KEY,
 };

@@ -30,6 +30,17 @@ const GROUP_API_ENDPOINT =
   import.meta.env.VITE_GROUP_API_ENDPOINT ??
   'https://api-dev.groupe-glenat.com/Api/v2.0/User/group';
 
+const CMS_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ??
+  'https://api-dev.groupe-glenat.com';
+
+const CMS_MODULE_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/Cms/module`;
+const CMS_PAGE_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/Cms/page`;
+const CMS_BLOC_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/Cms/bloc`;
+const CMS_ELEMENT_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/Cms/element`;
+const USER_VIEW_MATRIX_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/User/user`;
+const USER_GROUP_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/User/group`;
+
 const ADMIN_MODULES_QUERY = 'SET NOCOUNT ON;\nSELECT * FROM [modules];';
 const ADMIN_PAGES_QUERY = 'SELECT * FROM [pages];';
 const ADMIN_MODULE_PAGES_QUERY = 'SELECT * FROM [modulesPages];';
@@ -135,6 +146,232 @@ interface GroupApiResponse {
   message: string;
   group?: ApiGroupRecord;
   groupBaseInfos?: ApiGroupRecord;
+}
+
+// API response format (PascalCase from API)
+interface ApiCmsModuleRecord {
+  ModuleId: number | string;
+  ZoneId?: number | string;
+  ModuleCode: string;
+  ModuleName: string;
+  SupportMultilingual?: boolean;
+  IsActive: boolean;
+  CreatedAt?: string;
+  CreatedBy?: string;
+}
+
+// Normalized format (camelCase for frontend use)
+interface CmsModuleRecord {
+  moduleId: number;
+  zoneId?: number;
+  moduleCode: string;
+  moduleName: string;
+  supportMultilingual?: boolean;
+  isActive: boolean;
+  createdAt?: string;
+  createdBy?: string;
+}
+
+interface CmsModuleListResponse {
+  success?: boolean;
+  code?: number;
+  message?: string;
+  modules: ApiCmsModuleRecord[];
+  pagination: {
+    page: number;
+    perPage: number;
+    total: number;
+    pages: number;
+  };
+}
+
+// API response format (PascalCase from API)
+interface ApiCmsPageRecord {
+  PageId: number | string;
+  ModuleId: number | string;
+  PageCode: string;
+  PageName: string;
+  Slug?: string;
+  IsPublished: number | boolean;
+  RequiresAuthentication?: number | boolean;
+  CreatedAt?: string;
+  CreatedBy?: string;
+}
+
+// Normalized format (camelCase for frontend use)
+interface CmsPageRecord {
+  pageId: number;
+  moduleId: number;
+  pageCode: string;
+  pageName: string;
+  slug?: string;
+  isPublished: boolean;
+  requiresAuthentication?: boolean;
+  createdAt?: string;
+  createdBy?: string;
+}
+
+interface CmsPageListResponse {
+  success?: boolean;
+  code?: number;
+  message?: string;
+  pages: ApiCmsPageRecord[];
+  pagination: {
+    page: number;
+    perPage: number;
+    total: number;
+    pages: number;
+  };
+}
+
+// API response format for blocs (PascalCase from API)
+interface ApiCmsBlocRecord {
+  BlocId: number | string;
+  PageId: number | string;
+  BlocCode: string;
+  BlocName: string;
+  BlocType?: string;
+  DisplayOrder?: number | string;
+  IsActive: boolean | number;
+  CreatedAt?: string;
+  CreatedBy?: string;
+}
+
+// Normalized format for blocs (camelCase for frontend use)
+interface CmsBlocRecord {
+  blocId: number;
+  pageId: number;
+  blocCode: string;
+  blocName: string;
+  blocType?: string;
+  displayOrder?: number;
+  isActive: boolean;
+  createdAt?: string;
+  createdBy?: string;
+}
+
+interface CmsBlocListResponse {
+  success?: boolean;
+  code?: number;
+  message?: string;
+  blocs: ApiCmsBlocRecord[];
+  pagination: {
+    page: number;
+    perPage: number;
+    total: number;
+    pages: number;
+  };
+}
+
+// API response format for elements (PascalCase from API)
+interface ApiCmsElementRecord {
+  ElementId: number | string;
+  BlocId: number | string;
+  ElementCode: string;
+  ElementName: string;
+  ElementType?: string;
+  DisplayOrder?: number | string;
+  IsActive: boolean | number;
+  CreatedAt?: string;
+  CreatedBy?: string;
+}
+
+// Normalized format for elements (camelCase for frontend use)
+interface CmsElementRecord {
+  elementId: number;
+  blocId: number;
+  elementCode: string;
+  elementName: string;
+  elementType?: string;
+  displayOrder?: number;
+  isActive: boolean;
+  createdAt?: string;
+  createdBy?: string;
+}
+
+interface CmsElementListResponse {
+  success?: boolean;
+  code?: number;
+  message?: string;
+  elements: ApiCmsElementRecord[];
+  pagination: {
+    page: number;
+    perPage: number;
+    total: number;
+    pages: number;
+  };
+}
+
+interface ViewMatrixPermission {
+  target: number; // module ID, page ID, bloc ID, or element ID
+  canView: boolean;
+  source: 'USER' | 'GROUP';
+}
+
+interface UserViewMatrixResponse {
+  success: boolean;
+  code: number;
+  message: string;
+  matrix: {
+    PAGE?: ViewMatrixPermission[];
+    MODULE?: ViewMatrixPermission[];
+    BLOC?: ViewMatrixPermission[];
+    ELEMENT?: ViewMatrixPermission[];
+  };
+}
+
+export interface UserRightPermission {
+  target: number;
+  canView: boolean;
+  inherited: boolean; // true if from group, false if explicit user override
+}
+
+// Raw API response format for user rights
+interface ApiUserRightRecord {
+  UserRecordId?: string;
+  UserGroupId?: string;
+  ViewRightTypeCode: 'PAGE' | 'MODULE' | 'BLOC' | 'ELEMENT';
+  TargetObjectId: string | number;
+  CanView: number | boolean;
+  ResolvedFrom: 'USER' | 'GROUP';
+}
+
+interface ApiUserRightsResponse {
+  success: boolean;
+  code: number;
+  message: string;
+  userRights?: ApiUserRightRecord[];
+  userBaseRights?: ApiUserRightRecord[];
+  userGroupsRights?: ApiUserRightRecord[];
+}
+
+// Normalized response format for frontend use
+export interface UserRightsResponse {
+  success: boolean;
+  code: number;
+  message: string;
+  rights: {
+    PAGE?: UserRightPermission[];
+    MODULE?: UserRightPermission[];
+    BLOC?: UserRightPermission[];
+    ELEMENT?: UserRightPermission[];
+  };
+}
+
+interface ViewRightUpdate {
+  ViewRightTypeCode: 'PAGE' | 'MODULE' | 'BLOC' | 'ELEMENT';
+  TargetObjectId: number;
+  CanView: boolean;
+}
+
+interface UpdateViewRightsPayload {
+  rights: ViewRightUpdate[];
+}
+
+interface UpdateViewRightsResponse {
+  success: boolean;
+  code: number;
+  message: string;
 }
 
 type RawDatabaseUserRecord = Record<string, unknown>;
@@ -1821,6 +2058,640 @@ export async function fetchGroupsFromApi(): Promise<ApiGroupRecord[]> {
   return fetchAllGroupsFromApi();
 }
 
+/**
+ * Fetches all modules from CMS API
+ */
+// Helper function to normalize API module record to frontend format
+function normalizeModuleRecord(apiRecord: ApiCmsModuleRecord): CmsModuleRecord {
+  return {
+    moduleId: typeof apiRecord.ModuleId === 'string' ? parseInt(apiRecord.ModuleId, 10) : apiRecord.ModuleId,
+    zoneId: apiRecord.ZoneId != null
+      ? (typeof apiRecord.ZoneId === 'string' ? parseInt(apiRecord.ZoneId, 10) : apiRecord.ZoneId)
+      : undefined,
+    moduleCode: apiRecord.ModuleCode,
+    moduleName: apiRecord.ModuleName,
+    supportMultilingual: apiRecord.SupportMultilingual,
+    isActive: apiRecord.IsActive,
+    createdAt: apiRecord.CreatedAt,
+    createdBy: apiRecord.CreatedBy,
+  };
+}
+
+export async function fetchAllModulesFromCms(): Promise<CmsModuleRecord[]> {
+  const allModules: CmsModuleRecord[] = [];
+  let currentPage = 1;
+  let totalPages = 1;
+
+  while (currentPage <= totalPages) {
+    const url = `${CMS_MODULE_ENDPOINT}?page=${currentPage}&per_page=50`;
+
+    let response: Response;
+    try {
+      response = await fetchWithOAuth(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+      throw new Error(`Impossible de contacter l'API CMS Module : ${detail}`);
+    }
+
+    if (!response.ok) {
+      throw new Error(`Requête API CMS Module échouée (${response.status}) ${response.statusText}`);
+    }
+
+    let payload: CmsModuleListResponse;
+    try {
+      payload = (await response.json()) as CmsModuleListResponse;
+    } catch {
+      throw new Error('Réponse inattendue lors de la récupération des modules CMS.');
+    }
+
+    // Normalize API records to camelCase format
+    const normalizedModules = (payload.modules || []).map(normalizeModuleRecord);
+    allModules.push(...normalizedModules);
+    totalPages = payload.pagination?.pages || 1;
+    currentPage += 1;
+  }
+
+  return allModules;
+}
+
+// Helper function to normalize API page record to frontend format
+function normalizePageRecord(apiRecord: ApiCmsPageRecord): CmsPageRecord {
+  return {
+    pageId: typeof apiRecord.PageId === 'string' ? parseInt(apiRecord.PageId, 10) : apiRecord.PageId,
+    moduleId: typeof apiRecord.ModuleId === 'string' ? parseInt(apiRecord.ModuleId, 10) : apiRecord.ModuleId,
+    pageCode: apiRecord.PageCode,
+    pageName: apiRecord.PageName,
+    slug: apiRecord.Slug,
+    isPublished: apiRecord.IsPublished === 1 || apiRecord.IsPublished === true,
+    requiresAuthentication: apiRecord.RequiresAuthentication === 1 || apiRecord.RequiresAuthentication === true,
+    createdAt: apiRecord.CreatedAt,
+    createdBy: apiRecord.CreatedBy,
+  };
+}
+
+/**
+ * Fetches all pages from CMS API
+ */
+export async function fetchAllPagesFromCms(): Promise<CmsPageRecord[]> {
+  const allPages: CmsPageRecord[] = [];
+  let currentPage = 1;
+  let totalPages = 1;
+
+  while (currentPage <= totalPages) {
+    const url = `${CMS_PAGE_ENDPOINT}?page=${currentPage}&per_page=50`;
+
+    let response: Response;
+    try {
+      response = await fetchWithOAuth(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+      throw new Error(`Impossible de contacter l'API CMS Page : ${detail}`);
+    }
+
+    if (!response.ok) {
+      throw new Error(`Requête API CMS Page échouée (${response.status}) ${response.statusText}`);
+    }
+
+    let payload: CmsPageListResponse;
+    try {
+      payload = (await response.json()) as CmsPageListResponse;
+    } catch {
+      throw new Error('Réponse inattendue lors de la récupération des pages CMS.');
+    }
+
+    // Normalize API records to camelCase format
+    const normalizedPages = (payload.pages || []).map(normalizePageRecord);
+    allPages.push(...normalizedPages);
+    totalPages = payload.pagination?.pages || 1;
+    currentPage += 1;
+  }
+
+  return allPages;
+}
+
+// Helper function to normalize API bloc record to frontend format
+function normalizeBlocRecord(apiRecord: ApiCmsBlocRecord): CmsBlocRecord {
+  return {
+    blocId: typeof apiRecord.BlocId === 'string' ? parseInt(apiRecord.BlocId, 10) : apiRecord.BlocId,
+    pageId: typeof apiRecord.PageId === 'string' ? parseInt(apiRecord.PageId, 10) : apiRecord.PageId,
+    blocCode: apiRecord.BlocCode,
+    blocName: apiRecord.BlocName,
+    blocType: apiRecord.BlocType,
+    displayOrder: apiRecord.DisplayOrder != null
+      ? (typeof apiRecord.DisplayOrder === 'string' ? parseInt(apiRecord.DisplayOrder, 10) : apiRecord.DisplayOrder)
+      : undefined,
+    isActive: apiRecord.IsActive === 1 || apiRecord.IsActive === true,
+    createdAt: apiRecord.CreatedAt,
+    createdBy: apiRecord.CreatedBy,
+  };
+}
+
+// Helper function to normalize API element record to frontend format
+function normalizeElementRecord(apiRecord: ApiCmsElementRecord): CmsElementRecord {
+  return {
+    elementId: typeof apiRecord.ElementId === 'string' ? parseInt(apiRecord.ElementId, 10) : apiRecord.ElementId,
+    blocId: typeof apiRecord.BlocId === 'string' ? parseInt(apiRecord.BlocId, 10) : apiRecord.BlocId,
+    elementCode: apiRecord.ElementCode,
+    elementName: apiRecord.ElementName,
+    elementType: apiRecord.ElementType,
+    displayOrder: apiRecord.DisplayOrder != null
+      ? (typeof apiRecord.DisplayOrder === 'string' ? parseInt(apiRecord.DisplayOrder, 10) : apiRecord.DisplayOrder)
+      : undefined,
+    isActive: apiRecord.IsActive === 1 || apiRecord.IsActive === true,
+    createdAt: apiRecord.CreatedAt,
+    createdBy: apiRecord.CreatedBy,
+  };
+}
+
+/**
+ * Fetches all blocs from CMS (paginated)
+ */
+export async function fetchAllBlocsFromCms(): Promise<CmsBlocRecord[]> {
+  const allBlocs: CmsBlocRecord[] = [];
+  let currentPage = 1;
+  let hasMorePages = true;
+
+  while (hasMorePages) {
+    try {
+      const url = `${CMS_BLOC_ENDPOINT}?page=${currentPage}&per_page=50`;
+
+      const response = await fetchWithOAuth(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.warn(`Failed to fetch blocs page ${currentPage}: ${response.status}`);
+        break;
+      }
+
+      const data = (await response.json()) as CmsBlocListResponse;
+
+      if (data.blocs && Array.isArray(data.blocs)) {
+        const normalizedBlocs = data.blocs.map(normalizeBlocRecord);
+        allBlocs.push(...normalizedBlocs);
+      }
+
+      // Check if there are more pages
+      if (data.pagination && currentPage < data.pagination.pages) {
+        currentPage++;
+      } else {
+        hasMorePages = false;
+      }
+    } catch (error) {
+      console.error(`Error fetching blocs page ${currentPage}:`, error);
+      hasMorePages = false;
+    }
+  }
+
+  return allBlocs;
+}
+
+/**
+ * Fetches all elements from CMS (paginated)
+ */
+export async function fetchAllElementsFromCms(): Promise<CmsElementRecord[]> {
+  const allElements: CmsElementRecord[] = [];
+  let currentPage = 1;
+  let hasMorePages = true;
+
+  while (hasMorePages) {
+    try {
+      const url = `${CMS_ELEMENT_ENDPOINT}?page=${currentPage}&per_page=50`;
+
+      const response = await fetchWithOAuth(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.warn(`Failed to fetch elements page ${currentPage}: ${response.status}`);
+        break;
+      }
+
+      const data = (await response.json()) as CmsElementListResponse;
+
+      if (data.elements && Array.isArray(data.elements)) {
+        const normalizedElements = data.elements.map(normalizeElementRecord);
+        allElements.push(...normalizedElements);
+      }
+
+      // Check if there are more pages
+      if (data.pagination && currentPage < data.pagination.pages) {
+        currentPage++;
+      } else {
+        hasMorePages = false;
+      }
+    } catch (error) {
+      console.error(`Error fetching elements page ${currentPage}:`, error);
+      hasMorePages = false;
+    }
+  }
+
+  return allElements;
+}
+
+/**
+ * Fetches the view matrix for a specific user
+ */
+export async function fetchUserViewMatrix(userRecordId: string): Promise<UserViewMatrixResponse['matrix']> {
+  const url = `${USER_VIEW_MATRIX_ENDPOINT}/${encodeURIComponent(userRecordId)}/view-matrix`;
+
+  let response: Response;
+  try {
+    response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+    throw new Error(`Impossible de contacter l'API View Matrix : ${detail}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`Requête API View Matrix échouée (${response.status}) ${response.statusText}`);
+  }
+
+  let payload: UserViewMatrixResponse;
+  try {
+    payload = (await response.json()) as UserViewMatrixResponse;
+  } catch {
+    throw new Error('Réponse inattendue lors de la récupération de la view matrix.');
+  }
+
+  if (!payload.success) {
+    const detail = payload.message ?? 'La récupération de la view matrix a échoué.';
+    throw new Error(detail);
+  }
+
+  return payload.matrix;
+}
+
+/**
+ * Fetches the user rights (permissions) for a specific user
+ * @param userId The UserId (username/email like "nicolas.merceur@glenat.com"), NOT the numeric userRecordId
+ */
+export async function fetchUserRights(userId: string): Promise<UserRightsResponse['rights']> {
+  const url = `${USER_VIEW_MATRIX_ENDPOINT}/${encodeURIComponent(userId)}/rights`;
+
+  let response: Response;
+  try {
+    response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+    throw new Error(`Impossible de contacter l'API User Rights : ${detail}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`Requête API User Rights échouée (${response.status}) ${response.statusText}`);
+  }
+
+  let payload: ApiUserRightsResponse;
+  try {
+    payload = (await response.json()) as ApiUserRightsResponse;
+  } catch {
+    throw new Error('Réponse inattendue lors de la récupération des droits utilisateur.');
+  }
+
+  if (!payload.success) {
+    const detail = payload.message ?? 'La récupération des droits utilisateur a échoué.';
+    throw new Error(detail);
+  }
+
+  // Transform API response to normalized format
+  const rights: UserRightsResponse['rights'] = {
+    MODULE: [],
+    PAGE: [],
+    BLOC: [],
+    ELEMENT: [],
+  };
+
+  // Helper to add a right to the appropriate array
+  const addRight = (record: ApiUserRightRecord) => {
+    const targetId = typeof record.TargetObjectId === 'string'
+      ? parseInt(record.TargetObjectId, 10)
+      : record.TargetObjectId;
+    const canView = record.CanView === 1 || record.CanView === true;
+    const inherited = record.ResolvedFrom === 'GROUP';
+
+    const permission: UserRightPermission = {
+      target: targetId,
+      canView,
+      inherited,
+    };
+
+    const typeCode = record.ViewRightTypeCode;
+    if (typeCode === 'MODULE' || typeCode === 'PAGE' || typeCode === 'BLOC' || typeCode === 'ELEMENT') {
+      rights[typeCode]!.push(permission);
+    }
+  };
+
+  // Process user direct rights (not inherited)
+  (payload.userRights || []).forEach(addRight);
+
+  // Process group inherited rights (only if not already set by user)
+  (payload.userGroupsRights || []).forEach((record) => {
+    const targetId = typeof record.TargetObjectId === 'string'
+      ? parseInt(record.TargetObjectId, 10)
+      : record.TargetObjectId;
+    const typeCode = record.ViewRightTypeCode;
+
+    // Check if user already has an explicit right for this target
+    const existingRight = rights[typeCode]?.find(r => r.target === targetId);
+    if (!existingRight) {
+      addRight(record);
+    }
+  });
+
+  return rights;
+}
+
+/**
+ * Fetches modules from CMS with permissions for a specific user
+ */
+export async function fetchModulesWithPermissions(userRecordId?: string): Promise<CmsModuleRecord[]> {
+  const modules = await fetchAllModulesFromCms();
+
+  if (!userRecordId) {
+    // Return all modules with canView=false by default
+    return modules;
+  }
+
+  try {
+    const viewMatrix = await fetchUserViewMatrix(userRecordId);
+    const modulePermissions = new Map<number, boolean>();
+
+    // Build permission map from view matrix
+    (viewMatrix.MODULE || []).forEach(perm => {
+      modulePermissions.set(perm.target, perm.canView);
+    });
+
+    // Filter modules based on permissions (only return those with canView=true)
+    return modules.filter(module => modulePermissions.get(module.moduleId) === true);
+  } catch (error) {
+    console.error('Error fetching user permissions, returning no modules:', error);
+    return []; // Return empty if permissions can't be fetched
+  }
+}
+
+/**
+ * Fetches pages from CMS with permissions for a specific user
+ */
+export async function fetchPagesWithPermissions(userRecordId?: string): Promise<CmsPageRecord[]> {
+  const pages = await fetchAllPagesFromCms();
+
+  if (!userRecordId) {
+    // Return all pages with canView=false by default
+    return pages;
+  }
+
+  try {
+    const viewMatrix = await fetchUserViewMatrix(userRecordId);
+    const pagePermissions = new Map<number, boolean>();
+
+    // Build permission map from view matrix
+    (viewMatrix.PAGE || []).forEach(perm => {
+      pagePermissions.set(perm.target, perm.canView);
+    });
+
+    // Filter pages based on permissions (only return those with canView=true)
+    return pages.filter(page => pagePermissions.get(page.pageId) === true);
+  } catch (error) {
+    console.error('Error fetching user permissions, returning no pages:', error);
+    return []; // Return empty if permissions can't be fetched
+  }
+}
+
+/**
+ * Fetches blocs from CMS with permissions for a specific user
+ */
+export async function fetchBlocsWithPermissions(userRecordId?: string): Promise<CmsBlocRecord[]> {
+  const blocs = await fetchAllBlocsFromCms();
+
+  if (!userRecordId) {
+    // Return all blocs with canView=false by default
+    return blocs;
+  }
+
+  try {
+    const viewMatrix = await fetchUserViewMatrix(userRecordId);
+    const blocPermissions = new Map<number, boolean>();
+
+    // Build permission map from view matrix
+    (viewMatrix.BLOC || []).forEach(perm => {
+      blocPermissions.set(perm.target, perm.canView);
+    });
+
+    // Filter blocs based on permissions (only return those with canView=true)
+    return blocs.filter(bloc => blocPermissions.get(bloc.blocId) === true);
+  } catch (error) {
+    console.error('Error fetching user permissions, returning no blocs:', error);
+    return []; // Return empty if permissions can't be fetched
+  }
+}
+
+/**
+ * Fetches elements from CMS with permissions for a specific user
+ */
+export async function fetchElementsWithPermissions(userRecordId?: string): Promise<CmsElementRecord[]> {
+  const elements = await fetchAllElementsFromCms();
+
+  if (!userRecordId) {
+    // Return all elements with canView=false by default
+    return elements;
+  }
+
+  try {
+    const viewMatrix = await fetchUserViewMatrix(userRecordId);
+    const elementPermissions = new Map<number, boolean>();
+
+    // Build permission map from view matrix
+    (viewMatrix.ELEMENT || []).forEach(perm => {
+      elementPermissions.set(perm.target, perm.canView);
+    });
+
+    // Filter elements based on permissions (only return those with canView=true)
+    return elements.filter(element => elementPermissions.get(element.elementId) === true);
+  } catch (error) {
+    console.error('Error fetching user permissions, returning no elements:', error);
+    return []; // Return empty if permissions can't be fetched
+  }
+}
+
+/**
+ * Fetches the groups for a specific user from the API
+ */
+export async function fetchUserGroups(userRecordId: string): Promise<ApiGroupRecord[]> {
+  const url = `${USER_GROUP_ENDPOINT}?userId=${encodeURIComponent(userRecordId)}`;
+
+  let response: Response;
+  try {
+    response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+    throw new Error(`Impossible de contacter l'API des groupes : ${detail}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`Requête API des groupes échouée (${response.status}) ${response.statusText}`);
+  }
+
+  let payload: GroupApiListResponse;
+  try {
+    payload = (await response.json()) as GroupApiListResponse;
+  } catch {
+    throw new Error('Réponse inattendue lors de la récupération des groupes.');
+  }
+
+  if (!payload.success) {
+    const detail = payload.message ?? 'La récupération des groupes a échoué.';
+    throw new Error(detail);
+  }
+
+  return payload.groups.map(sanitizeApiGroupRecord);
+}
+
+/**
+ * Updates view rights (permissions) for a specific user
+ */
+/**
+ * Updates user view rights via the API
+ * @param userId The UserId (username/email like "nicolas.merceur@glenat.com"), NOT the numeric userRecordId
+ * @param rights Array of view rights to update
+ */
+export async function updateUserViewRights(
+  userId: string,
+  rights: ViewRightUpdate[]
+): Promise<void> {
+  const url = `${USER_VIEW_MATRIX_ENDPOINT}/${encodeURIComponent(userId)}/view-rights`;
+
+  const payload: UpdateViewRightsPayload = { rights };
+
+  let response: Response;
+  try {
+    response = await fetchWithOAuth(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+    throw new Error(`Impossible de contacter l'API View Rights : ${detail}`);
+  }
+
+  if (!response.ok) {
+    let errorDetail = response.statusText;
+    try {
+      const errorData = await response.json();
+      errorDetail = errorData.message || errorData.error || errorDetail;
+    } catch {
+      // Ignore JSON parse errors
+    }
+    throw new Error(`Requête API View Rights échouée (${response.status}): ${errorDetail}`);
+  }
+
+  let result: UpdateViewRightsResponse;
+  try {
+    result = (await response.json()) as UpdateViewRightsResponse;
+  } catch {
+    throw new Error('Réponse inattendue lors de la mise à jour des droits.');
+  }
+
+  if (!result.success) {
+    const detail = result.message ?? 'La mise à jour des droits a échoué.';
+    throw new Error(detail);
+  }
+}
+
+interface UpdateUserGroupsPayload {
+  groupIds: number[];
+}
+
+interface UpdateUserGroupsResponse {
+  success: boolean;
+  code: number;
+  message: string;
+}
+
+/**
+ * Updates user group memberships via the API
+ * @param userId The UserId (username/email like "nicolas.merceur@glenat.com")
+ * @param groupIds Array of group IDs the user should belong to
+ */
+export async function updateUserGroups(
+  userId: string,
+  groupIds: number[]
+): Promise<void> {
+  const url = `${USER_VIEW_MATRIX_ENDPOINT}/${encodeURIComponent(userId)}/groups`;
+
+  const payload: UpdateUserGroupsPayload = { groupIds };
+
+  let response: Response;
+  try {
+    response = await fetchWithOAuth(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
+    throw new Error(`Impossible de contacter l'API User Groups : ${detail}`);
+  }
+
+  if (!response.ok) {
+    let errorDetail = response.statusText;
+    try {
+      const errorData = await response.json();
+      errorDetail = errorData.message || errorData.error || errorDetail;
+    } catch {
+      // Ignore JSON parse errors
+    }
+    throw new Error(`Requête API User Groups échouée (${response.status}): ${errorDetail}`);
+  }
+
+  let result: UpdateUserGroupsResponse;
+  try {
+    result = (await response.json()) as UpdateUserGroupsResponse;
+  } catch {
+    throw new Error('Réponse inattendue lors de la mise à jour des groupes.');
+  }
+
+  if (!result.success) {
+    const detail = result.message ?? 'La mise à jour des groupes a échoué.';
+    throw new Error(detail);
+  }
+}
+
 export async function fetchGroups(): Promise<GroupDefinition[]> {
   const groupRecords = await runDatabaseQuery(ADMIN_GROUPS_QUERY, 'groupes');
 
@@ -2234,4 +3105,9 @@ export type {
   PermissionOverride,
   AuditLogEntry,
   UpdateUserAccessPayload,
+  ViewRightUpdate,
+  CmsModuleRecord,
+  CmsPageRecord,
+  CmsBlocRecord,
+  CmsElementRecord,
 };
