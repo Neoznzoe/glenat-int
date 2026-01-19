@@ -839,11 +839,49 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
             <ul className="space-y-1">
               {mainMenuItems.map((item) => {
                 const isInternalLink = item.path.startsWith('/');
+                const isHomePage = item.path === '/' || item.path === '/accueil';
                 const isActive = isInternalLink
                   ? item.path === '/'
-                    ? location.pathname === '/'
+                    ? location.pathname === '/' || location.pathname === ''
                     : location.pathname.startsWith(item.path)
                   : false;
+
+                // Special case for home page: redirect to root without hash
+                if (isHomePage) {
+                  return (
+                    <li key={item.id}>
+                      <a
+                        href={window.location.origin}
+                        className={`relative flex items-center w-full px-2 py-2 rounded-lg transition-all duration-300 group ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : 'text-red-100 hover:bg-white/10 hover:text-white'
+                        } ${isExpanded ? 'space-x-3' : 'justify-center'}`}
+                        title={!isExpanded ? item.label : ''}
+                      >
+                        {item.icon ? (
+                          <item.icon className="h-5 w-5 flex-shrink-0" />
+                        ) : (
+                          <span className="h-5 w-5 flex-shrink-0 flex items-center justify-center rounded-full bg-white/20 text-xs font-semibold uppercase">
+                            {item.label.charAt(0)}
+                          </span>
+                        )}
+                        <span
+                          className={`font-medium transition-all duration-300 whitespace-nowrap ${
+                            isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
+                          }`}
+                        >
+                          {item.label}
+                        </span>
+                        {item.badge !== undefined ? (
+                          <span className="absolute -top-[6px] -right-[6px] bg-white text-primary text-xs font-bold rounded-full px-1 min-h-[20px] min-w-[20px] flex items-center justify-center">
+                            {item.badge}
+                          </span>
+                        ) : null}
+                      </a>
+                    </li>
+                  );
+                }
 
                 return (
                   <li key={item.id}>

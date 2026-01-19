@@ -6,6 +6,10 @@ interface AccessDeniedState {
   from?: string;
   moduleName?: string;
   moduleCode?: string;
+  pageName?: string;
+  pageCode?: string;
+  isPageRestriction?: boolean;
+  displayName?: string;
 }
 
 /**
@@ -16,7 +20,7 @@ export function AccessDenied() {
   const navigate = useNavigate();
   const state = (location.state as AccessDeniedState) || {};
 
-  const { moduleName = 'cette page' } = state;
+  const { displayName = 'cette page', isPageRestriction, moduleName } = state;
 
   return (
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col items-center justify-center px-4">
@@ -28,7 +32,12 @@ export function AccessDenied() {
         <h1 className="text-2xl font-semibold mb-2">Acces refuse</h1>
 
         <p className="text-muted-foreground mb-6">
-          Vous n'avez pas les droits necessaires pour acceder a {moduleName}.
+          Vous n'avez pas les droits necessaires pour acceder a {isPageRestriction ? `la page "${displayName}"` : displayName}.
+          {isPageRestriction && moduleName && (
+            <span className="block mt-1 text-sm">
+              (Module : {moduleName})
+            </span>
+          )}
         </p>
 
         <p className="text-sm text-muted-foreground mb-8">

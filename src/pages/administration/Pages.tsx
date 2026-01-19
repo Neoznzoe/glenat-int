@@ -37,6 +37,8 @@ import {
 } from '@/hooks/useCmsPages';
 import type { Page, CreatePagePayload } from '@/hooks/useCmsPages';
 import { PageDialog } from '@/components/admin/PageDialog';
+import { fetchAllModulesFromCms } from '@/lib/adminApi';
+import { useQuery } from '@tanstack/react-query';
 
 export function Pages() {
   const [search, setSearch] = useState('');
@@ -46,9 +48,23 @@ export function Pages() {
   const [pageToDelete, setPageToDelete] = useState<Page | null>(null);
 
   const { data: pages = [], isLoading, refetch } = useCmsPages();
+  const { data: modules = [] } = useQuery({
+    queryKey: ['cms', 'all-modules'],
+    queryFn: fetchAllModulesFromCms,
+    staleTime: 5 * 60 * 1000,
+  });
   const createPageMutation = useCreateCmsPage();
   const updatePageMutation = useUpdateCmsPage();
   const deletePageMutation = useDeleteCmsPage();
+
+  // Create a map of moduleId -> moduleName for quick lookup
+  const moduleNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    modules.forEach((module) => {
+      map.set(module.moduleId.toString(), module.moduleName);
+    });
+    return map;
+  }, [modules]);
 
   const filteredPages = useMemo(() => {
     if (!search.trim()) {
@@ -180,8 +196,7 @@ export function Pages() {
                 <TableRow>
                   <TableHead>Code</TableHead>
                   <TableHead>Nom</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Template</TableHead>
+                  <TableHead>Module</TableHead>
                   <TableHead>Active</TableHead>
                   <TableHead>Publiée</TableHead>
                   <TableHead>Ordre</TableHead>
@@ -192,13 +207,13 @@ export function Pages() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       Chargement des pages...
                     </TableCell>
                   </TableRow>
                 ) : filteredPages.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       {search.trim()
                         ? 'Aucune page ne correspond à la recherche.'
                         : 'Aucune page disponible. Créez votre première page.'}
@@ -209,8 +224,7 @@ export function Pages() {
                     <TableRow key={page.PageId}>
                       <TableCell className="font-medium">{page.PageCode}</TableCell>
                       <TableCell>{page.PageName}</TableCell>
-                      <TableCell>{page.PageType || '-'}</TableCell>
-                      <TableCell>{page.TemplateKey || '-'}</TableCell>
+                      <TableCell>{moduleNameMap.get(page.ModuleId) || '-'}</TableCell>
                       <TableCell>
                         {page.IsActive === 1 ? (
                           <Badge variant="default" className="bg-green-500">

@@ -14,10 +14,18 @@ export interface QuickAccessItem {
 export interface QuickAccessProps {
   items: QuickAccessItem[];
   active?: string;
+  /** Optional filter function to check if a route is accessible */
+  canAccess?: (href: string) => boolean;
 }
 
-export function QuickAccess({ items, active }: QuickAccessProps) {
+export function QuickAccess({ items, active, canAccess }: QuickAccessProps) {
   const isSidebarExpanded = useSidebar();
+
+  // Filter items based on permissions if canAccess is provided
+  const filteredItems = canAccess
+    ? items.filter((item) => !item.href || canAccess(item.href))
+    : items;
+
   return (
     <div
       className={cn(
@@ -27,7 +35,7 @@ export function QuickAccess({ items, active }: QuickAccessProps) {
     >
       <h3 className="mb-4 font-semibold text-lg">Accès rapide</h3>
       <ul className="space-y-2">
-        {items.map((item) => (
+        {filteredItems.map((item) => (
           <li key={item.label}>
             <SecureLink to={item.href ?? '#'} onClick={item.onClick} className="block">
               <Card

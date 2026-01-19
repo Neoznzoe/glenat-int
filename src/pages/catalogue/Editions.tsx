@@ -12,13 +12,27 @@ import { Input } from '@/components/ui/input';
 import CatalogueLayout from './CatalogueLayout';
 import EditionCard from '@/components/EditionCard';
 import { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { SecureLink } from '@/components/routing/SecureLink';
 import { fetchCatalogueEditions, type CatalogueEdition } from '@/lib/catalogue';
 import { useScrollRestoration } from '@/hooks/useScrollRestoration';
+import { useModulePermissionsContext } from '@/context/ModulePermissionsContext';
+
+/**
+ * Priority order for catalogue pages redirection
+ * The first accessible page will be used
+ */
+const CATALOGUE_PAGES_PRIORITY = [
+  '/catalogue/offices',
+  '/catalogue/nouveautes',
+  '/catalogue/all',
+  '/catalogue/couverture-a-paraitre',
+];
 
 export function Catalogue() {
   useScrollRestoration();
   const [editions, setEditions] = useState<CatalogueEdition[] | null>(null);
+  const { canAccessRoute, isLoading } = useModulePermissionsContext();
 
   useEffect(() => {
     let isActive = true;
@@ -38,6 +52,28 @@ export function Catalogue() {
     };
   }, []);
 
+  // Wait for permissions to load before deciding where to redirect
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center">
+        <span
+          aria-hidden="true"
+          className="inline-flex h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent"
+        />
+        <span className="sr-only">Chargement...</span>
+      </div>
+    );
+  }
+
+  // Find the first accessible page from the priority list
+  const firstAccessiblePage = CATALOGUE_PAGES_PRIORITY.find(page => canAccessRoute(page));
+
+  // Redirect to the first accessible page if found
+  if (firstAccessiblePage) {
+    return <Navigate to={firstAccessiblePage} replace />;
+  }
+
+  // If no pages are accessible, show the default catalogue page (editions)
   return (
     <div className="p-6 space-y-6">
       <Breadcrumb>

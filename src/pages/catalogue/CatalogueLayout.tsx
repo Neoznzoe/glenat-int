@@ -12,6 +12,7 @@ import {
   UserPen,
 } from 'lucide-react';
 import { ReactNode } from 'react';
+import { useModulePermissionsContext } from '@/context/ModulePermissionsContext';
 
 const quickLinks: QuickAccessItem[] = [
   { label: 'Prochaines offices', icon: CalendarDays, href: '/catalogue/offices' },
@@ -34,13 +35,15 @@ interface CatalogueLayoutProps {
 }
 
 export function CatalogueLayout({ children, active }: CatalogueLayoutProps) {
+  const { canAccessRoute } = useModulePermissionsContext();
+
   return (
     <div className="flex flex-col md:flex-row gap-6">
       {(() => {
         const items = quickLinks.map((item) =>
           item.href === '/catalogue' ? { ...item, label: 'Accueil' } : item
         );
-        return <QuickAccess items={items} active={active} />;
+        return <QuickAccess items={items} active={active} canAccess={canAccessRoute} />;
       })()}
       <div className="flex-1">{children}</div>
     </div>
