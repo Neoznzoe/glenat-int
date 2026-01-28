@@ -5,25 +5,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  useUserGroups,
-  useUserRights,
-  useUpdateViewRights,
-  useGroupsFromApi,
-  useUpdateUserGroups,
-} from '@/hooks/useAdminData';
+import { useUserGroups, useUserRights, useUpdateViewRights, useGroupsFromApi, useUpdateUserGroups } from '@/hooks/useAdminData';
 import { fetchAllModulesFromCms, fetchAllPagesFromCms, fetchAllBlocsFromCms, fetchAllElementsFromCms } from '@/lib/adminApi';
 import { toast } from 'sonner';
-import type {
-  ViewRightUpdate,
-  CmsModuleRecord,
-  CmsPageRecord,
-  CmsBlocRecord,
-  CmsElementRecord,
-  UserRightPermission,
-  UserAccount,
-  ApiGroupRecord,
-} from '@/lib/adminApi';
+import type { ViewRightUpdate, CmsModuleRecord, CmsPageRecord, CmsBlocRecord, CmsElementRecord, UserRightPermission, UserAccount, ApiGroupRecord } from '@/lib/adminApi';
 
 interface PermissionState {
   modules: Map<number, { canView: boolean; inherited: boolean }>;
@@ -94,12 +79,7 @@ export function UserPermissionsPanel({ user }: UserPermissionsPanelProps) {
     const loadAllData = async () => {
       setIsLoadingAll(true);
       try {
-        const [modules, pages, blocs, elements] = await Promise.all([
-          fetchAllModulesFromCms(),
-          fetchAllPagesFromCms(),
-          fetchAllBlocsFromCms(),
-          fetchAllElementsFromCms(),
-        ]);
+        const [modules, pages, blocs, elements] = await Promise.all([ fetchAllModulesFromCms(), fetchAllPagesFromCms(), fetchAllBlocsFromCms(), fetchAllElementsFromCms() ]);
         console.log('Loaded modules:', modules);
         console.log('Loaded pages:', pages);
         console.log('Loaded blocs:', blocs);

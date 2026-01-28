@@ -1,13 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  fetchProjects,
-  fetchProject,
-  createProject,
-  updateProject,
-  deleteProject,
-  type Project,
-  type CreateProjectPayload,
-} from '@/lib/projectsApi';
+import { fetchProjects, fetchProject, createProject, updateProject, deleteProject, type Project, type CreateProjectPayload } from '@/lib/projectsApi';
 
 export function useProjects() {
   return useQuery({

@@ -1,14 +1,7 @@
 import JobOffer from '@/components/JobOffer';
 import { useJobOffers } from '@/hooks/useJobOffers';
 import { Loader2 } from 'lucide-react';
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 export function Emploi() {
   const {
     data: jobOffers,

@@ -1,28 +1,8 @@
-import {
-  Search,
-  Bell,
-  User,
-  ChevronDown,
-  ShoppingBag,
-  Settings,
-  KeyRound,
-  LogOut,
-} from 'lucide-react';
+import { Search, Bell, User, ChevronDown, ShoppingBag, Settings, KeyRound, LogOut } from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from './ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { ThemeToggle } from './ThemeToggle';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from './ui/hover-card';
 import { useAppSelector } from '@/hooks/redux';

@@ -1,11 +1,4 @@
-import {
-  BASE_PERMISSIONS,
-  GROUP_DEFINITIONS,
-  PERMISSION_DEFINITIONS,
-  type GroupDefinition,
-  type PermissionDefinition,
-  type PermissionKey,
-} from './access-control';
+import { BASE_PERMISSIONS, GROUP_DEFINITIONS, PERMISSION_DEFINITIONS, type GroupDefinition, type PermissionDefinition, type PermissionKey } from './access-control';
 
 export type PermissionOverrideMode = 'allow' | 'deny';
 

@@ -1,29 +1,6 @@
-import {
-  Suspense,
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactElement,
-  type ReactNode,
-} from 'react';
-import {
-  Navigate,
-  Route,
-  Routes,
-  useLocation,
-  useNavigate,
-  useParams,
-} from 'react-router-dom';
-import {
-  decryptUrlToken,
-  encryptUrlPayload,
-  isUrlEncryptionConfigured,
-  type EncryptedUrlPayload,
-} from './urlEncryption';
+import { Suspense, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { decryptUrlToken, encryptUrlPayload, isUrlEncryptionConfigured, type EncryptedUrlPayload } from './urlEncryption';
 
 export interface RouteDefinition {
   path: string;

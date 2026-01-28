@@ -1,10 +1,4 @@
-import {
-  decodeText,
-  encodeText,
-  fromBase64Url,
-  toArrayBuffer,
-  toBase64Url,
-} from './base64';
+import { decodeText, encodeText, fromBase64Url, toArrayBuffer, toBase64Url } from './base64';
 
 const STORAGE_KEY_BASE64 = import.meta.env.VITE_OAUTH_STORAGE_KEY as
   | string

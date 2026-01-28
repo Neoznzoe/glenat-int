@@ -22,31 +22,12 @@ export interface BookCardProps {
   infoValue?: string | number;
 }
 
-export function BookCard({
-  cover,
-  title,
-  ean,
-  authors,
-  publisher,
-  publicationDate,
-  priceHT,
-  stock,
-  views,
-  color,
-  ribbonText,
-  infoLabel,
-  infoValue,
-}: BookCardProps) {
+export function BookCard({ cover, title, ean, authors, publisher, publicationDate, priceHT, stock, views, color, ribbonText, infoLabel, infoValue}: BookCardProps) {
   const dispatch = useAppDispatch();
 
   const handleAddToCart = () => {
     dispatch(
-      addItem({
-        ean,
-        title,
-        cover,
-        authors,
-        priceHT: parseFloat(priceHT),
+      addItem({ ean, title, cover, authors, priceHT: parseFloat(priceHT),
       }),
     );
     toast.success('Ajouté au panier', { description: title });

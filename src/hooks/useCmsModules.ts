@@ -1,13 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  fetchModules,
-  fetchModule,
-  createModule,
-  updateModule,
-  deleteModule,
-  type Module,
-  type CreateModulePayload,
-} from '@/lib/modulesApi';
+import { fetchModules, fetchModule, createModule, updateModule, deleteModule, type Module, type CreateModulePayload } from '@/lib/modulesApi';
 
 export function useCmsModules() {
   return useQuery({

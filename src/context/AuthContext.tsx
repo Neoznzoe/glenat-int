@@ -1,24 +1,8 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
-import {
-  EventType,
-  InteractionRequiredAuthError,
-  type AccountInfo,
-  type AuthenticationResult,
-  type IPublicClientApplication,
-} from '@azure/msal-browser';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { EventType, InteractionRequiredAuthError, type AccountInfo, type AuthenticationResult, type IPublicClientApplication } from '@azure/msal-browser';
 import { useMsal } from '@azure/msal-react';
 import { loginRequest } from '@/lib/msal';
-import {
-  lookupInternalUserByEmail,
-  type DatabaseUserLookupResponse,
-} from '@/lib/internalUserLookup';
+import { lookupInternalUserByEmail, type DatabaseUserLookupResponse } from '@/lib/internalUserLookup';
 
 interface UserProfile {
   id: string;

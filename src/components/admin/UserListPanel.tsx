@@ -27,20 +27,7 @@ interface UserListPanelProps {
   isLoading?: boolean;
 }
 
-export function UserListPanel({
-  filteredUsers,
-  search,
-  onSearchChange,
-  showOnlyInactive,
-  onToggleShowOnlyInactive,
-  groups,
-  selectedUserId,
-  onSelectUser,
-  onCreateUser,
-  onEditUser,
-  onDeleteUser,
-  isLoading,
-}: UserListPanelProps) {
+export function UserListPanel({ filteredUsers, search, onSearchChange, showOnlyInactive, onToggleShowOnlyInactive, groups, selectedUserId, onSelectUser, onCreateUser, onEditUser, onDeleteUser, isLoading}: UserListPanelProps) {
   const groupsById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
 
   return (
@@ -61,19 +48,8 @@ export function UserListPanel({
           )}
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Input
-            placeholder="Rechercher par nom, email ou service..."
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            className="flex-1"
-          />
-          <Button
-            variant={showOnlyInactive ? 'default' : 'outline'}
-            size="sm"
-            className="sm:whitespace-nowrap"
-            onClick={onToggleShowOnlyInactive}
-            aria-pressed={showOnlyInactive}
-          >
+          <Input placeholder="Rechercher par nom, email ou service..." value={search} onChange={(event) => onSearchChange(event.target.value)} className="flex-1" />
+          <Button variant={showOnlyInactive ? 'default' : 'outline'} size="sm" className="sm:whitespace-nowrap" onClick={onToggleShowOnlyInactive} aria-pressed={showOnlyInactive} >
             Afficher les utilisateurs inactifs
           </Button>
         </div>
@@ -93,9 +69,7 @@ export function UserListPanel({
               {filteredUsers.map((user) => {
                 const isSelected = user.id === selectedUserId;
                 const accessCount = computeEffectivePermissions(user, groups).length;
-                const detailsParts = [user.jobTitle, user.department]
-                  .map((value) => (value ? value.trim() : ''))
-                  .filter((value) => Boolean(value));
+                const detailsParts = [user.jobTitle, user.department].map((value) => (value ? value.trim() : '')).filter((value) => Boolean(value));
                 if (!detailsParts.length && user.username) {
                   detailsParts.push(user.username);
                 }
@@ -117,12 +91,7 @@ export function UserListPanel({
                 })();
 
                 return (
-                  <TableRow
-                    key={user.id}
-                    data-state={isSelected ? 'selected' : undefined}
-                    className={cn('cursor-pointer', isSelected && 'bg-muted/80')}
-                    onClick={() => onSelectUser(user.id)}
-                  >
+                  <TableRow key={user.id} data-state={isSelected ? 'selected' : undefined} className={cn('cursor-pointer', isSelected && 'bg-muted/80')} onClick={() => onSelectUser(user.id)} >
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium">{user.displayName}</span>
@@ -137,11 +106,7 @@ export function UserListPanel({
                             return null;
                           }
                           return (
-                            <Badge
-                              key={group.id}
-                              variant="outline"
-                              className={cn('border text-xs', group.accentColor)}
-                            >
+                            <Badge key={group.id} variant="outline" className={cn('border text-xs', group.accentColor)} >
                               {group.name}
                             </Badge>
                           );
@@ -157,30 +122,12 @@ export function UserListPanel({
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         {onEditUser && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEditUser(user);
-                            }}
-                            title="Éditer l'utilisateur"
-                          >
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation(); onEditUser(user); }} title="Éditer l'utilisateur" >
                             <Pencil className="h-4 w-4" />
                           </Button>
                         )}
                         {onDeleteUser && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteUser(user);
-                            }}
-                            title="Supprimer l'utilisateur"
-                          >
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e) => {e.stopPropagation(); onDeleteUser(user); }} title="Supprimer l'utilisateur" >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}

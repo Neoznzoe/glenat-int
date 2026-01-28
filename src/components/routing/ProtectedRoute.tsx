@@ -66,17 +66,7 @@ export function ProtectedRoute({
         return;
       }
     }
-  }, [
-    currentUser,
-    cmsModules,
-    cmsPages,
-    moduleCode,
-    pageId,
-    loadingUser,
-    loadingModules,
-    loadingPages,
-    navigate,
-    fallbackPath,
+  }, [ currentUser, cmsModules, cmsPages, moduleCode, pageId, loadingUser, loadingModules, loadingPages, navigate, fallbackPath,
   ]);
 
   // Show loading state while checking permissions

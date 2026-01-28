@@ -1,13 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  fetchPages,
-  fetchPage,
-  createPage,
-  updatePage,
-  deletePage,
-  type Page,
-  type CreatePagePayload,
-} from '@/lib/pagesApi';
+import { fetchPages, fetchPage, createPage, updatePage, deletePage, type Page, type CreatePagePayload } from '@/lib/pagesApi';
 
 export function useCmsPages() {
   return useQuery({

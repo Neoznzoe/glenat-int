@@ -1,10 +1,5 @@
 import { forwardRef } from 'react';
-import {
-  Link,
-  NavLink,
-  type LinkProps,
-  type NavLinkProps,
-} from 'react-router-dom';
+import { Link, NavLink, type LinkProps, type NavLinkProps } from 'react-router-dom';
 import { useEncryptedPath } from '@/lib/secureRouting';
 
 type AnchorRef = HTMLAnchorElement;

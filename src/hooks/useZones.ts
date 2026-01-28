@@ -1,13 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  fetchZones,
-  fetchZone,
-  createZone,
-  updateZone,
-  deleteZone,
-  type Zone,
-  type CreateZonePayload,
-} from '@/lib/zonesApi';
+import { fetchZones, fetchZone, createZone, updateZone, deleteZone, type Zone, type CreateZonePayload } from '@/lib/zonesApi';
 
 export function useZones() {
   return useQuery({

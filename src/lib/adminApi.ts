@@ -1,22 +1,8 @@
-import {
-  type AuditLogEntry,
-  type PermissionOverride,
-  type UpdateUserAccessPayload,
-  type UserAccount,
-} from './mockDb';
-import {
-  type GroupDefinition,
-  type PermissionDefinition,
-  type PermissionKey,
-} from './access-control';
+import { type AuditLogEntry, type PermissionOverride, type UpdateUserAccessPayload, type UserAccount } from './mockDb';
+import { type GroupDefinition, type PermissionDefinition, type PermissionKey } from './access-control';
 import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
 import { fetchWithOAuth } from './oauth';
-import {
-  applySecurePayloadHeaders,
-  logSecurePayloadRequest,
-  prepareSecureJsonPayload,
-  SECURE_PAYLOAD_ENCRYPTION_HEADER,
-} from './securePayload';
+import { applySecurePayloadHeaders, logSecurePayloadRequest, prepareSecureJsonPayload, SECURE_PAYLOAD_ENCRYPTION_HEADER } from './securePayload';
 
 const ADMIN_DATABASE_ENDPOINT =
   import.meta.env.VITE_ADMIN_DATABASE_ENDPOINT ??

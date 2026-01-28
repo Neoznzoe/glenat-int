@@ -1,12 +1,5 @@
 import { useMemo } from 'react';
-import {
-  MapPin,
-  Briefcase,
-  Mail,
-  User,
-  CalendarDays,
-  type LucideIcon,
-} from 'lucide-react';
+import { MapPin, Briefcase, Mail, User, CalendarDays, type LucideIcon } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import type { JobOfferRecord } from '@/hooks/useJobOffers';

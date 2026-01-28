@@ -4,14 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import {
-  useCmsModules,
-  useCmsPages,
-  useCmsBlocs,
-  useCmsElements,
-  useUserGroups,
-  useUpdateViewRights,
-} from '@/hooks/useAdminData';
+import { useCmsModules, useCmsPages, useCmsBlocs, useCmsElements, useUserGroups, useUpdateViewRights} from '@/hooks/useAdminData';
 import { fetchUserViewMatrix } from '@/lib/adminApi';
 import { toast } from 'sonner';
 import type { ViewRightUpdate, CmsModuleRecord, CmsPageRecord, CmsBlocRecord, CmsElementRecord } from '@/lib/adminApi';

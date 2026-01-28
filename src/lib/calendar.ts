@@ -1,9 +1,5 @@
 import { fetchWithOAuth } from './oauth';
-import {
-  applySecurePayloadHeaders,
-  logSecurePayloadRequest,
-  prepareSecureJsonPayload,
-} from './securePayload';
+import { applySecurePayloadHeaders, logSecurePayloadRequest, prepareSecureJsonPayload } from './securePayload';
 
 const CALENDAR_DATABASE_ENDPOINT =
   import.meta.env.VITE_CALENDAR_DATABASE_ENDPOINT ??

@@ -1,11 +1,4 @@
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
@@ -14,11 +7,7 @@ import BookCard from '@/components/BookCard';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import {
-  ListFilter as ListFilterIcon,
-  ArrowDownWideNarrow,
-  ArrowUpWideNarrow,
-} from 'lucide-react';
+import { ListFilter as ListFilterIcon, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
 import { fetchCatalogueReleases, type CatalogueReleaseGroup } from '@/lib/catalogue';

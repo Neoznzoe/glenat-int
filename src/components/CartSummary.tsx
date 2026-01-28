@@ -1,13 +1,7 @@
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
 import { Trash2 } from 'lucide-react';
 import { removeItem, updateQuantity } from '@/store/cartSlice';

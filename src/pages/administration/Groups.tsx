@@ -3,38 +3,11 @@ import { Users, Plus, RefreshCw, MoreHorizontal, Pencil, Trash2 } from 'lucide-r
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import {
-  useGroupsFromApi,
-  useCreateGroupViaApi,
-  useUpdateGroupViaApi,
-  useDeleteGroupViaApi,
-  type ApiGroupRecord,
-} from '@/hooks/useAdminData';
+import { useGroupsFromApi, useCreateGroupViaApi, useUpdateGroupViaApi, useDeleteGroupViaApi, type ApiGroupRecord } from '@/hooks/useAdminData';
 import { GroupDialog } from '@/components/admin/GroupDialog';
 
 export function Groups() {

@@ -1,12 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import {
-  CALENDAR_EVENT_COLORS_QUERY_KEY,
-  CALENDAR_EVENTS_QUERY_KEY,
-  fetchCalendarEventColors,
-  fetchCalendarEvents,
-  type CalendarEventColorRecord,
-  type CalendarEventRecord,
-} from '@/lib/calendar';
+import { CALENDAR_EVENT_COLORS_QUERY_KEY, CALENDAR_EVENTS_QUERY_KEY, fetchCalendarEventColors, fetchCalendarEvents, type CalendarEventColorRecord, type CalendarEventRecord } from '@/lib/calendar';
 
 const DEFAULT_STALE_TIME = 5 * 60 * 1000;
 

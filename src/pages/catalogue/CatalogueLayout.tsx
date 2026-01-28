@@ -1,16 +1,5 @@
 import QuickAccess, { QuickAccessItem } from '@/components/QuickAccess';
-import {
-  BookOpen,
-  Building,
-  CalendarDays,
-  Download,
-  Image,
-  Info,
-  PackageX,
-  Sparkles,
-  TrendingUp,
-  UserPen,
-} from 'lucide-react';
+import { BookOpen, Building, CalendarDays, Download, Image, Info, PackageX, Sparkles, TrendingUp, UserPen } from 'lucide-react';
 import { ReactNode } from 'react';
 import { useModulePermissionsContext } from '@/context/ModulePermissionsContext';
 

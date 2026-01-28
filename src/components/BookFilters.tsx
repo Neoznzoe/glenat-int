@@ -1,11 +1,7 @@
 import { useState } from 'react';
 import { ListFilter as ListFilterIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from '@/components/ui/popover';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import ListFilter from '@/components/ui/list-filter';
 import TagInput from '@/components/ui/tag-input';
