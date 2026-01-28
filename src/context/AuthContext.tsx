@@ -74,8 +74,8 @@ async function fetchUserProfile(instance: IPublicClientApplication, account: Acc
       const blob = await photoResponse.blob();
       photoUrl = await convertBlobToDataUrl(blob);
     }
-  } catch (photoError) {
-    console.warn('Photo de profil indisponible :', photoError);
+  } catch {
+    // Silently ignore profile photo fetch errors
   }
 
   return {
@@ -141,11 +141,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (email) {
           try {
             internalUser = await lookupInternalUserByEmail(email);
-          } catch (syncError) {
-            console.error(
-              "Impossible de synchroniser l'utilisateur interne :",
-              syncError,
-            );
+          } catch {
+            // Silently ignore internal user sync errors
           }
         }
 
@@ -153,11 +150,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(null);
       } catch (authError) {
         if (authError instanceof InteractionRequiredAuthError) {
-          console.warn('Interaction MSAL requise :', authError);
           setUser(null);
           setError('Votre session a expiré. Veuillez vous reconnecter.');
         } else {
-          console.error('Erreur MSAL :', authError);
           setError("Une erreur est survenue lors de l'authentification.");
         }
       } finally {

@@ -46,8 +46,8 @@ export function Kiosque() {
           setKiosques(data);
         }
       })
-      .catch(error => {
-        console.error('Impossible de récupérer le kiosque', error);
+      .catch(() => {
+        // Silently ignore kiosk fetch errors
       });
 
     return () => {

@@ -166,9 +166,6 @@ export async function updateProject(
   if (payload.AssistanceEmail) apiPayload.assistance_email = payload.AssistanceEmail;
   if (payload.WebsiteBrand) apiPayload.website_brand = payload.WebsiteBrand;
 
-  console.log('UPDATE PROJECT - URL:', url);
-  console.log('UPDATE PROJECT - Payload:', apiPayload);
-
   const response = await fetchWithOAuth(url, {
     method: 'PUT',
     headers: {
@@ -178,7 +175,6 @@ export async function updateProject(
   });
 
   const data = await handleResponse<{ success: boolean; project: Project }>(response);
-  console.log('UPDATE PROJECT - Response:', data);
   return data.project;
 }
 

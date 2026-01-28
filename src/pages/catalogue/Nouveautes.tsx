@@ -42,8 +42,8 @@ export function Nouveautes() {
           setReleases(data);
         }
       })
-      .catch(error => {
-        console.error('Impossible de récupérer les nouveautés', error);
+      .catch(() => {
+        // Silently ignore releases fetch errors
       });
 
     return () => {

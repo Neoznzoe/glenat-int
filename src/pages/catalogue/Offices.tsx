@@ -44,8 +44,8 @@ export function Offices() {
 
     fetchCatalogueOffices({ hydrateCovers: false, onCoverProgress: handleProgress })
       .then(handleProgress)
-      .catch(error => {
-        console.error('Impossible de récupérer les offices', error);
+      .catch(() => {
+        // Silently ignore offices fetch errors
       });
 
     return () => {

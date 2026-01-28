@@ -147,31 +147,15 @@ function filterTodayAbsences(absences: KelioAbsence[]): KelioAbsence[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  console.log('Filtering absences for today:', today.toLocaleDateString('fr-FR'));
-  console.log('Total absences received:', absences.length);
-
-  const filtered = absences.filter(absence => {
+  return absences.filter(absence => {
     const startDate = new Date(absence.startDate);
     const endDate = new Date(absence.endDate);
 
     startDate.setHours(0, 0, 0, 0);
     endDate.setHours(0, 0, 0, 0);
 
-    const isToday = today >= startDate && today <= endDate;
-
-    if (isToday) {
-      console.log('Absence today:', {
-        employee: `${absence.employeeFirstName} ${absence.employeeSurname}`,
-        startDate: startDate.toLocaleDateString('fr-FR'),
-        endDate: endDate.toLocaleDateString('fr-FR')
-      });
-    }
-
-    return isToday;
+    return today >= startDate && today <= endDate;
   });
-
-  console.log('Filtered absences for today:', filtered.length);
-  return filtered;
 }
 
 /**
@@ -210,18 +194,9 @@ function transformAbsenceToAbsentPerson(absence: KelioAbsence): AbsentPerson {
  * Récupère les absences du jour et les transforme pour l'affichage
  */
 export async function fetchTodayAbsences(): Promise<AbsentPerson[]> {
-  console.log('=== fetchTodayAbsences START ===');
   const allAbsences = await fetchAbsences();
-  console.log('All absences fetched:', allAbsences.length);
-
   const todayAbsences = filterTodayAbsences(allAbsences);
-  console.log('Today absences after filter:', todayAbsences.length);
-
-  const transformed = todayAbsences.map(transformAbsenceToAbsentPerson);
-  console.log('Transformed absences:', transformed);
-  console.log('=== fetchTodayAbsences END ===');
-
-  return transformed;
+  return todayAbsences.map(transformAbsenceToAbsentPerson);
 }
 
 // ============================================================================
@@ -253,27 +228,11 @@ function filterTodayRemoteWorking(remoteWorkings: KelioRemoteWorking[]): KelioRe
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  console.log('Filtering remote working for today:', today.toLocaleDateString('fr-FR'));
-  console.log('Total remote working received:', remoteWorkings.length);
-
-  const filtered = remoteWorkings.filter(rw => {
+  return remoteWorkings.filter(rw => {
     const startDate = new Date(rw.startDate);
     startDate.setHours(0, 0, 0, 0);
-
-    const isToday = startDate.getTime() === today.getTime();
-
-    if (isToday) {
-      console.log('Remote working today:', {
-        employee: `${rw.employeeFirstName} ${rw.employeeSurname}`,
-        startDate: startDate.toLocaleDateString('fr-FR')
-      });
-    }
-
-    return isToday;
+    return startDate.getTime() === today.getTime();
   });
-
-  console.log('Filtered remote working for today:', filtered.length);
-  return filtered;
 }
 
 /**
@@ -292,16 +251,7 @@ function transformRemoteWorkingToPerson(rw: KelioRemoteWorking): RemoteWorkingPe
  * Récupère les télétravaux du jour et les transforme pour l'affichage
  */
 export async function fetchTodayRemoteWorking(): Promise<RemoteWorkingPerson[]> {
-  console.log('=== fetchTodayRemoteWorking START ===');
   const allRemoteWorking = await fetchRemoteWorking();
-  console.log('All remote working fetched:', allRemoteWorking.length);
-
   const todayRemoteWorking = filterTodayRemoteWorking(allRemoteWorking);
-  console.log('Today remote working after filter:', todayRemoteWorking.length);
-
-  const transformed = todayRemoteWorking.map(transformRemoteWorkingToPerson);
-  console.log('Transformed remote working:', transformed);
-  console.log('=== fetchTodayRemoteWorking END ===');
-
-  return transformed;
+  return todayRemoteWorking.map(transformRemoteWorkingToPerson);
 }

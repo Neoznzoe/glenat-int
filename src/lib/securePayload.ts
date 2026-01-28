@@ -87,34 +87,12 @@ export function applySecurePayloadHeaders(headers: Headers, encrypted: boolean):
   headers.set(SECURE_PAYLOAD_ENCRYPTION_HEADER, SECURE_PAYLOAD_ENCRYPTION_SCHEME);
 }
 
-function normalizeRequestTarget(target: RequestInfo | URL): string | undefined {
-  if (typeof target === 'string') {
-    return target;
-  }
-
-  if (target instanceof URL) {
-    return target.toString();
-  }
-
-  if (typeof Request !== 'undefined' && target instanceof Request) {
-    return target.url;
-  }
-
-  return undefined;
-}
-
 function logWithOptionalTarget(
-  label: string,
-  target: RequestInfo | URL,
-  value: unknown,
+  _label: string,
+  _target: RequestInfo | URL,
+  _value: unknown,
 ): void {
-  const url = normalizeRequestTarget(target);
-
-  if (url) {
-    console.log(`[securePayload] ${label}`, url, value);
-  } else {
-    console.log(`[securePayload] ${label}`, value);
-  }
+  // Debug logging disabled in production
 }
 
 export function logSecurePayloadRequest(
@@ -145,9 +123,6 @@ function isEncryptionEnabled(): boolean {
 function ensureFallbackLogged(): void {
   if (!loggedDisabledWarning && SECURE_PAYLOAD_MODE !== 'disabled') {
     loggedDisabledWarning = true;
-    console.warn(
-      "[securePayload] Le chiffrement des corps JSON est désactivé : mode optionnel ou clé publique manquante.",
-    );
   }
 }
 
@@ -171,9 +146,6 @@ export function disableSecurePayload(reason?: unknown): void {
     );
   }
 
-  if (reason) {
-    console.warn('[securePayload] Chiffrement des corps JSON désactivé.', reason);
-  }
 }
 
 function toUint8Array(buffer: ArrayBuffer): Uint8Array {

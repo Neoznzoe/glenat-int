@@ -103,8 +103,8 @@ export function BookDetails() {
         if (!cancelled) {
           setUpcomingBooks(data);
         }
-      } catch (error) {
-        console.error('[BookDetails] Erreur lors du chargement des livres à paraître', error);
+      } catch {
+        // Silently ignore upcoming books fetch errors
       } finally {
         if (!cancelled) {
           setIsLoadingUpcoming(false);
@@ -130,8 +130,8 @@ export function BookDetails() {
         if (!cancelled) {
           setSameCollectionBooks(data);
         }
-      } catch (error) {
-        console.error('[BookDetails] Erreur lors du chargement des livres de la même collection', error);
+      } catch {
+        // Silently ignore same collection books fetch errors
       } finally {
         if (!cancelled) {
           setIsLoadingSameCollection(false);
@@ -157,8 +157,8 @@ export function BookDetails() {
         if (!cancelled) {
           setSameAuthorBooks(data);
         }
-      } catch (error) {
-        console.error('[BookDetails] Erreur lors du chargement des livres du même auteur', error);
+      } catch {
+        // Silently ignore same author books fetch errors
       } finally {
         if (!cancelled) {
           setIsLoadingSameAuthor(false);

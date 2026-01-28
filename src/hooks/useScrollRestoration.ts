@@ -18,7 +18,6 @@ export function useScrollRestoration(key?: string) {
     const scrollContainer = document.querySelector('main.overflow-auto');
 
     if (!scrollContainer) {
-      console.warn('[useScrollRestoration] Container scrollable non trouvé');
       return;
     }
 

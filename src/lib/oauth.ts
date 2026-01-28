@@ -10,8 +10,6 @@ const TOKEN_ENDPOINT = import.meta.env.VITE_OAUTH_TOKEN_ENDPOINT ?? DEFAULT_TOKE
 const CLIENT_ID = import.meta.env.VITE_OAUTH_CLIENT_ID;
 const CLIENT_SECRET = import.meta.env.VITE_OAUTH_CLIENT_SECRET;
 const REQUEST_SCOPE = import.meta.env.VITE_OAUTH_SCOPE;
-const REQUEST_AUDIENCE = import.meta.env.VITE_OAUTH_AUDIENCE;
-const AUTHORIZE_GRANT_TYPE =  import.meta.env.VITE_OAUTH_AUTHORIZE_GRANT_TYPE ??  import.meta.env.VITE_OAUTH_GRANT_TYPE ??  '';
 const TOKEN_GRANT_TYPE =
   import.meta.env.VITE_OAUTH_TOKEN_GRANT_TYPE ?? 'authorization_code';
 const REFRESH_GRANT_TYPE =
@@ -124,12 +122,8 @@ async function hydrateTokenFromStorage(): Promise<void> {
     let decrypted: unknown;
     try {
       decrypted = await decryptFromStorage(raw);
-    } catch (error) {
+    } catch {
       storage.removeItem(STORAGE_KEY);
-      console.warn(
-        "[OAuth] Impossible de déchiffrer le jeton persistant, nettoyage du stockage.",
-        error,
-      );
       return;
     }
 
@@ -191,8 +185,8 @@ async function persistTokenInStorage(
   try {
     const encrypted = await encryptForStorage(payload);
     storage.setItem(STORAGE_KEY, encrypted);
-  } catch (error) {
-    console.warn('[OAuth] Impossible de persister le jeton chiffré.', error);
+  } catch {
+    // Silently ignore token persistence errors
   }
 }
 
@@ -224,37 +218,6 @@ function shouldReuseToken(forceRefresh: boolean): boolean {
 
   return Date.now() < refreshTimestamp;
 }
-
-function buildAuthorizeQueryParams(): string {
-  if (!CLIENT_ID) {
-    throw new Error(
-      'La variable VITE_OAUTH_CLIENT_ID doit être configurée pour récupérer un jeton OAuth.',
-    );
-  }
-
-  const params = new URLSearchParams();
-  params.set('client_id', CLIENT_ID);
-
-  if (CLIENT_SECRET) {
-    params.set('client_secret', CLIENT_SECRET);
-  }
-
-  const grantType = toTrimmedString(AUTHORIZE_GRANT_TYPE);
-  if (grantType) {
-    params.set('grant_type', grantType);
-  }
-
-  if (REQUEST_SCOPE) {
-    params.set('scope', REQUEST_SCOPE);
-  }
-
-  if (REQUEST_AUDIENCE) {
-    params.set('audience', REQUEST_AUDIENCE);
-  }
-
-  return params.toString();
-}
-
 
 function buildAuthorizeHeaders(): HeadersInit {
   const headers = new Headers();
@@ -289,13 +252,10 @@ async function parseOAuthError(response: Response): Promise<string | undefined> 
 }
 
 async function requestAuthorizationCode(): Promise<string> {
-  // const body = buildAuthorizeBody();
-  const body = buildAuthorizeQueryParams();
   const headers = buildAuthorizeHeaders();
   let response: Response;
 
   try {
-    console.log(body)
     response = await fetch(AUTHORIZE_ENDPOINT, {
       method: 'GET',
       headers,
@@ -330,12 +290,6 @@ async function requestAuthorizationCode(): Promise<string> {
     throw new Error(
       "La réponse /OAuth/authorize ne contient pas de champ 'code_exchange' ni 'code'.",
     );
-  }
-
-  if (codeExchange) {
-    console.debug('[OAuth] code_exchange reçu via /OAuth/authorize.');
-  } else {
-    console.debug('[OAuth] code reçu via /OAuth/authorize.');
   }
 
   return resolvedCode;
@@ -426,8 +380,6 @@ async function requestTokenEndpoint(payload: Record<string, string>): Promise<OA
     throw new Error('Réponse /OAuth/token invalide : impossible de lire le JSON.');
   }
 
-  console.debug('[OAuth] Réponse /OAuth/token reçue.');
-
   return cacheTokenFromResponse(payloadResponse);
 }
 
@@ -475,11 +427,7 @@ async function requestNewToken(forceRefresh: boolean): Promise<OAuthAccessToken>
       try {
         const refreshed = await refreshAccessTokenWithRefreshToken(refreshToken);
         return refreshed;
-      } catch (error) {
-        console.warn(
-          '[OAuth] Impossible de rafraîchir le jeton, tentative de régénération complète :',
-          error,
-        );
+      } catch {
         invalidateCachedOAuthToken();
       }
     }
@@ -524,33 +472,12 @@ function withAuthorizationHeader(init: RequestInit | undefined, token: OAuthAcce
   };
 }
 
-function normalizeRequestUrl(input: RequestInfo | URL): string | undefined {
-  if (typeof input === 'string') {
-    return input;
-  }
-
-  if (input instanceof URL) {
-    return input.toString();
-  }
-
-  if (typeof Request !== 'undefined' && input instanceof Request) {
-    return input.url;
-  }
-
-  return undefined;
-}
-
 export async function fetchWithOAuth(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {
   const token = await fetchAccessToken();
   const authorizedInit = withAuthorizationHeader(init, token);
-  const requestUrl = normalizeRequestUrl(input);
-
-  if (requestUrl?.includes('/Api/v2.0/Dev/callDatabase')) {
-    console.debug('[OAuth] Jeton OAuth appliqué pour un appel callDatabase.');
-  }
 
   return fetch(input, authorizedInit);
 }

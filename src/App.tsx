@@ -56,12 +56,6 @@ function App() {
     });
   }, []);
 
-  useEffect(() => {
-    if (user) {
-      console.debug('[App] Session utilisateur active.');
-    }
-  }, [user]);
-
   if (loading) {
     return (
       <>

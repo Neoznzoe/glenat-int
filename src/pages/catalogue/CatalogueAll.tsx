@@ -71,10 +71,8 @@ export function CatalogueAll() {
       } catch (error) {
         // Ignorer les erreurs d'annulation
         if (error instanceof Error && error.name === 'AbortError') {
-          console.debug('[CatalogueAll] Chargement annulé');
           return;
         }
-        console.error('Impossible de récupérer le catalogue', error);
         if (isActive) {
           setIsLoading(false);
         }

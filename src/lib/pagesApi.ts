@@ -183,9 +183,6 @@ export async function updatePage(pageId: string, payload: Partial<CreatePagePayl
   if (payload.CachePragma) apiPayload.cache_pragma = payload.CachePragma;
   if (payload.CacheAgeSeconds !== undefined) apiPayload.cache_age_seconds = payload.CacheAgeSeconds;
 
-  console.log('UPDATE PAGE - URL:', url);
-  console.log('UPDATE PAGE - Payload:', apiPayload);
-
   const response = await fetchWithOAuth(url, {
     method: 'PUT',
     headers: {
@@ -195,7 +192,6 @@ export async function updatePage(pageId: string, payload: Partial<CreatePagePayl
   });
 
   const data = await handleResponse<{ success: boolean; page: Page }>(response);
-  console.log('UPDATE PAGE - Response:', data);
   return data.page;
 }
 

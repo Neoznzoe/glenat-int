@@ -166,9 +166,6 @@ export async function updateModule(
   if (payload.CachePragma) apiPayload.cache_pragma = payload.CachePragma;
   if (payload.CacheAgeSeconds !== undefined) apiPayload.cache_age_seconds = payload.CacheAgeSeconds;
 
-  console.log('UPDATE MODULE - URL:', url);
-  console.log('UPDATE MODULE - Payload:', apiPayload);
-
   const response = await fetchWithOAuth(url, {
     method: 'PUT',
     headers: {
@@ -178,7 +175,6 @@ export async function updateModule(
   });
 
   const data = await handleResponse<{ success: boolean; module: Module }>(response);
-  console.log('UPDATE MODULE - Response:', data);
   return data.module;
 }
 

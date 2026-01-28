@@ -11,7 +11,6 @@ export function useLazyCoverLoading(books: CatalogueBook[]): CatalogueBook[] {
 
   useEffect(() => {
     // Réinitialiser l'état quand la liste de livres change
-    console.log('[useLazyCoverLoading] Mise à jour avec', books.length, 'livres');
     setBooksWithCovers(books);
 
     if (books.length === 0) {
@@ -22,7 +21,6 @@ export function useLazyCoverLoading(books: CatalogueBook[]): CatalogueBook[] {
 
     // Charger les couvertures progressivement
     const loadCovers = async () => {
-      console.log('[useLazyCoverLoading] Début du chargement de', books.length, 'couvertures');
       for (let i = 0; i < books.length; i++) {
         if (cancelled) break;
 
@@ -42,9 +40,8 @@ export function useLazyCoverLoading(books: CatalogueBook[]): CatalogueBook[] {
               return newBooks;
             });
           }
-        } catch (error) {
+        } catch {
           // Ignorer les erreurs silencieusement
-          console.debug(`[useLazyCoverLoading] Impossible de charger la couverture pour ${book.ean}`);
         }
 
         // Petit délai pour éviter de surcharger le serveur

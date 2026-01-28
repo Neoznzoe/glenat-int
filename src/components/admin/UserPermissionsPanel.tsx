@@ -80,16 +80,11 @@ export function UserPermissionsPanel({ user }: UserPermissionsPanelProps) {
       setIsLoadingAll(true);
       try {
         const [modules, pages, blocs, elements] = await Promise.all([ fetchAllModulesFromCms(), fetchAllPagesFromCms(), fetchAllBlocsFromCms(), fetchAllElementsFromCms() ]);
-        console.log('Loaded modules:', modules);
-        console.log('Loaded pages:', pages);
-        console.log('Loaded blocs:', blocs);
-        console.log('Loaded elements:', elements);
         setAllModules(modules);
         setAllPages(pages);
         setAllBlocs(blocs);
         setAllElements(elements);
-      } catch (error) {
-        console.error('Error loading CMS data:', error);
+      } catch {
         toast.error('Erreur lors du chargement des données CMS');
       } finally {
         setIsLoadingAll(false);
@@ -196,15 +191,7 @@ export function UserPermissionsPanel({ user }: UserPermissionsPanelProps) {
   const hierarchyTree = useMemo(() => {
     const tree: HierarchyNode[] = [];
 
-    console.log('Building hierarchy with:', {
-      modulesCount: allModules.length,
-      pagesCount: allPages.length,
-      blocsCount: allBlocs.length,
-      elementsCount: allElements.length
-    });
-
     allModules.forEach((module: CmsModuleRecord) => {
-      console.log('Processing module:', module);
       const modulePerm = permissions.modules.get(module.moduleId) || {
         canView: false,
         inherited: false,
@@ -221,7 +208,6 @@ export function UserPermissionsPanel({ user }: UserPermissionsPanelProps) {
 
       // Only pages belonging to THIS module
       const modulePagesData = allPages.filter((p: CmsPageRecord) => p.moduleId === module.moduleId);
-      console.log(`Module ${module.moduleId} has ${modulePagesData.length} pages`);
       modulePagesData.forEach((page: CmsPageRecord) => {
         const pagePerm = permissions.pages.get(page.pageId) || { canView: false, inherited: false };
         const pageNode: HierarchyNode = {
@@ -369,8 +355,7 @@ export function UserPermissionsPanel({ user }: UserPermissionsPanelProps) {
         description: 'Les permissions CMS ont été mises à jour avec succès.',
       });
       refetchRights();
-    } catch (error) {
-      console.error('Error saving permissions:', error);
+    } catch {
       toast.error('Erreur lors de l\'enregistrement des permissions');
     }
   };
@@ -438,7 +423,6 @@ export function UserPermissionsPanel({ user }: UserPermissionsPanelProps) {
         description: 'Les groupes de l\'utilisateur ont été mis à jour avec succès.',
       });
     } catch (error) {
-      console.error('Error saving groups:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
       toast.error('Erreur lors de l\'enregistrement des groupes', {
         description: errorMessage,

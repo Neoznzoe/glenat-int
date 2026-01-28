@@ -99,12 +99,12 @@ export interface CatalogueDb {
 }
 
 
-const logRequest = (endpoint: string) => {
-  console.info(`[catalogueApi] ${endpoint} appelé`);
+const logRequest = (_endpoint: string) => {
+  // Debug logging disabled in production
 };
 
-const logResponse = (endpoint: string, payload: unknown) => {
-  console.info(`[catalogueApi] ${endpoint} réponse`, payload);
+const logResponse = (_endpoint: string, _payload: unknown) => {
+  // Debug logging disabled in production
 };
 
 export interface CatalogueReleaseGroup {
@@ -281,7 +281,6 @@ export async function fetchCatalogueBooksWithPagination(
     const totalPages = Math.ceil(totalBooks / pageSize);
 
     // D'abord charger les livres sans les couvertures pour affichage immédiat
-    console.info(`[catalogueApi] Chargement initial de ${bookRecords.length} livres sans couvertures...`);
     const booksWithoutCovers = (
       await Promise.all(bookRecords.map(record => normalizeBookFromDatabaseRecord(record, false)))
     ).filter((book): book is CatalogueBook => book !== null);
@@ -296,16 +295,9 @@ export async function fetchCatalogueBooksWithPagination(
 
     // Si pas de callback de progression, charger toutes les couvertures avant de retourner
     if (!onProgress) {
-      console.info(`[catalogueApi] Chargement de toutes les couvertures...`);
-      const loadStartTime = Date.now();
-
       const booksWithCovers = (
         await Promise.all(bookRecords.map(record => normalizeBookFromDatabaseRecord(record, true)))
       ).filter((book): book is CatalogueBook => book !== null);
-
-      const loadEndTime = Date.now();
-      const loadDuration = ((loadEndTime - loadStartTime) / 1000).toFixed(2);
-      console.info(`[catalogueApi] ✓ Chargement terminé en ${loadDuration}s (${booksWithCovers.length} livres)`);
 
       const result: CatalogueBooksPage = {
         books: booksWithCovers,
@@ -320,9 +312,6 @@ export async function fetchCatalogueBooksWithPagination(
     }
 
     // Charger les couvertures progressivement en arrière-plan
-    console.info(`[catalogueApi] Début du chargement progressif des couvertures pour ${booksWithoutCovers.length} livres...`);
-    const loadStartTime = Date.now();
-
     void (async () => {
       const resultBooks = [...booksWithoutCovers];
       let loadedCount = 0;
@@ -345,7 +334,6 @@ export async function fetchCatalogueBooksWithPagination(
             if (error instanceof Error && error.name === 'AbortError') {
               return;
             }
-            console.debug(`[catalogueApi] Erreur chargement couverture ${book.ean}`, error);
           }
 
           loadedCount++;
@@ -365,24 +353,12 @@ export async function fetchCatalogueBooksWithPagination(
 
       await Promise.all(loadPromises);
 
-      if (!signal?.aborted) {
-        const loadEndTime = Date.now();
-        const loadDuration = ((loadEndTime - loadStartTime) / 1000).toFixed(2);
-        console.info(`[catalogueApi] ✓ Chargement progressif terminé en ${loadDuration}s (${loadedCount}/${resultBooks.length} couvertures)`);
-      } else {
-        console.debug('[catalogueApi] Chargement progressif annulé');
-      }
-    })().catch(error => {
-      if (!(error instanceof Error && error.name === 'AbortError')) {
-        console.error('[catalogueApi] Erreur lors du chargement progressif des couvertures', error);
-      }
+    })().catch(() => {
+      // Silently ignore cover loading errors
     });
-
-    console.debug(`[catalogueApi] Page ${page}/${totalPages} récupérée (${booksWithoutCovers.length} livres)`);
     logResponse(endpoint, initialResult);
     return initialResult;
   } catch (error) {
-    console.error('[catalogueApi] Erreur lors de la récupération des livres paginés', error);
     throw error;
   }
 }
@@ -563,8 +539,7 @@ const shouldIncludeCredentials = (endpoint: string): boolean => {
     }
 
     return false;
-  } catch (error) {
-    console.warn('[catalogueApi] Impossible de déterminer le domaine pour la couverture', endpoint, error);
+  } catch {
     return false;
   }
 };
@@ -603,7 +578,6 @@ const normaliseCoverDataUrl = (value: string | undefined): string | null => {
 const fetchCover = async (ean: string, signal?: AbortSignal): Promise<string | null> => {
   // Validation stricte de l'EAN
   if (!ean || typeof ean !== 'string' || ean.trim().length === 0) {
-    console.warn('[catalogueApi] Tentative de récupération de couverture avec un EAN invalide:', ean);
     return null;
   }
 
@@ -657,7 +631,6 @@ const fetchCover = async (ean: string, signal?: AbortSignal): Promise<string | n
           const imageBase64 = normaliseCoverDataUrl(data?.result?.imageBase64);
 
           if (data?.success && imageBase64) {
-            console.debug('[catalogueApi] Couverture récupérée via le service distant.');
             coverCache.set(trimmedEan, imageBase64);
             return imageBase64;
           }
@@ -665,7 +638,6 @@ const fetchCover = async (ean: string, signal?: AbortSignal): Promise<string | n
           // Si l'image n'est pas trouvée, ne pas retry
           const errorMessage = data?.message ?? "Réponse inattendue de l'API couverture";
           if (errorMessage.includes('Image non trouvée') || errorMessage.includes('image non trouvée')) {
-            console.debug(`[catalogueApi] Image non trouvée pour ${trimmedEan}, utilisation du fallback`);
             coverCache.set(trimmedEan, FALLBACK_COVER_DATA_URL);
             return FALLBACK_COVER_DATA_URL;
           }
@@ -680,15 +652,9 @@ const fetchCover = async (ean: string, signal?: AbortSignal): Promise<string | n
           const errorMsg = error instanceof Error ? error.message : String(error);
           // Si l'image n'est pas trouvée, ne pas retry
           if (errorMsg.includes('Image non trouvée') || errorMsg.includes('image non trouvée')) {
-            console.debug(`[catalogueApi] Image non trouvée pour ${trimmedEan}, utilisation du fallback`);
             coverCache.set(trimmedEan, FALLBACK_COVER_DATA_URL);
             return FALLBACK_COVER_DATA_URL;
           }
-
-          console.error(
-            `[catalogueApi] Impossible de récupérer la couverture ${trimmedEan} via ${endpoint} (tentative ${attempt + 1})`,
-            error,
-          );
         }
       }
 
@@ -749,18 +715,14 @@ const fetchAuthorPhoto = async (photoFilename: string): Promise<string | null> =
           const imageBase64 = normaliseCoverDataUrl(data?.result?.imageBase64);
 
           if (data?.success && imageBase64) {
-            console.debug('[catalogueApi] Photo auteur récupérée via le service distant.');
             authorPhotoCache.set(photoFilename, imageBase64);
             return imageBase64;
           }
 
           const errorMessage = data?.message ?? "Réponse inattendue de l'API photo auteur";
           throw new Error(errorMessage);
-        } catch (error) {
-          console.error(
-            `[catalogueApi] Impossible de récupérer la photo auteur ${photoFilename} via ${endpoint} (tentative ${attempt + 1})`,
-            error,
-          );
+        } catch {
+          // Silently ignore errors during retry
         }
       }
 
@@ -1096,7 +1058,6 @@ const normalizeBookFromDatabaseRecord = async (
 
   // Validation stricte de l'EAN
   if (!ean || typeof ean !== 'string' || ean.trim().length === 0) {
-    console.warn('[catalogueApi] Enregistrement ignoré: EAN invalide ou absent', record);
     return null;
   }
 
@@ -1433,13 +1394,7 @@ export async function hydrateCatalogueOfficeGroupsWithCovers(
         let coverPromise = coverCache.get(ean);
 
         if (!coverPromise) {
-          coverPromise = fetchCover(ean).catch(error => {
-            console.warn(
-              `[catalogueApi] Impossible de recuperer la couverture pour ${ean}`,
-              error,
-            );
-            return null;
-          });
+          coverPromise = fetchCover(ean).catch(() => null);
           coverCache.set(ean, coverPromise);
         }
 
@@ -1497,8 +1452,6 @@ export async function fetchCatalogueOffices(
     const payload = (await response.json()) as DatabaseApiResponse;
     const records = extractDatabaseRows(payload);
 
-    console.debug('[catalogueApi] Offices récupérés depuis la base.');
-
     if (!records.length) {
       throw new Error("La base de donnees n'a retourne aucun resultat");
     }
@@ -1513,8 +1466,8 @@ export async function fetchCatalogueOffices(
       logResponse(endpoint, groups);
 
       if (onCoverProgress) {
-        void hydrateCatalogueOfficeGroupsWithCovers(groups, { onCoverProgress }).catch(error => {
-          console.warn('[catalogueApi] Hydratation des couvertures interrompue', error);
+        void hydrateCatalogueOfficeGroupsWithCovers(groups, { onCoverProgress }).catch(() => {
+          // Silently ignore cover hydration errors
         });
       }
 
@@ -1528,7 +1481,6 @@ export async function fetchCatalogueOffices(
     logResponse(endpoint, hydratedGroups);
     return hydratedGroups;
   } catch (error) {
-    console.error('[catalogueApi] Impossible de recuperer les prochaines offices', error);
     throw error;
   }
 }
@@ -1679,14 +1631,11 @@ async function fetchCatalogueBookTexts(ean: string): Promise<CatalogueText[]> {
         })
         .filter((text): text is CatalogueText => text !== null);
 
-      console.debug(`[catalogueApi] ${texts.length} texte(s) récupéré(s) depuis catalogTexts pour`, ean);
       return texts;
     }
 
-    console.debug('[catalogueApi] Aucun texte trouvé dans catalogTexts pour', ean);
     return [];
-  } catch (error) {
-    console.error('[catalogueApi] Erreur lors de la récupération des textes pour', ean, error);
+  } catch {
     return [];
   }
 }
@@ -1780,15 +1729,12 @@ async function fetchCatalogueBookAuthors(ean: string): Promise<CatalogueAuthor[]
           return 0;
         });
 
-        console.debug('[catalogueApi] Auteurs récupérés pour', ean, validAuthors.length);
         return validAuthors;
       }
     }
 
-    console.debug('[catalogueApi] Aucun auteur trouvé dans catalogAutors pour', ean);
     return [];
-  } catch (error) {
-    console.error('[catalogueApi] Erreur lors de la récupération des auteurs pour', ean, error);
+  } catch {
     return [];
   }
 }
@@ -1866,11 +1812,9 @@ export async function fetchCatalogueBook(
     }
 
     // Aucune donnée disponible dans l'API
-    console.debug('[catalogueApi] Aucune donnée disponible pour', ean);
     logResponse(endpoint, null);
     return Promise.resolve(null);
-  } catch (error) {
-    console.error('[catalogueApi] Erreur lors de la récupération du livre', error);
+  } catch {
     logResponse(endpoint, null);
     return Promise.resolve(null);
   }
@@ -1925,7 +1869,6 @@ export async function fetchCataloguePastBooksFromSeries(
     const records = extractDatabaseRows(payload);
 
     if (records.length === 0) {
-      console.debug('[catalogueApi] Livre source introuvable pour', ean);
       return [];
     }
 
@@ -1933,7 +1876,6 @@ export async function fetchCataloguePastBooksFromSeries(
     const serie = ensureString(getField(record, 'serie'));
 
     if (!serie) {
-      console.debug('[catalogueApi] Aucune série trouvée pour', ean);
       return [];
     }
 
@@ -1969,7 +1911,6 @@ export async function fetchCataloguePastBooksFromSeries(
     const pastRecords = extractDatabaseRows(pastPayload);
 
     if (pastRecords.length === 0) {
-      console.debug('[catalogueApi] Aucun livre déjà paru trouvé pour la série', serie);
       return [];
     }
 
@@ -1978,11 +1919,9 @@ export async function fetchCataloguePastBooksFromSeries(
       await Promise.all(pastRecords.map(record => normalizeBookFromDatabaseRecord(record, true)))
     ).filter((book): book is CatalogueBook => book !== null);
 
-    console.debug(`[catalogueApi] ${books.length} livre(s) déjà paru(s) trouvé(s) pour la série ${serie}`);
     logResponse(endpoint, books);
     return books;
-  } catch (error) {
-    console.error('[catalogueApi] Erreur lors de la récupération des livres déjà parus', error);
+  } catch {
     logResponse(endpoint, []);
     return [];
   }
@@ -2051,7 +1990,6 @@ export async function fetchCatalogueSameCollectionBooks(
     const records = extractDatabaseRows(payload);
 
     if (records.length === 0) {
-      console.debug('[catalogueApi] Aucun livre de la même collection trouvé');
       return [];
     }
 
@@ -2060,11 +1998,9 @@ export async function fetchCatalogueSameCollectionBooks(
       await Promise.all(records.map(record => normalizeBookFromDatabaseRecord(record, true)))
     ).filter((book): book is CatalogueBook => book !== null);
 
-    console.debug(`[catalogueApi] ${books.length} livre(s) de la même collection trouvé(s)`);
     logResponse(endpoint, books);
     return books;
-  } catch (error) {
-    console.error('[catalogueApi] Erreur lors de la récupération des livres de la même collection', error);
+  } catch {
     logResponse(endpoint, []);
     return [];
   }
@@ -2109,7 +2045,6 @@ export async function fetchCatalogueUpcomingBooksFromSeries(
     const records = extractDatabaseRows(payload);
 
     if (records.length === 0) {
-      console.debug('[catalogueApi] Livre source introuvable pour', ean);
       return [];
     }
 
@@ -2117,7 +2052,6 @@ export async function fetchCatalogueUpcomingBooksFromSeries(
     const serie = ensureString(getField(record, 'serie'));
 
     if (!serie) {
-      console.debug('[catalogueApi] Aucune série trouvée pour', ean);
       return [];
     }
 
@@ -2153,7 +2087,6 @@ export async function fetchCatalogueUpcomingBooksFromSeries(
     const upcomingRecords = extractDatabaseRows(upcomingPayload);
 
     if (upcomingRecords.length === 0) {
-      console.debug('[catalogueApi] Aucun livre à paraître trouvé pour la série', serie);
       return [];
     }
 
@@ -2162,11 +2095,9 @@ export async function fetchCatalogueUpcomingBooksFromSeries(
       await Promise.all(upcomingRecords.map(record => normalizeBookFromDatabaseRecord(record, true)))
     ).filter((book): book is CatalogueBook => book !== null);
 
-    console.debug(`[catalogueApi] ${books.length} livre(s) à paraître trouvé(s) pour la série ${serie}`);
     logResponse(endpoint, books);
     return books;
-  } catch (error) {
-    console.error('[catalogueApi] Erreur lors de la récupération des livres à paraître', error);
+  } catch {
     logResponse(endpoint, []);
     return [];
   }
@@ -2211,7 +2142,6 @@ export async function fetchCatalogueAuthors(
     const records = extractDatabaseRows(payload);
 
     if (records.length === 0) {
-      console.debug('[catalogueApi] Aucun auteur trouvé pour', ean);
       return [];
     }
 
@@ -2227,11 +2157,9 @@ export async function fetchCatalogueAuthors(
       fonction: ensureString(getField(record, 'fonction', 'idfonction', 'function')),
     }));
 
-    console.debug(`[catalogueApi] ${authors.length} auteur(s) trouvé(s) pour ${ean}`);
     logResponse(endpoint, authors);
     return authors;
-  } catch (error) {
-    console.error('[catalogueApi] Erreur lors de la récupération des auteurs', error);
+  } catch {
     logResponse(endpoint, []);
     return [];
   }
@@ -2245,7 +2173,6 @@ export async function fetchCatalogueBooksByAuthors(
   logRequest(endpoint);
 
   if (authors.length === 0) {
-    console.debug('[catalogueApi] Aucun auteur fourni');
     logResponse(endpoint, []);
     return [];
   }
@@ -2311,11 +2238,9 @@ export async function fetchCatalogueBooksByAuthors(
     // Limit to 10 books maximum
     const finalBooks = uniqueBooks.slice(0, 10);
 
-    console.debug(`[catalogueApi] ${finalBooks.length} livres récupérés pour ${authors.length} auteur(s)`);
     logResponse(endpoint, finalBooks);
     return finalBooks;
-  } catch (error) {
-    console.error('[catalogueApi] Erreur lors de la récupération des livres par auteurs', error);
+  } catch {
     logResponse(endpoint, []);
     return [];
   }
@@ -2358,8 +2283,6 @@ export async function fetchNextCatalogueOffice(
     const payload = (await response.json()) as DatabaseApiResponse;
     const records = extractDatabaseRows(payload);
 
-    console.debug('[catalogueApi] Prochaine office récupérée depuis la base.');
-
     if (!records.length) {
       throw new Error("La base de donnees n'a retourne aucun resultat");
     }
@@ -2380,8 +2303,8 @@ export async function fetchNextCatalogueOffice(
       logResponse(endpoint, nextOffice);
 
       if (onCoverProgress) {
-        void hydrateCatalogueOfficeGroupsWithCovers([nextOffice], { onCoverProgress }).catch(error => {
-          console.warn('[catalogueApi] Hydratation des couvertures interrompue', error);
+        void hydrateCatalogueOfficeGroupsWithCovers([nextOffice], { onCoverProgress }).catch(() => {
+          // Silently ignore hydration errors
         });
       }
 
@@ -2396,7 +2319,6 @@ export async function fetchNextCatalogueOffice(
     logResponse(endpoint, hydratedOffice);
     return hydratedOffice;
   } catch (error) {
-    console.error('[catalogueApi] Impossible de recuperer la prochaine office', error);
     throw error;
   }
 }
@@ -2480,11 +2402,9 @@ export async function fetchCatalogueSearchSuggestions(
       cover: FALLBACK_COVER_DATA_URL,
     }));
 
-    console.debug(`[catalogueApi] ${suggestions.length} suggestions trouvées pour "${query}"`);
     logResponse(endpoint, suggestions);
     return suggestions;
-  } catch (error) {
-    console.error('[catalogueApi] Erreur lors de la recherche de suggestions', error);
+  } catch {
     return [];
   }
 }

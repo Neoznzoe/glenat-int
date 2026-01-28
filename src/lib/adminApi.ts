@@ -1230,9 +1230,6 @@ async function syncUserModuleOverrides(
       }
       const numericModuleId = toDatabaseIntegerId(moduleIdValue);
       if (numericModuleId === null) {
-        console.warn(
-          `Impossible de convertir l'identifiant du module « ${moduleIdValue} » pour la permission ${permissionKey}.`,
-        );
         continue;
       }
       const canView = mode === 'allow' ? 1 : 0;
@@ -1465,8 +1462,8 @@ export async function fetchUsers(): Promise<UserAccount[]> {
       'membres des groupes utilisateurs',
     );
     membershipsByUser = buildGroupMembershipMap(membershipRecords);
-  } catch (error) {
-    console.error('Impossible de récupérer les appartenances aux groupes.', error);
+  } catch {
+    // Silently ignore group membership fetch errors
   }
 
   let modulePermissionMaps: ModulePermissionMaps | null = null;
@@ -1479,8 +1476,8 @@ export async function fetchUsers(): Promise<UserAccount[]> {
       "exceptions d'accès individuelles",
     );
     moduleOverridesByUser = buildModuleOverrideMap(permissionRecords, maps.keyByModuleId);
-  } catch (error) {
-    console.error("Impossible de récupérer les permissions individuelles des utilisateurs.", error);
+  } catch {
+    // Silently ignore individual permission fetch errors
   }
 
   const moduleIdByKey = modulePermissionMaps?.moduleIdByKey ?? new Map<PermissionKey, string>();
@@ -1560,8 +1557,8 @@ export async function fetchUserById(userId: string): Promise<UserAccount> {
       user.permissionOverrides = sanitizePermissionOverrides(
         mergeModuleOverrides(user.permissionOverrides, moduleOverrides, maps.moduleIdByKey),
       );
-    } catch (error) {
-      console.error('Impossible de récupérer les permissions de l\'utilisateur.', error);
+    } catch {
+      // Silently ignore permission fetch errors
     }
   }
 
@@ -1574,7 +1571,6 @@ export async function updateUser(
 ): Promise<UserAccount> {
   const url = `${USER_API_ENDPOINT}/${encodeURIComponent(userId)}`;
   const apiPayload = mapToApiFormat(updates);
-  console.log('Updating user:', userId, 'with data:', apiPayload);
 
   let response: Response;
   try {
@@ -1594,7 +1590,6 @@ export async function updateUser(
     let errorDetail = response.statusText;
     try {
       const errorData = await response.json();
-      console.error('Update API Error Response:', errorData);
       errorDetail = errorData.message || errorData.error || errorDetail;
     } catch {
       // Ignore JSON parse errors
@@ -1605,7 +1600,6 @@ export async function updateUser(
   let payload: UserApiResponse;
   try {
     payload = (await response.json()) as UserApiResponse;
-    console.log('User update response:', payload);
   } catch {
     throw new Error('Réponse inattendue lors de la mise à jour de l\'utilisateur.');
   }
@@ -1647,7 +1641,6 @@ function mapToApiFormat(userData: Partial<ApiUserRecord>): Record<string, unknow
 
 export async function createUser(userData: Partial<ApiUserRecord>): Promise<UserAccount> {
   const apiPayload = mapToApiFormat(userData);
-  console.log('Creating user with data:', apiPayload);
 
   let response: Response;
   try {
@@ -1667,7 +1660,6 @@ export async function createUser(userData: Partial<ApiUserRecord>): Promise<User
     let errorDetail = response.statusText;
     try {
       const errorData = await response.json();
-      console.error('API Error Response:', errorData);
       errorDetail = errorData.message || errorData.error || errorDetail;
     } catch {
       // Ignore JSON parse errors
@@ -1678,7 +1670,6 @@ export async function createUser(userData: Partial<ApiUserRecord>): Promise<User
   let payload: UserApiResponse;
   try {
     payload = (await response.json()) as UserApiResponse;
-    console.log('User creation response:', payload);
   } catch {
     throw new Error('Réponse inattendue lors de la création de l\'utilisateur.');
   }
@@ -1698,7 +1689,6 @@ export async function createUser(userData: Partial<ApiUserRecord>): Promise<User
 
 export async function deleteUser(userId: string): Promise<void> {
   const url = `${USER_API_ENDPOINT}/${encodeURIComponent(userId)}`;
-  console.log('Deleting user:', userId);
 
   let response: Response;
   try {
@@ -1717,7 +1707,6 @@ export async function deleteUser(userId: string): Promise<void> {
     let errorDetail = response.statusText;
     try {
       const errorData = await response.json();
-      console.error('Delete API Error Response:', errorData);
       errorDetail = errorData.message || errorData.error || errorDetail;
     } catch {
       // Ignore JSON parse errors
@@ -1728,7 +1717,6 @@ export async function deleteUser(userId: string): Promise<void> {
   let payload: { success: boolean; message?: string };
   try {
     payload = (await response.json()) as { success: boolean; message?: string };
-    console.log('User deletion response:', payload);
   } catch {
     throw new Error('Réponse inattendue lors de la suppression de l\'utilisateur.');
   }
@@ -1893,7 +1881,6 @@ export async function fetchGroupById(groupId: string): Promise<ApiGroupRecord> {
 
 export async function createGroupViaApi(groupData: Partial<ApiGroupRecord>): Promise<ApiGroupRecord> {
   const apiPayload = mapToGroupApiFormat(groupData);
-  console.log('Creating group with data:', apiPayload);
 
   let response: Response;
   try {
@@ -1913,7 +1900,6 @@ export async function createGroupViaApi(groupData: Partial<ApiGroupRecord>): Pro
     let errorDetail = response.statusText;
     try {
       const errorData = await response.json();
-      console.error('API Error Response:', errorData);
       errorDetail = errorData.message || errorData.error || errorDetail;
     } catch {
       // Ignore JSON parse errors
@@ -1924,7 +1910,6 @@ export async function createGroupViaApi(groupData: Partial<ApiGroupRecord>): Pro
   let payload: GroupApiResponse;
   try {
     payload = (await response.json()) as GroupApiResponse;
-    console.log('Group creation response:', payload);
   } catch {
     throw new Error('Réponse inattendue lors de la création du groupe.');
   }
@@ -1948,7 +1933,6 @@ export async function updateGroup(
 ): Promise<ApiGroupRecord> {
   const url = `${GROUP_API_ENDPOINT}/${encodeURIComponent(groupId)}`;
   const apiPayload = mapToGroupApiFormat(updates);
-  console.log('Updating group:', groupId, 'with data:', apiPayload);
 
   let response: Response;
   try {
@@ -1968,7 +1952,6 @@ export async function updateGroup(
     let errorDetail = response.statusText;
     try {
       const errorData = await response.json();
-      console.error('Update API Error Response:', errorData);
       errorDetail = errorData.message || errorData.error || errorDetail;
     } catch {
       // Ignore JSON parse errors
@@ -1979,7 +1962,6 @@ export async function updateGroup(
   let payload: GroupApiResponse;
   try {
     payload = (await response.json()) as GroupApiResponse;
-    console.log('Group update response:', payload);
   } catch {
     throw new Error('Réponse inattendue lors de la mise à jour du groupe.');
   }
@@ -1999,7 +1981,6 @@ export async function updateGroup(
 
 export async function deleteGroup(groupId: string): Promise<void> {
   const url = `${GROUP_API_ENDPOINT}/${encodeURIComponent(groupId)}`;
-  console.log('Deleting group:', groupId);
 
   let response: Response;
   try {
@@ -2018,7 +1999,6 @@ export async function deleteGroup(groupId: string): Promise<void> {
     let errorDetail = response.statusText;
     try {
       const errorData = await response.json();
-      console.error('Delete API Error Response:', errorData);
       errorDetail = errorData.message || errorData.error || errorDetail;
     } catch {
       // Ignore JSON parse errors
@@ -2029,7 +2009,6 @@ export async function deleteGroup(groupId: string): Promise<void> {
   let payload: { success: boolean; message?: string };
   try {
     payload = (await response.json()) as { success: boolean; message?: string };
-    console.log('Group deletion response:', payload);
   } catch {
     throw new Error('Réponse inattendue lors de la suppression du groupe.');
   }
@@ -2219,7 +2198,6 @@ export async function fetchAllBlocsFromCms(): Promise<CmsBlocRecord[]> {
       });
 
       if (!response.ok) {
-        console.warn(`Failed to fetch blocs page ${currentPage}: ${response.status}`);
         break;
       }
 
@@ -2236,8 +2214,7 @@ export async function fetchAllBlocsFromCms(): Promise<CmsBlocRecord[]> {
       } else {
         hasMorePages = false;
       }
-    } catch (error) {
-      console.error(`Error fetching blocs page ${currentPage}:`, error);
+    } catch {
       hasMorePages = false;
     }
   }
@@ -2265,7 +2242,6 @@ export async function fetchAllElementsFromCms(): Promise<CmsElementRecord[]> {
       });
 
       if (!response.ok) {
-        console.warn(`Failed to fetch elements page ${currentPage}: ${response.status}`);
         break;
       }
 
@@ -2282,8 +2258,7 @@ export async function fetchAllElementsFromCms(): Promise<CmsElementRecord[]> {
       } else {
         hasMorePages = false;
       }
-    } catch (error) {
-      console.error(`Error fetching elements page ${currentPage}:`, error);
+    } catch {
       hasMorePages = false;
     }
   }
@@ -2419,12 +2394,7 @@ export async function fetchUserRights(userId: string): Promise<UserRightsRespons
 export async function fetchModulesWithPermissions(userRecordId?: string): Promise<CmsModuleRecord[]> {
   const modules = await fetchAllModulesFromCms();
 
-  console.debug('[fetchModulesWithPermissions] Called with userRecordId:', userRecordId);
-  console.debug('[fetchModulesWithPermissions] Total modules fetched:', modules.length);
-
   if (!userRecordId) {
-    // Return all modules with canView=false by default
-    console.debug('[fetchModulesWithPermissions] No userRecordId, returning all modules');
     return modules;
   }
 
@@ -2438,19 +2408,9 @@ export async function fetchModulesWithPermissions(userRecordId?: string): Promis
       modulePermissions.set(targetId, perm.canView);
     });
 
-    console.debug('[fetchModulesWithPermissions] View matrix MODULE entries:', modulePermissions.size);
-
     // Filter modules based on permissions (only return those with canView=true)
-    const filteredModules = modules.filter(module => {
-      const canView = modulePermissions.get(module.moduleId);
-      console.debug(`[fetchModulesWithPermissions] Module ${module.moduleId} "${module.moduleCode}": canView=${canView}`);
-      return canView === true;
-    });
-
-    console.debug('[fetchModulesWithPermissions] Filtered modules count:', filteredModules.length);
-    return filteredModules;
-  } catch (error) {
-    console.error('Error fetching user permissions, returning no modules:', error);
+    return modules.filter(module => modulePermissions.get(module.moduleId) === true);
+  } catch {
     return []; // Return empty if permissions can't be fetched
   }
 }
@@ -2478,8 +2438,7 @@ export async function fetchPagesWithPermissions(userRecordId?: string): Promise<
 
     // Filter pages based on permissions (only return those with canView=true)
     return pages.filter(page => pagePermissions.get(page.pageId) === true);
-  } catch (error) {
-    console.error('Error fetching user permissions, returning no pages:', error);
+  } catch {
     return []; // Return empty if permissions can't be fetched
   }
 }
@@ -2507,8 +2466,7 @@ export async function fetchBlocsWithPermissions(userRecordId?: string): Promise<
 
     // Filter blocs based on permissions (only return those with canView=true)
     return blocs.filter(bloc => blocPermissions.get(bloc.blocId) === true);
-  } catch (error) {
-    console.error('Error fetching user permissions, returning no blocs:', error);
+  } catch {
     return []; // Return empty if permissions can't be fetched
   }
 }
@@ -2536,8 +2494,7 @@ export async function fetchElementsWithPermissions(userRecordId?: string): Promi
 
     // Filter elements based on permissions (only return those with canView=true)
     return elements.filter(element => elementPermissions.get(element.elementId) === true);
-  } catch (error) {
-    console.error('Error fetching user permissions, returning no elements:', error);
+  } catch {
     return []; // Return empty if permissions can't be fetched
   }
 }
@@ -2710,12 +2667,6 @@ function buildSidebarModulesQuery(userId?: number): string {
   const sanitizedId = hasValidId ? Math.trunc(userId) : null;
   const userIdLiteral = sanitizedId === null ? 'CAST(NULL AS INT)' : String(sanitizedId);
 
-  if (sanitizedId !== null) {
-    console.debug('Requête SQL modules préparée pour un utilisateur authentifié.');
-  } else {
-    console.warn('Requête SQL modules – aucun identifiant utilisateur valide fourni.');
-  }
-
   return [
     'SET NOCOUNT ON;',
     `DECLARE @userId INT = ${userIdLiteral};`,
@@ -2883,11 +2834,8 @@ export async function fetchCurrentUser(): Promise<UserAccount> {
         ),
       };
     }
-  } catch (error) {
-    console.error(
-      "Impossible de récupérer les permissions individuelles pour l'utilisateur courant.",
-      error,
-    );
+  } catch {
+    // Silently ignore permission fetch errors for current user
   }
 
   return nextUser;
@@ -3093,8 +3041,7 @@ export async function persistModuleOverrideChange(
   let refreshedGroups: string[];
   try {
     refreshedGroups = await loadUserGroupIds(numericUserId);
-  } catch (error) {
-    console.warn('Failed to reload user groups after module override update.', { userId: payload.userId, error });
+  } catch {
     refreshedGroups = [...payload.groups];
   }
   updatedUser.groups = refreshedGroups;

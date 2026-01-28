@@ -209,8 +209,8 @@ function RouteRenderer({ path, element }: RouteRendererProps): ReactElement | nu
         }
         navigate(`/ci/${token}`, { replace: true });
       })
-      .catch((error) => {
-        console.error('Erreur lors de la génération du jeton chiffré :', error);
+      .catch(() => {
+        // Silently ignore token generation errors
       });
 
     return () => {

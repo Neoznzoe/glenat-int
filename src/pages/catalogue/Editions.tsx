@@ -36,8 +36,8 @@ export function Catalogue() {
           setEditions(data);
         }
       })
-      .catch(error => {
-        console.error('Impossible de récupérer les éditions', error);
+      .catch(() => {
+        // Silently ignore editions fetch errors
       });
 
     return () => {

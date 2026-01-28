@@ -180,9 +180,6 @@ export async function updateZone(zoneId: string, payload: Partial<CreateZonePayl
   if (payload.CacheAgeSeconds !== undefined) apiPayload.cache_age_seconds = payload.CacheAgeSeconds;
   if (payload.Description) apiPayload.description = payload.Description;
 
-  console.log('UPDATE ZONE - URL:', url);
-  console.log('UPDATE ZONE - Payload:', apiPayload);
-
   const response = await fetchWithOAuth(url, {
     method: 'PUT',
     headers: {
@@ -192,7 +189,6 @@ export async function updateZone(zoneId: string, payload: Partial<CreateZonePayl
   });
 
   const data = await handleResponse<{ success: boolean; zone: Zone }>(response);
-  console.log('UPDATE ZONE - Response:', data);
   return data.zone;
 }
 

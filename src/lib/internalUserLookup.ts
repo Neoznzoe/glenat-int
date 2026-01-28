@@ -48,8 +48,7 @@ export async function lookupInternalUserByEmail(
 
   try {
     return (await response.json()) as DatabaseUserLookupResponse;
-  } catch (error) {
-    console.warn('Réponse inattendue lors de la récupération utilisateur :', error);
+  } catch {
     return null;
   }
 }

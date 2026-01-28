@@ -161,8 +161,7 @@ export function CmsPermissionsSection({ userId }: CmsPermissionsSectionProps) {
         });
 
         setPermissions(newPermissions);
-      } catch (error) {
-        console.error('Error loading CMS permissions:', error);
+      } catch {
         setPermissions({
           modules: new Map(),
           pages: new Map(),

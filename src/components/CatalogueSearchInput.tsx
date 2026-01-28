@@ -46,8 +46,7 @@ export function CatalogueSearchInput() {
         setSuggestions(results);
         setShowSuggestions(results.length > 0);
         setSelectedIndex(-1);
-      } catch (error) {
-        console.error('Erreur de recherche', error);
+      } catch {
         setSuggestions([]);
       } finally {
         setIsLoading(false);

@@ -39,8 +39,8 @@ function HomeContent() {
           setNextOffice(office);
         }
       })
-      .catch(error => {
-        console.error('Impossible de récupérer la prochaine office', error);
+      .catch(() => {
+        // Silently ignore office fetch errors
       })
       .finally(() => {
         if (isActive) {
@@ -60,8 +60,8 @@ function HomeContent() {
           setAbsentsToday(absences);
         }
       })
-      .catch(error => {
-        console.error('Impossible de récupérer les absences', error);
+      .catch(() => {
+        // Silently ignore absences fetch errors
       });
 
     return () => { isActive = false; };
@@ -76,8 +76,8 @@ function HomeContent() {
           setTeleworkToday(remoteWorking);
         }
       })
-      .catch(error => {
-        console.error('Impossible de récupérer le télétravail', error);
+      .catch(() => {
+        // Silently ignore remote working fetch errors
       });
 
     return () => { isActive = false; };

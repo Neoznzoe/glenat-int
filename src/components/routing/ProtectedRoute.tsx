@@ -33,7 +33,6 @@ export function ProtectedRoute({
 
     // If no user, redirect
     if (!currentUser) {
-      console.warn('No user found, redirecting to fallback');
       navigate(fallbackPath, { replace: true });
       return;
     }
@@ -50,7 +49,6 @@ export function ProtectedRoute({
       );
 
       if (!hasModuleAccess) {
-        console.warn(`Access denied to module: ${moduleCode}`);
         navigate(fallbackPath, { replace: true });
         return;
       }
@@ -61,7 +59,6 @@ export function ProtectedRoute({
       const hasPageAccess = cmsPages.some((page) => page.pageId === pageId);
 
       if (!hasPageAccess) {
-        console.warn(`Access denied to page: ${pageId}`);
         navigate(fallbackPath, { replace: true });
         return;
       }

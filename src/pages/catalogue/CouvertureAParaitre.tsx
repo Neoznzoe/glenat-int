@@ -116,7 +116,6 @@ export function CouvertureAParaitre() {
             const message =
               error instanceof Error ? error.message : 'Erreur inconnue lors de la récupération';
 
-            console.error(`Erreur lors de la récupération de la couverture ${ean}:`, error);
             setStates((prev) =>
               prev.map((item) =>
                 item.ean === ean
