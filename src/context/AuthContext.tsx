@@ -43,6 +43,7 @@ const convertBlobToDataUrl = (blob: Blob) =>
     reader.readAsDataURL(blob);
   });
 
+// [PERF] async-parallel: Paralléliser le fetch du profil et de la photo
 async function fetchUserProfile(instance: IPublicClientApplication, account: AccountInfo) {
   const response = await instance.acquireTokenSilent({
     ...loginRequest,
@@ -54,9 +55,11 @@ async function fetchUserProfile(instance: IPublicClientApplication, account: Acc
     'Content-Type': 'application/json',
   };
 
-  const profileResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
-    headers,
-  });
+  // Démarrer les deux requêtes en parallèle
+  const [profileResponse, photoResponse] = await Promise.all([
+    fetch('https://graph.microsoft.com/v1.0/me', { headers }),
+    fetch('https://graph.microsoft.com/v1.0/me/photo/$value', { headers }).catch(() => null),
+  ]);
 
   if (!profileResponse.ok) {
     throw new Error('Impossible de récupérer le profil utilisateur.');
@@ -65,17 +68,14 @@ async function fetchUserProfile(instance: IPublicClientApplication, account: Acc
   const profile = (await profileResponse.json()) as UserProfile;
   let photoUrl: string | undefined;
 
-  try {
-    const photoResponse = await fetch('https://graph.microsoft.com/v1.0/me/photo/$value', {
-      headers,
-    });
-
-    if (photoResponse.ok) {
+  // Traiter la photo si disponible
+  if (photoResponse?.ok) {
+    try {
       const blob = await photoResponse.blob();
       photoUrl = await convertBlobToDataUrl(blob);
+    } catch {
+      // Silently ignore profile photo conversion errors
     }
-  } catch {
-    // Silently ignore profile photo fetch errors
   }
 
   return {

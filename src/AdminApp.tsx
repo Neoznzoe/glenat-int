@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { AdminLayout } from './layouts/AdminLayout';
 import { lazy } from 'react';
-import * as LucideIcons from 'lucide-react';
+import { SquareStack, Component, Zap, Users, Palette, Newspaper, ParkingCircle, Clock, CalendarDays, BriefcaseBusiness, Bell, BookOpen, MailMinus, Monitor} from 'lucide-react';
 import { PlaceholderPage } from './pages/administration/PlaceholderPage';
 
 const AdminDashboard = lazy(() => import('./pages/administration/Dashboard'));
@@ -77,7 +77,7 @@ function AdminContent() {
       <PlaceholderPage
         title="Gestion des Blocs"
         description="Gérez les blocs et leurs configurations."
-        icon={LucideIcons.SquareStack}
+        icon={SquareStack}
       />
     </Suspense>;
   }
@@ -87,7 +87,7 @@ function AdminContent() {
       <PlaceholderPage
         title="Gestion des Éléments"
         description="Gérez les éléments et leur contenu."
-        icon={LucideIcons.Component}
+        icon={Component}
       />
     </Suspense>;
   }
@@ -103,7 +103,7 @@ function AdminContent() {
       <PlaceholderPage
         title="PHPulse"
         description="Vous pouvez facilement administrer les différentes fonctionnalités de PHPulse."
-        icon={LucideIcons.Zap}
+        icon={Zap}
       />
     </Suspense>;
   }
@@ -113,7 +113,7 @@ function AdminContent() {
       <PlaceholderPage
         title="Qui fait quoi ?"
         description="Administrez la section Qui fait quoi."
-        icon={LucideIcons.Users}
+        icon={Users}
       />
     </Suspense>;
   }
@@ -123,7 +123,7 @@ function AdminContent() {
       <PlaceholderPage
         title="Glénat'ée"
         description="Administrez la section Glénat'ée."
-        icon={LucideIcons.Palette}
+        icon={Palette}
       />
     </Suspense>;
   }
@@ -133,7 +133,7 @@ function AdminContent() {
       <PlaceholderPage
         title="Glénat'Doc"
         description="Administrez la section Glénat'Doc."
-        icon={LucideIcons.Newspaper}
+        icon={Newspaper}
       />
     </Suspense>;
   }
@@ -143,7 +143,7 @@ function AdminContent() {
       <PlaceholderPage
         title="Plans de parking"
         description="Gérez les plans de parking."
-        icon={LucideIcons.ParkingCircle}
+        icon={ParkingCircle}
       />
     </Suspense>;
   }
@@ -153,7 +153,7 @@ function AdminContent() {
       <PlaceholderPage
         title="Gestion des temps"
         description="Administrez la gestion des temps."
-        icon={LucideIcons.Clock}
+        icon={Clock}
       />
     </Suspense>;
   }
@@ -163,7 +163,7 @@ function AdminContent() {
       <PlaceholderPage
         title="Agenda"
         description="Administrez l'agenda et les événements."
-        icon={LucideIcons.CalendarDays}
+        icon={CalendarDays}
       />
     </Suspense>;
   }
@@ -173,7 +173,7 @@ function AdminContent() {
       <PlaceholderPage
         title="Emplois"
         description="Gérez les offres d'emploi."
-        icon={LucideIcons.BriefcaseBusiness}
+        icon={BriefcaseBusiness}
       />
     </Suspense>;
   }
@@ -183,7 +183,7 @@ function AdminContent() {
       <PlaceholderPage
         title="Alertes"
         description="Gérez les alertes système."
-        icon={LucideIcons.Bell}
+        icon={Bell}
       />
     </Suspense>;
   }
@@ -193,7 +193,7 @@ function AdminContent() {
       <PlaceholderPage
         title="Crédit livre"
         description="Administrez le crédit livre."
-        icon={LucideIcons.BookOpen}
+        icon={BookOpen}
       />
     </Suspense>;
   }
@@ -203,7 +203,7 @@ function AdminContent() {
       <PlaceholderPage
         title="Désabonnement newsletter"
         description="Gérez les désabonnements à la newsletter."
-        icon={LucideIcons.MailMinus}
+        icon={MailMinus}
       />
     </Suspense>;
   }
@@ -213,7 +213,7 @@ function AdminContent() {
       <PlaceholderPage
         title="Écran de service"
         description="Administrez l'écran de service."
-        icon={LucideIcons.Monitor}
+        icon={Monitor}
       />
     </Suspense>;
   }

@@ -31,7 +31,9 @@ export function useSidebarModules(userId?: number | null) {
     select: (payload) => payload.definitions,
     enabled: sanitizedId !== undefined,
     staleTime: 5 * 60 * 1000,
-    refetchInterval: sanitizedId !== undefined ? 15_000 : false,
-    refetchIntervalInBackground: true,
+    // [PERF] Réduire la fréquence de refetch de 15s à 60s pour limiter la charge API
+    refetchInterval: sanitizedId !== undefined ? 60_000 : false,
+    // [PERF] Désactiver le refetch en arrière-plan pour économiser les ressources
+    refetchIntervalInBackground: false,
   });
 }

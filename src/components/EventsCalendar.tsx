@@ -24,6 +24,34 @@ function parseDate(value?: string | null): Date | null {
   }
 }
 
+// [PERF] js-hoist-regexp: Hoister la fonction lightenColor hors du composant pour éviter les recréations
+const lightenColor = (hex: string, percent: number = 0.85): string => {
+  const sanitized = hex.replace(/^#/, '');
+  const num = parseInt(sanitized, 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+
+  const lighten = (c: number) => Math.round(c + (255 - c) * percent);
+  const newR = lighten(r);
+  const newG = lighten(g);
+  const newB = lighten(b);
+
+  return `rgb(${newR}, ${newG}, ${newB})`;
+};
+
+// [PERF] js-cache-function-results: Cache pour les couleurs allégées
+const lightenedColorCache = new Map<string, string>();
+const getLightenedColor = (hex: string, percent: number = 0.85): string => {
+  const cacheKey = `${hex}-${percent}`;
+  let result = lightenedColorCache.get(cacheKey);
+  if (!result) {
+    result = lightenColor(hex, percent);
+    lightenedColorCache.set(cacheKey, result);
+  }
+  return result;
+};
+
 export function EventsCalendar() {
   const today = new Date();
   const [month, setMonth] = React.useState<Date>(today);
@@ -206,33 +234,15 @@ export function EventsCalendar() {
             ) => {
               const { theme } = useTheme();
 
-              // Récupérer la couleur pour un jour donné
+              // [PERF] Utiliser la fonction lightenColor hoistée et cachée
               const getColorForDay = (d: Date): { bg: string; type: string } | null => {
                 const dateKey = format(d, 'yyyy-MM-dd');
                 const dayEvents = eventsByDate.get(dateKey);
 
                 if (!dayEvents || dayEvents.length === 0) return null;
 
-                // Prendre le premier événement pour déterminer la couleur
                 const firstEvent = dayEvents[0];
-
-                // Fonction pour alléger une couleur hex
-                const lightenColor = (hex: string, percent: number = 0.85): string => {
-                  const sanitized = hex.replace(/^#/, '');
-                  const num = parseInt(sanitized, 16);
-                  const r = (num >> 16) & 255;
-                  const g = (num >> 8) & 255;
-                  const b = num & 255;
-
-                  const lighten = (c: number) => Math.round(c + (255 - c) * percent);
-                  const newR = lighten(r);
-                  const newG = lighten(g);
-                  const newB = lighten(b);
-
-                  return `rgb(${newR}, ${newG}, ${newB})`;
-                };
-
-                const bg = lightenColor(firstEvent.color);
+                const bg = getLightenedColor(firstEvent.color);
 
                 return { bg, type: 'event' };
               };

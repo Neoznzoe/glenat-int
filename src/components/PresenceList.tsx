@@ -103,18 +103,23 @@ export function PresenceList<T extends Record<string, ReactNode>>({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((row, idx) => (
-              <TableRow key={idx} className={rowClassName?.(row, idx)}>
-                {columns.map((col) => (
-                  <TableCell
-                    key={String(col.key)}
-                    className={isTwoColumn ? 'w-1/2' : undefined}
-                  >
-                    {row[col.key]}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
+            {/* [PERF] rendering-conditional-render: Utiliser des clés stables basées sur les données */}
+            {rows.map((row, idx) => {
+              // Générer une clé stable basée sur les valeurs de la ligne
+              const rowKey = columns.map(col => String(row[col.key] ?? '')).join('-') || `row-${idx}`;
+              return (
+                <TableRow key={rowKey} className={rowClassName?.(row, idx)}>
+                  {columns.map((col) => (
+                    <TableCell
+                      key={String(col.key)}
+                      className={isTwoColumn ? 'w-1/2' : undefined}
+                    >
+                      {row[col.key]}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
