@@ -1507,6 +1507,40 @@ export async function fetchCatalogueEditions(): Promise<CatalogueEdition[]> {
   return Promise.resolve(data);
 }
 
+// [PERF] js-hoist-regexp: Pré-compiler les regex et map d'entités au niveau module
+const HTML_ENTITIES_MAP: Record<string, string> = {
+  '&nbsp;': ' ',
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&#39;': "'",
+  '&eacute;': 'é',
+  '&egrave;': 'è',
+  '&ecirc;': 'ê',
+  '&agrave;': 'à',
+  '&acirc;': 'â',
+  '&icirc;': 'î',
+  '&ocirc;': 'ô',
+  '&ucirc;': 'û',
+  '&ccedil;': 'ç',
+  '&rsquo;': '\u2019',
+  '&lsquo;': '\u2018',
+  '&rdquo;': '\u201D',
+  '&ldquo;': '\u201C',
+  '&ndash;': '\u2013',
+  '&mdash;': '\u2014',
+  '&hellip;': '\u2026',
+};
+
+// Regex combinée pour toutes les entités nommées (plus efficace qu'une boucle)
+const HTML_NAMED_ENTITIES_REGEX = new RegExp(
+  Object.keys(HTML_ENTITIES_MAP).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'),
+  'g'
+);
+const HTML_NUMERIC_ENTITY_REGEX = /&#(\d+);/g;
+const HTML_HEX_ENTITY_REGEX = /&#x([0-9A-Fa-f]+);/g;
+
 const decodeHtmlEntities = (text: string): string => {
   if (typeof document !== 'undefined') {
     const textarea = document.createElement('textarea');
@@ -1514,48 +1548,11 @@ const decodeHtmlEntities = (text: string): string => {
     return textarea.value;
   }
 
-  // Fallback pour le cas où document n'est pas disponible
-  const entities: Record<string, string> = {
-    '&nbsp;': ' ',
-    '&amp;': '&',
-    '&lt;': '<',
-    '&gt;': '>',
-    '&quot;': '"',
-    '&#39;': "'",
-    '&eacute;': 'é',
-    '&egrave;': 'è',
-    '&ecirc;': 'ê',
-    '&agrave;': 'à',
-    '&acirc;': 'â',
-    '&icirc;': 'î',
-    '&ocirc;': 'ô',
-    '&ucirc;': 'û',
-    '&ccedil;': 'ç',
-    '&rsquo;': '\u2019',
-    '&lsquo;': '\u2018',
-    '&rdquo;': '\u201D',
-    '&ldquo;': '\u201C',
-    '&ndash;': '\u2013',
-    '&mdash;': '\u2014',
-    '&hellip;': '\u2026',
-  };
-
-  let decoded = text;
-  for (const [entity, char] of Object.entries(entities)) {
-    decoded = decoded.replace(new RegExp(entity, 'g'), char);
-  }
-
-  // Décoder les entités numériques comme &#233;
-  decoded = decoded.replace(/&#(\d+);/g, (_, code) => {
-    return String.fromCharCode(parseInt(code, 10));
-  });
-
-  // Décoder les entités hexadécimales comme &#x00E9;
-  decoded = decoded.replace(/&#x([0-9A-Fa-f]+);/g, (_, code) => {
-    return String.fromCharCode(parseInt(code, 16));
-  });
-
-  return decoded;
+  // [PERF] Fallback optimisé avec regex pré-compilées
+  return text
+    .replace(HTML_NAMED_ENTITIES_REGEX, match => HTML_ENTITIES_MAP[match] || match)
+    .replace(HTML_NUMERIC_ENTITY_REGEX, (_, code) => String.fromCharCode(parseInt(code, 10)))
+    .replace(HTML_HEX_ENTITY_REGEX, (_, code) => String.fromCharCode(parseInt(code, 16)));
 };
 
 const stripHtmlTags = (html: string): string => {
@@ -1739,13 +1736,35 @@ async function fetchCatalogueBookAuthors(ean: string): Promise<CatalogueAuthor[]
   }
 }
 
+// [PERF] js-cache-function-results: Cache et déduplication pour les requêtes de livres
+const bookCache = new Map<string, CatalogueBook>();
+const pendingBookRequests = new Map<string, Promise<CatalogueBook | null>>();
+const BOOK_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const bookCacheTimestamps = new Map<string, number>();
+
 export async function fetchCatalogueBook(
   ean: string,
 ): Promise<CatalogueBook | null> {
-  const endpoint = `fetchCatalogueBook:${ean}`;
+  const trimmedEan = ean.trim();
+  const endpoint = `fetchCatalogueBook:${trimmedEan}`;
   logRequest(endpoint);
 
-  try {
+  // Vérifier le cache
+  const cachedBook = bookCache.get(trimmedEan);
+  const cacheTimestamp = bookCacheTimestamps.get(trimmedEan);
+  if (cachedBook && cacheTimestamp && Date.now() - cacheTimestamp < BOOK_CACHE_TTL_MS) {
+    logResponse(endpoint, cachedBook);
+    return cachedBook;
+  }
+
+  // Vérifier si une requête est déjà en cours pour cet EAN
+  const pendingRequest = pendingBookRequests.get(trimmedEan);
+  if (pendingRequest) {
+    return pendingRequest;
+  }
+
+  const request = (async (): Promise<CatalogueBook | null> => {
+    try {
     // Essayer d'abord de récupérer depuis la base de données
     const requestPayload = {
       query: `SELECT * FROM [catalogBooks] WHERE idItem = '${ean}';`,
@@ -1778,16 +1797,18 @@ export async function fetchCatalogueBook(
         const record = records[0];
         const book = await normalizeBookFromDatabaseRecord(record);
         if (book) {
-          // Récupérer les textes depuis catalogTexts
-          const texts = await fetchCatalogueBookTexts(ean);
+          // [PERF] Récupérer les textes et auteurs en parallèle (async-parallel)
+          const [texts, authors] = await Promise.all([
+            fetchCatalogueBookTexts(ean),
+            fetchCatalogueBookAuthors(ean),
+          ]);
+
           if (texts.length > 0 && book.details) {
             book.details.texts = texts;
             // Garder le summary pour la compatibilité (utiliser le premier texte)
             book.details.summary = texts[0]?.texte;
           }
 
-          // Récupérer les auteurs depuis catalogAutors
-          const authors = await fetchCatalogueBookAuthors(ean);
           if (authors.length > 0 && book.details) {
             book.details.authors = authors;
 
@@ -1805,6 +1826,10 @@ export async function fetchCatalogueBook(
             }
           }
 
+          // Mettre en cache le livre trouvé
+          bookCache.set(trimmedEan, book);
+          bookCacheTimestamps.set(trimmedEan, Date.now());
+
           logResponse(endpoint, book);
           return book;
         }
@@ -1813,11 +1838,22 @@ export async function fetchCatalogueBook(
 
     // Aucune donnée disponible dans l'API
     logResponse(endpoint, null);
-    return Promise.resolve(null);
+    return null;
   } catch {
     logResponse(endpoint, null);
-    return Promise.resolve(null);
+    return null;
   }
+  })();
+
+  // Enregistrer la requête en cours
+  pendingBookRequests.set(trimmedEan, request);
+
+  // Nettoyer après résolution
+  request.finally(() => {
+    pendingBookRequests.delete(trimmedEan);
+  });
+
+  return request;
 }
 
 export async function fetchCatalogueRelatedBooks(

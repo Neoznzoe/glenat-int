@@ -1,9 +1,58 @@
-import * as LucideIcons from 'lucide-react';
-import { PanelLeft } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+// [PERF] bundle-barrel-imports: Imports explicites au lieu de import * pour réduire le bundle
+import {
+  PanelLeft,
+  ArrowLeft,
+  LayoutDashboard,
+  FolderKanban,
+  Globe,
+  Puzzle,
+  FileText,
+  SquareStack,
+  Component,
+  Users,
+  UsersRound,
+  Zap,
+  Palette,
+  Newspaper,
+  ParkingCircle,
+  Clock,
+  CalendarDays,
+  BriefcaseBusiness,
+  Bell,
+  BookOpen,
+  MailMinus,
+  Monitor,
+  type LucideIcon,
+} from 'lucide-react';
 import { useState, useEffect, useRef, type FocusEvent, type KeyboardEvent } from 'react';
 import Logo from '../assets/logos/glenat/glenat_white.svg';
 import LogoCompact from '../assets/logos/glenat/glenat_G.svg';
+
+// Map statique des icônes utilisées dans l'admin sidebar
+const ADMIN_ICONS = {
+  LayoutDashboard,
+  FolderKanban,
+  Globe,
+  Puzzle,
+  FileText,
+  SquareStack,
+  Component,
+  Users,
+  UsersRound,
+  Zap,
+  Palette,
+  Newspaper,
+  ParkingCircle,
+  Clock,
+  CalendarDays,
+  BriefcaseBusiness,
+  Bell,
+  BookOpen,
+  MailMinus,
+  Monitor,
+} as const;
+
+type AdminIconName = keyof typeof ADMIN_ICONS;
 
 interface AdminSidebarProps {
   onExpandChange?: (expanded: boolean) => void;
@@ -13,7 +62,7 @@ interface AdminMenuItem {
   id: string;
   label: string;
   path: string;
-  icon: keyof typeof LucideIcons;
+  icon: AdminIconName;
   section?: 'main' | 'sections' | 'features';
 }
 
@@ -145,7 +194,7 @@ export function AdminSidebar({ onExpandChange }: AdminSidebarProps) {
   const dashboardItem = ADMIN_MENU_ITEMS.find(item => item.id === 'dashboard');
 
   const renderMenuItem = (item: AdminMenuItem) => {
-    const IconComponent = LucideIcons[item.icon] as LucideIcon;
+    const IconComponent = ADMIN_ICONS[item.icon] as LucideIcon;
 
     // Vérifier si on est sur cette route via le hash
     const currentHash = window.location.hash;
@@ -319,7 +368,7 @@ export function AdminSidebar({ onExpandChange }: AdminSidebarProps) {
           }`}
           title="Retour vers l'intranet"
         >
-          <LucideIcons.ArrowLeft className="h-3 w-3" />
+          <ArrowLeft className="h-3 w-3" />
           Retour vers l'intranet
         </a>
       </div>

@@ -48,12 +48,23 @@ function App() {
     </div>
   );
 
+  // [PERF] bundle-preload: Échelonner les preloads pour éviter de surcharger le réseau
   useEffect(() => {
-    LAZY_ROUTE_PRELOADERS.forEach((preload) => {
-      void preload().catch(() => {
-        // Ignorer les erreurs de préchargement pour ne pas perturber l'expérience utilisateur
-      });
+    const PRELOAD_DELAY_MS = 150; // Délai entre chaque preload
+    const timeoutIds: ReturnType<typeof setTimeout>[] = [];
+
+    LAZY_ROUTE_PRELOADERS.forEach((preload, index) => {
+      const timeoutId = setTimeout(() => {
+        void preload().catch(() => {
+          // Ignorer les erreurs de préchargement pour ne pas perturber l'expérience utilisateur
+        });
+      }, index * PRELOAD_DELAY_MS);
+      timeoutIds.push(timeoutId);
     });
+
+    return () => {
+      timeoutIds.forEach(clearTimeout);
+    };
   }, []);
 
   if (loading) {

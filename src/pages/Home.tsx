@@ -12,6 +12,7 @@ import { fetchNextCatalogueOffice, type CatalogueOfficeGroup } from '@/lib/catal
 import { fetchTodayAbsences, type AbsentPerson, fetchTodayRemoteWorking, type RemoteWorkingPerson } from '@/lib/absencesApi';
 import { HomeSkeleton } from '@/components/HomeSkeleton';
 import { visitingToday, travelingToday, plannedTravel, sharePointLinks, usefulLinks, companyLifeLinks } from '@/data/homeData';
+import { useExpandableList } from '@/hooks/useExpandableList';
 
 const noop = () => undefined;
 
@@ -73,11 +74,9 @@ function HomeContent() {
     href: `/catalogue/book?ean=${book.ean}`,
   })) ?? [];
 
-  const [showAllVisiting, setShowAllVisiting] = useState(false);
-  const [showAllTraveling, setShowAllTraveling] = useState(false);
-  const [showAllPlanned, setShowAllPlanned] = useState(false);
-  const [showAllAbsents, setShowAllAbsents] = useState(false);
-  const [showAllTelework, setShowAllTelework] = useState(false);
+  // [PERF] rerender-functional-setstate: Utiliser un hook pour gérer les états expand avec des callbacks stables
+  const expandKeys = ['visiting', 'traveling', 'planned', 'absents', 'telework'] as const;
+  const { isExpanded, expand, collapse } = useExpandableList(expandKeys);
 
   const rightCardRef = useRef<HTMLDivElement>(null);
   const absentRef = useRef<HTMLDivElement>(null);
@@ -88,9 +87,9 @@ function HomeContent() {
   const [absentLimit, setAbsentLimit] = useState(100);
   const [teleworkLimit, setTeleworkLimit] = useState(100);
 
-  const visitingDisplayed = showAllVisiting ? visitingToday : visitingToday.slice(0, 2);
-  const travelingDisplayed = showAllTraveling ? travelingToday : travelingToday.slice(0, 2);
-  const plannedTravelDisplayed = showAllPlanned ? plannedTravel : plannedTravel.slice(0, 2);
+  const visitingDisplayed = isExpanded('visiting') ? visitingToday : visitingToday.slice(0, 2);
+  const travelingDisplayed = isExpanded('traveling') ? travelingToday : travelingToday.slice(0, 2);
+  const plannedTravelDisplayed = isExpanded('planned') ? plannedTravel : plannedTravel.slice(0, 2);
 
   type VisitingRow = { name: string; email: string; date: ReactNode };
 
@@ -142,10 +141,10 @@ function HomeContent() {
 
     computeLimit(absentRef.current, absentMetrics, absentsToday.length, 0, setAbsentMetrics, setAbsentLimit);
     computeLimit(teleworkRef.current, teleworkMetrics, teleworkToday.length, -1, setTeleworkMetrics, setTeleworkLimit);
-  }, [showAllVisiting, showAllTraveling, showAllPlanned, absentMetrics, teleworkMetrics, absentsToday.length, teleworkToday.length]);
+  }, [isExpanded, absentMetrics, teleworkMetrics, absentsToday.length, teleworkToday.length]);
 
-  const absentsDisplayed = showAllAbsents ? absentsToday : absentsToday.slice(0, absentLimit);
-  const teleworkDisplayed = showAllTelework ? teleworkToday : teleworkToday.slice(0, teleworkLimit);
+  const absentsDisplayed = isExpanded('absents') ? absentsToday : absentsToday.slice(0, absentLimit);
+  const teleworkDisplayed = isExpanded('telework') ? teleworkToday : teleworkToday.slice(0, teleworkLimit);
 
   return (
     <div className="p-6 space-y-6">
@@ -207,26 +206,26 @@ function HomeContent() {
         <div ref={absentRef}>
           <PresenceList title="Absent aujourd'hui"
             columns={[{ key: 'name', label: 'Nom' }, { key: 'email', label: 'Email' }, { key: 'retour', label: 'Retour prévu' }]}
-            rows={absentsDisplayed} count={absentsToday.length} searchable sortable showMore={!showAllAbsents && absentsToday.length > absentLimit} showLess={showAllAbsents && absentsToday.length > absentLimit} onSearch={noop} onSort={noop} onShowMore={() => setShowAllAbsents(true)} onShowLess={() => setShowAllAbsents(false)} emptyMessage="aucun absent aujourd'hui" />
+            rows={absentsDisplayed} count={absentsToday.length} searchable sortable showMore={!isExpanded('absents') && absentsToday.length > absentLimit} showLess={isExpanded('absents') && absentsToday.length > absentLimit} onSearch={noop} onSort={noop} onShowMore={() => expand('absents')} onShowLess={() => collapse('absents')} emptyMessage="aucun absent aujourd'hui" />
         </div>
         <div ref={teleworkRef}>
           <PresenceList title="Télétravail aujourd'hui"
             columns={[{ key: 'name', label: 'Nom' }, { key: 'email', label: 'Email' }]}
-            rows={teleworkDisplayed} count={teleworkToday.length} searchable sortable showMore={!showAllTelework && teleworkToday.length > teleworkLimit} showLess={showAllTelework && teleworkToday.length > teleworkLimit} onSearch={noop} onSort={noop} onShowMore={() => setShowAllTelework(true)} onShowLess={() => setShowAllTelework(false)} emptyMessage="aucun télétravail aujourd'hui"/>
+            rows={teleworkDisplayed} count={teleworkToday.length} searchable sortable showMore={!isExpanded('telework') && teleworkToday.length > teleworkLimit} showLess={isExpanded('telework') && teleworkToday.length > teleworkLimit} onSearch={noop} onSort={noop} onShowMore={() => expand('telework')} onShowLess={() => collapse('telework')} emptyMessage="aucun télétravail aujourd'hui"/>
         </div>
         <Card ref={rightCardRef} className="self-start">
           <CardContent className="pt-6 space-y-6">
             <PresenceList variant="embedded" title="En visite chez nous"
               columns={[{ key: 'name', label: 'Nom' }, { key: 'email', label: 'Email' }, { key: 'date', label: 'Date' }]}
               rows={visitingRows} count={visitingToday.length} rowClassName={(row) => String(row.name).toLowerCase().includes('manon roux') ? 'bg-primary/5' : undefined}
-              showMore={!showAllVisiting && visitingToday.length > 2} showLess={showAllVisiting && visitingToday.length > 2} onShowMore={() => setShowAllVisiting(true)} onShowLess={() => setShowAllVisiting(false)} emptyMessage="aucune visite chez nous" />
+              showMore={!isExpanded('visiting') && visitingToday.length > 2} showLess={isExpanded('visiting') && visitingToday.length > 2} onShowMore={() => expand('visiting')} onShowLess={() => collapse('visiting')} emptyMessage="aucune visite chez nous" />
             <PresenceList variant="embedded" title="En déplacement aujourd'hui"
               columns={[{ key: 'name', label: 'Nom' }, { key: 'email', label: 'Email' }]}
-              rows={travelingDisplayed} count={travelingToday.length} searchable sortable sortKeys={['name']} showMore={!showAllTraveling && travelingToday.length > 2} showLess={showAllTraveling && travelingToday.length > 2} onSort={noop} onShowMore={() => setShowAllTraveling(true)} onShowLess={() => setShowAllTraveling(false)} emptyMessage="aucun déplacement aujourd'hui"
+              rows={travelingDisplayed} count={travelingToday.length} searchable sortable sortKeys={['name']} showMore={!isExpanded('traveling') && travelingToday.length > 2} showLess={isExpanded('traveling') && travelingToday.length > 2} onSort={noop} onShowMore={() => expand('traveling')} onShowLess={() => collapse('traveling')} emptyMessage="aucun déplacement aujourd'hui"
             />
             <PresenceList variant="embedded" title="Déplacement prévu"
               columns={[{ key: 'name', label: 'Nom' }, { key: 'email', label: 'Email' }, { key: 'date', label: 'Date' }]}
-              rows={plannedTravelDisplayed} count={plannedTravel.length} searchable sortable sortKeys={['date', 'name']} showMore={!showAllPlanned && plannedTravel.length > 2} showLess={showAllPlanned && plannedTravel.length > 2} onSort={noop} onShowMore={() => setShowAllPlanned(true)} onShowLess={() => setShowAllPlanned(false)} emptyMessage="aucun déplacement prévu"/>
+              rows={plannedTravelDisplayed} count={plannedTravel.length} searchable sortable sortKeys={['date', 'name']} showMore={!isExpanded('planned') && plannedTravel.length > 2} showLess={isExpanded('planned') && plannedTravel.length > 2} onSort={noop} onShowMore={() => expand('planned')} onShowLess={() => collapse('planned')} emptyMessage="aucun déplacement prévu"/>
           </CardContent>
         </Card>
       </div>
