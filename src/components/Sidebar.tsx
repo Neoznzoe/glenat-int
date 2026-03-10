@@ -119,7 +119,8 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
   }, [isExpanded, onExpandChange]);
 
   const { user: authUser } = useAuth();
-  const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
+  const authUserEmailForLookup = authUser?.mail || authUser?.userPrincipalName;
+  const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser(authUserEmailForLookup);
   const { data: groups = [], isLoading: loadingGroups } = useAdminGroups();
   const internalUserId = useMemo(() => extractInternalUserId(authUser?.internalUser), [authUser?.internalUser]);
   const currentUserId = toNumericId(currentUser?.id);

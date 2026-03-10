@@ -108,9 +108,21 @@ export async function fetchPages(): Promise<Page[]> {
     },
   });
 
-  const data = await handleResponse<PagesListResponse>(response);
+  const data = await handleResponse<PagesListResponse & { result?: Page[] | { pages?: Page[] } }>(response);
 
-  return data.pages || [];
+  // Handle API envelope: pages may be at top level or inside result
+  if (data.pages && data.pages.length > 0) {
+    return data.pages;
+  }
+  if (data.result) {
+    if (Array.isArray(data.result)) {
+      return data.result;
+    }
+    if (data.result.pages) {
+      return data.result.pages;
+    }
+  }
+  return [];
 }
 
 export async function fetchPage(pageId: string): Promise<Page> {

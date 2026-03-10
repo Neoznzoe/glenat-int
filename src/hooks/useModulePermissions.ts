@@ -20,8 +20,14 @@ const URL_TO_PAGE_CODE_MAP: Record<string, string> = {
   'offices': 'prochaines_offices',
   'nouveautes': 'dernieres_nouveautes',
   'couverture-a-paraitre': 'catalogue_next_cover',
+  'accueil': 'catalogue_accueil',
   'kiosque': 'kiosque',
   'book': 'book',
+  'auteurs': 'catalogue_auteurs',
+  'telecharger': 'catalogue_download',
+  'top-commandes': 'catalogue_top_order',
+  'informations': 'catalogue_needed_info',
+  'plus-de-stock': 'catalogue_no_stock',
 };
 
 /**
@@ -109,6 +115,11 @@ export function useModulePermissions(userEmail?: string): ModulePermissionsResul
   const isLoading = modulesLoading || pagesLoading || matrixLoading;
   const error = modulesError || pagesError || matrixError || null;
 
+  // If view matrix is empty (e.g. API returns 501), grant access to everything
+  const isMatrixEmpty = viewMatrix &&
+    (viewMatrix.MODULE || []).length === 0 &&
+    (viewMatrix.PAGE || []).length === 0;
+
   // Build permissions map
   const permissions: ModulePermission[] = [];
   if (modules && viewMatrix) {
@@ -121,7 +132,8 @@ export function useModulePermissions(userEmail?: string): ModulePermissionsResul
 
     modules.forEach((module) => {
       const normalizedCode = normalizeModuleCode(module.moduleCode);
-      const canView = modulePermMap.get(module.moduleId) ?? false;
+      // If matrix is empty (501 fallback), grant access by default
+      const canView = isMatrixEmpty ? true : (modulePermMap.get(module.moduleId) ?? false);
       permissions.push({
         moduleId: module.moduleId,
         moduleCode: normalizedCode,
@@ -144,7 +156,8 @@ export function useModulePermissions(userEmail?: string): ModulePermissionsResul
     pages.forEach((page) => {
       const pageId = typeof page.PageId === 'string' ? parseInt(page.PageId, 10) : page.PageId;
       const moduleId = typeof page.ModuleId === 'string' ? parseInt(page.ModuleId, 10) : page.ModuleId;
-      const canView = pagePermMap.get(pageId) ?? false;
+      // If matrix is empty (501 fallback), grant access by default
+      const canView = isMatrixEmpty ? true : (pagePermMap.get(pageId) ?? false);
       pagePermissions.push({
         pageId,
         pageCode: page.PageCode.toLowerCase(),
@@ -216,7 +229,15 @@ export function useModulePermissions(userEmail?: string): ModulePermissionsResul
       if (matchingPage) {
         return matchingPage.canView;
       }
-      // If no matching page found, allow access (page might not be in CMS)
+
+      // If no matching page found but there are page-level permissions for this module,
+      // deny access by default (the page exists in CMS but slug mapping is missing)
+      const hasPagePermsForModule = pagePermissions.some(
+        (perm) => perm.moduleId === matchingModule.moduleId
+      );
+      if (hasPagePermsForModule) {
+        return false;
+      }
     }
 
     return matchingModule.canView;

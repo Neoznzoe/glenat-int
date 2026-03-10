@@ -4,17 +4,13 @@ import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
 import { fetchWithOAuth } from './oauth';
 import { applySecurePayloadHeaders, logSecurePayloadRequest, prepareSecureJsonPayload, SECURE_PAYLOAD_ENCRYPTION_HEADER } from './securePayload';
 
-const ADMIN_DATABASE_ENDPOINT =
-  import.meta.env.VITE_ADMIN_DATABASE_ENDPOINT ??
-  'https://api-dev.groupe-glenat.com/Api/v2.0/Dev/callDatabase';
-
 const USER_API_ENDPOINT =
   import.meta.env.VITE_USER_API_ENDPOINT ??
-  'https://api-dev.groupe-glenat.com/Api/v2.0/User/user';
+  'https://api-dev.groupe-glenat.com/Api/v2.0/users';
 
 const GROUP_API_ENDPOINT =
   import.meta.env.VITE_GROUP_API_ENDPOINT ??
-  'https://api-dev.groupe-glenat.com/Api/v2.0/User/group';
+  'https://api-dev.groupe-glenat.com/Api/v2.0/groups';
 
 const CMS_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ??
@@ -24,28 +20,7 @@ const CMS_MODULE_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/Cms/module`;
 const CMS_PAGE_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/Cms/page`;
 const CMS_BLOC_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/Cms/bloc`;
 const CMS_ELEMENT_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/Cms/element`;
-const USER_VIEW_MATRIX_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/User/user`;
-const USER_GROUP_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/User/group`;
-
-const ADMIN_MODULES_QUERY = 'SET NOCOUNT ON;\nSELECT * FROM [modules];';
-const ADMIN_PAGES_QUERY = 'SELECT * FROM [pages];';
-const ADMIN_MODULE_PAGES_QUERY = 'SELECT * FROM [modulesPages];';
-const ADMIN_GROUPS_QUERY = 'SELECT * FROM [userGroups];';
-const ADMIN_USER_GROUP_MEMBERS_QUERY = 'SELECT * FROM [userGroupMembers];';
-const ADMIN_USER_PERMISSIONS_QUERY = 'SELECT * FROM [userPermissions];';
-
-interface DatabaseQueryResponse {
-  success?: boolean;
-  message?: string;
-  result?: unknown;
-  data?: unknown;
-  rows?: unknown;
-  recordset?: unknown;
-  Recordset?: unknown;
-  recordsets?: unknown;
-  records?: unknown;
-  [key: string]: unknown;
-}
+const USER_VIEW_MATRIX_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/users`;
 
 export interface ApiUserRecord {
   UserRecordId: number;
@@ -92,17 +67,20 @@ export interface ApiGroupRecord {
   UpdatedBy?: string | null;
 }
 
+interface ApiPagination {
+  page: number;
+  perPage: number;
+  total: number;
+  pages: number;
+}
+
 interface UserApiListResponse {
   success: boolean;
   code: number;
   message: string;
-  users: ApiUserRecord[];
-  pagination: {
-    page: number;
-    perPage: number;
-    total: number;
-    pages: number;
-  };
+  users?: ApiUserRecord[];
+  pagination?: ApiPagination;
+  result?: ApiUserRecord[];
 }
 
 interface UserApiResponse {
@@ -111,19 +89,16 @@ interface UserApiResponse {
   message: string;
   user?: ApiUserRecord;
   userBaseInfos?: ApiUserRecord;
+  result?: ApiUserRecord;
 }
 
 interface GroupApiListResponse {
   success: boolean;
   code: number;
   message: string;
-  groups: ApiGroupRecord[];
-  pagination: {
-    page: number;
-    perPage: number;
-    total: number;
-    pages: number;
-  };
+  groups?: ApiGroupRecord[];
+  pagination?: ApiPagination;
+  result?: ApiGroupRecord[];
 }
 
 interface GroupApiResponse {
@@ -132,6 +107,7 @@ interface GroupApiResponse {
   message: string;
   group?: ApiGroupRecord;
   groupBaseInfos?: ApiGroupRecord;
+  result?: ApiGroupRecord;
 }
 
 // API response format (PascalCase from API)
@@ -294,16 +270,21 @@ interface ViewMatrixPermission {
   source: 'USER' | 'GROUP';
 }
 
+interface ViewMatrix {
+  PAGE?: ViewMatrixPermission[];
+  MODULE?: ViewMatrixPermission[];
+  BLOC?: ViewMatrixPermission[];
+  ELEMENT?: ViewMatrixPermission[];
+}
+
 interface UserViewMatrixResponse {
   success: boolean;
   code: number;
   message: string;
-  matrix: {
-    PAGE?: ViewMatrixPermission[];
-    MODULE?: ViewMatrixPermission[];
-    BLOC?: ViewMatrixPermission[];
-    ELEMENT?: ViewMatrixPermission[];
+  result?: {
+    matrix: ViewMatrix;
   };
+  matrix?: ViewMatrix;
 }
 
 export interface UserRightPermission {
@@ -326,9 +307,11 @@ interface ApiUserRightsResponse {
   success: boolean;
   code: number;
   message: string;
-  userRights?: ApiUserRightRecord[];
-  userBaseRights?: ApiUserRightRecord[];
-  userGroupsRights?: ApiUserRightRecord[];
+  result?: {
+    userRights?: ApiUserRightRecord[];
+    userBaseRights?: ApiUserRightRecord[];
+    userGroupsRights?: ApiUserRightRecord[];
+  };
 }
 
 // Normalized response format for frontend use
@@ -358,14 +341,6 @@ interface UpdateViewRightsResponse {
   success: boolean;
   code: number;
   message: string;
-}
-
-type RawDatabaseUserRecord = Record<string, unknown>;
-
-interface ModuleAssociation {
-  moduleId: string;
-  pageId: string;
-  defaultPage: boolean;
 }
 
 interface ModulePermissionMaps {
@@ -418,18 +393,6 @@ function assignAccentColor(id: string, index: number): string {
   return GROUP_ACCENT_COLORS[paletteIndex];
 }
 
-function getValue(record: RawDatabaseUserRecord, keys: string[]): unknown {
-  for (const key of keys) {
-    if (key in record) {
-      const value = record[key];
-      if (value !== undefined && value !== null) {
-        return value;
-      }
-    }
-  }
-  return undefined;
-}
-
 function toNonEmptyString(value: unknown): string | undefined {
   if (typeof value === 'string') {
     const trimmed = value.trim();
@@ -439,77 +402,6 @@ function toNonEmptyString(value: unknown): string | undefined {
     return value.toString();
   }
   return undefined;
-}
-
-function toNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return undefined;
-    }
-    const parsed = Number.parseInt(trimmed, 10);
-    if (!Number.isNaN(parsed)) {
-      return parsed;
-    }
-  }
-  return undefined;
-}
-
-function toRecordIdentifier(value: unknown): string | undefined {
-  const stringValue = toNonEmptyString(value);
-  if (stringValue) {
-    return stringValue;
-  }
-  const numericValue = toNumber(value);
-  if (numericValue !== undefined) {
-    return numericValue.toString();
-  }
-  return undefined;
-}
-
-function normalizeDateValue(value: unknown): string | null {
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return new Date(value).toISOString();
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return null;
-    }
-    const timestamp = Date.parse(trimmed);
-    if (!Number.isNaN(timestamp)) {
-      return new Date(timestamp).toISOString();
-    }
-  }
-  return null;
-}
-
-function toOptionalBoolean(value: unknown): boolean | null {
-  if (typeof value === 'boolean') {
-    return value;
-  }
-  if (typeof value === 'number') {
-    return value === 0 ? false : value === 1 ? true : null;
-  }
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase();
-    if (!normalized) {
-      return null;
-    }
-    if (['1', 'true', 'oui', 'yes', 'on'].includes(normalized)) {
-      return true;
-    }
-    if (['0', 'false', 'non', 'no', 'off'].includes(normalized)) {
-      return false;
-    }
-  }
-  return null;
 }
 
 function normalizeGroups(value: unknown): string[] {
@@ -616,141 +508,6 @@ function humanizeLabel(value: string): string {
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 }
 
-function extractDatabaseRecords(payload: unknown): RawDatabaseUserRecord[] {
-  const visited = new Set<unknown>();
-  const queue: unknown[] = [payload];
-
-  while (queue.length > 0) {
-    const current = queue.shift();
-    if (current === undefined || current === null) {
-      continue;
-    }
-    if (visited.has(current)) {
-      continue;
-    }
-    visited.add(current);
-
-    if (Array.isArray(current)) {
-      const records = current.filter(
-        (item): item is RawDatabaseUserRecord => item !== null && typeof item === 'object' && !Array.isArray(item),
-      );
-      if (records.length) {
-        return records;
-      }
-      continue;
-    }
-
-    if (typeof current === 'string') {
-      try {
-        const parsed = JSON.parse(current) as unknown;
-        queue.push(parsed);
-      } catch {
-        // ignore parse errors
-      }
-      continue;
-    }
-
-    if (typeof current === 'object') {
-      const objectPayload = current as Record<string, unknown>;
-      const keysToInspect = ['rows', 'data', 'result', 'recordset', 'Recordset', 'records'];
-      for (const key of keysToInspect) {
-        if (key in objectPayload) {
-          queue.push(objectPayload[key]);
-        }
-      }
-      if (Array.isArray(objectPayload.recordsets)) {
-        for (const entry of objectPayload.recordsets as unknown[]) {
-          queue.push(entry);
-        }
-      }
-    }
-  }
-
-  return [];
-}
-
-function buildGroupMembershipMap(
-  records: RawDatabaseUserRecord[],
-): Map<string, string[]> {
-  const memberships = new Map<string, string[]>();
-
-  for (const record of records) {
-    const userId = toRecordIdentifier(getValue(record, ['userId', 'UserId', 'userID', 'UserID']));
-    const groupId = toRecordIdentifier(
-      getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID']),
-    );
-
-    if (!userId || !groupId) {
-      continue;
-    }
-
-    if (!memberships.has(userId)) {
-      memberships.set(userId, []);
-    }
-
-    memberships.get(userId)!.push(groupId);
-  }
-
-  for (const [userId, groupIds] of memberships) {
-    const unique = Array.from(new Set(groupIds));
-    unique.sort((left, right) =>
-      left.localeCompare(right, 'fr', { sensitivity: 'base', numeric: true }),
-    );
-    memberships.set(userId, unique);
-  }
-
-  return memberships;
-}
-
-function escapeSqlLiteral(value: string): string {
-  return value.replace(/'/g, "''");
-}
-
-async function runDatabaseQuery(query: string, context: string): Promise<RawDatabaseUserRecord[]> {
-  const requestPayload = { query };
-  const securePayload = await prepareSecureJsonPayload(requestPayload);
-
-  let response: Response;
-  try {
-    const headers = new Headers({ 'Content-Type': 'application/json' });
-
-    applySecurePayloadHeaders(headers, securePayload.encrypted);
-    logSecurePayloadRequest(
-      ADMIN_DATABASE_ENDPOINT,
-      requestPayload,
-      securePayload.body,
-      securePayload.encrypted,
-    );
-
-    response = await fetchWithOAuth(ADMIN_DATABASE_ENDPOINT, {
-      method: 'POST',
-      headers,
-      body: securePayload.body,
-    });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
-    throw new Error(`Impossible de contacter la base ${context} : ${detail}`);
-  }
-
-  if (!response.ok) {
-    throw new Error(`Requête ${context} échouée (${response.status}) ${response.statusText}`);
-  }
-
-  let payload: DatabaseQueryResponse;
-  try {
-    payload = (await response.json()) as DatabaseQueryResponse;
-  } catch {
-    throw new Error(`Réponse inattendue lors de la récupération des ${context}.`);
-  }
-
-  if (payload.success === false) {
-    const detail = payload.message ?? `La récupération des ${context} a échoué.`;
-    throw new Error(detail);
-  }
-
-  return extractDatabaseRecords(payload.result ?? payload.data ?? payload.rows ?? payload);
-}
-
 function isIgnorableModuleMutationError(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false;
@@ -764,235 +521,30 @@ function isIgnorableModuleMutationError(error: unknown): boolean {
   );
 }
 
-function normalizeUserRecord(
-  record: RawDatabaseUserRecord,
-  index: number,
-  fallbackTimestamp: string,
-): UserAccount {
-  const numericId = toNumber(
-    getValue(record, ['userId', 'userID', 'UserId', 'UserID', 'id', 'ID', 'Id']),
-  );
-  const stringId =
-    toNonEmptyString(getValue(record, ['userId', 'userID', 'UserId', 'UserID', 'id', 'ID', 'Id'])) ??
-    (numericId !== undefined ? numericId.toString() : undefined);
-  const id = stringId ?? `user-${index + 1}`;
-
-  const firstName =
-    toNonEmptyString(
-      getValue(record, ['firstName', 'firstname', 'FirstName', 'FIRSTNAME', 'first_name']),
-    ) ?? '';
-  const lastName =
-    toNonEmptyString(
-      getValue(record, ['lastName', 'lastname', 'LastName', 'LASTNAME', 'last_name']),
-    ) ?? '';
-  const username = toNonEmptyString(getValue(record, ['username', 'userName', 'UserName']));
-  const email = toNonEmptyString(getValue(record, ['email', 'Email', 'EMAIL']));
-
-  const composedName = [firstName, lastName].filter(Boolean).join(' ').trim();
-  const displayName = composedName || username || email || `Utilisateur ${id}`;
-
-  const azureUpn =
-    toNonEmptyString(getValue(record, ['azureUpn', 'azure_upn', 'azureUPN'])) ?? email ?? username ?? '';
-  const azureOid =
-    toNonEmptyString(getValue(record, ['azureOid', 'azure_oid', 'azureOID'])) ?? id;
-
-  const jobTitle =
-    toNonEmptyString(getValue(record, ['jobTitle', 'job_title', 'title', 'fonction'])) ?? '';
-  const department =
-    toNonEmptyString(getValue(record, ['department', 'departement', 'service', 'division'])) ?? '';
-  const location =
-    toNonEmptyString(getValue(record, ['location', 'ville', 'city', 'site', 'bureau'])) ?? '';
-  const phoneNumber =
-    toNonEmptyString(getValue(record, ['phoneNumber', 'phone', 'telephone', 'tel', 'mobile'])) ?? '';
-
-  const statusValue = getValue(record, ['status', 'active', 'isActive', 'etat', 'state']);
-  let status: 'active' | 'inactive' = 'active';
-  if (typeof statusValue === 'string') {
-    const normalized = statusValue.trim().toLowerCase();
-    if (['inactive', 'inactif', '0', 'false', 'off', 'désactivé', 'desactive'].includes(normalized)) {
-      status = 'inactive';
-    } else if (['active', 'actif', '1', 'true', 'on'].includes(normalized)) {
-      status = 'active';
-    }
-  } else if (typeof statusValue === 'number') {
-    status = statusValue === 0 ? 'inactive' : 'active';
-  } else if (typeof statusValue === 'boolean') {
-    status = statusValue ? 'active' : 'inactive';
-  }
-
-  const lastConnection =
-    normalizeDateValue(
-      getValue(record, [
-        'lastConnection',
-        'last_connection',
-        'lastLogin',
-        'last_login',
-        'lastSeen',
-        'last_seen',
-      ]),
-    ) ?? fallbackTimestamp;
-  const createdAt =
-    normalizeDateValue(
-      getValue(record, ['createdAt', 'created_at', 'created', 'creationDate', 'createdDate']),
-    ) ?? fallbackTimestamp;
-  const updatedAt =
-    normalizeDateValue(
-      getValue(record, ['updatedAt', 'updated_at', 'updated', 'updateDate', 'modifiedAt', 'modified_at']),
-    ) ?? createdAt;
-
-  const groups = normalizeGroups(getValue(record, ['groups', 'groupIds', 'group_ids']));
-
-  const user: UserAccount = {
-    id,
-    firstName: firstName || displayName,
-    lastName,
-    displayName,
-    email: email ?? '',
-    username,
-    azureOid,
-    azureUpn,
-    jobTitle,
-    department,
-    location,
-    phoneNumber,
-    status,
-    lastConnection,
-    createdAt,
-    updatedAt,
-    groups,
-    permissionOverrides: [],
-  };
-
-  const preferredLanguage = toNonEmptyString(
-    getValue(record, ['preferedLanguage', 'preferredLanguage', 'language']),
-  );
-  const preferredTheme = toNonEmptyString(
-    getValue(record, ['preferedTheme', 'preferredTheme', 'theme']),
-  );
-  const photoUrl = toNonEmptyString(getValue(record, ['photoSD', 'photo', 'avatar', 'picture']));
-
-  if (preferredLanguage) {
-    user.preferredLanguage = preferredLanguage;
-  }
-  if (preferredTheme) {
-    user.preferredTheme = preferredTheme;
-  }
-  if (photoUrl) {
-    user.photoUrl = photoUrl;
-  }
-
-  const superAdminValue = getValue(record, ['isSuperAdmin', 'superAdmin', 'is_admin', 'admin']);
-  if (typeof superAdminValue === 'boolean') {
-    user.isSuperAdmin = superAdminValue;
-  } else if (typeof superAdminValue === 'number') {
-    user.isSuperAdmin = superAdminValue !== 0;
-  } else if (typeof superAdminValue === 'string') {
-    const normalized = superAdminValue.trim().toLowerCase();
-    if (['true', '1', 'yes', 'oui'].includes(normalized)) {
-      user.isSuperAdmin = true;
-    } else if (['false', '0', 'no', 'non'].includes(normalized)) {
-      user.isSuperAdmin = false;
-    }
-  }
-
-  return user;
-}
-
-function normalizeModuleDefinition(
-  record: RawDatabaseUserRecord,
+function cmsModuleToPermissionDefinition(
+  module: CmsModuleRecord,
   index: number,
 ): PermissionDefinition {
-  const idValue = getValue(record, ['id', 'ID', 'moduleId', 'ModuleId', 'moduleID', 'ModuleID']);
-  const numericId = toNumber(idValue);
-  const id =
-    toNonEmptyString(idValue) ??
-    (numericId !== undefined ? numericId.toString() : `module-${index + 1}`);
-  const slugSource =
-    toNonEmptyString(getValue(record, ['name', 'Name', 'slug', 'Slug'])) ?? id ?? `module-${index + 1}`;
+  const id = module.moduleId.toString();
+  const slugSource = module.moduleCode || module.moduleName || `module-${index + 1}`;
   const key = normalizeKey(slugSource, `module-${index + 1}`);
-  const labelSource =
-    toNonEmptyString(getValue(record, ['name', 'Name', 'label', 'Label'])) ??
-    toNonEmptyString(getValue(record, ['description', 'Description'])) ??
-    slugSource;
-  const label = humanizeLabel(labelSource);
-  const description =
-    toNonEmptyString(
-      getValue(record, ['supportMultilingual', 'SupportMultilingual', 'description', 'Description']),
-    ) ?? '';
+  const label = humanizeLabel(module.moduleName || slugSource);
 
   const metadata: Record<string, unknown> = {
     id,
     slug: slugSource,
+    isActive: module.isActive,
   };
 
-  const pathValue = toNonEmptyString(
-    getValue(record, ['path', 'Path', 'route', 'Route', 'href', 'Href', 'url', 'Url']),
-  );
-  if (pathValue) {
-    metadata.path = pathValue;
-  }
-
-  const iconValue = toNonEmptyString(getValue(record, ['icon', 'Icon', 'iconName', 'IconName']));
-  if (iconValue) {
-    metadata.icon = iconValue;
-  }
-
-  const permissionValue = getValue(record, ['permission', 'Permission', 'permissionKey', 'PermissionKey']);
-  const normalizedPermissionKey = normalizePermissionKey(permissionValue);
-  if (normalizedPermissionKey) {
-    metadata.permissionKey = normalizedPermissionKey;
-  } else {
-    const fallbackPermission = toNonEmptyString(permissionValue);
-    if (fallbackPermission) {
-      metadata.permissionKey = fallbackPermission;
-    }
-  }
-
-  const badgeValue = getValue(record, ['badge', 'Badge']);
-  if (badgeValue !== undefined) {
-    metadata.badge = badgeValue;
-  }
-
-  const sectionValue = getValue(record, ['section', 'Section', 'category', 'Category', 'area', 'Area']);
-  if (sectionValue !== undefined && sectionValue !== null) {
-    const sectionString = toNonEmptyString(sectionValue) ?? String(sectionValue);
-    if (sectionString.trim()) {
-      metadata.section = sectionString;
-    }
-  }
-
-  const orderValue = getValue(record, ['order', 'Order', 'displayOrder', 'DisplayOrder', 'position', 'Position']);
-  const orderNumber = toNumber(orderValue);
-  if (orderNumber !== undefined) {
-    metadata.order = orderNumber;
-  } else if (typeof orderValue === 'string') {
-    const trimmed = orderValue.trim();
-    if (trimmed) {
-      const parsed = Number.parseFloat(trimmed);
-      if (!Number.isNaN(parsed)) {
-        metadata.order = parsed;
-      }
-    }
-  }
-
-  const externalPathValue = toNonEmptyString(getValue(record, ['externalPath', 'ExternalPath']));
-  if (externalPathValue) {
-    metadata.externalPath = externalPathValue;
-  }
-
-  const isActiveValue = toOptionalBoolean(getValue(record, ['isActive', 'IsActive', 'active', 'Active']));
-  if (isActiveValue !== null) {
-    metadata.isActive = isActiveValue;
-  }
-  const versionValue = getValue(record, ['version', 'Version']);
-  if (versionValue !== undefined) {
-    metadata.version = versionValue;
+  const normalizedPermKey = normalizePermissionKey(module.moduleCode);
+  if (normalizedPermKey) {
+    metadata.permissionKey = normalizedPermKey;
   }
 
   return {
     key,
     label,
-    description,
+    description: '',
     category: 'Module',
     type: 'module',
     parentKey: null,
@@ -1000,41 +552,27 @@ function normalizeModuleDefinition(
   };
 }
 
-function normalizePageDefinition(record: RawDatabaseUserRecord, index: number): PermissionDefinition {
-  const idValue = getValue(record, ['id', 'ID', 'pageId', 'PageId', 'pageID', 'PageID']);
-  const numericId = toNumber(idValue);
-  const id =
-    toNonEmptyString(idValue) ??
-    (numericId !== undefined ? numericId.toString() : `page-${index + 1}`);
-  const slugSource =
-    toNonEmptyString(getValue(record, ['name', 'Name', 'slug', 'Slug'])) ?? id ?? `page-${index + 1}`;
+function cmsPageToPermissionDefinition(
+  page: CmsPageRecord,
+  index: number,
+): PermissionDefinition {
+  const id = page.pageId.toString();
+  const slugSource = page.pageCode || page.pageName || `page-${index + 1}`;
   const key = `page:${normalizeKey(slugSource, `page-${index + 1}`)}`;
-  const labelSource =
-    toNonEmptyString(getValue(record, ['metaTitle', 'MetaTitle'])) ??
-    toNonEmptyString(getValue(record, ['name', 'Name'])) ??
-    slugSource;
-  const label = humanizeLabel(labelSource);
-  const description =
-    toNonEmptyString(getValue(record, ['metaDescription', 'MetaDescription'])) ?? '';
+  const label = humanizeLabel(page.pageName || slugSource);
 
   const metadata: Record<string, unknown> = {
     id,
     slug: slugSource,
+    isPublished: page.isPublished,
+    needUserConnected: page.requiresAuthentication,
+    moduleId: page.moduleId.toString(),
   };
-
-  const isPublishedValue = getValue(record, ['isPublished', 'IsPublished']);
-  if (isPublishedValue !== undefined) {
-    metadata.isPublished = isPublishedValue;
-  }
-  const needUserConnectedValue = getValue(record, ['needUserConnected', 'NeedUserConnected']);
-  if (needUserConnectedValue !== undefined) {
-    metadata.needUserConnected = needUserConnectedValue;
-  }
 
   return {
     key,
     label,
-    description,
+    description: '',
     category: 'Page',
     type: 'page',
     parentKey: null,
@@ -1042,146 +580,54 @@ function normalizePageDefinition(record: RawDatabaseUserRecord, index: number): 
   };
 }
 
-function normalizeModulePageRecord(record: RawDatabaseUserRecord): ModuleAssociation | null {
-  const moduleIdValue = getValue(record, ['moduleId', 'ModuleId', 'moduleID', 'ModuleID', 'module_id']);
-  const pageIdValue = getValue(record, ['pageId', 'PageId', 'pageID', 'PageID', 'page_id']);
-  const moduleNumeric = toNumber(moduleIdValue);
-  const pageNumeric = toNumber(pageIdValue);
-  const moduleId =
-    toNonEmptyString(moduleIdValue) ??
-    (moduleNumeric !== undefined ? moduleNumeric.toString() : undefined);
-  const pageId =
-    toNonEmptyString(pageIdValue) ??
-    (pageNumeric !== undefined ? pageNumeric.toString() : undefined);
-
-  if (!moduleId || !pageId) {
-    return null;
-  }
-
-  const defaultValue = getValue(record, ['defaultPage', 'DefaultPage', 'isDefault']);
-  const defaultPage =
-    defaultValue === true ||
-    defaultValue === 1 ||
-    defaultValue === '1' ||
-    (typeof defaultValue === 'string' && defaultValue.toLowerCase() === 'true');
-
-  return { moduleId, pageId, defaultPage };
-}
-
-function normalizeGroupRecord(record: RawDatabaseUserRecord, index: number): GroupDefinition {
-  const groupIdValue = getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID', 'id']);
-  const numericId = toNumber(groupIdValue);
-  const id =
-    toNonEmptyString(groupIdValue) ??
-    (numericId !== undefined ? numericId.toString() : `group-${index + 1}`);
-  const name =
-    toNonEmptyString(getValue(record, ['groupName', 'GroupName', 'name', 'Name'])) ??
-    `Groupe ${index + 1}`;
-  const description =
-    toNonEmptyString(getValue(record, ['description', 'Description', 'groupDescription'])) ?? '';
-  const defaultPermissions: string[] = [];
+function mapApiGroupToGroupDefinition(apiGroup: ApiGroupRecord, index: number): GroupDefinition {
+  const id = apiGroup.UserGroupId.toString();
+  const name = apiGroup.GroupName || `Groupe ${index + 1}`;
+  const description = apiGroup.Description ?? '';
 
   return {
     id,
     name,
     description,
-    defaultPermissions,
+    defaultPermissions: [],
     accentColor: assignAccentColor(id, index),
   };
 }
 
 async function loadModulePermissionMaps(): Promise<ModulePermissionMaps> {
-  const moduleRecords = await runDatabaseQuery(ADMIN_MODULES_QUERY, 'modules');
+  const modules = await fetchAllModulesFromCms();
   const moduleIdByKey = new Map<PermissionKey, string>();
   const keyByModuleId = new Map<string, PermissionKey>();
 
-  moduleRecords.forEach((record, index) => {
-    const definition = normalizeModuleDefinition(record, index);
-    const rawId = toRecordIdentifier(definition.metadata?.id);
-    if (!rawId) {
-      return;
-    }
-    const metadata = (definition.metadata ?? {}) as Record<string, unknown>;
-    const metadataPermissionKey = normalizePermissionKey(metadata.permissionKey);
-    const normalizedDefinitionKey = normalizePermissionKey(definition.key);
+  modules.forEach((module, index) => {
+    const id = module.moduleId.toString();
+    const slugSource = module.moduleCode || module.moduleName || `module-${index + 1}`;
+    const key = normalizeKey(slugSource, `module-${index + 1}`) as PermissionKey;
+    const normalizedCodeKey = normalizePermissionKey(module.moduleCode);
 
     const candidateKeys = new Set<PermissionKey>();
-    if (metadataPermissionKey) {
-      candidateKeys.add(metadataPermissionKey);
+    if (normalizedCodeKey) {
+      candidateKeys.add(normalizedCodeKey);
     }
-    if (normalizedDefinitionKey) {
-      candidateKeys.add(normalizedDefinitionKey);
-    } else if (typeof definition.key === 'string' && definition.key.trim()) {
-      candidateKeys.add(definition.key.trim().toLowerCase() as PermissionKey);
+    if (key) {
+      candidateKeys.add(key);
     }
 
-    for (const key of candidateKeys) {
-      if (!moduleIdByKey.has(key)) {
-        moduleIdByKey.set(key, rawId);
+    for (const candidateKey of candidateKeys) {
+      if (!moduleIdByKey.has(candidateKey)) {
+        moduleIdByKey.set(candidateKey, id);
       }
     }
 
-    if (!keyByModuleId.has(rawId)) {
-      const canonicalKey = metadataPermissionKey ?? normalizedDefinitionKey;
-      const preferredKey = canonicalKey ?? candidateKeys.values().next().value;
+    if (!keyByModuleId.has(id)) {
+      const preferredKey = normalizedCodeKey ?? key;
       if (preferredKey) {
-        keyByModuleId.set(rawId, preferredKey);
+        keyByModuleId.set(id, preferredKey);
       }
     }
   });
 
   return { moduleIdByKey, keyByModuleId };
-}
-
-function buildModuleOverrideMap(
-  records: RawDatabaseUserRecord[],
-  keyByModuleId: Map<string, PermissionKey>,
-): Map<string, PermissionOverride[]> {
-  const overridesByUser = new Map<string, PermissionOverride[]>();
-
-  for (const record of records) {
-    const typeValue = toNonEmptyString(
-      getValue(record, ['permissionType', 'PermissionType', 'type', 'Type']),
-    );
-    if (!typeValue || typeValue.trim().toUpperCase() !== 'MODULE') {
-      continue;
-    }
-
-    const userId = toRecordIdentifier(getValue(record, ['userId', 'UserId', 'userID', 'UserID']));
-    const moduleId = toRecordIdentifier(
-      getValue(record, ['moduleId', 'ModuleId', 'moduleID', 'ModuleID']),
-    );
-    if (!userId || !moduleId) {
-      continue;
-    }
-
-    const permissionKey = keyByModuleId.get(moduleId);
-    if (!permissionKey) {
-      continue;
-    }
-
-    const canViewValue = getValue(record, ['canView', 'CanView', 'can_view', 'Can_View']);
-    const canView = toOptionalBoolean(canViewValue);
-    if (canView === null) {
-      continue;
-    }
-
-    const mode: PermissionOverride['mode'] = canView ? 'allow' : 'deny';
-    if (!overridesByUser.has(userId)) {
-      overridesByUser.set(userId, []);
-    }
-
-    const list = overridesByUser.get(userId)!;
-    const nextOverride: PermissionOverride = { key: permissionKey, mode };
-    const existingIndex = list.findIndex((entry) => entry.key === permissionKey);
-    if (existingIndex >= 0) {
-      list[existingIndex] = nextOverride;
-    } else {
-      list.push(nextOverride);
-    }
-  }
-
-  return overridesByUser;
 }
 
 function mergeModuleOverrides(
@@ -1203,65 +649,36 @@ function mergeModuleOverrides(
 }
 
 async function syncUserModuleOverrides(
-  userId: number,
+  userId: string,
   overrides: PermissionOverride[],
 ): Promise<void> {
   const maps = await loadModulePermissionMaps();
-  const uniqueOverrides = new Map<PermissionKey, PermissionOverride['mode']>();
+  const rights: ViewRightUpdate[] = [];
 
   for (const override of overrides) {
-    if (!maps.moduleIdByKey.has(override.key)) {
+    const moduleIdValue = maps.moduleIdByKey.get(override.key);
+    if (!moduleIdValue) {
       continue;
     }
-    uniqueOverrides.set(override.key, override.mode);
+    const numericModuleId = toDatabaseIntegerId(moduleIdValue);
+    if (numericModuleId === null) {
+      continue;
+    }
+    rights.push({
+      ViewRightTypeCode: 'MODULE',
+      TargetObjectId: numericModuleId,
+      CanView: override.mode === 'allow',
+    });
   }
 
-  const statements = [
-    'SET NOCOUNT ON;',
-    `DELETE FROM [userPermissions] WHERE [userId] = ${userId} AND UPPER(LTRIM(RTRIM([permissionType]))) = 'MODULE';`,
-  ];
-
-  if (uniqueOverrides.size > 0) {
-    const values: string[] = [];
-    for (const [permissionKey, mode] of uniqueOverrides) {
-      const moduleIdValue = maps.moduleIdByKey.get(permissionKey);
-      if (!moduleIdValue) {
-        continue;
-      }
-      const numericModuleId = toDatabaseIntegerId(moduleIdValue);
-      if (numericModuleId === null) {
-        continue;
-      }
-      const canView = mode === 'allow' ? 1 : 0;
-      values.push(`(${userId}, 'MODULE', ${numericModuleId}, ${canView})`);
-    }
-
-    if (values.length > 0) {
-      statements.push(
-        `INSERT INTO [userPermissions] ([userId], [permissionType], [moduleId], [canView]) VALUES ${values.join(',\n')};`,
-      );
-    }
+  if (rights.length > 0) {
+    await updateUserViewRights(userId, rights);
   }
-
-  await runDatabaseQuery(
-    statements.join('\n'),
-    "mise à jour des permissions individuelles de l'utilisateur",
-  );
 }
 
-async function loadUserGroupIds(userId: number): Promise<string[]> {
-  const membershipRecords = await runDatabaseQuery(
-    `SET NOCOUNT ON;\nSELECT [groupId]\nFROM [userGroupMembers]\nWHERE [userId] = ${userId}\nORDER BY [groupId];`,
-    'récupération des groupes de l’utilisateur',
-  );
-
-  const groupIds = membershipRecords
-    .map((record) =>
-      toRecordIdentifier(getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID'])),
-    )
-    .filter((identifier): identifier is string => Boolean(identifier));
-
-  return groupIds;
+async function loadUserGroupIds(userId: string): Promise<string[]> {
+  const groups = await fetchUserGroups(userId);
+  return groups.map((group) => group.UserGroupId.toString());
 }
 
 async function withEncryptedUrl(
@@ -1444,7 +861,8 @@ async function fetchAllUsersFromApi(): Promise<ApiUserRecord[]> {
       throw new Error(detail);
     }
 
-    allUsers.push(...(payload.users || []));
+    const users = payload.users || (Array.isArray(payload.result) ? payload.result : []);
+    allUsers.push(...users);
     totalPages = payload.pagination?.pages || 1;
     currentPage += 1;
   }
@@ -1455,45 +873,7 @@ async function fetchAllUsersFromApi(): Promise<ApiUserRecord[]> {
 export async function fetchUsers(): Promise<UserAccount[]> {
   const apiUsers = await fetchAllUsersFromApi();
 
-  let membershipsByUser = new Map<string, string[]>();
-  try {
-    const membershipRecords = await runDatabaseQuery(
-      ADMIN_USER_GROUP_MEMBERS_QUERY,
-      'membres des groupes utilisateurs',
-    );
-    membershipsByUser = buildGroupMembershipMap(membershipRecords);
-  } catch {
-    // Silently ignore group membership fetch errors
-  }
-
-  let modulePermissionMaps: ModulePermissionMaps | null = null;
-  let moduleOverridesByUser = new Map<string, PermissionOverride[]>();
-  try {
-    const maps = await loadModulePermissionMaps();
-    modulePermissionMaps = maps;
-    const permissionRecords = await runDatabaseQuery(
-      ADMIN_USER_PERMISSIONS_QUERY,
-      "exceptions d'accès individuelles",
-    );
-    moduleOverridesByUser = buildModuleOverrideMap(permissionRecords, maps.keyByModuleId);
-  } catch {
-    // Silently ignore individual permission fetch errors
-  }
-
-  const moduleIdByKey = modulePermissionMaps?.moduleIdByKey ?? new Map<PermissionKey, string>();
-
-  const users = apiUsers.map((apiUser) => {
-    const user = mapApiUserToUserAccount(apiUser);
-    const memberships = membershipsByUser.get(user.id);
-    if (memberships) {
-      user.groups = memberships;
-    }
-    const moduleOverrides = moduleOverridesByUser.get(user.id) ?? [];
-    user.permissionOverrides = sanitizePermissionOverrides(
-      mergeModuleOverrides(user.permissionOverrides, moduleOverrides, moduleIdByKey),
-    );
-    return user;
-  });
+  const users = apiUsers.map((apiUser) => mapApiUserToUserAccount(apiUser));
 
   users.sort((left, right) =>
     left.displayName.localeCompare(right.displayName, 'fr', { sensitivity: 'base' }),
@@ -1534,32 +914,38 @@ export async function fetchUserById(userId: string): Promise<UserAccount> {
     throw new Error(detail);
   }
 
-  const apiUser = payload.user ?? payload.userBaseInfos;
+  const apiUser = payload.user ?? payload.userBaseInfos ?? (payload.result && !Array.isArray(payload.result) ? payload.result : undefined);
   if (!apiUser) {
     throw new Error('Aucune donnée utilisateur retournée par l\'API.');
   }
 
   const user = mapApiUserToUserAccount(apiUser);
 
-  const numericUserId = toDatabaseIntegerId(userId);
-  if (numericUserId !== null) {
-    try {
-      const memberships = await loadUserGroupIds(numericUserId);
-      user.groups = memberships;
+  try {
+    const memberships = await loadUserGroupIds(userId);
+    user.groups = memberships;
+  } catch {
+    // Silently ignore group fetch errors
+  }
 
-      const maps = await loadModulePermissionMaps();
-      const permissionRecords = await runDatabaseQuery(
-        `SET NOCOUNT ON;\nSELECT *\nFROM [userPermissions]\nWHERE [userId] = ${numericUserId}\n  AND UPPER(LTRIM(RTRIM([permissionType]))) = 'MODULE';`,
-        "exceptions d'accès individuelles",
-      );
-      const overridesByUser = buildModuleOverrideMap(permissionRecords, maps.keyByModuleId);
-      const moduleOverrides = overridesByUser.get(userId) ?? [];
-      user.permissionOverrides = sanitizePermissionOverrides(
-        mergeModuleOverrides(user.permissionOverrides, moduleOverrides, maps.moduleIdByKey),
-      );
-    } catch {
-      // Silently ignore permission fetch errors
+  try {
+    const rights = await fetchUserRights(userId);
+    const maps = await loadModulePermissionMaps();
+    const moduleOverrides: PermissionOverride[] = [];
+    for (const moduleRight of rights.MODULE ?? []) {
+      const permKey = maps.keyByModuleId.get(moduleRight.target.toString());
+      if (permKey) {
+        moduleOverrides.push({
+          key: permKey,
+          mode: moduleRight.canView ? 'allow' : 'deny',
+        });
+      }
     }
+    user.permissionOverrides = sanitizePermissionOverrides(
+      mergeModuleOverrides(user.permissionOverrides, moduleOverrides, maps.moduleIdByKey),
+    );
+  } catch {
+    // Silently ignore permission fetch errors
   }
 
   return user;
@@ -1609,7 +995,7 @@ export async function updateUser(
     throw new Error(detail);
   }
 
-  const apiUser = payload.user ?? payload.userBaseInfos;
+  const apiUser = payload.user ?? payload.userBaseInfos ?? (payload.result && !Array.isArray(payload.result) ? payload.result : undefined);
   if (!apiUser) {
     throw new Error('Aucune donnée utilisateur retournée par l\'API.');
   }
@@ -1679,7 +1065,7 @@ export async function createUser(userData: Partial<ApiUserRecord>): Promise<User
     throw new Error(detail);
   }
 
-  const apiUser = payload.user ?? payload.userBaseInfos;
+  const apiUser = payload.user ?? payload.userBaseInfos ?? (payload.result && !Array.isArray(payload.result) ? payload.result : undefined);
   if (!apiUser) {
     throw new Error('Aucune donnée utilisateur retournée par l\'API.');
   }
@@ -1828,7 +1214,8 @@ async function fetchAllGroupsFromApi(): Promise<ApiGroupRecord[]> {
     }
 
     // Sanitize group records to normalize date formats
-    const sanitizedGroups = (payload.groups || []).map((group) =>
+    const groups = payload.groups || (Array.isArray(payload.result) ? payload.result : []);
+    const sanitizedGroups = groups.map((group) =>
       sanitizeApiGroupRecord(group as unknown as ApiGroupRecordRaw)
     );
     allGroups.push(...sanitizedGroups);
@@ -1871,7 +1258,7 @@ export async function fetchGroupById(groupId: string): Promise<ApiGroupRecord> {
     throw new Error(detail);
   }
 
-  const apiGroup = payload.group ?? payload.groupBaseInfos;
+  const apiGroup = payload.group ?? payload.groupBaseInfos ?? (payload.result && !Array.isArray(payload.result) ? payload.result : undefined);
   if (!apiGroup) {
     throw new Error('Aucune donnée groupe retournée par l\'API.');
   }
@@ -1919,7 +1306,7 @@ export async function createGroupViaApi(groupData: Partial<ApiGroupRecord>): Pro
     throw new Error(detail);
   }
 
-  const apiGroup = payload.group ?? payload.groupBaseInfos;
+  const apiGroup = payload.group ?? payload.groupBaseInfos ?? (payload.result && !Array.isArray(payload.result) ? payload.result : undefined);
   if (!apiGroup) {
     throw new Error('Aucune donnée groupe retournée par l\'API.');
   }
@@ -1971,7 +1358,7 @@ export async function updateGroup(
     throw new Error(detail);
   }
 
-  const apiGroup = payload.group ?? payload.groupBaseInfos;
+  const apiGroup = payload.group ?? payload.groupBaseInfos ?? (payload.result && !Array.isArray(payload.result) ? payload.result : undefined);
   if (!apiGroup) {
     throw new Error('Aucune donnée groupe retournée par l\'API.');
   }
@@ -2269,7 +1656,7 @@ export async function fetchAllElementsFromCms(): Promise<CmsElementRecord[]> {
 /**
  * Fetches the view matrix for a specific user
  */
-export async function fetchUserViewMatrix(userRecordId: string): Promise<UserViewMatrixResponse['matrix']> {
+export async function fetchUserViewMatrix(userRecordId: string): Promise<ViewMatrix> {
   const url = `${USER_VIEW_MATRIX_ENDPOINT}/${encodeURIComponent(userRecordId)}/view-matrix`;
 
   let response: Response;
@@ -2283,6 +1670,12 @@ export async function fetchUserViewMatrix(userRecordId: string): Promise<UserVie
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
     throw new Error(`Impossible de contacter l'API View Matrix : ${detail}`);
+  }
+
+  // 501 = handler not yet implemented on backend, return empty matrix to allow access
+  if (response.status === 501) {
+    console.warn('API View Matrix: endpoint not yet implemented (501), returning empty matrix');
+    return { MODULE: [], PAGE: [], BLOC: [], ELEMENT: [] };
   }
 
   if (!response.ok) {
@@ -2301,7 +1694,13 @@ export async function fetchUserViewMatrix(userRecordId: string): Promise<UserVie
     throw new Error(detail);
   }
 
-  return payload.matrix;
+  // API wraps handler data in "result", fallback to flat "matrix" for compatibility
+  const matrix = payload.result?.matrix ?? payload.matrix;
+  if (!matrix) {
+    return { MODULE: [], PAGE: [], BLOC: [], ELEMENT: [] };
+  }
+
+  return matrix;
 }
 
 /**
@@ -2322,6 +1721,12 @@ export async function fetchUserRights(userId: string): Promise<UserRightsRespons
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'Erreur réseau inconnue';
     throw new Error(`Impossible de contacter l'API User Rights : ${detail}`);
+  }
+
+  // 501 = handler not yet implemented on backend, return empty rights to allow access
+  if (response.status === 501) {
+    console.warn('API User Rights: endpoint not yet implemented (501), returning empty rights');
+    return { MODULE: [], PAGE: [], BLOC: [], ELEMENT: [] };
   }
 
   if (!response.ok) {
@@ -2369,10 +1774,10 @@ export async function fetchUserRights(userId: string): Promise<UserRightsRespons
   };
 
   // Process user direct rights (not inherited)
-  (payload.userRights || []).forEach(addRight);
+  (payload.result?.userRights || []).forEach(addRight);
 
   // Process group inherited rights (only if not already set by user)
-  (payload.userGroupsRights || []).forEach((record) => {
+  (payload.result?.userGroupsRights || []).forEach((record) => {
     const targetId = typeof record.TargetObjectId === 'string'
       ? parseInt(record.TargetObjectId, 10)
       : record.TargetObjectId;
@@ -2408,8 +1813,11 @@ export async function fetchModulesWithPermissions(userRecordId?: string): Promis
       modulePermissions.set(targetId, perm.canView);
     });
 
-    // Filter modules based on permissions (only return those with canView=true)
-    return modules.filter(module => modulePermissions.get(module.moduleId) === true);
+    // Filter modules based on permissions (canView can be true or 1)
+    return modules.filter(module => {
+      const canView = modulePermissions.get(module.moduleId);
+      return canView === true || canView === (1 as unknown as boolean);
+    });
   } catch {
     return []; // Return empty if permissions can't be fetched
   }
@@ -2503,7 +1911,7 @@ export async function fetchElementsWithPermissions(userRecordId?: string): Promi
  * Fetches the groups for a specific user from the API
  */
 export async function fetchUserGroups(userRecordId: string): Promise<ApiGroupRecord[]> {
-  const url = `${USER_GROUP_ENDPOINT}?userId=${encodeURIComponent(userRecordId)}`;
+  const url = `${USER_VIEW_MATRIX_ENDPOINT}/${encodeURIComponent(userRecordId)}/groups`;
 
   let response: Response;
   try {
@@ -2534,7 +1942,8 @@ export async function fetchUserGroups(userRecordId: string): Promise<ApiGroupRec
     throw new Error(detail);
   }
 
-  return payload.groups.map(sanitizeApiGroupRecord);
+  const groups = payload.groups || (Array.isArray(payload.result) ? payload.result : []);
+  return groups.map(sanitizeApiGroupRecord);
 }
 
 /**
@@ -2617,7 +2026,7 @@ export async function updateUserGroups(
   let response: Response;
   try {
     response = await fetchWithOAuth(url, {
-      method: 'PUT',
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -2653,62 +2062,32 @@ export async function updateUserGroups(
 }
 
 export async function fetchGroups(): Promise<GroupDefinition[]> {
-  const groupRecords = await runDatabaseQuery(ADMIN_GROUPS_QUERY, 'groupes');
+  const apiGroups = await fetchAllGroupsFromApi();
 
-  const groups = groupRecords.map((record, index) => normalizeGroupRecord(record, index));
+  const groups = apiGroups.map((apiGroup, index) => mapApiGroupToGroupDefinition(apiGroup, index));
 
   groups.sort((left, right) => left.name.localeCompare(right.name, 'fr', { sensitivity: 'base' }));
 
   return groups;
 }
 
-function buildSidebarModulesQuery(userId?: number): string {
-  const hasValidId = typeof userId === 'number' && Number.isFinite(userId);
-  const sanitizedId = hasValidId ? Math.trunc(userId) : null;
-  const userIdLiteral = sanitizedId === null ? 'CAST(NULL AS INT)' : String(sanitizedId);
-
-  return [
-    'SET NOCOUNT ON;',
-    `DECLARE @userId INT = ${userIdLiteral};`,
-    'WITH VisibleModules AS (',
-    '  SELECT',
-    '    m.*,',
-    "    CONVERT(bit, CASE WHEN up.[canView] = 0 THEN 0 ELSE 1 END) AS [isUserVisible]",
-    '  FROM [modules] AS m',
-    '  LEFT JOIN [userPermissions] AS up',
-    '    ON up.[moduleId] = m.[id]',
-    '   AND up.[userId] = @userId',
-    "   AND UPPER(LTRIM(RTRIM(up.[permissionType]))) = 'MODULE'",
-    '  WHERE m.[isActive] = 1',
-    ')',
-    'SELECT *',
-    'FROM VisibleModules',
-    'WHERE [isUserVisible] = CONVERT(bit, 1);',
-  ].join('\n');
-}
-
 export async function fetchModules(userId?: number): Promise<PermissionDefinition[]> {
-  const moduleRecords = await runDatabaseQuery(
-    buildSidebarModulesQuery(userId),
-    'modules visibles',
-  );
+  const userRecordId = userId !== undefined ? userId.toString() : undefined;
+  const modules = await fetchModulesWithPermissions(userRecordId);
 
-  return moduleRecords.map((record, index) => normalizeModuleDefinition(record, index));
+  return modules.map((module, index) => cmsModuleToPermissionDefinition(module, index));
 }
 
 export async function fetchPermissions(): Promise<PermissionDefinition[]> {
-  const [moduleRecords, pageRecords, modulePageRecords] = await Promise.all([
-    runDatabaseQuery(ADMIN_MODULES_QUERY, 'modules'),
-    runDatabaseQuery(ADMIN_PAGES_QUERY, 'pages'),
-    runDatabaseQuery(ADMIN_MODULE_PAGES_QUERY, 'associations modules/pages'),
+  const [cmsModules, cmsPages] = await Promise.all([
+    fetchAllModulesFromCms(),
+    fetchAllPagesFromCms(),
   ]);
 
-  const modules = moduleRecords.map((record, index) => normalizeModuleDefinition(record, index));
-  const pages = pageRecords.map((record, index) => normalizePageDefinition(record, index));
-  const associations = modulePageRecords
-    .map((record) => normalizeModulePageRecord(record))
-    .filter((value): value is ModuleAssociation => Boolean(value));
+  const modules = cmsModules.map((module, index) => cmsModuleToPermissionDefinition(module, index));
+  const pages = cmsPages.map((page, index) => cmsPageToPermissionDefinition(page, index));
 
+  // Build module lookup by ID for parent assignment
   const moduleById = new Map<string, PermissionDefinition>();
   for (const moduleDefinition of modules) {
     const metadataId = moduleDefinition.metadata?.id;
@@ -2717,25 +2096,14 @@ export async function fetchPermissions(): Promise<PermissionDefinition[]> {
     }
   }
 
-  const associationByPage = new Map<string, ModuleAssociation>();
-  for (const association of associations) {
-    const existing = associationByPage.get(association.pageId);
-    if (!existing || (!existing.defaultPage && association.defaultPage)) {
-      associationByPage.set(association.pageId, association);
-    }
-  }
-
+  // Derive module-page associations from each page's moduleId field
   const pagesWithParent = pages.map((pageDefinition) => {
-    const metadataId = pageDefinition.metadata?.id;
-    const pageId = typeof metadataId === 'string' ? metadataId : undefined;
-    if (!pageId) {
+    const moduleId = pageDefinition.metadata?.moduleId;
+    const moduleIdStr = typeof moduleId === 'string' ? moduleId : typeof moduleId === 'number' ? moduleId.toString() : undefined;
+    if (!moduleIdStr) {
       return pageDefinition;
     }
-    const association = associationByPage.get(pageId);
-    if (!association) {
-      return pageDefinition;
-    }
-    const moduleDefinition = moduleById.get(association.moduleId);
+    const moduleDefinition = moduleById.get(moduleIdStr);
     if (!moduleDefinition) {
       return pageDefinition;
     }
@@ -2743,11 +2111,6 @@ export async function fetchPermissions(): Promise<PermissionDefinition[]> {
       ...pageDefinition,
       parentKey: moduleDefinition.key,
       category: moduleDefinition.label,
-      metadata: {
-        ...(pageDefinition.metadata ?? {}),
-        moduleId: association.moduleId,
-        defaultPage: association.defaultPage,
-      },
     };
   });
 
@@ -2779,28 +2142,19 @@ export async function createGroup(name: string): Promise<void> {
     throw new Error('Le nom du groupe est requis.');
   }
 
-  const escapedName = escapeSqlLiteral(trimmed);
-
-  const existing = await runDatabaseQuery(
-    `SET NOCOUNT ON;
-SELECT TOP (1) [groupId]
-FROM [userGroups]
-WHERE LOWER(LTRIM(RTRIM([groupName]))) = LOWER(N'${escapedName}');`,
-    'vérification des groupes',
+  // Check for duplicate via existing groups
+  const existingGroups = await fetchAllGroupsFromApi();
+  const duplicate = existingGroups.find(
+    (group) => group.GroupName.trim().toLowerCase() === trimmed.toLowerCase(),
   );
-
-  if (existing.length) {
+  if (duplicate) {
     throw new Error('Un groupe avec ce nom existe déjà.');
   }
 
-  const query = `SET NOCOUNT ON;
-INSERT INTO [userGroups] ([groupName]) VALUES (N'${escapedName}');
-SELECT CAST(SCOPE_IDENTITY() AS INT) AS [groupId], N'${escapedName}' AS [groupName];`;
-
-  const inserted = await runDatabaseQuery(query, 'création du groupe');
-  if (!inserted.length) {
-    throw new Error("La création du groupe n'a retourné aucun résultat.");
-  }
+  await createGroupViaApi({
+    GroupName: trimmed,
+    GroupCode: normalizeKey(trimmed, trimmed),
+  });
 }
 
 export async function fetchAuditLog(limit = 25): Promise<AuditLogEntry[]> {
@@ -2808,24 +2162,58 @@ export async function fetchAuditLog(limit = 25): Promise<AuditLogEntry[]> {
   return requestJson<AuditLogEntry[]>(`/api/admin/audit-log?${params.toString()}`);
 }
 
-export async function fetchCurrentUser(): Promise<UserAccount> {
-  const fetchedUser = await requestJson<UserAccount>('/api/admin/current-user');
-  const baseUser = sanitizeUserAccountResponse(fetchedUser);
-  let nextUser: UserAccount = { ...baseUser };
+export async function fetchCurrentUser(email?: string): Promise<UserAccount> {
+  let baseUser: UserAccount;
 
-  const numericUserId = toDatabaseIntegerId(baseUser.id);
-  if (numericUserId === null) {
-    return nextUser;
+  if (email) {
+    // Resolve the current user from the v2.0 API using their M365 email (= UserId)
+    try {
+      const url = `${USER_API_ENDPOINT}/${encodeURIComponent(email)}`;
+      const response = await fetchWithOAuth(url, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (response.ok) {
+        const payload = (await response.json()) as { success: boolean; result?: ApiUserRecord };
+        if (payload.success && payload.result) {
+          baseUser = mapApiUserToUserAccount(payload.result);
+        } else {
+          console.warn(`fetchCurrentUser: utilisateur "${email}" introuvable dans la base API, fallback mock.`);
+          const fetchedUser = await requestJson<UserAccount>('/api/admin/current-user');
+          baseUser = sanitizeUserAccountResponse(fetchedUser);
+        }
+      } else {
+        console.warn(`fetchCurrentUser: erreur API (${response.status}) pour "${email}", fallback mock.`);
+        const fetchedUser = await requestJson<UserAccount>('/api/admin/current-user');
+        baseUser = sanitizeUserAccountResponse(fetchedUser);
+      }
+    } catch (err) {
+      console.warn('fetchCurrentUser: erreur réseau, fallback mock.', err);
+      const fetchedUser = await requestJson<UserAccount>('/api/admin/current-user');
+      baseUser = sanitizeUserAccountResponse(fetchedUser);
+    }
+  } else {
+    // Fallback: mock server (legacy)
+    const fetchedUser = await requestJson<UserAccount>('/api/admin/current-user');
+    baseUser = sanitizeUserAccountResponse(fetchedUser);
   }
 
+  let nextUser: UserAccount = { ...baseUser };
+
   try {
+    const rights = await fetchUserRights(email || baseUser.id);
     const maps = await loadModulePermissionMaps();
-    const permissionRecords = await runDatabaseQuery(
-      `SET NOCOUNT ON;\nSELECT *\nFROM [userPermissions]\nWHERE [userId] = ${numericUserId}\n  AND UPPER(LTRIM(RTRIM([permissionType]))) = 'MODULE';`,
-      "exceptions d'accès individuelles (utilisateur courant)",
-    );
-    const overridesByUser = buildModuleOverrideMap(permissionRecords, maps.keyByModuleId);
-    const moduleOverrides = overridesByUser.get(baseUser.id) ?? [];
+    const moduleOverrides: PermissionOverride[] = [];
+    for (const moduleRight of rights.MODULE ?? []) {
+      const permKey = maps.keyByModuleId.get(moduleRight.target.toString());
+      if (permKey) {
+        moduleOverrides.push({
+          key: permKey,
+          mode: moduleRight.canView ? 'allow' : 'deny',
+        });
+      }
+    }
     if (moduleOverrides.length > 0) {
       nextUser = {
         ...nextUser,
@@ -2856,87 +2244,40 @@ function toDatabaseIntegerId(value: string | undefined): number | null {
   return parsed;
 }
 
-async function syncUserGroupMemberships(userId: number, groupIds: number[]): Promise<string[]> {
+async function syncUserGroupMemberships(userId: string, groupIds: number[]): Promise<string[]> {
   const uniqueGroupIds = Array.from(new Set(groupIds));
   uniqueGroupIds.sort((left, right) => left - right);
 
-  const statements = [
-    'SET NOCOUNT ON;',
-    `DELETE FROM [userGroupMembers] WHERE [userId] = ${userId};`,
-  ];
+  await updateUserGroups(userId, uniqueGroupIds);
 
-  if (uniqueGroupIds.length > 0) {
-    const values = uniqueGroupIds.map((groupId) => `(${userId}, ${groupId})`).join(',\n');
-    statements.push(`INSERT INTO [userGroupMembers] ([userId], [groupId]) VALUES ${values};`);
+  // Fetch back the applied group IDs to confirm
+  try {
+    const appliedGroups = await fetchUserGroups(userId);
+    const appliedGroupIds = appliedGroups.map((g) => g.UserGroupId.toString());
+    appliedGroupIds.sort((left, right) =>
+      left.localeCompare(right, 'fr', { sensitivity: 'base', numeric: true }),
+    );
+    return appliedGroupIds;
+  } catch {
+    // Fall back to requested group IDs if re-fetch fails
+    return uniqueGroupIds.map((id) => id.toString());
   }
-
-  statements.push(
-    `SELECT [groupId] FROM [userGroupMembers] WHERE [userId] = ${userId} ORDER BY [groupId];`,
-  );
-
-  const membershipRecords = await runDatabaseQuery(
-    statements.join('\n'),
-    'mise à jour des membres de groupe',
-  );
-
-  const appliedGroupIds = membershipRecords
-    .map((record) =>
-      toRecordIdentifier(getValue(record, ['groupId', 'GroupId', 'groupID', 'GroupID'])),
-    )
-    .filter((identifier): identifier is string => Boolean(identifier));
-
-  const uniqueApplied = Array.from(new Set(appliedGroupIds));
-  uniqueApplied.sort((left, right) =>
-    left.localeCompare(right, 'fr', { sensitivity: 'base', numeric: true }),
-  );
-
-  return uniqueApplied;
 }
 
 export async function persistUserAccess(
   payload: UpdateUserAccessPayload,
 ): Promise<UserAccount> {
   const sanitizedOverrides = sanitizePermissionOverrides(payload.permissionOverrides);
-  const numericUserId = toDatabaseIntegerId(payload.userId);
-
-  if (numericUserId === null) {
-    const { userId, ...body } = payload;
-    const updated = await requestJson<UserAccount>(
-      `/api/admin/users/${encodeURIComponent(userId)}/access`,
-      {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ...body, permissionOverrides: sanitizedOverrides }),
-      },
-    );
-
-    const sanitized = sanitizeUserAccountResponse(updated);
-    return { ...sanitized, permissionOverrides: sanitizedOverrides };
-  }
 
   const numericGroupIds = payload.groups
     .map((groupId) => toDatabaseIntegerId(groupId))
     .filter((value): value is number => value !== null);
 
-  const appliedGroupIds = await syncUserGroupMemberships(numericUserId, numericGroupIds);
+  const appliedGroupIds = await syncUserGroupMemberships(payload.userId, numericGroupIds);
 
-  await syncUserModuleOverrides(numericUserId, sanitizedOverrides);
+  await syncUserModuleOverrides(payload.userId, sanitizedOverrides);
 
-  const userRecords = await runDatabaseQuery(
-    `SET NOCOUNT ON;
-SELECT TOP (1) *
-FROM [users]
-WHERE [userId] = ${numericUserId};`,
-    'récupération de l’utilisateur',
-  );
-
-  if (!userRecords.length) {
-    throw new Error("Impossible de récupérer l'utilisateur mis à jour.");
-  }
-
-  const updatedUser = normalizeUserRecord(userRecords[0], 0, '');
+  const updatedUser = await fetchUserById(payload.userId);
   updatedUser.groups = appliedGroupIds;
   updatedUser.permissionOverrides = sanitizedOverrides;
 
@@ -2948,33 +2289,12 @@ export async function persistModuleOverrideChange(
 ): Promise<UserAccount> {
   const sanitizedModuleOverrides = sanitizePermissionOverrides(payload.moduleOverrides);
   const sanitizedAllOverrides = sanitizePermissionOverrides(payload.allOverrides);
-  const numericUserId = toDatabaseIntegerId(payload.userId);
-
-  if (numericUserId === null) {
-    const updated = await requestJson<UserAccount>(
-      `/api/admin/users/${encodeURIComponent(payload.userId)}/access`,
-      {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          groups: payload.groups,
-          permissionOverrides: sanitizedAllOverrides,
-          actorId: payload.actorId,
-        }),
-      },
-    );
-
-    const sanitized = sanitizeUserAccountResponse(updated);
-    return { ...sanitized, permissionOverrides: sanitizedAllOverrides };
-  }
 
   const maps = await loadModulePermissionMaps();
   const moduleIdValue = maps.moduleIdByKey.get(payload.permissionKey);
   if (!moduleIdValue) {
     throw new Error(
-      `Impossible d’identifier le module associé à la permission ${payload.permissionKey}.`,
+      `Impossible d'identifier le module associé à la permission ${payload.permissionKey}.`,
     );
   }
 
@@ -2985,40 +2305,37 @@ export async function persistModuleOverrideChange(
     );
   }
 
+  // Build the view right update for this specific module
   const hasDenyOverride = sanitizedModuleOverrides.some(
     (override) => override.key === payload.permissionKey && override.mode === 'deny',
   );
 
-  const statements = [
-    'SET NOCOUNT ON;',
-    `DELETE FROM [userPermissions] WHERE [userId] = ${numericUserId} AND UPPER(LTRIM(RTRIM([permissionType]))) = 'MODULE' AND [moduleId] = ${numericModuleId};`,
-  ];
-
-  if (hasDenyOverride) {
-    statements.push(
-      `INSERT INTO [userPermissions] ([userId], [permissionType], [moduleId], [canView]) VALUES (${numericUserId}, 'MODULE', ${numericModuleId}, 0);`,
-    );
-  }
+  const rights: ViewRightUpdate[] = [{
+    ViewRightTypeCode: 'MODULE',
+    TargetObjectId: numericModuleId,
+    CanView: !hasDenyOverride,
+  }];
 
   try {
-    await runDatabaseQuery(
-      statements.join('\n'),
-      "mise à jour de l'exception de module de l'utilisateur",
-    );
+    await updateUserViewRights(payload.userId, rights);
   } catch (error) {
     if (!isIgnorableModuleMutationError(error)) {
       throw error;
     }
   }
 
-  const permissionRecords = await runDatabaseQuery(
-    `SET NOCOUNT ON;\nSELECT *\nFROM [userPermissions]\nWHERE [userId] = ${numericUserId}\n  AND UPPER(LTRIM(RTRIM([permissionType]))) = 'MODULE';`,
-    "lecture des permissions de module de l'utilisateur",
-  );
-
-  const overridesByUser = buildModuleOverrideMap(permissionRecords, maps.keyByModuleId);
-  const userKey = String(numericUserId);
-  const storedModuleOverrides = sanitizePermissionOverrides(overridesByUser.get(userKey) ?? []);
+  // Re-fetch permissions from API to get stored state
+  const userRights = await fetchUserRights(payload.userId);
+  const storedModuleOverrides: PermissionOverride[] = [];
+  for (const moduleRight of userRights.MODULE ?? []) {
+    const permKey = maps.keyByModuleId.get(moduleRight.target.toString());
+    if (permKey) {
+      storedModuleOverrides.push({
+        key: permKey,
+        mode: moduleRight.canView ? 'allow' : 'deny',
+      });
+    }
+  }
 
   const nonModuleOverrides = sanitizedAllOverrides.filter(
     (override) => !maps.moduleIdByKey.has(override.key),
@@ -3028,19 +2345,11 @@ export async function persistModuleOverrideChange(
     ...nonModuleOverrides,
   ]);
 
-  const userRecords = await runDatabaseQuery(
-    `SET NOCOUNT ON;\nSELECT TOP (1) *\nFROM [users]\nWHERE [userId] = ${numericUserId};`,
-    "récupération de l’utilisateur",
-  );
-
-  if (!userRecords.length) {
-    throw new Error("Impossible de récupérer l'utilisateur mis à jour.");
-  }
-
-  const updatedUser = normalizeUserRecord(userRecords[0], 0, '');
+  // Fetch updated user via API
+  const updatedUser = await fetchUserById(payload.userId);
   let refreshedGroups: string[];
   try {
-    refreshedGroups = await loadUserGroupIds(numericUserId);
+    refreshedGroups = await loadUserGroupIds(payload.userId);
   } catch {
     refreshedGroups = [...payload.groups];
   }

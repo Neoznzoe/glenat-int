@@ -33,8 +33,12 @@ export function useAuditLog(limit = 25) {
   });
 }
 
-export function useCurrentUser() {
-  return useQuery<UserAccount>({ queryKey: CURRENT_USER_QUERY_KEY, queryFn: fetchCurrentUser });
+export function useCurrentUser(email?: string) {
+  return useQuery<UserAccount>({
+    queryKey: [...CURRENT_USER_QUERY_KEY, email],
+    queryFn: () => fetchCurrentUser(email),
+    enabled: !!email,
+  });
 }
 
 interface UpdateUserOptions {

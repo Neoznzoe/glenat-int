@@ -5,7 +5,14 @@
       "Bash(cat:*)",
       "Bash(npm run build:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(move CmsModules.tsx Modules.tsx)"
+      "Bash(move CmsModules.tsx Modules.tsx)",
+      "Bash(V22=\"/c/Users/victor.besson/OneDrive - GLENAT EDITIONS/Bureau/glenat-int/docs/api-migration/v2.2\")",
+      "Read(//c/Users/victor.besson/OneDrive - GLENAT EDITIONS/Bureau/glenat-int/$V22/handlers/imagino/**)",
+      "Read(//c/Users/victor.besson/OneDrive - GLENAT EDITIONS/Bureau/glenat-int/$V22/handlers/jobs/**)",
+      "Read(//c/Users/victor.besson/OneDrive - GLENAT EDITIONS/Bureau/glenat-int/$V22/handlers/test/**)",
+      "Bash(V20=\"/c/Users/victor.besson/OneDrive - GLENAT EDITIONS/Bureau/glenat-int/docs/api-migration/v2.0\")",
+      "Read(//c/Users/victor.besson/OneDrive - GLENAT EDITIONS/Bureau/glenat-int/$V20/**)",
+      "Bash(echo EXIT_CODE=$?:*)"
     ],
     "deny": [],
     "ask": [],

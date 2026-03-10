@@ -6,16 +6,16 @@ import { useModulePermissionsContext } from '@/context/ModulePermissionsContext'
 const quickLinks: QuickAccessItem[] = [
   { label: 'Prochaines offices', icon: CalendarDays, href: '/catalogue/offices' },
   { label: 'Dernières nouveautés', icon: Sparkles, href: '/catalogue/nouveautes' },
-  { label: 'Éditions', icon: Building, href: '/catalogue' },
-  { label: 'Les auteurs', icon: UserPen },
+  { label: 'Éditions', icon: Building, href: '/catalogue', permissionPath: '/catalogue/accueil' },
+  { label: 'Les auteurs', icon: UserPen, permissionPath: '/catalogue/auteurs' },
   { label: 'Tout le catalogue', icon: BookOpen, href: '/catalogue/all' },
 
-  { label: 'Télécharger le catalogue', icon: Download },
+  { label: 'Télécharger le catalogue', icon: Download, permissionPath: '/catalogue/telecharger' },
   // { label: 'Kiosque', icon: Store, href: '/catalogue/kiosque' },
-  { label: 'Top des commandes', icon: TrendingUp },//???//
+  { label: 'Top des commandes', icon: TrendingUp, permissionPath: '/catalogue/top-commandes' },
   { label: 'Couverture à paraître', icon: Image, href: '/catalogue/couverture-a-paraitre' },
-  { label: 'Information à renseigner', icon: Info },
-  { label: 'Plus de stock', icon: PackageX },//??//
+  { label: 'Information à renseigner', icon: Info, permissionPath: '/catalogue/informations' },
+  { label: 'Plus de stock', icon: PackageX, permissionPath: '/catalogue/plus-de-stock' },
 ];
 
 interface CatalogueLayoutProps {

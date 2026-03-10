@@ -8,6 +8,8 @@ export interface QuickAccessItem {
   label: string;
   icon: LucideIcon;
   href?: string;
+  /** Optional permission path used for access checks when href is absent */
+  permissionPath?: string;
   onClick?: () => void;
 }
 
@@ -23,7 +25,10 @@ export function QuickAccess({ items, active, canAccess }: QuickAccessProps) {
 
   // Filter items based on permissions if canAccess is provided
   const filteredItems = canAccess
-    ? items.filter((item) => !item.href || canAccess(item.href))
+    ? items.filter((item) => {
+        const checkPath = item.permissionPath || item.href;
+        return !checkPath || canAccess(checkPath);
+      })
     : items;
 
   return (

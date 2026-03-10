@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/useAdminData';
 import { useCmsModules, useCmsPages } from '@/hooks/useAdminData';
+import { useAuth } from '@/context/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -21,7 +22,9 @@ export function ProtectedRoute({
   fallbackPath = '/',
 }: ProtectedRouteProps) {
   const navigate = useNavigate();
-  const { data: currentUser, isLoading: loadingUser } = useCurrentUser();
+  const { user: authUser } = useAuth();
+  const authEmail = authUser?.mail || authUser?.userPrincipalName;
+  const { data: currentUser, isLoading: loadingUser } = useCurrentUser(authEmail);
   const { data: cmsModules, isLoading: loadingModules } = useCmsModules(currentUser?.id);
   const { data: cmsPages, isLoading: loadingPages } = useCmsPages(currentUser?.id);
 
