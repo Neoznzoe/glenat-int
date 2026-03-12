@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useState, useMemo, type ComponentType, type LazyExoticComponent } from 'react';
 import { AdminLayout } from './layouts/AdminLayout';
 import { lazy } from 'react';
-import { SquareStack, Component, Zap, Users, Palette, Newspaper, ParkingCircle, Clock, CalendarDays, BriefcaseBusiness, Bell, BookOpen, MailMinus, Monitor, type LucideIcon } from 'lucide-react';
+import { Zap, Users, Palette, Newspaper, ParkingCircle, Clock, CalendarDays, BriefcaseBusiness, Bell, BookOpen, MailMinus, Monitor, type LucideIcon } from 'lucide-react';
 import { PlaceholderPage } from './pages/administration/PlaceholderPage';
 
 const AdminDashboard = lazy(() => import('./pages/administration/Dashboard'));
@@ -11,6 +11,8 @@ const Zones = lazy(() => import('./pages/administration/Zones'));
 const Projects = lazy(() => import('./pages/administration/Projects'));
 const Modules = lazy(() => import('./pages/administration/Modules'));
 const Pages = lazy(() => import('./pages/administration/Pages'));
+const Blocks = lazy(() => import('./pages/administration/Blocks'));
+const Elements = lazy(() => import('./pages/administration/Elements'));
 
 const loadingScreen = (
   <div className="flex min-h-screen w-full items-center justify-center bg-background text-foreground">
@@ -41,12 +43,8 @@ const ADMIN_ROUTES: Record<string, RouteConfig> = {
   '/modules': { component: Modules },
   '/pages': { component: Pages },
   '/projects': { component: Projects },
-  '/blocs': {
-    component: lazy(() => Promise.resolve({ default: () => <PlaceholderPage title="Gestion des Blocs" description="Gérez les blocs et leurs configurations." icon={SquareStack} /> })),
-  },
-  '/elements': {
-    component: lazy(() => Promise.resolve({ default: () => <PlaceholderPage title="Gestion des Éléments" description="Gérez les éléments et leur contenu." icon={Component} /> })),
-  },
+  '/blocs': { component: Blocks },
+  '/elements': { component: Elements },
   '/phpulse': {
     component: lazy(() => Promise.resolve({ default: () => <PlaceholderPage title="PHPulse" description="Vous pouvez facilement administrer les différentes fonctionnalités de PHPulse." icon={Zap} /> })),
   },

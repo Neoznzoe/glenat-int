@@ -223,6 +223,9 @@ export function UserPermissionsPanel({ user }: UserPermissionsPanelProps) {
 
         // Only blocs belonging to THIS page
         const pageBlocs = allBlocs.filter((b: CmsBlocRecord) => b.pageId === page.pageId);
+
+        // Construire une map de tous les nœuds blocs
+        const blocNodeMap = new Map<number, HierarchyNode>();
         pageBlocs.forEach((bloc: CmsBlocRecord) => {
           const blocPerm = permissions.blocs.get(bloc.blocId) || {
             canView: false,
@@ -258,7 +261,17 @@ export function UserPermissionsPanel({ user }: UserPermissionsPanelProps) {
             blocNode.children!.push(elementNode);
           });
 
-          pageNode.children!.push(blocNode);
+          blocNodeMap.set(bloc.blocId, blocNode);
+        });
+
+        // Imbriquer les blocs enfants sous leurs parents
+        pageBlocs.forEach((bloc: CmsBlocRecord) => {
+          const blocNode = blocNodeMap.get(bloc.blocId)!;
+          if (bloc.parentBlockId && blocNodeMap.has(bloc.parentBlockId)) {
+            blocNodeMap.get(bloc.parentBlockId)!.children!.push(blocNode);
+          } else {
+            pageNode.children!.push(blocNode);
+          }
         });
 
         moduleNode.children!.push(pageNode);
@@ -681,6 +694,8 @@ function PageRow({
               onToggle={() => onToggleBloc(blocNode.id)}
               onPermissionChange={onPermissionChange}
               parentDenied={isDisabled || !node.canView}
+              expandedBlocs={expandedBlocs}
+              onToggleBloc={onToggleBloc}
             />
           ))}
         </div>
@@ -700,6 +715,8 @@ interface BlocRowProps {
     node?: HierarchyNode
   ) => void;
   parentDenied: boolean;
+  expandedBlocs: Set<number>;
+  onToggleBloc: (id: number) => void;
 }
 
 function BlocRow({
@@ -708,6 +725,8 @@ function BlocRow({
   onToggle,
   onPermissionChange,
   parentDenied,
+  expandedBlocs,
+  onToggleBloc,
 }: BlocRowProps) {
   const hasChildren = node.children && node.children.length > 0;
   const isDisabled = parentDenied;
@@ -742,14 +761,27 @@ function BlocRow({
 
       {expanded && hasChildren && !isDisabled && (
         <div className="ml-6 mt-2 space-y-1">
-          {node.children!.map((elementNode) => (
-            <ElementRow
-              key={elementNode.id}
-              node={elementNode}
-              onPermissionChange={onPermissionChange}
-              parentDenied={isDisabled || !node.canView}
-            />
-          ))}
+          {node.children!.map((childNode) =>
+            childNode.type === 'bloc' ? (
+              <BlocRow
+                key={childNode.id}
+                node={childNode}
+                expanded={expandedBlocs.has(childNode.id)}
+                onToggle={() => onToggleBloc(childNode.id)}
+                onPermissionChange={onPermissionChange}
+                parentDenied={isDisabled || !node.canView}
+                expandedBlocs={expandedBlocs}
+                onToggleBloc={onToggleBloc}
+              />
+            ) : (
+              <ElementRow
+                key={childNode.id}
+                node={childNode}
+                onPermissionChange={onPermissionChange}
+                parentDenied={isDisabled || !node.canView}
+              />
+            )
+          )}
         </div>
       )}
     </div>

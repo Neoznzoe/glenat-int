@@ -9,6 +9,8 @@ import { fetchUserViewMatrix } from '@/lib/adminApi';
 import { toast } from 'sonner';
 import type { ViewRightUpdate, CmsModuleRecord, CmsPageRecord, CmsBlocRecord, CmsElementRecord } from '@/lib/adminApi';
 
+console.log('🔴 CmsPermissionsSection MODULE LOADED — version avec parentBlockId');
+
 interface PermissionState {
   modules: Map<number, boolean>;
   pages: Map<number, boolean>;
@@ -80,6 +82,9 @@ export function CmsPermissionsSection({ userId }: CmsPermissionsSectionProps) {
         };
 
         const pageBlocs = allBlocs.filter((b: CmsBlocRecord) => b.pageId === page.pageId);
+
+        // Construire une map de tous les nœuds blocs
+        const blocNodeMap = new Map<number, HierarchyNode>();
         pageBlocs.forEach((bloc: CmsBlocRecord) => {
           const blocNode: HierarchyNode = {
             id: bloc.blocId,
@@ -104,7 +109,17 @@ export function CmsPermissionsSection({ userId }: CmsPermissionsSectionProps) {
             blocNode.children!.push(elementNode);
           });
 
-          pageNode.children!.push(blocNode);
+          blocNodeMap.set(bloc.blocId, blocNode);
+        });
+
+        // Imbriquer les blocs enfants sous leurs parents
+        pageBlocs.forEach((bloc: CmsBlocRecord) => {
+          const blocNode = blocNodeMap.get(bloc.blocId)!;
+          if (bloc.parentBlockId && blocNodeMap.has(bloc.parentBlockId)) {
+            blocNodeMap.get(bloc.parentBlockId)!.children!.push(blocNode);
+          } else {
+            pageNode.children!.push(blocNode);
+          }
         });
 
         moduleNode.children!.push(pageNode);
@@ -112,6 +127,21 @@ export function CmsPermissionsSection({ userId }: CmsPermissionsSectionProps) {
 
       tree.push(moduleNode);
     });
+
+    // DEBUG: vérifier l'arborescence des blocs
+    console.log('[CMS] hierarchyTree built:', JSON.stringify(tree.map(m => ({
+      name: m.name,
+      children: m.children?.map(p => ({
+        name: p.name,
+        blocs: p.children?.map(b => ({
+          name: b.name,
+          type: b.type,
+          childrenCount: b.children?.length,
+          childTypes: b.children?.map(c => c.type),
+        })),
+      })),
+    })), null, 2));
+    console.log('[CMS] allBlocs parentBlockId sample:', allBlocs.slice(0, 5).map((b: CmsBlocRecord) => ({ code: b.blocCode, parentBlockId: b.parentBlockId, blocId: b.blocId })));
 
     return tree;
   }, [allModules, allPages, allBlocs, allElements, permissions]);
@@ -253,6 +283,10 @@ export function CmsPermissionsSection({ userId }: CmsPermissionsSectionProps) {
         });
       });
 
+      const blocRights = rights.filter(r => r.ViewRightTypeCode === 'BLOC');
+      console.log('[DEBUG CmsPermissions] saving BLOC rights:', blocRights);
+      console.log('[DEBUG CmsPermissions] total rights to save:', rights.length);
+
       await updateViewRightsMutation.mutateAsync({
         userId,
         rights,
@@ -374,7 +408,11 @@ export function CmsPermissionsSection({ userId }: CmsPermissionsSectionProps) {
         </div>
         {isExpanded && hasChildren && (
           <div className="space-y-1">
-            {bloc.children!.map((element) => renderElement(element, isDenied))}
+            {bloc.children!.map((child) =>
+              child.type === 'bloc'
+                ? renderBloc(child, isDenied)
+                : renderElement(child, isDenied)
+            )}
           </div>
         )}
       </div>

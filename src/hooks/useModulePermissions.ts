@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchUserViewMatrix, fetchAllModulesFromCms, type CmsModuleRecord } from '@/lib/adminApi';
+import { fetchUserViewMatrix, fetchAllModulesFromCms, fetchAllBlocsFromCms, fetchAllElementsFromCms, type CmsModuleRecord, type CmsBlocRecord, type CmsElementRecord } from '@/lib/adminApi';
 import { fetchPages, type Page } from '@/lib/pagesApi';
 
 /**
@@ -61,14 +61,34 @@ export interface PagePermission {
   canView: boolean;
 }
 
+export interface BlocPermission {
+  blocId: number;
+  blocCode: string;
+  blocName: string;
+  pageId: number;
+  canView: boolean;
+}
+
+export interface ElementPermission {
+  elementId: number;
+  elementCode: string;
+  elementName: string;
+  blocId: number;
+  canView: boolean;
+}
+
 export interface ModulePermissionsResult {
   permissions: ModulePermission[];
   pagePermissions: PagePermission[];
+  blocPermissions: BlocPermission[];
+  elementPermissions: ElementPermission[];
   isLoading: boolean;
   error: Error | null;
   canAccessRoute: (path: string) => boolean;
   canAccessModule: (moduleId: number) => boolean;
   canAccessPage: (pageId: number) => boolean;
+  canAccessBloc: (blocCode: string) => boolean;
+  canAccessElement: (elementCode: string) => boolean;
   getModuleForRoute: (path: string) => ModulePermission | undefined;
   getPageForRoute: (path: string) => PagePermission | undefined;
 }
@@ -100,6 +120,28 @@ export function useModulePermissions(userEmail?: string): ModulePermissionsResul
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // Fetch all CMS blocs
+  const {
+    data: blocs,
+    isLoading: blocsLoading,
+    error: blocsError,
+  } = useQuery<CmsBlocRecord[]>({
+    queryKey: ['cms', 'all-blocs'],
+    queryFn: fetchAllBlocsFromCms,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Fetch all CMS elements
+  const {
+    data: elements,
+    isLoading: elementsLoading,
+    error: elementsError,
+  } = useQuery<CmsElementRecord[]>({
+    queryKey: ['cms', 'all-elements'],
+    queryFn: fetchAllElementsFromCms,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
   // Fetch user's view matrix
   const {
     data: viewMatrix,
@@ -112,8 +154,8 @@ export function useModulePermissions(userEmail?: string): ModulePermissionsResul
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
-  const isLoading = modulesLoading || pagesLoading || matrixLoading;
-  const error = modulesError || pagesError || matrixError || null;
+  const isLoading = modulesLoading || pagesLoading || blocsLoading || elementsLoading || matrixLoading;
+  const error = modulesError || pagesError || blocsError || elementsError || matrixError || null;
 
   // If view matrix is empty (e.g. API returns 501), grant access to everything
   const isMatrixEmpty = viewMatrix &&
@@ -164,6 +206,48 @@ export function useModulePermissions(userEmail?: string): ModulePermissionsResul
         pageName: page.PageName,
         slug: page.PageCode.toLowerCase(),
         moduleId,
+        canView,
+      });
+    });
+  }
+
+  // Build bloc permissions map
+  const blocPermissionsList: BlocPermission[] = [];
+  if (blocs && viewMatrix) {
+    const blocPermMap = new Map<number, boolean>();
+    (viewMatrix.BLOC || []).forEach((perm) => {
+      const targetId = typeof perm.target === 'string' ? parseInt(perm.target, 10) : perm.target;
+      blocPermMap.set(targetId, perm.canView);
+    });
+
+    blocs.forEach((bloc) => {
+      const canView = isMatrixEmpty ? true : (blocPermMap.get(bloc.blocId) ?? true);
+      blocPermissionsList.push({
+        blocId: bloc.blocId,
+        blocCode: bloc.blocCode,
+        blocName: bloc.blocName,
+        pageId: bloc.pageId,
+        canView,
+      });
+    });
+  }
+
+  // Build element permissions map
+  const elementPermissionsList: ElementPermission[] = [];
+  if (elements && viewMatrix) {
+    const elementPermMap = new Map<number, boolean>();
+    (viewMatrix.ELEMENT || []).forEach((perm) => {
+      const targetId = typeof perm.target === 'string' ? parseInt(perm.target, 10) : perm.target;
+      elementPermMap.set(targetId, perm.canView);
+    });
+
+    elements.forEach((element) => {
+      const canView = isMatrixEmpty ? true : (elementPermMap.get(element.elementId) ?? true);
+      elementPermissionsList.push({
+        elementId: element.elementId,
+        elementCode: element.elementCode,
+        elementName: element.elementName,
+        blocId: element.blocId,
         canView,
       });
     });
@@ -230,14 +314,8 @@ export function useModulePermissions(userEmail?: string): ModulePermissionsResul
         return matchingPage.canView;
       }
 
-      // If no matching page found but there are page-level permissions for this module,
-      // deny access by default (the page exists in CMS but slug mapping is missing)
-      const hasPagePermsForModule = pagePermissions.some(
-        (perm) => perm.moduleId === matchingModule.moduleId
-      );
-      if (hasPagePermsForModule) {
-        return false;
-      }
+      // If no matching page found in CMS, inherit from module permission
+      // (page not yet registered in CMS should not block access)
     }
 
     return matchingModule.canView;
@@ -263,6 +341,38 @@ export function useModulePermissions(userEmail?: string): ModulePermissionsResul
 
     const perm = pagePermissions.find((p) => p.pageId === pageId);
     return perm?.canView ?? false;
+  };
+
+  /**
+   * Check if user can view a specific bloc by its code (e.g. "HOME_LINKS_SECTION")
+   * Returns true if loading or bloc not found in CMS (graceful fallback)
+   */
+  const canAccessBloc = (blocCode: string): boolean => {
+    if (!userEmail || isLoading) return true;
+    if (!blocs || !viewMatrix) return true;
+
+    const perm = blocPermissionsList.find(
+      (p) => p.blocCode.toUpperCase() === blocCode.toUpperCase()
+    );
+    // If bloc not found in CMS, allow by default
+    if (!perm) return true;
+    return perm.canView;
+  };
+
+  /**
+   * Check if user can view a specific element by its code (e.g. "HOME_TEXT_BONNE_JOURNEE")
+   * Returns true if loading or element not found in CMS (graceful fallback)
+   */
+  const canAccessElement = (elementCode: string): boolean => {
+    if (!userEmail || isLoading) return true;
+    if (!elements || !viewMatrix) return true;
+
+    const perm = elementPermissionsList.find(
+      (p) => p.elementCode.toUpperCase() === elementCode.toUpperCase()
+    );
+    // If element not found in CMS, allow by default
+    if (!perm) return true;
+    return perm.canView;
   };
 
   /**
@@ -308,11 +418,15 @@ export function useModulePermissions(userEmail?: string): ModulePermissionsResul
   return {
     permissions,
     pagePermissions,
+    blocPermissions: blocPermissionsList,
+    elementPermissions: elementPermissionsList,
     isLoading,
     error,
     canAccessRoute,
     canAccessModule,
     canAccessPage,
+    canAccessBloc,
+    canAccessElement,
     getModuleForRoute,
     getPageForRoute,
   };

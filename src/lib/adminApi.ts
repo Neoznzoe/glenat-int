@@ -18,8 +18,8 @@ const CMS_BASE_URL =
 
 const CMS_MODULE_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/Cms/module`;
 const CMS_PAGE_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/Cms/page`;
-const CMS_BLOC_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/Cms/bloc`;
-const CMS_ELEMENT_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/Cms/element`;
+const CMS_BLOC_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/cms/blocks`;
+const CMS_ELEMENT_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/cms/elements`;
 const USER_VIEW_MATRIX_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/users`;
 
 export interface ApiUserRecord {
@@ -188,25 +188,32 @@ interface CmsPageListResponse {
 
 // API response format for blocs (PascalCase from API)
 interface ApiCmsBlocRecord {
-  BlocId: number | string;
+  BlockId: number | string;
   PageId: number | string;
-  BlocCode: string;
-  BlocName: string;
-  BlocType?: string;
-  DisplayOrder?: number | string;
-  IsActive: boolean | number;
+  ParentBlockId?: number | string | null;
+  BlockCode: string;
+  Title: string | null;
+  LayoutRegion?: string | null;
+  SortOrder?: number | string;
+  IsReusable?: boolean | number;
+  Status?: string | null;
+  ContentDefinition?: string | null;
   CreatedAt?: string;
   CreatedBy?: string;
 }
 
 // Normalized format for blocs (camelCase for frontend use)
-interface CmsBlocRecord {
+export interface CmsBlocRecord {
   blocId: number;
   pageId: number;
+  parentBlockId?: number | null;
   blocCode: string;
   blocName: string;
-  blocType?: string;
-  displayOrder?: number;
+  layoutRegion?: string | null;
+  sortOrder?: number;
+  isReusable?: boolean;
+  status?: string | null;
+  contentDefinition?: string | null;
   isActive: boolean;
   createdAt?: string;
   createdBy?: string;
@@ -216,7 +223,8 @@ interface CmsBlocListResponse {
   success?: boolean;
   code?: number;
   message?: string;
-  blocs: ApiCmsBlocRecord[];
+  blocks?: ApiCmsBlocRecord[];
+  result?: ApiCmsBlocRecord[];
   pagination: {
     page: number;
     perPage: number;
@@ -228,24 +236,27 @@ interface CmsBlocListResponse {
 // API response format for elements (PascalCase from API)
 interface ApiCmsElementRecord {
   ElementId: number | string;
-  BlocId: number | string;
-  ElementCode: string;
-  ElementName: string;
-  ElementType?: string;
-  DisplayOrder?: number | string;
+  BlockId: number | string;
+  ElementType: string;
+  ElementKey: string | null;
+  Content?: string | null;
+  Metadata?: string | null;
   IsActive: boolean | number;
+  SortOrder?: number | string;
   CreatedAt?: string;
   CreatedBy?: string;
 }
 
 // Normalized format for elements (camelCase for frontend use)
-interface CmsElementRecord {
+export interface CmsElementRecord {
   elementId: number;
   blocId: number;
   elementCode: string;
   elementName: string;
   elementType?: string;
-  displayOrder?: number;
+  content?: string | null;
+  metadata?: string | null;
+  sortOrder?: number;
   isActive: boolean;
   createdAt?: string;
   createdBy?: string;
@@ -255,7 +266,8 @@ interface CmsElementListResponse {
   success?: boolean;
   code?: number;
   message?: string;
-  elements: ApiCmsElementRecord[];
+  elements?: ApiCmsElementRecord[];
+  result?: ApiCmsElementRecord[];
   pagination: {
     page: number;
     perPage: number;
@@ -1534,15 +1546,21 @@ export async function fetchAllPagesFromCms(): Promise<CmsPageRecord[]> {
 // Helper function to normalize API bloc record to frontend format
 function normalizeBlocRecord(apiRecord: ApiCmsBlocRecord): CmsBlocRecord {
   return {
-    blocId: typeof apiRecord.BlocId === 'string' ? parseInt(apiRecord.BlocId, 10) : apiRecord.BlocId,
+    blocId: typeof apiRecord.BlockId === 'string' ? parseInt(apiRecord.BlockId, 10) : apiRecord.BlockId,
     pageId: typeof apiRecord.PageId === 'string' ? parseInt(apiRecord.PageId, 10) : apiRecord.PageId,
-    blocCode: apiRecord.BlocCode,
-    blocName: apiRecord.BlocName,
-    blocType: apiRecord.BlocType,
-    displayOrder: apiRecord.DisplayOrder != null
-      ? (typeof apiRecord.DisplayOrder === 'string' ? parseInt(apiRecord.DisplayOrder, 10) : apiRecord.DisplayOrder)
+    parentBlockId: apiRecord.ParentBlockId != null
+      ? (typeof apiRecord.ParentBlockId === 'string' ? parseInt(apiRecord.ParentBlockId, 10) : apiRecord.ParentBlockId)
+      : null,
+    blocCode: apiRecord.BlockCode,
+    blocName: apiRecord.Title || apiRecord.BlockCode,
+    layoutRegion: apiRecord.LayoutRegion,
+    sortOrder: apiRecord.SortOrder != null
+      ? (typeof apiRecord.SortOrder === 'string' ? parseInt(apiRecord.SortOrder, 10) : apiRecord.SortOrder)
       : undefined,
-    isActive: apiRecord.IsActive === 1 || apiRecord.IsActive === true,
+    isReusable: apiRecord.IsReusable === 1 || apiRecord.IsReusable === true,
+    status: apiRecord.Status,
+    contentDefinition: apiRecord.ContentDefinition,
+    isActive: apiRecord.Status === 'active',
     createdAt: apiRecord.CreatedAt,
     createdBy: apiRecord.CreatedBy,
   };
@@ -1552,12 +1570,14 @@ function normalizeBlocRecord(apiRecord: ApiCmsBlocRecord): CmsBlocRecord {
 function normalizeElementRecord(apiRecord: ApiCmsElementRecord): CmsElementRecord {
   return {
     elementId: typeof apiRecord.ElementId === 'string' ? parseInt(apiRecord.ElementId, 10) : apiRecord.ElementId,
-    blocId: typeof apiRecord.BlocId === 'string' ? parseInt(apiRecord.BlocId, 10) : apiRecord.BlocId,
-    elementCode: apiRecord.ElementCode,
-    elementName: apiRecord.ElementName,
+    blocId: typeof apiRecord.BlockId === 'string' ? parseInt(apiRecord.BlockId, 10) : apiRecord.BlockId,
+    elementCode: apiRecord.ElementKey || apiRecord.ElementType,
+    elementName: apiRecord.ElementKey || apiRecord.ElementType,
     elementType: apiRecord.ElementType,
-    displayOrder: apiRecord.DisplayOrder != null
-      ? (typeof apiRecord.DisplayOrder === 'string' ? parseInt(apiRecord.DisplayOrder, 10) : apiRecord.DisplayOrder)
+    content: apiRecord.Content,
+    metadata: apiRecord.Metadata,
+    sortOrder: apiRecord.SortOrder != null
+      ? (typeof apiRecord.SortOrder === 'string' ? parseInt(apiRecord.SortOrder, 10) : apiRecord.SortOrder)
       : undefined,
     isActive: apiRecord.IsActive === 1 || apiRecord.IsActive === true,
     createdAt: apiRecord.CreatedAt,
@@ -1585,13 +1605,15 @@ export async function fetchAllBlocsFromCms(): Promise<CmsBlocRecord[]> {
       });
 
       if (!response.ok) {
+
         break;
       }
 
       const data = (await response.json()) as CmsBlocListResponse;
 
-      if (data.blocs && Array.isArray(data.blocs)) {
-        const normalizedBlocs = data.blocs.map(normalizeBlocRecord);
+      const blocks = data.blocks || data.result;
+      if (blocks && Array.isArray(blocks)) {
+        const normalizedBlocs = blocks.map(normalizeBlocRecord);
         allBlocs.push(...normalizedBlocs);
       }
 
@@ -1629,13 +1651,15 @@ export async function fetchAllElementsFromCms(): Promise<CmsElementRecord[]> {
       });
 
       if (!response.ok) {
+
         break;
       }
 
       const data = (await response.json()) as CmsElementListResponse;
 
-      if (data.elements && Array.isArray(data.elements)) {
-        const normalizedElements = data.elements.map(normalizeElementRecord);
+      const elements = data.elements || data.result;
+      if (elements && Array.isArray(elements)) {
+        const normalizedElements = elements.map(normalizeElementRecord);
         allElements.push(...normalizedElements);
       }
 
@@ -1990,6 +2014,7 @@ export async function updateUserViewRights(
   let result: UpdateViewRightsResponse;
   try {
     result = (await response.json()) as UpdateViewRightsResponse;
+
   } catch {
     throw new Error('Réponse inattendue lors de la mise à jour des droits.');
   }
@@ -2367,6 +2392,4 @@ export type {
   ViewRightUpdate,
   CmsModuleRecord,
   CmsPageRecord,
-  CmsBlocRecord,
-  CmsElementRecord,
 };

@@ -223,7 +223,6 @@ export function useCmsModules(userRecordId?: string) {
   return useQuery({
     queryKey: [...CMS_MODULES_QUERY_KEY, userRecordId],
     queryFn: () => fetchModulesWithPermissions(userRecordId),
-    enabled: !!userRecordId, // Only fetch if we have a user ID
   });
 }
 
@@ -231,7 +230,6 @@ export function useCmsPages(userRecordId?: string) {
   return useQuery({
     queryKey: [...CMS_PAGES_QUERY_KEY, userRecordId],
     queryFn: () => fetchPagesWithPermissions(userRecordId),
-    enabled: !!userRecordId, // Only fetch if we have a user ID
   });
 }
 
@@ -239,7 +237,6 @@ export function useCmsBlocs(userRecordId?: string) {
   return useQuery({
     queryKey: [...CMS_BLOCS_QUERY_KEY, userRecordId],
     queryFn: () => fetchBlocsWithPermissions(userRecordId),
-    enabled: !!userRecordId, // Only fetch if we have a user ID
   });
 }
 
@@ -247,7 +244,6 @@ export function useCmsElements(userRecordId?: string) {
   return useQuery({
     queryKey: [...CMS_ELEMENTS_QUERY_KEY, userRecordId],
     queryFn: () => fetchElementsWithPermissions(userRecordId),
-    enabled: !!userRecordId, // Only fetch if we have a user ID
   });
 }
 

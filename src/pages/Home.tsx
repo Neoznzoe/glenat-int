@@ -8,6 +8,7 @@ import { PresenceList } from '@/components/PresenceList';
 import { LinksCard } from '@/components/LinksCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/context/AuthContext';
+import { useModulePermissionsContext } from '@/context/ModulePermissionsContext';
 import { fetchNextCatalogueOffice, type CatalogueOfficeGroup } from '@/lib/catalogue';
 import { fetchTodayAbsences, type AbsentPerson, fetchTodayRemoteWorking, type RemoteWorkingPerson } from '@/lib/absencesApi';
 import { HomeSkeleton } from '@/components/HomeSkeleton';
@@ -18,6 +19,7 @@ const noop = () => undefined;
 
 function HomeContent() {
   const { user } = useAuth();
+  const { canAccessBloc, canAccessElement } = useModulePermissionsContext();
   const userName = user?.givenName || user?.displayName || 'utilisateur';
 
   const [nextOffice, setNextOffice] = useState<CatalogueOfficeGroup | null>(null);
@@ -149,59 +151,86 @@ function HomeContent() {
   return (
     <div className="p-6 space-y-6">
       {/* En-tête */}
-      <div className="rounded-2xl border border-border bg-card text-card-foreground px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
-          <div className="lg:col-span-4 flex flex-col justify-between min-h-[220px]">
-            <div>
-              <h1 className="text-5xl lg:text-6xl font-extrabold text-foreground">
-                {new Date().toLocaleDateString('fr-FR', { weekday: 'long' }).toUpperCase()}
-              </h1>
-              <h2 className="mt-2 text-lg lg:text-xl text-muted-foreground capitalize">
-                {new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: '2-digit' })}
-              </h2>
-            </div>
-            <div className="mt-6 space-y-1">
-              <p className="text-base lg:text-lg font-semibold">Bonjour {userName}</p>
-              <p className="text-base lg:text-lg font-semibold text-primary">Bonne journée !</p>
-            </div>
-          </div>
+      {canAccessBloc('HOME_HERO_CARD') && (
+        <div className="rounded-2xl border border-border bg-card text-card-foreground px-6 py-6">
+          {canAccessBloc('HOME_INFINITE_CAROUSEL_SECTION_1') && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+              {canAccessBloc('HOME_GREETING_COLUMN') && (
+                <div className="lg:col-span-4 flex flex-col justify-between min-h-[220px]">
+                  {canAccessBloc('HOME_HEADING_BLOC') && (
+                    <div>
+                      <h1 className="text-5xl lg:text-6xl font-extrabold text-foreground">
+                        {new Date().toLocaleDateString('fr-FR', { weekday: 'long' }).toUpperCase()}
+                      </h1>
+                      <h2 className="mt-2 text-lg lg:text-xl text-muted-foreground capitalize">
+                        {new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: '2-digit' })}
+                      </h2>
+                    </div>
+                  )}
+                  {canAccessBloc('HOME_GREETING') && (
+                    <div className="mt-6 space-y-1">
+                      {canAccessElement('HOME_GREETING_TEXT') && (
+                        <p className="text-base lg:text-lg font-semibold">Bonjour {userName}</p>
+                      )}
+                      {canAccessElement('HOME_TEXT_BONNE_JOURNEE') && (
+                        <p className="text-base lg:text-lg font-semibold text-primary">Bonne journée !</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
-          <div className="lg:col-span-8">
-            <div className="flex items-baseline justify-between mb-3">
-              {isLoadingOffice ? (
-                <Skeleton className="h-4 w-60" />
-              ) : nextOffice ? (
-                <span className="text-sm lg:text-base text-muted-foreground">
-                  Prochaine office {nextOffice.office} : {nextOffice.date}
-                </span>
-              ) : (
-                <span className="text-sm lg:text-base text-muted-foreground">Aucune office prévue</span>
+              {canAccessBloc('HOME_INFINITE_CAROUSEL_SECTION_2') && (
+                <div className="lg:col-span-8">
+                  {canAccessBloc('HOME_OFFICE_INFO') && (
+                    <div className="flex items-baseline justify-between mb-3">
+                      {isLoadingOffice ? (
+                        <Skeleton className="h-4 w-60" />
+                      ) : nextOffice ? (
+                        <span className="text-sm lg:text-base text-muted-foreground">
+                          Prochaine office {nextOffice.office} : {nextOffice.date}
+                        </span>
+                      ) : (
+                        <span className="text-sm lg:text-base text-muted-foreground">Aucune office prévue</span>
+                      )}
+                    </div>
+                  )}
+                  {canAccessBloc('HOME_INFINITE_CAROUSEL') && (
+                    <>
+                      {isLoadingOffice ? (
+                        <Skeleton className="h-48 w-full rounded-xl" />
+                      ) : covers.length > 0 ? (
+                        <InfiniteCarousel covers={covers} speedSeconds={30} />
+                      ) : (
+                        <div className="h-48 w-full rounded-xl bg-muted flex items-center justify-center">
+                          <p className="text-muted-foreground">Aucune couverture disponible</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               )}
             </div>
-            {isLoadingOffice ? (
-              <Skeleton className="h-48 w-full rounded-xl" />
-            ) : covers.length > 0 ? (
-              <InfiniteCarousel covers={covers} speedSeconds={30} />
-            ) : (
-              <div className="h-48 w-full rounded-xl bg-muted flex items-center justify-center">
-                <p className="text-muted-foreground">Aucune couverture disponible</p>
-              </div>
-            )}
-          </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* Section Actualités et calendrier */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <ActualitesCard />
-        <Card className="lg:col-span-1">
-          <CardContent className="pt-4">
-            <EventsCalendar />
-          </CardContent>
-        </Card>
-      </div>
+      {canAccessBloc('HOME_ACTUALITES_SECTION') && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {canAccessBloc('HOME_ACTUALITES_CARD') && <ActualitesCard />}
+          {canAccessBloc('HOME_CARD') && (
+            <Card className="lg:col-span-1">
+              <CardContent className="pt-4">
+                <EventsCalendar />
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Présence */}
+      {canAccessBloc('HOME_PRESENCE_SECTION') && (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div ref={absentRef}>
           <PresenceList title="Absent aujourd'hui"
@@ -229,13 +258,16 @@ function HomeContent() {
           </CardContent>
         </Card>
       </div>
+      )}
 
       {/* 3 colonnes de liens */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <LinksCard title="Sites utiles" links={usefulLinks} limit={linkLimit} />
-        <LinksCard title="Vie de l'entreprise" links={companyLifeLinks} limit={linkLimit} />
-        <LinksCard title="Sites Share Point" links={sharePointLinks} limit={linkLimit} />
-      </div>
+      {canAccessBloc('HOME_LINKS_SECTION') && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <LinksCard title="Sites utiles" links={usefulLinks} limit={linkLimit} />
+          <LinksCard title="Vie de l'entreprise" links={companyLifeLinks} limit={linkLimit} />
+          <LinksCard title="Sites Share Point" links={sharePointLinks} limit={linkLimit} />
+        </div>
+      )}
     </div>
   );
 }
