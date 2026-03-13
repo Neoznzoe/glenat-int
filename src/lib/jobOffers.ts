@@ -1,13 +1,8 @@
 import { fetchWithOAuth } from './oauth';
-import { applySecurePayloadHeaders, logSecurePayloadRequest, prepareSecureJsonPayload } from './securePayload';
 
-const JOB_OFFERS_ENDPOINT = import.meta.env.DEV
-  ? '/intranet/call-database'
-  : 'https://api-dev.groupe-glenat.com/Api/v2.0/Dev/callDatabase';
-
-const JOB_OFFERS_QUERY = 'SELECT * FROM jobOffers WHERE publiee = 1;';
-const JOB_OFFER_COUNT_QUERY =
-  'SELECT COUNT(*) AS nombre_offres FROM [jobOffers] WHERE publiee = 1;';
+const JOB_OFFERS_BASE_URL = import.meta.env.DEV
+  ? '/Api/v2.0/jobOffers'
+  : 'https://api-dev.groupe-glenat.com/Api/v2.0/jobOffers';
 
 export interface DatabaseJobOffersResponse {
   success?: boolean;
@@ -63,55 +58,6 @@ function normalizeId(value: unknown): string | undefined {
     return trimmed;
   }
   return undefined;
-}
-
-function extractArray(payload: unknown): RawJobOfferRecord[] {
-  const tryParse = (input: unknown): unknown => {
-    if (Array.isArray(input)) {
-      return input;
-    }
-    if (typeof input === 'string') {
-      try {
-        const parsed = JSON.parse(input) as unknown;
-        return tryParse(parsed);
-      } catch {
-        return [];
-      }
-    }
-    if (input && typeof input === 'object') {
-      const objectPayload = input as Record<string, unknown>;
-      if (Array.isArray(objectPayload.rows)) {
-        return objectPayload.rows;
-      }
-      if (Array.isArray(objectPayload.data)) {
-        return objectPayload.data;
-      }
-      if (Array.isArray(objectPayload.result)) {
-        return objectPayload.result;
-      }
-      if (Array.isArray(objectPayload.recordset)) {
-        return objectPayload.recordset;
-      }
-      if (Array.isArray(objectPayload.Recordset)) {
-        return objectPayload.Recordset;
-      }
-      if (Array.isArray(objectPayload.recordsets)) {
-        const [first] = objectPayload.recordsets as unknown[];
-        if (Array.isArray(first)) {
-          return first;
-        }
-      }
-      if ('records' in objectPayload && Array.isArray(objectPayload.records)) {
-        return objectPayload.records;
-      }
-    }
-    return [];
-  };
-
-  const arrayCandidate = tryParse(payload);
-  return Array.isArray(arrayCandidate)
-    ? (arrayCandidate.filter((item) => item && typeof item === 'object') as RawJobOfferRecord[])
-    : [];
 }
 
 function normalizeJobOffer(raw: RawJobOfferRecord): JobOfferRecord | null {
@@ -211,23 +157,42 @@ function normalizeJobOffer(raw: RawJobOfferRecord): JobOfferRecord | null {
   };
 }
 
-export async function fetchJobOffers(): Promise<JobOfferRecord[]> {
-  const requestPayload = { query: JOB_OFFERS_QUERY };
-  const securePayload = await prepareSecureJsonPayload(requestPayload);
-  const headers = new Headers({ 'Content-Type': 'application/json' });
-  applySecurePayloadHeaders(headers, securePayload.encrypted);
-  logSecurePayloadRequest(
-    JOB_OFFERS_ENDPOINT,
-    requestPayload,
-    securePayload.body,
-    securePayload.encrypted,
-  );
+/**
+ * Convertit un objet avec des clés numériques en tableau.
+ * PHP peut sérialiser les tableaux séquentiels comme des objets : {"0": {...}, "1": {...}, ...}
+ */
+function toArrayIfArrayLike(value: unknown): unknown[] | null {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== 'object') return null;
+  const keys = Object.keys(value as Record<string, unknown>);
+  if (keys.length === 0) return null;
+  const allNumeric = keys.every((k) => /^\d+$/.test(k));
+  if (!allNumeric) return null;
+  const sorted = keys.map(Number).sort((a, b) => a - b);
+  if (sorted[0] !== 0 || sorted[sorted.length - 1] !== sorted.length - 1) return null;
+  return sorted.map((i) => (value as Record<string, unknown>)[String(i)]);
+}
 
-  const response = await fetchWithOAuth(JOB_OFFERS_ENDPOINT, {
-    method: 'POST',
-    headers,
-    body: securePayload.body,
-  });
+function extractResultArray(payload: Record<string, unknown>): RawJobOfferRecord[] {
+  const resultAsArray = Array.isArray(payload.result)
+    ? payload.result
+    : toArrayIfArrayLike(payload.result);
+  if (resultAsArray) {
+    return resultAsArray as RawJobOfferRecord[];
+  }
+  // Format imbriqué: { success, code, message, result: { message, result: [...] } }
+  if (payload.result && typeof payload.result === 'object') {
+    const nested = (payload.result as Record<string, unknown>).result;
+    const nestedAsArray = Array.isArray(nested) ? nested : toArrayIfArrayLike(nested);
+    if (nestedAsArray) {
+      return nestedAsArray as RawJobOfferRecord[];
+    }
+  }
+  return [];
+}
+
+export async function fetchJobOffers(): Promise<JobOfferRecord[]> {
+  const response = await fetchWithOAuth(JOB_OFFERS_BASE_URL);
 
   if (!response.ok) {
     throw new Error(
@@ -240,13 +205,7 @@ export async function fetchJobOffers(): Promise<JobOfferRecord[]> {
     throw new Error(data.message || "La récupération des offres d'emploi a échoué.");
   }
 
-  let rawRecords = extractArray(data.result);
-  if (!rawRecords.length) {
-    rawRecords = extractArray(data.data);
-  }
-  if (!rawRecords.length) {
-    rawRecords = extractArray(data as unknown);
-  }
+  const rawRecords = extractResultArray(data as Record<string, unknown>);
 
   const offers: JobOfferRecord[] = [];
   for (const record of rawRecords) {
@@ -262,91 +221,10 @@ export async function fetchJobOffers(): Promise<JobOfferRecord[]> {
 export const JOB_OFFERS_QUERY_KEY = ['job-offers'] as const;
 
 export async function fetchPublishedJobOfferCount(): Promise<number> {
-  const requestPayload = { query: JOB_OFFER_COUNT_QUERY };
-  const securePayload = await prepareSecureJsonPayload(requestPayload);
-  const headers = new Headers({ 'Content-Type': 'application/json' });
-  applySecurePayloadHeaders(headers, securePayload.encrypted);
-  logSecurePayloadRequest(
-    JOB_OFFERS_ENDPOINT,
-    requestPayload,
-    securePayload.body,
-    securePayload.encrypted,
-  );
-
-  const response = await fetchWithOAuth(JOB_OFFERS_ENDPOINT, {
-    method: 'POST',
-    headers,
-    body: securePayload.body,
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `La récupération du nombre d'offres d'emploi a échoué (${response.status}) ${response.statusText}`,
-    );
-  }
-
-  const data = (await response.json()) as DatabaseJobOffersResponse;
-  if (data.success === false) {
-    throw new Error(data.message || "La récupération du nombre d'offres d'emploi a échoué.");
-  }
-
-  let rawRecords = extractArray(data.result);
-  if (!rawRecords.length) {
-    rawRecords = extractArray(data.data);
-  }
-  if (!rawRecords.length) {
-    rawRecords = extractArray(data as unknown);
-  }
-
-  const [firstRecord] = rawRecords;
-  if (!firstRecord) {
-    return 0;
-  }
-
-  const countCandidates = [
-    firstRecord['nombre_offres'],
-    firstRecord['nombreOffres'],
-    firstRecord['NombreOffres'],
-    firstRecord['count'],
-    firstRecord['Count'],
-    firstRecord['total'],
-    firstRecord['Total'],
-  ];
-
-  const parseCandidate = (input: unknown): number | null => {
-    if (typeof input === 'number' && Number.isFinite(input) && input >= 0) {
-      return Math.trunc(input);
-    }
-    if (typeof input === 'string') {
-      const trimmed = input.trim();
-      if (!trimmed) {
-        return null;
-      }
-      const parsed = Number.parseInt(trimmed, 10);
-      if (!Number.isNaN(parsed) && parsed >= 0) {
-        return parsed;
-      }
-    }
-    return null;
-  };
-
-  for (const candidate of countCandidates) {
-    const parsed = parseCandidate(candidate);
-    if (parsed !== null) {
-      return parsed;
-    }
-  }
-
-  for (const value of Object.values(firstRecord)) {
-    const parsed = parseCandidate(value);
-    if (parsed !== null) {
-      return parsed;
-    }
-  }
-
-  return 0;
+  // L'endpoint /count a un bug serveur (retourne 0).
+  // On utilise la liste et on compte les résultats.
+  const offers = await fetchJobOffers();
+  return offers.length;
 }
 
 export const JOB_OFFER_COUNT_QUERY_KEY = ['job-offers', 'count'] as const;
-
-export { JOB_OFFERS_ENDPOINT, JOB_OFFERS_QUERY, JOB_OFFER_COUNT_QUERY };

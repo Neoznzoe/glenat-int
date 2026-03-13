@@ -217,7 +217,8 @@ export function useModulePermissions(userEmail?: string): ModulePermissionsResul
     const blocPermMap = new Map<number, boolean>();
     (viewMatrix.BLOC || []).forEach((perm) => {
       const targetId = typeof perm.target === 'string' ? parseInt(perm.target, 10) : perm.target;
-      blocPermMap.set(targetId, perm.canView);
+      const canView = perm.canView === true || (perm.canView as unknown) === 1 || (perm.canView as unknown) === 'true';
+      blocPermMap.set(targetId, canView);
     });
 
     blocs.forEach((bloc) => {
@@ -238,7 +239,9 @@ export function useModulePermissions(userEmail?: string): ModulePermissionsResul
     const elementPermMap = new Map<number, boolean>();
     (viewMatrix.ELEMENT || []).forEach((perm) => {
       const targetId = typeof perm.target === 'string' ? parseInt(perm.target, 10) : perm.target;
-      elementPermMap.set(targetId, perm.canView);
+      // Coerce canView to strict boolean (API may return 0/1 or "true"/"false")
+      const canView = perm.canView === true || (perm.canView as unknown) === 1 || (perm.canView as unknown) === 'true';
+      elementPermMap.set(targetId, canView);
     });
 
     elements.forEach((element) => {
@@ -370,6 +373,7 @@ export function useModulePermissions(userEmail?: string): ModulePermissionsResul
     const perm = elementPermissionsList.find(
       (p) => p.elementCode.toUpperCase() === elementCode.toUpperCase()
     );
+
     // If element not found in CMS, allow by default
     if (!perm) return true;
     return perm.canView;

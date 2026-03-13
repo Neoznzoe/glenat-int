@@ -12,6 +12,8 @@ export interface LinkItem {
   highlight?: boolean;
   badgePosition?: 'left' | 'right';
   separator?: boolean;
+  /** Optional CMS element code for granular permission control */
+  elementCode?: string;
 }
 
 export interface LinksCardProps {

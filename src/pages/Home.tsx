@@ -106,7 +106,23 @@ function HomeContent() {
     });
   }, [visitingDisplayed]);
 
-  const linkLimit = companyLifeLinks.length;
+  // Filter links based on individual element permissions
+  const filteredCompanyLifeLinks = useMemo(
+    () => companyLifeLinks.filter(link => !link.elementCode || canAccessElement(link.elementCode)),
+    [canAccessElement]
+  );
+  const filteredUsefulLinks = useMemo(
+    () => usefulLinks.filter(link => !link.elementCode || canAccessElement(link.elementCode)),
+    [canAccessElement]
+  );
+  const filteredSharePointLinks = useMemo(
+    () => sharePointLinks.filter(link => !link.elementCode || canAccessElement(link.elementCode)),
+    [canAccessElement]
+  );
+
+  const usefulLinksLimit = filteredUsefulLinks.length;
+  const companyLifeLinksLimit = filteredCompanyLifeLinks.length;
+  const sharePointLinksLimit = filteredSharePointLinks.length;
 
   useLayoutEffect(() => {
     const rightHeight = rightCardRef.current?.scrollHeight ?? 0;
@@ -263,9 +279,15 @@ function HomeContent() {
       {/* 3 colonnes de liens */}
       {canAccessBloc('HOME_LINKS_SECTION') && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <LinksCard title="Sites utiles" links={usefulLinks} limit={linkLimit} />
-          <LinksCard title="Vie de l'entreprise" links={companyLifeLinks} limit={linkLimit} />
-          <LinksCard title="Sites Share Point" links={sharePointLinks} limit={linkLimit} />
+          {canAccessBloc('HOME_LIENS_UTILES_CARD') && (
+            <LinksCard title="Sites utiles" links={filteredUsefulLinks} limit={usefulLinksLimit} />
+          )}
+          {canAccessBloc('HOME_VIE_ENTREPRISE_CARD') && (
+            <LinksCard title="Vie de l'entreprise" links={filteredCompanyLifeLinks} limit={companyLifeLinksLimit} />
+          )}
+          {canAccessBloc('HOME_SHAREPOINT_CARD') && (
+            <LinksCard title="Sites Share Point" links={filteredSharePointLinks} limit={sharePointLinksLimit} />
+          )}
         </div>
       )}
     </div>

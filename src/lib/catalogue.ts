@@ -1,6 +1,5 @@
 import type { BookCardProps } from '@/components/BookCard';
 import { fetchWithOAuth } from './oauth';
-import { applySecurePayloadHeaders, logSecurePayloadRequest, prepareSecureJsonPayload } from './securePayload';
 import UniversBD from '@/assets/logos/univers/univers-bd.svg';
 import UniversJeune from '@/assets/logos/univers/univers-jeunesse.svg';
 import UniversLivre from '@/assets/logos/univers/univers-livres.svg';
@@ -183,102 +182,54 @@ export async function fetchCatalogueBooksWithPagination(
   logRequest(endpoint);
 
   try {
-    // Calculer l'offset pour la pagination
-    const offset = (page - 1) * pageSize;
+    const params = new URLSearchParams({
+      page: String(page),
+      per_page: String(pageSize),
+    });
+    if (seed) {
+      params.set('seed', seed);
+    }
 
-    // Requête pour compter le nombre total de livres
-    const countQuery = `
-      SELECT COUNT(*) as totalCount
-      FROM catalogBooks
-      WHERE dateMev >= '1950-01-01'
-        AND dateMev <= DATEADD(YEAR, 10, GETDATE())
-        AND idItem IS NOT NULL
-        AND idItem <> ''
-        AND LEN(LTRIM(RTRIM(idItem))) > 0;
-    `;
+    const url = `${CATALOGUE_API_BASE}/books?${params.toString()}`;
+    const response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal,
+    });
 
-    // Requête pour récupérer les livres paginés (ordre aléatoire avec seed)
-    // Utilise plusieurs colonnes pour mieux disperser les séries
-    const orderByClause = seed
-      ? `ABS(CHECKSUM(CONCAT('${seed}', idItem, ISNULL(titre, ''), ISNULL(serie, ''))))`
-      : 'NEWID()';
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
 
-    const booksQuery = `
-      SELECT *
-      FROM catalogBooks
-      WHERE dateMev >= '1950-01-01'
-        AND dateMev <= DATEADD(YEAR, 10, GETDATE())
-        AND idItem IS NOT NULL
-        AND idItem <> ''
-        AND LEN(LTRIM(RTRIM(idItem))) > 0
-      ORDER BY ${orderByClause}
-      OFFSET ${offset} ROWS
-      FETCH NEXT ${pageSize} ROWS ONLY;
-    `;
+    const payload = (await response.json()) as CatalogueApiResponse;
 
-    // Exécuter les deux requêtes en parallèle
-    const [countResult, booksResult] = await Promise.all([
-      (async () => {
-        const countPayload = { query: countQuery };
-        const countSecurePayload = await prepareSecureJsonPayload(countPayload);
-        const countHeaders = new Headers({
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        });
-        applySecurePayloadHeaders(countHeaders, countSecurePayload.encrypted);
-        logSecurePayloadRequest(
-          CATALOGUE_OFFICES_ENDPOINT,
-          countPayload,
-          countSecurePayload.body,
-          countSecurePayload.encrypted,
-        );
-        const countResponse = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
-          method: 'POST',
-          headers: countHeaders,
-          body: countSecurePayload.body,
-        });
-        if (!countResponse.ok) {
-          throw new Error(`HTTP ${countResponse.status} ${countResponse.statusText}`);
-        }
-        return countResponse.json() as Promise<DatabaseApiResponse>;
-      })(),
-      (async () => {
-        const booksPayload = { query: booksQuery };
-        const booksSecurePayload = await prepareSecureJsonPayload(booksPayload);
-        const booksHeaders = new Headers({
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        });
-        applySecurePayloadHeaders(booksHeaders, booksSecurePayload.encrypted);
-        logSecurePayloadRequest(
-          CATALOGUE_OFFICES_ENDPOINT,
-          booksPayload,
-          booksSecurePayload.body,
-          booksSecurePayload.encrypted,
-        );
-        const booksResponse = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
-          method: 'POST',
-          headers: booksHeaders,
-          body: booksSecurePayload.body,
-        });
-        if (!booksResponse.ok) {
-          throw new Error(`HTTP ${booksResponse.status} ${booksResponse.statusText}`);
-        }
-        return booksResponse.json() as Promise<DatabaseApiResponse>;
-      })(),
-    ]);
+    // L'API peut retourner :
+    // - result: [...rows...] (tableau plat de livres)
+    // - result: {"0": {...}, "1": {...}, ...} (objet à clés numériques, sérialisation PHP)
+    // - result: { books: [...], pagination: {...} } (structure paginée du handler)
+    const resultAsArray = Array.isArray(payload.result)
+      ? (payload.result as RawCatalogueOfficeRecord[])
+      : toArrayIfArrayLike(payload.result) as RawCatalogueOfficeRecord[] | null;
 
-    // Extraire le nombre total de livres
-    const countRecords = extractDatabaseRows(countResult);
-    const totalBooks = countRecords.length > 0
-      ? (ensureNumber(getField(countRecords[0], 'totalCount', 'totalcount')) ?? 0)
-      : 0;
+    const bookRecords = resultAsArray
+      ?? (() => {
+          const structured = payload.result as Record<string, unknown> | undefined;
+          if (Array.isArray(structured?.books)) return structured.books as RawCatalogueOfficeRecord[];
+          const booksAsArray = toArrayIfArrayLike(structured?.books);
+          if (booksAsArray) return booksAsArray as RawCatalogueOfficeRecord[];
+          // Fallback imbriqué: result: { result: { books: [...] } }
+          const nested = structured?.result as Record<string, unknown> | undefined;
+          if (Array.isArray(nested?.books)) return nested.books as RawCatalogueOfficeRecord[];
+          return extractApiResult(payload);
+        })();
 
-    // Extraire les livres
-    const bookRecords = extractDatabaseRows(booksResult);
-
-    // Calculer le nombre total de pages
-    const totalPages = Math.ceil(totalBooks / pageSize);
+    // Lire la pagination depuis l'enveloppe ou depuis result.pagination
+    const paginationSource = !resultAsArray
+      ? ((payload.result as Record<string, unknown>)?.pagination ?? (payload.pagination as Record<string, unknown>))
+      : payload.pagination;
+    const paginationObj = paginationSource as { total?: number; pages?: number; page?: number; perPage?: number } | undefined;
+    const totalBooks = ensureNumber(paginationObj?.total) ?? bookRecords.length;
+    const totalPages = ensureNumber(paginationObj?.pages) ?? Math.ceil(totalBooks / pageSize);
 
     // D'abord charger les livres sans les couvertures pour affichage immédiat
     const booksWithoutCovers = (
@@ -363,9 +314,9 @@ export async function fetchCatalogueBooksWithPagination(
   }
 }
 
-const CATALOGUE_OFFICES_ENDPOINT = import.meta.env.DEV
-  ? '/intranet/callDatabase'
-  : 'https://api-dev.groupe-glenat.com/Api/v2.0/Dev/callDatabase';
+const CATALOGUE_API_BASE = import.meta.env.DEV
+  ? '/Api/v2.0/catalogue'
+  : 'https://api-dev.groupe-glenat.com/Api/v2.0/catalogue';
 
 const parseEndpointList = (value: unknown): string[] => {
   if (typeof value !== 'string') {
@@ -434,54 +385,6 @@ const resolveAuthorPhotoEndpoints = (): string[] => {
 };
 
 const CATALOGUE_AUTHOR_PHOTO_ENDPOINTS = resolveAuthorPhotoEndpoints();
-
-const NEXT_OFFICES_SQL_QUERY = `;WITH office_min_dates AS (
-    SELECT
-           office,
-           MIN(dateMev) AS nextDate
-    FROM dbo.catalogBooks
-    WHERE dateMev >= CONVERT(date, GETDATE())
-      AND dateMev >= '20000101'
-      AND dateMev < DATEADD(year, 5, CONVERT(date, GETDATE()))
-      AND office <> '0000'
-    GROUP BY office
-),
-next_offices AS (
-    SELECT TOP (4)
-           office,
-           nextDate
-    FROM office_min_dates
-    ORDER BY nextDate ASC, office ASC
-)
-SELECT c.*
-FROM dbo.catalogBooks AS c
-JOIN next_offices AS n
-  ON n.office = c.office
-ORDER BY n.nextDate ASC, n.office ASC, c.dateMev ASC;`;
-
-const NEXT_OFFICE_SQL_QUERY = `;WITH office_min_dates AS (
-    SELECT
-           office,
-           MIN(dateMev) AS nextDate
-    FROM dbo.catalogBooks
-    WHERE dateMev >= CONVERT(date, GETDATE())
-      AND dateMev >= '20000101'
-      AND dateMev < DATEADD(year, 5, CONVERT(date, GETDATE()))
-      AND office <> '0000'
-    GROUP BY office
-),
-next_office AS (
-    SELECT TOP (1)
-           office,
-           nextDate
-    FROM office_min_dates
-    ORDER BY nextDate ASC, office ASC
-)
-SELECT c.*
-FROM dbo.catalogBooks AS c
-JOIN next_office AS n
-  ON n.office = c.office
-ORDER BY n.nextDate ASC, n.office ASC, c.dateMev ASC;`;
 
 const FALLBACK_COVER_DATA_URL =
   'data:image/svg+xml;utf8,' +
@@ -750,8 +653,9 @@ const fetchAuthorPhoto = async (photoFilename: string): Promise<string | null> =
 
 type RawCatalogueOfficeRecord = Record<string, unknown>;
 
-interface DatabaseApiResponse {
+interface CatalogueApiResponse {
   success?: boolean;
+  code?: number;
   message?: string;
   result?: unknown;
   data?: unknown;
@@ -917,16 +821,44 @@ const getField = (source: RawCatalogueOfficeRecord, ...keys: string[]): unknown 
   return undefined;
 };
 
-const extractDatabaseRows = (payload: unknown): RawCatalogueOfficeRecord[] => {
-  const visit = (input: unknown): unknown => {
+/**
+ * Convertit un objet avec des clés numériques en tableau.
+ * PHP peut sérialiser les tableaux séquentiels comme des objets : {"0": {...}, "1": {...}, ...}
+ */
+const toArrayIfArrayLike = (value: unknown): unknown[] | null => {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== 'object') return null;
+
+  const keys = Object.keys(value as Record<string, unknown>);
+  if (keys.length === 0) return null;
+
+  // Vérifier que toutes les clés sont des entiers séquentiels commençant à 0
+  const allNumeric = keys.every((k) => /^\d+$/.test(k));
+  if (!allNumeric) return null;
+
+  const sorted = keys.map(Number).sort((a, b) => a - b);
+  if (sorted[0] !== 0 || sorted[sorted.length - 1] !== sorted.length - 1) return null;
+
+  return sorted.map((i) => (value as Record<string, unknown>)[String(i)]);
+};
+
+const extractApiResult = (payload: unknown): RawCatalogueOfficeRecord[] => {
+  const visit = (input: unknown, depth = 0): unknown => {
+    if (depth > 3) return [];
     if (Array.isArray(input)) {
       return input;
+    }
+
+    // Objet à clés numériques (sérialisation PHP) → convertir en tableau
+    const asArray = toArrayIfArrayLike(input);
+    if (asArray) {
+      return asArray;
     }
 
     if (typeof input === 'string') {
       try {
         const parsed = JSON.parse(input) as unknown;
-        return visit(parsed);
+        return visit(parsed, depth + 1);
       } catch {
         return [];
       }
@@ -936,10 +868,26 @@ const extractDatabaseRows = (payload: unknown): RawCatalogueOfficeRecord[] => {
       const objectPayload = input as Record<string, unknown>;
       const possibleKeys = ['rows', 'data', 'result', 'recordset', 'Recordset', 'records'];
 
+      // D'abord chercher un tableau direct ou array-like
       for (const key of possibleKeys) {
         const candidate = objectPayload[key];
         if (Array.isArray(candidate)) {
           return candidate;
+        }
+        const candidateAsArray = toArrayIfArrayLike(candidate);
+        if (candidateAsArray) {
+          return candidateAsArray;
+        }
+      }
+
+      // Ensuite chercher récursivement dans les objets imbriqués
+      for (const key of possibleKeys) {
+        const candidate = objectPayload[key];
+        if (candidate && typeof candidate === 'object' && !Array.isArray(candidate) && !toArrayIfArrayLike(candidate)) {
+          const nested = visit(candidate, depth + 1);
+          if (Array.isArray(nested) && nested.length > 0) {
+            return nested;
+          }
         }
       }
 
@@ -1253,23 +1201,6 @@ const buildCatalogueOfficeGroups = async (
   let order = 0;
 
   records.forEach(record => {
-    const office = ensureString(getField(record, 'office', 'codeoffice'));
-    if (!office) {
-      return;
-    }
-
-    let group = groupsMap.get(office);
-    if (!group) {
-      group = {
-        office,
-        records: [],
-        order: order++,
-      };
-      groupsMap.set(office, group);
-    }
-
-    group.records.push(record);
-
     const rawDate = getField(
       record,
       'datemev',
@@ -1278,6 +1209,26 @@ const buildCatalogueOfficeGroups = async (
       'nextdate',
       'dateoffre',
     );
+
+    // Grouper par date de MEV (clé normalisée YYYY-MM-DD)
+    const parsedDate = parseDateInput(rawDate);
+    const dateKey = parsedDate
+      ? `${parsedDate.getFullYear()}-${String(parsedDate.getMonth() + 1).padStart(2, '0')}-${String(parsedDate.getDate()).padStart(2, '0')}`
+      : 'unknown';
+
+    const office = ensureString(getField(record, 'office', 'codeoffice')) ?? dateKey;
+
+    let group = groupsMap.get(dateKey);
+    if (!group) {
+      group = {
+        office,
+        records: [],
+        order: order++,
+      };
+      groupsMap.set(dateKey, group);
+    }
+
+    group.records.push(record);
 
     if (group.rawDate === undefined && rawDate !== undefined) {
       group.rawDate = rawDate;
@@ -1423,40 +1374,45 @@ export async function fetchCatalogueOffices(
   logRequest(endpoint);
 
   try {
-    const requestPayload = {
-      query: NEXT_OFFICES_SQL_QUERY,
-    };
-    const securePayload = await prepareSecureJsonPayload(requestPayload);
-    const headers = new Headers({
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    });
-
-    applySecurePayloadHeaders(headers, securePayload.encrypted);
-    logSecurePayloadRequest(
-      CATALOGUE_OFFICES_ENDPOINT,
-      requestPayload,
-      securePayload.body,
-      securePayload.encrypted,
-    );
-    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
-      method: 'POST',
-      headers,
-      body: securePayload.body,
+    const url = `${CATALOGUE_API_BASE}/offices`;
+    const response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
     });
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} ${response.statusText}`);
     }
 
-    const payload = (await response.json()) as DatabaseApiResponse;
-    const records = extractDatabaseRows(payload);
+    const payload = (await response.json()) as CatalogueApiResponse;
+
+    // DEBUG offices - à supprimer
+    const payloadObj = payload as Record<string, unknown>;
+    const resultField = payloadObj.result;
+    console.warn('[offices:debug] payload keys:', Object.keys(payloadObj));
+    console.warn('[offices:debug] result type:', typeof resultField, 'isArray:', Array.isArray(resultField));
+    if (resultField && typeof resultField === 'object' && !Array.isArray(resultField)) {
+      const keys = Object.keys(resultField as Record<string, unknown>);
+      console.warn('[offices:debug] result object keys count:', keys.length, 'first 5:', keys.slice(0, 5));
+    }
+
+    const records = extractApiResult(payload);
+    console.warn('[offices:debug] extractApiResult returned:', records.length, 'records');
+    if (records.length > 0) {
+      const dates = records.map(r => {
+        const d = (r as Record<string, unknown>).dateMev;
+        return typeof d === 'object' && d ? (d as Record<string, unknown>).date : d;
+      });
+      const uniqueDates = [...new Set(dates.map(String))];
+      console.warn('[offices:debug] unique dateMev values:', uniqueDates.length, uniqueDates);
+    }
 
     if (!records.length) {
       throw new Error("La base de donnees n'a retourne aucun resultat");
     }
 
     const groups = await buildCatalogueOfficeGroups(records);
+    console.warn('[offices:debug] groups count:', groups.length, groups.map(g => `${g.date} (${g.books.length} books)`));
 
     if (!groups.length) {
       throw new Error('Impossible de construire les offices a partir des donnees recues');
@@ -1583,159 +1539,6 @@ const cleanHtmlText = (html: string): string => {
   return decoded;
 };
 
-async function fetchCatalogueBookTexts(ean: string): Promise<CatalogueText[]> {
-  try {
-    const requestPayload = {
-      query: `SELECT * FROM [catalogTexts] WHERE idItem = '${ean}' ORDER BY idTypeTexte;`,
-    };
-    const securePayload = await prepareSecureJsonPayload(requestPayload);
-    const headers = new Headers({
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    });
-
-    applySecurePayloadHeaders(headers, securePayload.encrypted);
-    logSecurePayloadRequest(
-      CATALOGUE_OFFICES_ENDPOINT,
-      requestPayload,
-      securePayload.body,
-      securePayload.encrypted,
-    );
-
-    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
-      method: 'POST',
-      headers,
-      body: securePayload.body,
-    });
-
-    if (response.ok) {
-      const payload = (await response.json()) as DatabaseApiResponse;
-      const records = extractDatabaseRows(payload);
-
-      const texts: CatalogueText[] = records
-        .map(record => {
-          const idTypeTexte = ensureString(getField(record, 'idTypeTexte', 'idtypetexte'));
-          const rawText = ensureString(getField(record, 'texte', 'text', 'description', 'resume'));
-
-          if (idTypeTexte && rawText) {
-            const cleanedText = cleanHtmlText(rawText);
-            return {
-              idTypeTexte,
-              texte: cleanedText,
-            };
-          }
-          return null;
-        })
-        .filter((text): text is CatalogueText => text !== null);
-
-      return texts;
-    }
-
-    return [];
-  } catch {
-    return [];
-  }
-}
-
-async function fetchCatalogueBookAuthors(ean: string): Promise<CatalogueAuthor[]> {
-  try {
-    // Requête optimisée avec LEFT JOIN pour récupérer auteurs et biographies en une seule fois
-    const requestPayload = {
-      query: `
-        SELECT
-          a.*,
-          t.texte as bioTexte
-        FROM [catalogAutors] a
-        LEFT JOIN [catalogAutorsTexts] t ON a.idAuthor = t.idAuthor
-        WHERE a.idItem = '${ean}'
-        ORDER BY a.sortOrder ASC;
-      `,
-    };
-    const securePayload = await prepareSecureJsonPayload(requestPayload);
-    const headers = new Headers({
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    });
-
-    applySecurePayloadHeaders(headers, securePayload.encrypted);
-    logSecurePayloadRequest(
-      CATALOGUE_OFFICES_ENDPOINT,
-      requestPayload,
-      securePayload.body,
-      securePayload.encrypted,
-    );
-
-    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
-      method: 'POST',
-      headers,
-      body: securePayload.body,
-    });
-
-    if (response.ok) {
-      const payload = (await response.json()) as DatabaseApiResponse;
-      const records = extractDatabaseRows(payload);
-
-      if (records.length > 0) {
-        const authors = await Promise.all(
-          records.map(async (record) => {
-            const idAuthor = ensureString(getField(record, 'idAuthor', 'idauthor', 'authorid'));
-            if (!idAuthor) {
-              return null;
-            }
-
-            const firstName = ensureString(getField(record, 'firstName', 'firstname', 'prenom'));
-            const lastName = ensureString(getField(record, 'lastName', 'lastname', 'nom'));
-            const fullName = lastName && firstName
-              ? `${firstName} ${lastName}`
-              : ensureString(getField(record, 'fullName', 'fullname', 'name', 'nom'));
-            const photoFilename = ensureString(getField(record, 'photo', 'isPhoto', 'image'));
-            const sortOrder = ensureNumber(getField(record, 'sortOrder', 'order', 'ordre'));
-
-            // Récupérer et nettoyer la biographie depuis la jointure
-            const rawBio = ensureString(getField(record, 'bioTexte', 'texte', 'text', 'bio', 'biographie'));
-            const bio = rawBio ? cleanHtmlText(rawBio) : undefined;
-
-            // Récupérer la photo de l'auteur si disponible
-            let photo: string | undefined = undefined;
-            if (photoFilename && photoFilename !== '0' && photoFilename !== 'NULL') {
-              const photoUrl = await fetchAuthorPhoto(photoFilename);
-              if (photoUrl) {
-                photo = photoUrl;
-              }
-            }
-
-            return {
-              idAuthor,
-              firstName,
-              lastName,
-              fullName,
-              photo,
-              bio,
-              sortOrder,
-            } as CatalogueAuthor;
-          })
-        );
-
-        const validAuthors = authors.filter((author): author is CatalogueAuthor => author !== null);
-
-        // Trier par sortOrder si disponible (déjà trié par la requête SQL mais on garde le fallback)
-        validAuthors.sort((a, b) => {
-          if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
-            return a.sortOrder - b.sortOrder;
-          }
-          return 0;
-        });
-
-        return validAuthors;
-      }
-    }
-
-    return [];
-  } catch {
-    return [];
-  }
-}
-
 // [PERF] js-cache-function-results: Cache et déduplication pour les requêtes de livres
 const bookCache = new Map<string, CatalogueBook>();
 const pendingBookRequests = new Map<string, Promise<CatalogueBook | null>>();
@@ -1765,64 +1568,112 @@ export async function fetchCatalogueBook(
 
   const request = (async (): Promise<CatalogueBook | null> => {
     try {
-    // Essayer d'abord de récupérer depuis la base de données
-    const requestPayload = {
-      query: `SELECT * FROM [catalogBooks] WHERE idItem = '${ean}';`,
-    };
-    const securePayload = await prepareSecureJsonPayload(requestPayload);
-    const headers = new Headers({
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    });
-
-    applySecurePayloadHeaders(headers, securePayload.encrypted);
-    logSecurePayloadRequest(
-      CATALOGUE_OFFICES_ENDPOINT,
-      requestPayload,
-      securePayload.body,
-      securePayload.encrypted,
-    );
-
-    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
-      method: 'POST',
-      headers,
-      body: securePayload.body,
+    // Le nouvel endpoint retourne le livre + textes + auteurs en une seule requête
+    const url = `${CATALOGUE_API_BASE}/books/${encodeURIComponent(trimmedEan)}`;
+    const response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
     });
 
     if (response.ok) {
-      const payload = (await response.json()) as DatabaseApiResponse;
-      const records = extractDatabaseRows(payload);
+      const payload = (await response.json()) as CatalogueApiResponse;
 
-      if (records.length > 0) {
-        const record = records[0];
-        const book = await normalizeBookFromDatabaseRecord(record);
+      // L'API peut retourner :
+      // - result: { book: {...}, texts: [...], authors: [...] } (handler structuré)
+      // - result: { idItem, titre, ... } (row directe)
+      // - result: [{ idItem, titre, ... }] (array avec un row)
+      const rawResult = payload.result;
+      let apiResult: { book?: RawCatalogueOfficeRecord; texts?: RawCatalogueOfficeRecord[]; authors?: RawCatalogueOfficeRecord[] } | undefined;
+      let bookRecord: RawCatalogueOfficeRecord | undefined;
+
+      if (rawResult && typeof rawResult === 'object' && !Array.isArray(rawResult)) {
+        const resultObj = rawResult as Record<string, unknown>;
+        if (resultObj.book && typeof resultObj.book === 'object') {
+          // Format structuré du handler: { book, texts, authors }
+          apiResult = resultObj as { book: RawCatalogueOfficeRecord; texts?: RawCatalogueOfficeRecord[]; authors?: RawCatalogueOfficeRecord[] };
+          bookRecord = apiResult.book;
+        } else if (resultObj.idItem || resultObj.iditem || resultObj.ean || resultObj.titre) {
+          // Row directe: { idItem, titre, ... }
+          bookRecord = resultObj as RawCatalogueOfficeRecord;
+        }
+      }
+
+      if (!bookRecord) {
+        // Fallback: extraire depuis l'array
+        bookRecord = extractApiResult(payload)[0];
+      }
+
+      if (bookRecord) {
+        const book = await normalizeBookFromDatabaseRecord(bookRecord);
         if (book) {
-          // [PERF] Récupérer les textes et auteurs en parallèle (async-parallel)
-          const [texts, authors] = await Promise.all([
-            fetchCatalogueBookTexts(ean),
-            fetchCatalogueBookAuthors(ean),
-          ]);
+          // Extraire les textes depuis la réponse combinée
+          const textRecords = apiResult?.texts ?? [];
+          if (Array.isArray(textRecords) && textRecords.length > 0) {
+            const texts: CatalogueText[] = textRecords
+              .map(record => {
+                const idTypeTexte = ensureString(getField(record, 'idTypeTexte', 'idtypetexte'));
+                const rawText = ensureString(getField(record, 'texte', 'text', 'description', 'resume'));
+                if (idTypeTexte && rawText) {
+                  return { idTypeTexte, texte: cleanHtmlText(rawText) };
+                }
+                return null;
+              })
+              .filter((text): text is CatalogueText => text !== null);
 
-          if (texts.length > 0 && book.details) {
-            book.details.texts = texts;
-            // Garder le summary pour la compatibilité (utiliser le premier texte)
-            book.details.summary = texts[0]?.texte;
+            if (texts.length > 0 && book.details) {
+              book.details.texts = texts;
+              book.details.summary = texts[0]?.texte;
+            }
           }
 
-          if (authors.length > 0 && book.details) {
-            book.details.authors = authors;
+          // Extraire les auteurs depuis la réponse combinée
+          const authorRecords = apiResult?.authors ?? [];
+          if (Array.isArray(authorRecords) && authorRecords.length > 0) {
+            const authors = await Promise.all(
+              authorRecords.map(async (record) => {
+                const idAuthor = ensureString(getField(record, 'idAuthor', 'idauthor', 'authorid'));
+                if (!idAuthor) return null;
 
-            // Si on a plusieurs auteurs, combiner leurs biographies pour authorBio
-            const combinedBio = authors
-              .filter(author => author.bio)
-              .map(author => {
-                const name = author.fullName || `${author.firstName || ''} ${author.lastName || ''}`.trim();
-                return name ? `${name}\n\n${author.bio}` : author.bio;
+                const firstName = ensureString(getField(record, 'firstName', 'firstname', 'prenom'));
+                const lastName = ensureString(getField(record, 'lastName', 'lastname', 'nom'));
+                const fullName = lastName && firstName
+                  ? `${firstName} ${lastName}`
+                  : ensureString(getField(record, 'fullName', 'fullname', 'name', 'nom'));
+                const photoFilename = ensureString(getField(record, 'photo', 'isPhoto', 'image'));
+                const sortOrder = ensureNumber(getField(record, 'sortOrder', 'order', 'ordre'));
+                const rawBio = ensureString(getField(record, 'bioTexte', 'texte', 'text', 'bio', 'biographie'));
+                const bio = rawBio ? cleanHtmlText(rawBio) : undefined;
+
+                let photo: string | undefined = undefined;
+                if (photoFilename && photoFilename !== '0' && photoFilename !== 'NULL') {
+                  const photoUrl = await fetchAuthorPhoto(photoFilename);
+                  if (photoUrl) photo = photoUrl;
+                }
+
+                return { idAuthor, firstName, lastName, fullName, photo, bio, sortOrder } as CatalogueAuthor;
               })
-              .join('\n\n---\n\n');
+            );
 
-            if (combinedBio) {
-              book.details.authorBio = combinedBio;
+            const validAuthors = authors.filter((a): a is CatalogueAuthor => a !== null);
+            validAuthors.sort((a, b) => {
+              if (a.sortOrder !== undefined && b.sortOrder !== undefined) return a.sortOrder - b.sortOrder;
+              return 0;
+            });
+
+            if (validAuthors.length > 0 && book.details) {
+              book.details.authors = validAuthors;
+
+              const combinedBio = validAuthors
+                .filter(author => author.bio)
+                .map(author => {
+                  const name = author.fullName || `${author.firstName || ''} ${author.lastName || ''}`.trim();
+                  return name ? `${name}\n\n${author.bio}` : author.bio;
+                })
+                .join('\n\n---\n\n');
+
+              if (combinedBio) {
+                book.details.authorBio = combinedBio;
+              }
             }
           }
 
@@ -1873,86 +1724,26 @@ export async function fetchCataloguePastBooksFromSeries(
   logRequest(endpoint);
 
   try {
-    // D'abord récupérer le livre actuel pour obtenir la série
-    const requestPayload = {
-      query: `SELECT * FROM [catalogBooks] WHERE idItem = '${ean}';`,
-    };
-    const securePayload = await prepareSecureJsonPayload(requestPayload);
-    const headers = new Headers({
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    });
-
-    applySecurePayloadHeaders(headers, securePayload.encrypted);
-    logSecurePayloadRequest(
-      CATALOGUE_OFFICES_ENDPOINT,
-      requestPayload,
-      securePayload.body,
-      securePayload.encrypted,
-    );
-
-    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
-      method: 'POST',
-      headers,
-      body: securePayload.body,
+    const url = `${CATALOGUE_API_BASE}/books/${encodeURIComponent(ean)}/series/past`;
+    const response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
     });
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} ${response.statusText}`);
     }
 
-    const payload = (await response.json()) as DatabaseApiResponse;
-    const records = extractDatabaseRows(payload);
+    const payload = (await response.json()) as CatalogueApiResponse;
+    const records = extractApiResult(payload);
 
     if (records.length === 0) {
       return [];
     }
 
-    const record = records[0];
-    const serie = ensureString(getField(record, 'serie'));
-
-    if (!serie) {
-      return [];
-    }
-
-    // Maintenant récupérer les 10 derniers livres parus de la même série
-    const pastRequestPayload = {
-      query: `SELECT TOP 10 * FROM [catalogBooks] WHERE [serie] = '${serie}' AND [dateMev] < GETDATE() AND [idItem] <> '${ean}' ORDER BY [dateMev] DESC;`,
-    };
-    const pastSecurePayload = await prepareSecureJsonPayload(pastRequestPayload);
-    const pastHeaders = new Headers({
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    });
-
-    applySecurePayloadHeaders(pastHeaders, pastSecurePayload.encrypted);
-    logSecurePayloadRequest(
-      CATALOGUE_OFFICES_ENDPOINT,
-      pastRequestPayload,
-      pastSecurePayload.body,
-      pastSecurePayload.encrypted,
-    );
-
-    const pastResponse = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
-      method: 'POST',
-      headers: pastHeaders,
-      body: pastSecurePayload.body,
-    });
-
-    if (!pastResponse.ok) {
-      throw new Error(`HTTP ${pastResponse.status} ${pastResponse.statusText}`);
-    }
-
-    const pastPayload = (await pastResponse.json()) as DatabaseApiResponse;
-    const pastRecords = extractDatabaseRows(pastPayload);
-
-    if (pastRecords.length === 0) {
-      return [];
-    }
-
     // Normaliser les livres récupérés - charger les couvertures car c'est l'onglet par défaut
     const books = (
-      await Promise.all(pastRecords.map(record => normalizeBookFromDatabaseRecord(record, true)))
+      await Promise.all(records.map(record => normalizeBookFromDatabaseRecord(record, true)))
     ).filter((book): book is CatalogueBook => book !== null);
 
     logResponse(endpoint, books);
@@ -1970,60 +1761,18 @@ export async function fetchCatalogueSameCollectionBooks(
   logRequest(endpoint);
 
   try {
-    // Récupérer le livre actuel pour obtenir la collection, la série et la date
-    const requestPayload = {
-      query: `
-        DECLARE @currentBookDate DATE;
-        DECLARE @currentCollection NVARCHAR(255);
-        DECLARE @currentSerie NVARCHAR(255);
-
-        SELECT @currentBookDate = dateMev, @currentCollection = collection, @currentSerie = serie
-        FROM [catalogBooks]
-        WHERE idItem = '${ean}';
-
-        WITH CTE AS (
-            SELECT  *,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY serie
-                        ORDER BY ABS(DATEDIFF(DAY, dateMev, @currentBookDate))
-                    ) AS rn
-            FROM [catalogBooks]
-            WHERE [collection] = @currentCollection
-              AND LOWER([serie]) <> LOWER(@currentSerie)
-              AND dateMev BETWEEN DATEADD(YEAR, -1, @currentBookDate) AND DATEADD(YEAR, 1, @currentBookDate)
-        )
-        SELECT TOP 10 *
-        FROM CTE
-        WHERE rn = 1
-        ORDER BY serie;
-      `,
-    };
-    const securePayload = await prepareSecureJsonPayload(requestPayload);
-    const headers = new Headers({
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    });
-
-    applySecurePayloadHeaders(headers, securePayload.encrypted);
-    logSecurePayloadRequest(
-      CATALOGUE_OFFICES_ENDPOINT,
-      requestPayload,
-      securePayload.body,
-      securePayload.encrypted,
-    );
-
-    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
-      method: 'POST',
-      headers,
-      body: securePayload.body,
+    const url = `${CATALOGUE_API_BASE}/books/${encodeURIComponent(ean)}/collection`;
+    const response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
     });
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} ${response.statusText}`);
     }
 
-    const payload = (await response.json()) as DatabaseApiResponse;
-    const records = extractDatabaseRows(payload);
+    const payload = (await response.json()) as CatalogueApiResponse;
+    const records = extractApiResult(payload);
 
     if (records.length === 0) {
       return [];
@@ -2049,86 +1798,26 @@ export async function fetchCatalogueUpcomingBooksFromSeries(
   logRequest(endpoint);
 
   try {
-    // D'abord récupérer le livre actuel pour obtenir la série
-    const requestPayload = {
-      query: `SELECT * FROM [catalogBooks] WHERE idItem = '${ean}';`,
-    };
-    const securePayload = await prepareSecureJsonPayload(requestPayload);
-    const headers = new Headers({
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    });
-
-    applySecurePayloadHeaders(headers, securePayload.encrypted);
-    logSecurePayloadRequest(
-      CATALOGUE_OFFICES_ENDPOINT,
-      requestPayload,
-      securePayload.body,
-      securePayload.encrypted,
-    );
-
-    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
-      method: 'POST',
-      headers,
-      body: securePayload.body,
+    const url = `${CATALOGUE_API_BASE}/books/${encodeURIComponent(ean)}/series/upcoming`;
+    const response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
     });
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} ${response.statusText}`);
     }
 
-    const payload = (await response.json()) as DatabaseApiResponse;
-    const records = extractDatabaseRows(payload);
+    const payload = (await response.json()) as CatalogueApiResponse;
+    const records = extractApiResult(payload);
 
     if (records.length === 0) {
       return [];
     }
 
-    const record = records[0];
-    const serie = ensureString(getField(record, 'serie'));
-
-    if (!serie) {
-      return [];
-    }
-
-    // Maintenant récupérer les livres à paraître de la même série (limité à 10)
-    const upcomingRequestPayload = {
-      query: `SELECT TOP 10 * FROM [catalogBooks] WHERE [serie] = '${serie}' AND [dateMev] > GETDATE() AND [idItem] <> '${ean}' ORDER BY [dateMev] ASC;`,
-    };
-    const upcomingSecurePayload = await prepareSecureJsonPayload(upcomingRequestPayload);
-    const upcomingHeaders = new Headers({
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    });
-
-    applySecurePayloadHeaders(upcomingHeaders, upcomingSecurePayload.encrypted);
-    logSecurePayloadRequest(
-      CATALOGUE_OFFICES_ENDPOINT,
-      upcomingRequestPayload,
-      upcomingSecurePayload.body,
-      upcomingSecurePayload.encrypted,
-    );
-
-    const upcomingResponse = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
-      method: 'POST',
-      headers: upcomingHeaders,
-      body: upcomingSecurePayload.body,
-    });
-
-    if (!upcomingResponse.ok) {
-      throw new Error(`HTTP ${upcomingResponse.status} ${upcomingResponse.statusText}`);
-    }
-
-    const upcomingPayload = (await upcomingResponse.json()) as DatabaseApiResponse;
-    const upcomingRecords = extractDatabaseRows(upcomingPayload);
-
-    if (upcomingRecords.length === 0) {
-      return [];
-    }
-
     // Normaliser les livres récupérés avec chargement des couvertures
     const books = (
-      await Promise.all(upcomingRecords.map(record => normalizeBookFromDatabaseRecord(record, true)))
+      await Promise.all(records.map(record => normalizeBookFromDatabaseRecord(record, true)))
     ).filter((book): book is CatalogueBook => book !== null);
 
     logResponse(endpoint, books);
@@ -2146,36 +1835,18 @@ export async function fetchCatalogueAuthors(
   logRequest(endpoint);
 
   try {
-    const requestPayload = {
-      query: `SELECT * FROM [catalogAutors] WHERE idItem = '${ean}' ORDER BY sortOrder ASC;`,
-    };
-
-    const securePayload = await prepareSecureJsonPayload(requestPayload);
-    const headers = new Headers({
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    });
-
-    applySecurePayloadHeaders(headers, securePayload.encrypted);
-    logSecurePayloadRequest(
-      CATALOGUE_OFFICES_ENDPOINT,
-      requestPayload,
-      securePayload.body,
-      securePayload.encrypted,
-    );
-
-    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
-      method: 'POST',
-      headers,
-      body: securePayload.body,
+    const url = `${CATALOGUE_API_BASE}/books/${encodeURIComponent(ean)}/authors`;
+    const response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
     });
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} ${response.statusText}`);
     }
 
-    const payload = (await response.json()) as DatabaseApiResponse;
-    const records = extractDatabaseRows(payload);
+    const payload = (await response.json()) as CatalogueApiResponse;
+    const records = extractApiResult(payload);
 
     if (records.length === 0) {
       return [];
@@ -2214,60 +1885,26 @@ export async function fetchCatalogueBooksByAuthors(
   }
 
   try {
-    // Calculate books per author to get ~10 books total
-    const booksPerAuthor = Math.max(1, Math.ceil(10 / authors.length));
-
-    // Fetch books for each author
-    const bookPromises = authors.map(async (author) => {
-      const requestPayload = {
-        query: `
-          SELECT TOP ${booksPerAuthor} cb.*
-          FROM [catalogBooks] cb
-          INNER JOIN [catalogAutors] ca ON cb.idItem = ca.idItem
-          WHERE ca.idAuthor = '${author.idAuthor}'
-            AND cb.idItem <> '${currentEan}'
-            AND cb.dateMev IS NOT NULL
-          ORDER BY cb.dateMev DESC;
-        `,
-      };
-
-      const securePayload = await prepareSecureJsonPayload(requestPayload);
-      const headers = new Headers({
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      });
-
-      applySecurePayloadHeaders(headers, securePayload.encrypted);
-      logSecurePayloadRequest(
-        CATALOGUE_OFFICES_ENDPOINT,
-        requestPayload,
-        securePayload.body,
-        securePayload.encrypted,
-      );
-
-      const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
-        method: 'POST',
-        headers,
-        body: securePayload.body,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status} ${response.statusText}`);
-      }
-
-      const payload = (await response.json()) as DatabaseApiResponse;
-      const records = extractDatabaseRows(payload);
-
-      return (
-        await Promise.all(records.map(record => normalizeBookFromDatabaseRecord(record, false)))
-      ).filter((book): book is CatalogueBook => book !== null);
+    // Le nouvel endpoint fait la recherche par auteurs côté serveur
+    const url = `${CATALOGUE_API_BASE}/books/${encodeURIComponent(currentEan)}/related-authors`;
+    const response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
     });
 
-    const allBooksArrays = await Promise.all(bookPromises);
-    const allBooks = allBooksArrays.flat();
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+
+    const payload = (await response.json()) as CatalogueApiResponse;
+    const records = extractApiResult(payload);
+
+    const books = (
+      await Promise.all(records.map(record => normalizeBookFromDatabaseRecord(record, false)))
+    ).filter((book): book is CatalogueBook => book !== null);
 
     // Remove duplicates (same book can be by multiple authors)
-    const uniqueBooks = allBooks.filter((book, index, self) =>
+    const uniqueBooks = books.filter((book, index, self) =>
       index === self.findIndex((b) => b.ean === book.ean)
     );
 
@@ -2290,34 +1927,18 @@ export async function fetchNextCatalogueOffice(
   logRequest(endpoint);
 
   try {
-    const requestPayload = {
-      query: NEXT_OFFICE_SQL_QUERY,
-    };
-    const securePayload = await prepareSecureJsonPayload(requestPayload);
-    const headers = new Headers({
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    });
-
-    applySecurePayloadHeaders(headers, securePayload.encrypted);
-    logSecurePayloadRequest(
-      CATALOGUE_OFFICES_ENDPOINT,
-      requestPayload,
-      securePayload.body,
-      securePayload.encrypted,
-    );
-    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
-      method: 'POST',
-      headers,
-      body: securePayload.body,
+    const url = `${CATALOGUE_API_BASE}/offices/next`;
+    const response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
     });
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} ${response.statusText}`);
     }
 
-    const payload = (await response.json()) as DatabaseApiResponse;
-    const records = extractDatabaseRows(payload);
+    const payload = (await response.json()) as CatalogueApiResponse;
+    const records = extractApiResult(payload);
 
     if (!records.length) {
       throw new Error("La base de donnees n'a retourne aucun resultat");
@@ -2372,62 +1993,18 @@ export async function fetchCatalogueSearchSuggestions(
   const searchTerm = query.trim();
 
   try {
-    const searchQuery = `
-      SELECT TOP 15
-        idItem,
-        titre,
-        auteurssimple,
-        publisher,
-        serie
-      FROM catalogBooks
-      WHERE (
-        idItem LIKE '%${searchTerm}%'
-        OR titre LIKE '%${searchTerm}%'
-        OR auteurssimple LIKE '%${searchTerm}%'
-        OR serie LIKE '%${searchTerm}%'
-      )
-      AND idItem IS NOT NULL
-      AND idItem <> ''
-      AND LEN(LTRIM(RTRIM(idItem))) > 0
-      ORDER BY
-        CASE
-          WHEN idItem = '${searchTerm}' THEN 0
-          WHEN idItem LIKE '${searchTerm}%' THEN 1
-          WHEN titre LIKE '${searchTerm}%' THEN 2
-          WHEN titre LIKE '%${searchTerm}%' THEN 3
-          WHEN serie LIKE '${searchTerm}%' THEN 4
-          ELSE 5
-        END,
-        titre ASC;
-    `;
-
-    const requestPayload = { query: searchQuery };
-    const securePayload = await prepareSecureJsonPayload(requestPayload);
-    const headers = new Headers({
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    });
-
-    applySecurePayloadHeaders(headers, securePayload.encrypted);
-    logSecurePayloadRequest(
-      CATALOGUE_OFFICES_ENDPOINT,
-      requestPayload,
-      securePayload.body,
-      securePayload.encrypted,
-    );
-
-    const response = await fetchWithOAuth(CATALOGUE_OFFICES_ENDPOINT, {
-      method: 'POST',
-      headers,
-      body: securePayload.body,
+    const url = `${CATALOGUE_API_BASE}/search?q=${encodeURIComponent(searchTerm)}`;
+    const response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
     });
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} ${response.statusText}`);
     }
 
-    const payload = (await response.json()) as DatabaseApiResponse;
-    const records = extractDatabaseRows(payload);
+    const payload = (await response.json()) as CatalogueApiResponse;
+    const records = extractApiResult(payload);
 
     const suggestions: CatalogueSearchSuggestion[] = records.map(record => ({
       ean: ensureString(getField(record, 'idItem', 'iditem')) ?? '',

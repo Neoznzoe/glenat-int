@@ -233,7 +233,7 @@ export function Offices() {
                     <Card className="col-span-full w-fit min-w-[280px] bg-background">
                       <CardHeader className="py-2">
                         <CardTitle className="text-lg">
-                          Office {group.office} : {group.date}
+                          Office du {group.date}
                         </CardTitle>
                         <p className="text-sm text-muted-foreground">{group.shipping}</p>
                       </CardHeader>

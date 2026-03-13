@@ -1,22 +1,8 @@
 import { fetchWithOAuth } from './oauth';
-import { applySecurePayloadHeaders, logSecurePayloadRequest, prepareSecureJsonPayload } from './securePayload';
 
-const CALENDAR_DATABASE_ENDPOINT =
-  import.meta.env.VITE_CALENDAR_DATABASE_ENDPOINT ??
-  (import.meta.env.DEV
-    ? '/intranet/call-database'
-    : 'https://api-dev.groupe-glenat.com/Api/v2.0/Dev/callDatabase');
-
-const CALENDAR_EVENT_COLORS_QUERY = 'SELECT * FROM [calendarEventColor];';
-const CALENDAR_EVENTS_QUERY = `SELECT *, 'Ancien (2 ans)' AS Categorie
-FROM [calendarEvent]
-WHERE YEAR([DATE_DEBUT]) = YEAR(GETDATE()) - 2
-
-UNION ALL
-
-SELECT *, 'Actuel ou futur' AS Categorie
-FROM [calendarEvent]
-WHERE YEAR([DATE_DEBUT]) >= YEAR(GETDATE());`;
+const CALENDAR_API_BASE = import.meta.env.DEV
+  ? '/Api/v2.0/calendar'
+  : 'https://api-dev.groupe-glenat.com/Api/v2.0/calendar';
 
 export interface CalendarEventColorRecord {
   reason: string;
@@ -43,69 +29,7 @@ export interface CalendarEventRecord {
   metadata?: Record<string, unknown>;
 }
 
-interface RawDatabaseResponse {
-  success?: boolean;
-  message?: string;
-  result?: unknown;
-  data?: unknown;
-  rows?: unknown;
-  recordset?: unknown;
-  Recordset?: unknown;
-  recordsets?: unknown;
-  records?: unknown;
-  [key: string]: unknown;
-}
-
 type RawRecord = Record<string, unknown>;
-
-function extractArray(payload: unknown): RawRecord[] {
-  const tryParse = (value: unknown): unknown => {
-    if (Array.isArray(value)) {
-      return value;
-    }
-    if (typeof value === 'string') {
-      try {
-        const parsed = JSON.parse(value) as unknown;
-        return tryParse(parsed);
-      } catch {
-        return [];
-      }
-    }
-    if (value && typeof value === 'object') {
-      const record = value as Record<string, unknown>;
-      if (Array.isArray(record.rows)) {
-        return record.rows;
-      }
-      if (Array.isArray(record.data)) {
-        return record.data;
-      }
-      if (Array.isArray(record.result)) {
-        return record.result;
-      }
-      if (Array.isArray(record.recordset)) {
-        return record.recordset;
-      }
-      if (Array.isArray(record.Recordset)) {
-        return record.Recordset;
-      }
-      if (Array.isArray(record.recordsets)) {
-        const [first] = record.recordsets as unknown[];
-        if (Array.isArray(first)) {
-          return first;
-        }
-      }
-      if (Array.isArray(record.records)) {
-        return record.records;
-      }
-    }
-    return [];
-  };
-
-  const arrayCandidate = tryParse(payload);
-  return Array.isArray(arrayCandidate)
-    ? (arrayCandidate.filter((item) => item && typeof item === 'object') as RawRecord[])
-    : [];
-}
 
 function toNonEmptyString(value: unknown): string | undefined {
   if (typeof value === 'string') {
@@ -535,54 +459,63 @@ function normalizeCalendarEventColor(record: RawRecord): CalendarEventColorRecor
   };
 }
 
-async function executeCalendarQuery(query: string): Promise<RawDatabaseResponse> {
-  const requestPayload = { query };
-  const securePayload = await prepareSecureJsonPayload(requestPayload);
-  const headers = new Headers({ 'Content-Type': 'application/json' });
-  applySecurePayloadHeaders(headers, securePayload.encrypted);
-  logSecurePayloadRequest(
-    CALENDAR_DATABASE_ENDPOINT,
-    requestPayload,
-    securePayload.body,
-    securePayload.encrypted,
-  );
+/**
+ * Convertit un objet avec des clés numériques en tableau.
+ * PHP peut sérialiser les tableaux séquentiels comme des objets : {"0": {...}, "1": {...}, ...}
+ */
+function toArrayIfArrayLike(value: unknown): unknown[] | null {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== 'object') return null;
+  const keys = Object.keys(value as Record<string, unknown>);
+  if (keys.length === 0) return null;
+  const allNumeric = keys.every((k) => /^\d+$/.test(k));
+  if (!allNumeric) return null;
+  const sorted = keys.map(Number).sort((a, b) => a - b);
+  if (sorted[0] !== 0 || sorted[sorted.length - 1] !== sorted.length - 1) return null;
+  return sorted.map((i) => (value as Record<string, unknown>)[String(i)]);
+}
 
-  const response = await fetchWithOAuth(CALENDAR_DATABASE_ENDPOINT, {
-    method: 'POST',
-    headers,
-    body: securePayload.body,
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `La récupération des données du calendrier a échoué (${response.status}) ${response.statusText}`,
-    );
+function extractResultArray(payload: Record<string, unknown>): RawRecord[] {
+  // Format direct: { success, code, message, result: [...] } ou objet à clés numériques
+  const resultAsArray = Array.isArray(payload.result)
+    ? payload.result
+    : toArrayIfArrayLike(payload.result);
+  if (resultAsArray) {
+    return resultAsArray as RawRecord[];
   }
-
-  const payload = (await response.json()) as RawDatabaseResponse;
-  if (payload.success === false) {
-    throw new Error(payload.message || 'La récupération des données du calendrier a échoué.');
+  // Format imbriqué: { success, code, message, result: { message, result: [...] } }
+  if (payload.result && typeof payload.result === 'object') {
+    const nested = (payload.result as Record<string, unknown>).result;
+    const nestedAsArray = Array.isArray(nested) ? nested : toArrayIfArrayLike(nested);
+    if (nestedAsArray) {
+      return nestedAsArray as RawRecord[];
+    }
   }
-
-  return payload;
+  // Fallback: chercher dans data
+  const dataAsArray = Array.isArray(payload.data) ? payload.data : toArrayIfArrayLike(payload.data);
+  if (dataAsArray) {
+    return dataAsArray as RawRecord[];
+  }
+  return [];
 }
 
 export async function fetchCalendarEventColors(): Promise<CalendarEventColorRecord[]> {
-  const response = await executeCalendarQuery(CALENDAR_EVENT_COLORS_QUERY);
+  const response = await fetchWithOAuth(`${CALENDAR_API_BASE}/event-colors`);
 
-  let rawRecords = extractArray(response.result);
-  if (!rawRecords.length) {
-    rawRecords = extractArray(response.data);
-  }
-  if (!rawRecords.length) {
-    rawRecords = extractArray(response.rows);
-  }
-  if (!rawRecords.length) {
-    rawRecords = extractArray(response);
+  if (!response.ok) {
+    throw new Error(
+      `La récupération des couleurs du calendrier a échoué (${response.status}) ${response.statusText}`,
+    );
   }
 
+  const payload = (await response.json()) as Record<string, unknown>;
+  if (payload.success === false) {
+    throw new Error((payload.message as string) || 'La récupération des couleurs du calendrier a échoué.');
+  }
+
+  const records = extractResultArray(payload);
   const colors: CalendarEventColorRecord[] = [];
-  for (const record of rawRecords) {
+  for (const record of records) {
     const normalized = normalizeCalendarEventColor(record);
     if (normalized) {
       colors.push(normalized);
@@ -593,21 +526,23 @@ export async function fetchCalendarEventColors(): Promise<CalendarEventColorReco
 }
 
 export async function fetchCalendarEvents(): Promise<CalendarEventRecord[]> {
-  const response = await executeCalendarQuery(CALENDAR_EVENTS_QUERY);
+  const response = await fetchWithOAuth(`${CALENDAR_API_BASE}/events`);
 
-  let rawRecords = extractArray(response.result);
-  if (!rawRecords.length) {
-    rawRecords = extractArray(response.data);
+  if (!response.ok) {
+    throw new Error(
+      `La récupération des événements du calendrier a échoué (${response.status}) ${response.statusText}`,
+    );
   }
-  if (!rawRecords.length) {
-    rawRecords = extractArray(response.rows);
+
+  const payload = (await response.json()) as Record<string, unknown>;
+  if (payload.success === false) {
+    throw new Error((payload.message as string) || 'La récupération des événements du calendrier a échoué.');
   }
-  if (!rawRecords.length) {
-    rawRecords = extractArray(response);
-  }
+
+  const records = extractResultArray(payload);
 
   const events: CalendarEventRecord[] = [];
-  for (const record of rawRecords) {
+  for (const record of records) {
     const normalized = normalizeCalendarEvent(record);
     if (normalized) {
       events.push(normalized);
