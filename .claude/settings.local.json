@@ -12,7 +12,8 @@
       "Read(//c/Users/victor.besson/OneDrive - GLENAT EDITIONS/Bureau/glenat-int/$V22/handlers/test/**)",
       "Bash(V20=\"/c/Users/victor.besson/OneDrive - GLENAT EDITIONS/Bureau/glenat-int/docs/api-migration/v2.0\")",
       "Read(//c/Users/victor.besson/OneDrive - GLENAT EDITIONS/Bureau/glenat-int/$V20/**)",
-      "Bash(echo EXIT_CODE=$?:*)"
+      "Bash(echo EXIT_CODE=$?:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": [],

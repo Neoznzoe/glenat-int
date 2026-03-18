@@ -1592,6 +1592,11 @@ export async function fetchCatalogueBook(
           // Format structuré du handler: { book, texts, authors }
           apiResult = resultObj as { book: RawCatalogueOfficeRecord; texts?: RawCatalogueOfficeRecord[]; authors?: RawCatalogueOfficeRecord[] };
           bookRecord = apiResult.book;
+        } else if ('book' in resultObj && !resultObj.book) {
+          // Format structuré mais book est null (bug backend: mode 'row' + $bookRows[0])
+          // Conserver texts/authors pour enrichir le livre si on le retrouve autrement
+          apiResult = resultObj as { book?: RawCatalogueOfficeRecord; texts?: RawCatalogueOfficeRecord[]; authors?: RawCatalogueOfficeRecord[] };
+          console.warn('[fetchCatalogueBook] Structured result but book is null — attempting fallback');
         } else if (resultObj.idItem || resultObj.iditem || resultObj.ean || resultObj.titre) {
           // Row directe: { idItem, titre, ... }
           bookRecord = resultObj as RawCatalogueOfficeRecord;

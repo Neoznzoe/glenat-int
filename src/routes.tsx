@@ -15,6 +15,11 @@ const Offices = lazy(() => import('./pages/catalogue/Offices'));
 const Nouveautes = lazy(() => import('./pages/catalogue/Nouveautes'));
 const CouvertureAParaitre = lazy(() => import('./pages/catalogue/CouvertureAParaitre'));
 const BookDetails = lazy(() => import('./pages/catalogue/BookDetails'));
+const QuiFaitQuoiHome = lazy(() => import('./pages/qui-fait-quoi/QuiFaitQuoiHome'));
+const Groupes = lazy(() => import('./pages/qui-fait-quoi/Groupes'));
+const Company = lazy(() => import('./pages/qui-fait-quoi/Company'));
+const Departement = lazy(() => import('./pages/qui-fait-quoi/Departement'));
+const EmployeeFiche = lazy(() => import('./pages/qui-fait-quoi/EmployeeFiche'));
 
 export const ROUTES_CONFIG: RouteDefinition[] = [
   { path: '/', element: <Home /> },
@@ -32,6 +37,11 @@ export const ROUTES_CONFIG: RouteDefinition[] = [
   { path: '/catalogue/nouveautes', element: <Nouveautes /> },
   { path: '/catalogue/couverture-a-paraitre', element: <CouvertureAParaitre /> },
   { path: '/catalogue/book', element: <BookDetails /> },
+  { path: '/qui-fait-quoi', element: <QuiFaitQuoiHome /> },
+  { path: '/qui-fait-quoi/groupes', element: <Groupes /> },
+  { path: '/qui-fait-quoi/company', element: <Company /> },
+  { path: '/qui-fait-quoi/departement', element: <Departement /> },
+  { path: '/qui-fait-quoi/employe', element: <EmployeeFiche /> },
 ];
 
 export const LAZY_ROUTE_PRELOADERS: Array<() => Promise<unknown>> = [
@@ -46,6 +56,11 @@ export const LAZY_ROUTE_PRELOADERS: Array<() => Promise<unknown>> = [
   () => import('./pages/catalogue/Nouveautes'),
   () => import('./pages/catalogue/CouvertureAParaitre'),
   () => import('./pages/catalogue/BookDetails'),
+  () => import('./pages/qui-fait-quoi/QuiFaitQuoiHome'),
+  () => import('./pages/qui-fait-quoi/Groupes'),
+  () => import('./pages/qui-fait-quoi/Company'),
+  () => import('./pages/qui-fait-quoi/Departement'),
+  () => import('./pages/qui-fait-quoi/EmployeeFiche'),
 ];
 
 export function AppRoutes() {
