@@ -20,6 +20,9 @@ const Groupes = lazy(() => import('./pages/qui-fait-quoi/Groupes'));
 const Company = lazy(() => import('./pages/qui-fait-quoi/Company'));
 const Departement = lazy(() => import('./pages/qui-fait-quoi/Departement'));
 const EmployeeFiche = lazy(() => import('./pages/qui-fait-quoi/EmployeeFiche'));
+const DocsHome = lazy(() => import('./pages/docs/DocsHome'));
+const DocsDocuments = lazy(() => import('./pages/docs/DocsDocuments'));
+const DocsCategorie = lazy(() => import('./pages/docs/DocsCategorie'));
 
 export const ROUTES_CONFIG: RouteDefinition[] = [
   { path: '/', element: <Home /> },
@@ -42,6 +45,9 @@ export const ROUTES_CONFIG: RouteDefinition[] = [
   { path: '/qui-fait-quoi/company', element: <Company /> },
   { path: '/qui-fait-quoi/departement', element: <Departement /> },
   { path: '/qui-fait-quoi/employe', element: <EmployeeFiche /> },
+  { path: '/glenat-doc', element: <DocsHome /> },
+  { path: '/glenat-doc/categorie', element: <DocsCategorie /> },
+  { path: '/glenat-doc/documents', element: <DocsDocuments /> },
 ];
 
 export const LAZY_ROUTE_PRELOADERS: Array<() => Promise<unknown>> = [
@@ -61,6 +67,9 @@ export const LAZY_ROUTE_PRELOADERS: Array<() => Promise<unknown>> = [
   () => import('./pages/qui-fait-quoi/Company'),
   () => import('./pages/qui-fait-quoi/Departement'),
   () => import('./pages/qui-fait-quoi/EmployeeFiche'),
+  () => import('./pages/docs/DocsHome'),
+  () => import('./pages/docs/DocsCategorie'),
+  () => import('./pages/docs/DocsDocuments'),
 ];
 
 export function AppRoutes() {

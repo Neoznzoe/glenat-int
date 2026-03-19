@@ -84,7 +84,7 @@ const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
   { id: 'phpulse', label: 'PHPulse', path: '/admin/phpulse', icon: 'Zap', section: 'features' },
   { id: 'qui-fait-quoi', label: 'Qui fait quoi ?', path: '/admin/qui-fait-quoi', icon: 'Users', section: 'features' },
   { id: 'glenatee', label: "Glénat'ée", path: '/admin/glenatee', icon: 'Palette', section: 'features' },
-  { id: 'glenatdoc', label: "Glénat'Doc", path: '/admin/glenatdoc', icon: 'Newspaper', section: 'features' },
+  { id: 'glenatdoc', label: "Glénat'Doc", path: '/admin/glenatdoc', icon: 'FileText', section: 'features' },
   { id: 'parking', label: 'Plans de parking', path: '/admin/parking', icon: 'ParkingCircle', section: 'features' },
   { id: 'temps', label: 'Gestion des temps', path: '/admin/temps', icon: 'Clock', section: 'features' },
   { id: 'agenda', label: 'Agenda', path: '/admin/agenda', icon: 'CalendarDays', section: 'features' },

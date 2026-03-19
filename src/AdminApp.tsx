@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useState, useMemo, type ComponentType, type LazyExoticComponent } from 'react';
 import { AdminLayout } from './layouts/AdminLayout';
 import { lazy } from 'react';
-import { Zap, Users, Palette, Newspaper, ParkingCircle, Clock, CalendarDays, BriefcaseBusiness, Bell, BookOpen, MailMinus, Monitor, type LucideIcon } from 'lucide-react';
+import { Zap, Users, Palette, FileText, ParkingCircle, Clock, CalendarDays, BriefcaseBusiness, Bell, BookOpen, MailMinus, Monitor, type LucideIcon } from 'lucide-react';
 import { PlaceholderPage } from './pages/administration/PlaceholderPage';
 
 const AdminDashboard = lazy(() => import('./pages/administration/Dashboard'));
@@ -55,7 +55,7 @@ const ADMIN_ROUTES: Record<string, RouteConfig> = {
     component: lazy(() => Promise.resolve({ default: () => <PlaceholderPage title="Glénat'ée" description="Administrez la section Glénat'ée." icon={Palette} /> })),
   },
   '/glenatdoc': {
-    component: lazy(() => Promise.resolve({ default: () => <PlaceholderPage title="Glénat'Doc" description="Administrez la section Glénat'Doc." icon={Newspaper} /> })),
+    component: lazy(() => Promise.resolve({ default: () => <PlaceholderPage title="Glénat'Doc" description="Administrez la section Glénat'Doc." icon={FileText} /> })),
   },
   '/parking': {
     component: lazy(() => Promise.resolve({ default: () => <PlaceholderPage title="Plans de parking" description="Gérez les plans de parking." icon={ParkingCircle} /> })),
