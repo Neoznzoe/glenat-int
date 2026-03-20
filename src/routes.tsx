@@ -23,6 +23,7 @@ const EmployeeFiche = lazy(() => import('./pages/qui-fait-quoi/EmployeeFiche'));
 const DocsHome = lazy(() => import('./pages/docs/DocsHome'));
 const DocsDocuments = lazy(() => import('./pages/docs/DocsDocuments'));
 const DocsCategorie = lazy(() => import('./pages/docs/DocsCategorie'));
+const Annonces = lazy(() => import('./pages/Annonces'));
 
 export const ROUTES_CONFIG: RouteDefinition[] = [
   { path: '/', element: <Home /> },
@@ -48,6 +49,7 @@ export const ROUTES_CONFIG: RouteDefinition[] = [
   { path: '/glenat-doc', element: <DocsHome /> },
   { path: '/glenat-doc/categorie', element: <DocsCategorie /> },
   { path: '/glenat-doc/documents', element: <DocsDocuments /> },
+  { path: '/annonces', element: <Annonces /> },
 ];
 
 export const LAZY_ROUTE_PRELOADERS: Array<() => Promise<unknown>> = [
@@ -70,6 +72,7 @@ export const LAZY_ROUTE_PRELOADERS: Array<() => Promise<unknown>> = [
   () => import('./pages/docs/DocsHome'),
   () => import('./pages/docs/DocsCategorie'),
   () => import('./pages/docs/DocsDocuments'),
+  () => import('./pages/Annonces'),
 ];
 
 export function AppRoutes() {

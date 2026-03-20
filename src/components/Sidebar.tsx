@@ -14,6 +14,7 @@ import { SidebarMenuItem } from '@/components/SidebarMenuItem';
 
 interface SidebarProps {
   jobCount?: number;
+  annoncesCount?: number;
   onExpandChange?: (expanded: boolean) => void;
 }
 
@@ -34,7 +35,7 @@ function SidebarSkeletonList({ count, isExpanded }: { count: number; isExpanded:
   );
 }
 
-export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
+export function Sidebar({ jobCount, annoncesCount, onExpandChange }: SidebarProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isManuallyCollapsed, setIsManuallyCollapsed] = useState(false);
   const collapsedTriggerRef = useRef<HTMLDivElement | null>(null);
@@ -186,12 +187,15 @@ export function Sidebar({ jobCount, onExpandChange }: SidebarProps) {
       if (normalizedCode === 'emploi' && jobCount !== undefined && jobCount > 0) {
         badge = jobCount;
       }
+      if (normalizedCode === 'annonces' && annoncesCount !== undefined && annoncesCount > 0) {
+        badge = annoncesCount;
+      }
 
       items.push({ id, label, path, permission: permissionKey, icon, badge, order: index, section: undefined });
     });
 
     return items;
-  }, [cmsModules, jobCount]);
+  }, [cmsModules, jobCount, annoncesCount]);
 
   const processedModules = useMemo(() => {
     if (!moduleDefinitions) {

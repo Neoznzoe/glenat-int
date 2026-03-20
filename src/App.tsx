@@ -6,6 +6,7 @@ import { Topbar } from './components/Topbar';
 import { Toaster } from '@/components/ui/sonner';
 import AppRoutes, { LAZY_ROUTE_PRELOADERS, ROUTES_CONFIG } from './routes';
 import { usePublishedJobOfferCount } from '@/hooks/useJobOffers';
+import { useAnnoncesCount } from '@/hooks/useAnnonces';
 import { SecureRoutingProvider } from './lib/secureRouting';
 import { useAuth } from '@/context/AuthContext';
 import { LoginPage } from '@/pages/Login';
@@ -19,6 +20,8 @@ function App() {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const { data: publishedJobCount, isLoading: loadingJobCount } = usePublishedJobOfferCount();
   const jobCount = loadingJobCount ? undefined : publishedJobCount;
+  const { data: annoncesCountData, isLoading: loadingAnnoncesCount } = useAnnoncesCount();
+  const annoncesCount = loadingAnnoncesCount ? undefined : annoncesCountData;
 
   // Vérifier si on est sur une route admin (supporte à la fois /admin et #/admin)
   const [isAdminRoute, setIsAdminRoute] = useState(() => {
@@ -102,7 +105,7 @@ function App() {
         <SecureRoutingProvider routes={ROUTES_CONFIG}>
           <>
             <div className="flex h-screen bg-background text-foreground overflow-hidden">
-              <Sidebar jobCount={jobCount} onExpandChange={setIsSidebarExpanded} />
+              <Sidebar jobCount={jobCount} annoncesCount={annoncesCount} onExpandChange={setIsSidebarExpanded} />
               <div className="flex-1 flex flex-col">
                 <Topbar />
                 <main className="flex-1 overflow-auto">
