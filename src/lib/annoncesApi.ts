@@ -123,6 +123,7 @@ export interface AnnonceEmetteur {
   department: string;
   email: string;
   company: string;
+  lieu?: number;
 }
 
 export async function fetchAnnonceEmetteur(email: string): Promise<AnnonceEmetteur | null> {
