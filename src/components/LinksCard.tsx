@@ -64,6 +64,8 @@ export function LinksCard({ title, links, limit = links.length }: LinksCardProps
                 {link.type === 'link' || (link.href && !link.type) ? (
                   <a
                     href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className={`group flex w-full items-center justify-between rounded-sm transition-colors px-2 py-1 mb-2 last:mb-0 hover:bg-accent hover:text-accent-foreground ${
                       link.highlight ? 'text-primary font-semibold' : ''
                     }`}

@@ -1,5 +1,4 @@
-import { Search, Bell, User, ChevronDown, ShoppingBag, Settings, KeyRound, LogOut } from 'lucide-react';
-import { Input } from './ui/input';
+import { Bell, User, ChevronDown, ShoppingBag, Settings, KeyRound, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
@@ -11,36 +10,29 @@ import { useState } from 'react';
 import NotificationList from './NotificationList';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/context/AuthContext';
+import { useAnnonceEmetteur } from '@/hooks/useAnnonces';
+import { useNotifications } from '@/hooks/useNotifications';
 import { CatalogueSearchInput } from './CatalogueSearchInput';
+import { TopbarSearchInput } from './TopbarSearchInput';
 
 export function Topbar() {
   const itemCount = useAppSelector((state) =>
     state.cart.items.reduce((sum, i) => sum + i.quantity, 0),
   );
-  const notifications = [
-    {
-      count: 2,
-      label: "Demande d'investissement informatique et téléphonie à traiter",
-    },
-    {
-      count: 24,
-      label: "Demande d'intervention informatique à traiter",
-    },
-    {
-      count: 10,
-      label: "Demande d'installation nouvel entrant à traiter",
-    },
-  ];
-  const notificationCount = notifications.reduce((sum, n) => sum + n.count, 0);
   const [open, setOpen] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
   const [searchScope, setSearchScope] = useState('qui-fait-quoi');
   const { user, loading: authLoading, logout } = useAuth();
-  const scopeLabels = {
-    catalogue: 'Catalogue',
-    glenatdoc: "Glénat'doc",
-    'qui-fait-quoi': 'Qui fait quoi',
-  } as const;
+  const userEmail = user?.mail ?? user?.userPrincipalName;
+  const { data: emetteur } = useAnnonceEmetteur(userEmail);
+  const { data: notificationGroups = [] } = useNotifications(emetteur?.id);
+
+  const notifications = notificationGroups.map((g) => ({
+    count: g.count,
+    label: `${g.category} à traiter`,
+  }));
+  const notificationCount = notifications.reduce((sum, n) => sum + n.count, 0);
+
 
   // Prevent the hover card from briefly closing when interacting with the
   // quantity selector inside the cart summary. If the select dropdown is open,
@@ -53,46 +45,25 @@ export function Topbar() {
   return (
     <header className="h-16 bg-background border-b border-border flex items-center justify-between px-6">
       {/* Barre de recherche */}
-      <div className="flex-1 max-w-md">
-        <div className="flex items-center space-x-2">
-          {searchScope === 'catalogue' ? (
-            // Recherche catalogue avec autocomplétion
-            <div className="flex items-center gap-2 flex-1">
-              <div className="flex-1">
-                <CatalogueSearchInput />
-              </div>
-              <Select value={searchScope} onValueChange={setSearchScope}>
-                <SelectTrigger className="w-36 bg-muted">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="qui-fait-quoi">Qui fait quoi</SelectItem>
-                  <SelectItem value="catalogue">Catalogue</SelectItem>
-                  <SelectItem value="glenatdoc">Glénat'doc</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            // Recherche normale pour les autres scopes
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder={`Rechercher dans ${scopeLabels[searchScope as keyof typeof scopeLabels]}`}
-                className="pl-10 pr-36 bg-muted border-input focus:bg-background"
-              />
-              <Select value={searchScope} onValueChange={setSearchScope}>
-                <SelectTrigger className="absolute top-0 right-0 h-full w-36 border-l border-input bg-muted pr-8 pl-2 text-sm focus:ring-0 focus:ring-offset-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="qui-fait-quoi">Qui fait quoi</SelectItem>
-                  <SelectItem value="catalogue">Catalogue</SelectItem>
-                  <SelectItem value="glenatdoc">Glénat'doc</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+      <div className="flex-1 max-w-lg">
+        <div className="flex items-center">
+          <div className="flex-1">
+            {searchScope === 'catalogue' ? (
+              <CatalogueSearchInput />
+            ) : (
+              <TopbarSearchInput scope={searchScope as 'qui-fait-quoi' | 'glenatdoc'} />
+            )}
+          </div>
+          <Select value={searchScope} onValueChange={setSearchScope}>
+            <SelectTrigger className="w-28 h-9 rounded-l-none border-l-0 bg-muted text-xs shrink-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="qui-fait-quoi">Qui fait quoi</SelectItem>
+              <SelectItem value="catalogue">Catalogue</SelectItem>
+              <SelectItem value="glenatdoc">Glénat'doc</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

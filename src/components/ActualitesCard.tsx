@@ -43,7 +43,7 @@ export function ActualitesCard() {
   const newArrivals = ['Alice Martin', 'Bob Dupont', 'Charles Durand'];
 
   return (
-    <Card className="lg:col-span-2 overflow-hidden">
+    <Card className="overflow-hidden">
       <CardHeader className="bg-primary text-primary-foreground px-6 py-4">
         <CardTitle className="flex items-center space-x-2">
           <HomeIcon className="h-5 w-5" />

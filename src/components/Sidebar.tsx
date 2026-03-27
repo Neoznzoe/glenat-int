@@ -276,6 +276,20 @@ export function Sidebar({ jobCount, annoncesCount, onExpandChange }: SidebarProp
     ? modulesToUse.filter((item) => isAdministrationModule(item))
     : modulesToUse.filter((item) => isAdministrationModule(item) && userCanAccess(item.permission));
 
+  // Cache des menus pour éviter le flash lors des refetch
+  const cachedMainRef = useRef<typeof mainMenuItems | null>(null);
+  const cachedAdminRef = useRef<typeof adminMenuItems | null>(null);
+
+  if (mainMenuItems.length > 0) {
+    cachedMainRef.current = mainMenuItems;
+  }
+  if (adminMenuItems.length > 0) {
+    cachedAdminRef.current = adminMenuItems;
+  }
+
+  const displayMainItems = mainMenuItems.length > 0 ? mainMenuItems : cachedMainRef.current;
+  const displayAdminItems = adminMenuItems.length > 0 ? adminMenuItems : cachedAdminRef.current;
+
   const moduleErrorMessage = hasModuleError && moduleError
     ? moduleError instanceof Error ? moduleError.message : String(moduleError)
     : null;
@@ -332,11 +346,11 @@ export function Sidebar({ jobCount, annoncesCount, onExpandChange }: SidebarProp
       <div className="flex-1 min-h-0 flex flex-col justify-between">
         {/* Menu principal */}
         <nav className="p-2">
-          {waitingForModules ? (
+          {waitingForModules && !displayMainItems ? (
             <SidebarSkeletonList count={6} isExpanded={isExpanded} />
           ) : (
             <ul className="space-y-1">
-              {mainMenuItems.map((item) => {
+              {(displayMainItems ?? []).map((item) => {
                 const isHomePage = item.path === '/' || item.path === '/accueil';
                 return (
                   <SidebarMenuItem
@@ -363,11 +377,11 @@ export function Sidebar({ jobCount, annoncesCount, onExpandChange }: SidebarProp
 
         {/* Bloc Administration */}
         <nav className="p-2">
-          {waitingForModules ? (
+          {waitingForModules && !displayAdminItems ? (
             <SidebarSkeletonList count={2} isExpanded={isExpanded} />
           ) : (
             <ul>
-              {adminMenuItems.map((item) => {
+              {(displayAdminItems ?? []).map((item) => {
                 if (item.permission.toLowerCase() === 'administration') {
                   return (
                     <SidebarMenuItem

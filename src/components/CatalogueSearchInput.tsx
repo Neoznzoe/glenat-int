@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
-import { fetchCatalogueSearchSuggestions, type CatalogueSearchSuggestion } from '@/lib/catalogue';
+import { fetchCatalogueSearchSuggestions, getColorFromPublisher, getLogoFromPublisher, type CatalogueSearchSuggestion } from '@/lib/catalogue';
 import { Search, Loader2 } from 'lucide-react';
 
 export function CatalogueSearchInput() {
@@ -107,9 +107,9 @@ export function CatalogueSearchInput() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          type="search"
+          type="text"
           placeholder="Rechercher dans Catalogue"
-          className="pl-9 pr-9 bg-muted border-input focus:bg-background"
+          className="pl-9 pr-9 bg-muted border-input focus:bg-background rounded-r-none"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -137,23 +137,35 @@ export function CatalogueSearchInput() {
                     : 'hover:bg-accent hover:text-accent-foreground'
                 }`}
               >
-                <div className="font-medium text-sm">
-                  {highlightMatch(suggestion.title, query)}
-                </div>
-                <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1">
-                  <span>{highlightMatch(suggestion.ean, query)}</span>
-                  {suggestion.authors && (
-                    <>
-                      <span>•</span>
-                      <span>{suggestion.authors}</span>
-                    </>
-                  )}
-                  {suggestion.serie && (
-                    <>
-                      <span>•</span>
-                      <span>{highlightMatch(suggestion.serie, query)}</span>
-                    </>
-                  )}
+                <div className="flex items-center gap-2.5">
+                  <img
+                    src={getLogoFromPublisher(suggestion.publisher)}
+                    alt=""
+                    className="h-6 w-6 shrink-0 rounded"
+                    style={{ backgroundColor: `var(${getColorFromPublisher(suggestion.publisher)})`, padding: '2px' }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-sm">
+                      {highlightMatch(suggestion.title, query)}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1">
+                      <span>{highlightMatch(suggestion.ean, query)}</span>
+                      {suggestion.authors && (
+                        <>
+                          <span>•</span>
+                          <span>{suggestion.authors}</span>
+                        </>
+                      )}
+                      {suggestion.serie && (
+                        <>
+                          <span>•</span>
+                          <span className="font-medium" style={{ color: `var(${getColorFromPublisher(suggestion.publisher)})` }}>
+                            {highlightMatch(suggestion.serie, query)}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </button>
             ))}

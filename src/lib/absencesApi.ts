@@ -176,16 +176,52 @@ function calculateReturnDate(absence: KelioAbsence): string {
   return returnDate.toLocaleDateString('fr-FR');
 }
 
+// ─── Cache des emails employés ──────────────────────────────
+let employeeEmailCache: Map<string, string> | null = null;
+
+async function getEmployeeEmailMap(): Promise<Map<string, string>> {
+  if (employeeEmailCache) return employeeEmailCache;
+  try {
+    // Charger tous les employés actifs (sans filtre)
+    const PLANNING_URL = import.meta.env.DEV
+      ? '/Api/v2.0/planning'
+      : 'https://api-dev.groupe-glenat.com/Api/v2.0/planning';
+    const response = await fetchWithOAuth(`${PLANNING_URL}/employees`);
+    if (response.ok) {
+      const data = (await response.json()) as { result?: Array<{ firstName: string; lastName: string; email?: string }> };
+      const employees = data.result ?? [];
+      const map = new Map<string, string>();
+      for (const emp of employees) {
+        if (emp.firstName && emp.lastName) {
+          const key = `${emp.firstName.toLowerCase()} ${emp.lastName.toLowerCase()}`;
+          map.set(key, emp.email ?? '');
+        }
+      }
+      employeeEmailCache = map;
+      return map;
+    }
+  } catch {
+    // Silently fail — les emails resteront vides
+  }
+  return new Map();
+}
+
+function lookupEmail(emailMap: Map<string, string>, firstName: string, lastName: string): string {
+  const key = `${firstName.toLowerCase()} ${lastName.toLowerCase()}`;
+  return emailMap.get(key) ?? '';
+}
+
 /**
  * Transforme une absence Kelio en objet AbsentPerson pour l'affichage
  */
-function transformAbsenceToAbsentPerson(absence: KelioAbsence): AbsentPerson {
+function transformAbsenceToAbsentPerson(absence: KelioAbsence, emailMap: Map<string, string>): AbsentPerson {
   const name = `${absence.employeeFirstName} ${absence.employeeSurname}`;
   const retour = calculateReturnDate(absence);
+  const email = lookupEmail(emailMap, absence.employeeFirstName, absence.employeeSurname);
 
   return {
     name,
-    email: 'Pas d\'information',
+    email: email || 'Mail non disponible',
     retour,
   };
 }
@@ -194,9 +230,12 @@ function transformAbsenceToAbsentPerson(absence: KelioAbsence): AbsentPerson {
  * Récupère les absences du jour et les transforme pour l'affichage
  */
 export async function fetchTodayAbsences(): Promise<AbsentPerson[]> {
-  const allAbsences = await fetchAbsences();
+  const [allAbsences, emailMap] = await Promise.all([
+    fetchAbsences(),
+    getEmployeeEmailMap(),
+  ]);
   const todayAbsences = filterTodayAbsences(allAbsences);
-  return todayAbsences.map(transformAbsenceToAbsentPerson);
+  return todayAbsences.map((a) => transformAbsenceToAbsentPerson(a, emailMap));
 }
 
 // ============================================================================
@@ -238,12 +277,13 @@ function filterTodayRemoteWorking(remoteWorkings: KelioRemoteWorking[]): KelioRe
 /**
  * Transforme un télétravail Kelio en objet RemoteWorkingPerson pour l'affichage
  */
-function transformRemoteWorkingToPerson(rw: KelioRemoteWorking): RemoteWorkingPerson {
+function transformRemoteWorkingToPerson(rw: KelioRemoteWorking, emailMap: Map<string, string>): RemoteWorkingPerson {
   const name = `${rw.employeeFirstName} ${rw.employeeSurname}`;
+  const email = lookupEmail(emailMap, rw.employeeFirstName, rw.employeeSurname);
 
   return {
     name,
-    email: 'Pas d\'information',
+    email: email || 'Mail non disponible',
   };
 }
 
@@ -251,7 +291,10 @@ function transformRemoteWorkingToPerson(rw: KelioRemoteWorking): RemoteWorkingPe
  * Récupère les télétravaux du jour et les transforme pour l'affichage
  */
 export async function fetchTodayRemoteWorking(): Promise<RemoteWorkingPerson[]> {
-  const allRemoteWorking = await fetchRemoteWorking();
+  const [allRemoteWorking, emailMap] = await Promise.all([
+    fetchRemoteWorking(),
+    getEmployeeEmailMap(),
+  ]);
   const todayRemoteWorking = filterTodayRemoteWorking(allRemoteWorking);
-  return todayRemoteWorking.map(transformRemoteWorkingToPerson);
+  return todayRemoteWorking.map((rw) => transformRemoteWorkingToPerson(rw, emailMap));
 }

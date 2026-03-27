@@ -57,7 +57,7 @@ export function PresenceList<T extends Record<string, ReactNode>>({
   const isTwoColumn = columns.length === 2;
   const hasRows = rows.length > 0;
   const controls =
-    hasRows && (searchable || sortable) && (
+    (searchable || sortable) && (
       <div className="flex items-center gap-2 mb-4">
         {searchable && (
           <Input

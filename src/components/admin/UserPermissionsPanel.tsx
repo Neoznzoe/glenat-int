@@ -292,26 +292,54 @@ export function UserPermissionsPanel({ user }: UserPermissionsPanelProps) {
     setPermissions((prev) => {
       const next = { ...prev };
       next[type] = new Map(prev[type]);
-      next[type].set(id, { canView, inherited: false }); // Mark as explicit user override
+      next[type].set(id, { canView, inherited: false });
 
       // Cascade to children
       if (!canView && node && node.children) {
-        const denyChildren = (children: HierarchyNode[]) => {
+        const cascadeChildren = (children: HierarchyNode[], value: boolean) => {
           children.forEach((child) => {
             if (child.type === 'page') {
-              next.pages.set(child.id, { canView: false, inherited: false });
+              next.pages = new Map(next.pages);
+              next.pages.set(child.id, { canView: value, inherited: false });
             } else if (child.type === 'bloc') {
-              next.blocs.set(child.id, { canView: false, inherited: false });
+              next.blocs = new Map(next.blocs);
+              next.blocs.set(child.id, { canView: value, inherited: false });
             } else if (child.type === 'element') {
-              next.elements.set(child.id, { canView: false, inherited: false });
+              next.elements = new Map(next.elements);
+              next.elements.set(child.id, { canView: value, inherited: false });
             }
             if (child.children) {
-              denyChildren(child.children);
+              cascadeChildren(child.children, value);
             }
           });
         };
-        denyChildren(node.children);
+        cascadeChildren(node.children, false);
       }
+      return next;
+    });
+  };
+
+  const handleSelectAllChildren = (node: HierarchyNode, value: boolean) => {
+    setPermissions((prev) => {
+      const next = {
+        modules: new Map(prev.modules),
+        pages: new Map(prev.pages),
+        blocs: new Map(prev.blocs),
+        elements: new Map(prev.elements),
+      };
+
+      const cascade = (children: HierarchyNode[]) => {
+        children.forEach((child) => {
+          const map = child.type === 'page' ? next.pages
+            : child.type === 'bloc' ? next.blocs
+            : child.type === 'element' ? next.elements
+            : next.modules;
+          map.set(child.id, { canView: value, inherited: false });
+          if (child.children) cascade(child.children);
+        });
+      };
+
+      if (node.children) cascade(node.children);
       return next;
     });
   };
@@ -535,6 +563,7 @@ export function UserPermissionsPanel({ user }: UserPermissionsPanelProps) {
                   expanded={expandedModules.has(moduleNode.id)}
                   onToggle={() => toggleExpanded('module', moduleNode.id)}
                   onPermissionChange={handlePermissionChange}
+                  onSelectAllChildren={handleSelectAllChildren}
                   expandedPages={expandedPages}
                   expandedBlocs={expandedBlocs}
                   onTogglePage={(id) => toggleExpanded('page', id)}
@@ -568,6 +597,7 @@ interface ModuleRowProps {
     canView: boolean,
     node?: HierarchyNode
   ) => void;
+  onSelectAllChildren: (node: HierarchyNode, value: boolean) => void;
   expandedPages: Set<number>;
   expandedBlocs: Set<number>;
   onTogglePage: (id: number) => void;
@@ -579,12 +609,14 @@ function ModuleRow({
   expanded,
   onToggle,
   onPermissionChange,
+  onSelectAllChildren,
   expandedPages,
   expandedBlocs,
   onTogglePage,
   onToggleBloc,
 }: ModuleRowProps) {
   const hasChildren = node.children && node.children.length > 0;
+  const allChildrenChecked = hasChildren && node.children!.every((c) => c.canView);
 
   return (
     <div className="border rounded-md p-3">
@@ -607,6 +639,13 @@ function ModuleRow({
           </Label>
           {node.inherited && <Badge variant="outline" className="text-xs">Hérité</Badge>}
         </div>
+        {hasChildren && (
+          <Checkbox
+            checked={allChildrenChecked}
+            onCheckedChange={(checked) => onSelectAllChildren(node, checked as boolean)}
+            title={allChildrenChecked ? 'Tout désélectionner' : 'Tout sélectionner'}
+          />
+        )}
       </div>
 
       {expanded && hasChildren && (
@@ -618,6 +657,7 @@ function ModuleRow({
               expanded={expandedPages.has(pageNode.id)}
               onToggle={() => onTogglePage(pageNode.id)}
               onPermissionChange={onPermissionChange}
+              onSelectAllChildren={onSelectAllChildren}
               expandedBlocs={expandedBlocs}
               onToggleBloc={onToggleBloc}
               parentDenied={!node.canView}
@@ -639,6 +679,7 @@ interface PageRowProps {
     canView: boolean,
     node?: HierarchyNode
   ) => void;
+  onSelectAllChildren: (node: HierarchyNode, value: boolean) => void;
   expandedBlocs: Set<number>;
   onToggleBloc: (id: number) => void;
   parentDenied: boolean;
@@ -649,12 +690,14 @@ function PageRow({
   expanded,
   onToggle,
   onPermissionChange,
+  onSelectAllChildren,
   expandedBlocs,
   onToggleBloc,
   parentDenied,
 }: PageRowProps) {
   const hasChildren = node.children && node.children.length > 0;
   const isDisabled = parentDenied;
+  const allChildrenChecked = hasChildren && node.children!.every((c) => c.canView);
 
   return (
     <div className="border rounded-md p-2 bg-muted/30">
@@ -682,6 +725,13 @@ function PageRow({
           {node.inherited && <Badge variant="outline" className="text-xs">Hérité</Badge>}
           {isDisabled && <Badge variant="destructive" className="text-xs">Bloqué par parent</Badge>}
         </div>
+        {hasChildren && !isDisabled && (
+          <Checkbox
+            checked={allChildrenChecked}
+            onCheckedChange={(checked) => onSelectAllChildren(node, checked as boolean)}
+            title={allChildrenChecked ? 'Tout désélectionner' : 'Tout sélectionner'}
+          />
+        )}
       </div>
 
       {expanded && hasChildren && !isDisabled && (
@@ -693,6 +743,7 @@ function PageRow({
               expanded={expandedBlocs.has(blocNode.id)}
               onToggle={() => onToggleBloc(blocNode.id)}
               onPermissionChange={onPermissionChange}
+              onSelectAllChildren={onSelectAllChildren}
               parentDenied={isDisabled || !node.canView}
               expandedBlocs={expandedBlocs}
               onToggleBloc={onToggleBloc}
@@ -714,6 +765,7 @@ interface BlocRowProps {
     canView: boolean,
     node?: HierarchyNode
   ) => void;
+  onSelectAllChildren: (node: HierarchyNode, value: boolean) => void;
   parentDenied: boolean;
   expandedBlocs: Set<number>;
   onToggleBloc: (id: number) => void;
@@ -724,12 +776,14 @@ function BlocRow({
   expanded,
   onToggle,
   onPermissionChange,
+  onSelectAllChildren,
   parentDenied,
   expandedBlocs,
   onToggleBloc,
 }: BlocRowProps) {
   const hasChildren = node.children && node.children.length > 0;
   const isDisabled = parentDenied;
+  const allChildrenChecked = hasChildren && node.children!.every((c) => c.canView);
 
   return (
     <div className="border rounded-md p-2 bg-muted/50">
@@ -757,6 +811,13 @@ function BlocRow({
           {node.inherited && <Badge variant="outline" className="text-xs">Hérité</Badge>}
           {isDisabled && <Badge variant="destructive" className="text-xs">Bloqué par parent</Badge>}
         </div>
+        {hasChildren && !isDisabled && (
+          <Checkbox
+            checked={allChildrenChecked}
+            onCheckedChange={(checked) => onSelectAllChildren(node, checked as boolean)}
+            title={allChildrenChecked ? 'Tout désélectionner' : 'Tout sélectionner'}
+          />
+        )}
       </div>
 
       {expanded && hasChildren && !isDisabled && (
@@ -769,6 +830,7 @@ function BlocRow({
                 expanded={expandedBlocs.has(childNode.id)}
                 onToggle={() => onToggleBloc(childNode.id)}
                 onPermissionChange={onPermissionChange}
+                onSelectAllChildren={onSelectAllChildren}
                 parentDenied={isDisabled || !node.canView}
                 expandedBlocs={expandedBlocs}
                 onToggleBloc={onToggleBloc}

@@ -12,6 +12,7 @@ export interface PlanningEmployee {
   lastName: string;
   department: string;
   company: string;
+  email?: string;
 }
 
 export interface PlanningLeave {

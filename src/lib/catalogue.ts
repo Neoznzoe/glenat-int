@@ -910,7 +910,7 @@ const extractApiResult = (payload: unknown): RawCatalogueOfficeRecord[] => {
   return result.filter((item): item is RawCatalogueOfficeRecord => Boolean(item) && typeof item === 'object');
 };
 
-const getColorFromPublisher = (publisher?: string): string => {
+export const getColorFromPublisher = (publisher?: string): string => {
   if (!publisher) {
     return '--glenat-bd';
   }
@@ -932,7 +932,7 @@ const getColorFromPublisher = (publisher?: string): string => {
   return '--glenat-bd';
 };
 
-const getLogoFromPublisher = (publisher?: string): string => {
+export const getLogoFromPublisher = (publisher?: string): string => {
   if (!publisher) {
     return UniversBD;
   }

@@ -158,13 +158,8 @@ export function EventsCalendar() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row lg:space-x-6 pt-2">
-      <div className="flex flex-col w-full lg:w-auto flex-shrink-0 lg:basis-72">
-        <div className="flex items-center justify-center mb-2">
-          <Button variant="outline" size="sm" onClick={() => setMonth(new Date())}>
-            Aujourd'hui
-          </Button>
-        </div>
+    <div className="flex flex-col pt-2">
+      <div className="flex flex-col w-full">
         <Calendar
           month={month}
           onMonthChange={setMonth}
@@ -175,7 +170,7 @@ export function EventsCalendar() {
             months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
             month: 'space-y-4 w-full',
             caption: 'flex justify-center pt-1 relative items-center',
-            caption_label: 'text-sm font-medium',
+            caption_label: 'text-lg font-semibold',
             nav: 'space-x-1 flex items-center',
             nav_button: 'h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100',
             nav_button_previous: 'absolute left-1',
@@ -354,29 +349,20 @@ export function EventsCalendar() {
           }}
         />
       </div>
-      <div className="mt-4 lg:mt-0 lg:pl-4 lg:border-l flex items-start justify-start lg:w-64">
-        <div className="text-left w-full">
-          <p className="font-semibold text-xl capitalize">
-            {format(month, 'LLLL yyyy', { locale: fr })}
-          </p>
-          {colors && colors.length > 0 && (
-            <>
-              <p className="mt-4 text-sm font-medium">Légende</p>
-              <ul className="mt-2 space-y-2 text-sm">
-                {colors.map((color) => (
-                  <li key={color.reason} className="flex items-center gap-2">
-                    <span
-                      className="h-4 w-4 rounded-sm flex-shrink-0"
-                      style={{ backgroundColor: color.color }}
-                    />
-                    <span className="text-xs">{color.lastName}</span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-      </div>
+      {/* Légende */}
+      {colors && colors.length > 0 && (
+        <details className="mt-3">
+          <summary className="text-sm font-medium text-primary cursor-pointer select-none">Voir légende</summary>
+          <ul className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2">
+            {colors.map((color) => (
+              <li key={color.reason} className="flex items-center gap-2">
+                <span className="h-4 w-4 rounded-sm flex-shrink-0" style={{ backgroundColor: color.color }} />
+                <span className="text-xs">{color.lastName}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   );
 }

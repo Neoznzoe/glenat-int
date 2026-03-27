@@ -1,6 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { InfiniteCarousel } from '@/components/InfiniteCarousel';
 import { EventsCalendar } from '@/components/EventsCalendar';
 import { ActualitesCard } from '@/components/ActualitesCard';
@@ -12,8 +11,10 @@ import { useModulePermissionsContext } from '@/context/ModulePermissionsContext'
 import { fetchNextCatalogueOffice, type CatalogueOfficeGroup } from '@/lib/catalogue';
 import { fetchTodayAbsences, type AbsentPerson, fetchTodayRemoteWorking, type RemoteWorkingPerson } from '@/lib/absencesApi';
 import { HomeSkeleton } from '@/components/HomeSkeleton';
-import { visitingToday, travelingToday, plannedTravel, sharePointLinks, usefulLinks, companyLifeLinks } from '@/data/homeData';
+import { sharePointLinks, usefulLinks, companyLifeLinks } from '@/data/homeData';
 import { useExpandableList } from '@/hooks/useExpandableList';
+import { useTravelingToday, usePlannedTravel, useVisitingToday } from '@/hooks/usePresence';
+import type { PresencePerson } from '@/lib/presenceApi';
 
 const noop = () => undefined;
 
@@ -26,6 +27,41 @@ function HomeContent() {
   const [isLoadingOffice, setIsLoadingOffice] = useState(true);
   const [absentsToday, setAbsentsToday] = useState<AbsentPerson[]>([]);
   const [teleworkToday, setTeleworkToday] = useState<RemoteWorkingPerson[]>([]);
+
+  // ─── Présence : données réelles depuis l'API ─────────────
+  const { data: travelingTodayData = [] } = useTravelingToday();
+  const { data: plannedTravelData = [] } = usePlannedTravel();
+  const { data: visitingTodayData = [] } = useVisitingToday();
+
+  const formatPresenceDate = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  };
+
+  const mapPresenceToRow = (p: PresencePerson) => ({
+    name: p.name,
+    email: [p.department, p.company].filter(Boolean).join(' \u2014 '),
+  });
+
+  const mapPresenceToRowWithDate = (p: PresencePerson) => ({
+    name: p.name,
+    email: [p.department, p.company].filter(Boolean).join(' \u2014 '),
+    date: formatPresenceDate(p.startDate),
+  });
+
+  const visitingToday = useMemo(
+    () => visitingTodayData.map(mapPresenceToRowWithDate),
+    [visitingTodayData],
+  );
+  const travelingToday = useMemo(
+    () => travelingTodayData.map(mapPresenceToRow),
+    [travelingTodayData],
+  );
+  const plannedTravel = useMemo(
+    () => plannedTravelData.map(mapPresenceToRowWithDate),
+    [plannedTravelData],
+  );
 
   // [PERF] async-parallel: Paralléliser les 3 fetches au lieu de les exécuter séquentiellement
   useEffect(() => {
@@ -93,18 +129,7 @@ function HomeContent() {
   const travelingDisplayed = isExpanded('traveling') ? travelingToday : travelingToday.slice(0, 2);
   const plannedTravelDisplayed = isExpanded('planned') ? plannedTravel : plannedTravel.slice(0, 2);
 
-  type VisitingRow = { name: string; email: string; date: ReactNode };
-
-  // [PERF] rerender-memo: Mémoriser le calcul de visitingRows pour éviter le recalcul à chaque render
-  const visitingRows: VisitingRow[] = useMemo(() => {
-    return visitingDisplayed.map(row => {
-      const isManon = String(row.name).toLowerCase().includes('manon roux');
-      return {
-        ...row,
-        date: isManon ? <Badge variant="default">Aujourd'hui</Badge> : row.date,
-      };
-    });
-  }, [visitingDisplayed]);
+  const visitingRows = visitingDisplayed;
 
   // Filter links based on individual element permissions
   const filteredCompanyLifeLinks = useMemo(
@@ -120,9 +145,10 @@ function HomeContent() {
     [canAccessElement]
   );
 
-  const usefulLinksLimit = filteredUsefulLinks.length;
-  const companyLifeLinksLimit = filteredCompanyLifeLinks.length;
-  const sharePointLinksLimit = filteredSharePointLinks.length;
+  const linksDefaultLimit = 10;
+  const usefulLinksLimit = linksDefaultLimit;
+  const companyLifeLinksLimit = linksDefaultLimit;
+  const sharePointLinksLimit = linksDefaultLimit;
 
   useLayoutEffect(() => {
     const rightHeight = rightCardRef.current?.scrollHeight ?? 0;
@@ -140,7 +166,7 @@ function HomeContent() {
       const apply = ({ rowHeight, baseHeight }: { rowHeight: number; baseHeight: number }) => {
         if (rowHeight === 0) return;
         const maxRows = Math.floor((rightHeight - baseHeight) / rowHeight) + offset;
-        setLimit(Math.min(totalRows, Math.max(1, maxRows)));
+        setLimit(Math.min(totalRows, Math.max(10, maxRows)));
       };
 
       if (!metrics) {
@@ -161,30 +187,45 @@ function HomeContent() {
     computeLimit(teleworkRef.current, teleworkMetrics, teleworkToday.length, -1, setTeleworkMetrics, setTeleworkLimit);
   }, [isExpanded, absentMetrics, teleworkMetrics, absentsToday.length, teleworkToday.length]);
 
-  const absentsDisplayed = isExpanded('absents') ? absentsToday : absentsToday.slice(0, absentLimit);
-  const teleworkDisplayed = isExpanded('telework') ? teleworkToday : teleworkToday.slice(0, teleworkLimit);
+  const [absentSearch, setAbsentSearch] = useState('');
+  const [teleworkSearch, setTeleworkSearch] = useState('');
+
+  const absentsFiltered = useMemo(() => {
+    if (!absentSearch.trim()) return absentsToday;
+    const s = absentSearch.toLowerCase();
+    return absentsToday.filter((a) => String(a.name).toLowerCase().includes(s) || String(a.email).toLowerCase().includes(s));
+  }, [absentsToday, absentSearch]);
+
+  const teleworkFiltered = useMemo(() => {
+    if (!teleworkSearch.trim()) return teleworkToday;
+    const s = teleworkSearch.toLowerCase();
+    return teleworkToday.filter((t) => String(t.name).toLowerCase().includes(s) || String(t.email).toLowerCase().includes(s));
+  }, [teleworkToday, teleworkSearch]);
+
+  const absentsDisplayed = isExpanded('absents') ? absentsFiltered : absentsFiltered.slice(0, absentLimit);
+  const teleworkDisplayed = isExpanded('telework') ? teleworkFiltered : teleworkFiltered.slice(0, teleworkLimit);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* En-tête */}
       {canAccessBloc('HOME_HERO_CARD') && (
-        <div className="rounded-2xl border border-border bg-card text-card-foreground px-6 py-6">
+        <div className="rounded-2xl border border-border bg-card text-card-foreground px-4 sm:px-6 py-5 sm:py-6">
           {canAccessBloc('HOME_INFINITE_CAROUSEL_SECTION_1') && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8 items-start">
               {canAccessBloc('HOME_GREETING_COLUMN') && (
-                <div className="lg:col-span-4 flex flex-col justify-between min-h-[220px]">
+                <div className="lg:col-span-3 flex flex-col justify-between lg:min-h-[220px]">
                   {canAccessBloc('HOME_HEADING_BLOC') && (
                     <div>
-                      <h1 className="text-5xl lg:text-6xl font-extrabold text-foreground">
+                      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-foreground">
                         {new Date().toLocaleDateString('fr-FR', { weekday: 'long' }).toUpperCase()}
                       </h1>
-                      <h2 className="mt-2 text-lg lg:text-xl text-muted-foreground capitalize">
+                      <h2 className="mt-2 text-base sm:text-lg lg:text-xl text-muted-foreground capitalize">
                         {new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: '2-digit' })}
                       </h2>
                     </div>
                   )}
                   {canAccessBloc('HOME_GREETING') && (
-                    <div className="mt-6 space-y-1">
+                    <div className="mt-4 lg:mt-6 space-y-1">
                       {canAccessElement('HOME_GREETING_TEXT') && (
                         <p className="text-base lg:text-lg font-semibold">Bonjour {userName}</p>
                       )}
@@ -197,7 +238,7 @@ function HomeContent() {
               )}
 
               {canAccessBloc('HOME_INFINITE_CAROUSEL_SECTION_2') && (
-                <div className="lg:col-span-8">
+                <div className="lg:col-span-9">
                   {canAccessBloc('HOME_OFFICE_INFO') && (
                     <div className="flex items-baseline justify-between mb-3">
                       {isLoadingOffice ? (
@@ -216,7 +257,7 @@ function HomeContent() {
                       {isLoadingOffice ? (
                         <Skeleton className="h-48 w-full rounded-xl" />
                       ) : covers.length > 0 ? (
-                        <InfiniteCarousel covers={covers} speedSeconds={30} />
+                        <InfiniteCarousel covers={covers} pixelsPerSecond={20} />
                       ) : (
                         <div className="h-48 w-full rounded-xl bg-muted flex items-center justify-center">
                           <p className="text-muted-foreground">Aucune couverture disponible</p>
@@ -233,10 +274,10 @@ function HomeContent() {
 
       {/* Section Actualités et calendrier */}
       {canAccessBloc('HOME_ACTUALITES_SECTION') && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {canAccessBloc('HOME_ACTUALITES_CARD') && <ActualitesCard />}
           {canAccessBloc('HOME_CARD') && (
-            <Card className="lg:col-span-1">
+            <Card>
               <CardContent className="pt-4">
                 <EventsCalendar />
               </CardContent>
@@ -247,22 +288,22 @@ function HomeContent() {
 
       {/* Présence */}
       {canAccessBloc('HOME_PRESENCE_SECTION') && (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         <div ref={absentRef}>
           <PresenceList title="Absent aujourd'hui"
             columns={[{ key: 'name', label: 'Nom' }, { key: 'email', label: 'Email' }, { key: 'retour', label: 'Retour prévu' }]}
-            rows={absentsDisplayed} count={absentsToday.length} searchable sortable showMore={!isExpanded('absents') && absentsToday.length > absentLimit} showLess={isExpanded('absents') && absentsToday.length > absentLimit} onSearch={noop} onSort={noop} onShowMore={() => expand('absents')} onShowLess={() => collapse('absents')} emptyMessage="aucun absent aujourd'hui" />
+            rows={absentsDisplayed} count={absentsFiltered.length} searchable sortable showMore={!isExpanded('absents') && absentsFiltered.length > absentLimit} showLess={isExpanded('absents') && absentsFiltered.length > absentLimit} onSearch={setAbsentSearch} onSort={noop} onShowMore={() => expand('absents')} onShowLess={() => collapse('absents')} emptyMessage={absentSearch ? 'aucun résultat' : 'aucun absent aujourd\'hui'} />
         </div>
         <div ref={teleworkRef}>
           <PresenceList title="Télétravail aujourd'hui"
             columns={[{ key: 'name', label: 'Nom' }, { key: 'email', label: 'Email' }]}
-            rows={teleworkDisplayed} count={teleworkToday.length} searchable sortable showMore={!isExpanded('telework') && teleworkToday.length > teleworkLimit} showLess={isExpanded('telework') && teleworkToday.length > teleworkLimit} onSearch={noop} onSort={noop} onShowMore={() => expand('telework')} onShowLess={() => collapse('telework')} emptyMessage="aucun télétravail aujourd'hui"/>
+            rows={teleworkDisplayed} count={teleworkFiltered.length} searchable sortable showMore={!isExpanded('telework') && teleworkFiltered.length > teleworkLimit} showLess={isExpanded('telework') && teleworkFiltered.length > teleworkLimit} onSearch={setTeleworkSearch} onSort={noop} onShowMore={() => expand('telework')} onShowLess={() => collapse('telework')} emptyMessage={teleworkSearch ? 'aucun résultat' : 'aucun télétravail aujourd\'hui'}/>
         </div>
         <Card ref={rightCardRef} className="self-start">
           <CardContent className="pt-6 space-y-6">
             <PresenceList variant="embedded" title="En visite chez nous"
               columns={[{ key: 'name', label: 'Nom' }, { key: 'email', label: 'Email' }, { key: 'date', label: 'Date' }]}
-              rows={visitingRows} count={visitingToday.length} rowClassName={(row) => String(row.name).toLowerCase().includes('manon roux') ? 'bg-primary/5' : undefined}
+              rows={visitingRows} count={visitingToday.length}
               showMore={!isExpanded('visiting') && visitingToday.length > 2} showLess={isExpanded('visiting') && visitingToday.length > 2} onShowMore={() => expand('visiting')} onShowLess={() => collapse('visiting')} emptyMessage="aucune visite chez nous" />
             <PresenceList variant="embedded" title="En déplacement aujourd'hui"
               columns={[{ key: 'name', label: 'Nom' }, { key: 'email', label: 'Email' }]}
@@ -278,7 +319,7 @@ function HomeContent() {
 
       {/* 3 colonnes de liens */}
       {canAccessBloc('HOME_LINKS_SECTION') && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {canAccessBloc('HOME_LIENS_UTILES_CARD') && (
             <LinksCard title="Sites utiles" links={filteredUsefulLinks} limit={usefulLinksLimit} />
           )}
