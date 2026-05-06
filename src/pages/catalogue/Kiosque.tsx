@@ -12,6 +12,7 @@ import { ListFilter as ListFilterIcon, CalendarDays, CalendarClock, BarChart3, A
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
 import { fetchCatalogueKiosques, type CatalogueKiosqueGroup } from '@/lib/catalogue';
+import { CatalogueCategoryBar, publisherMatchesCategory, type CatalogueCategory } from '@/components/CatalogueCategoryBar';
 import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 
 export function Kiosque() {
@@ -31,6 +32,7 @@ export function Kiosque() {
   ];
 
   const [selectedPublishers, setSelectedPublishers] = useState<string[]>([]);
+  const [activeCategory, setActiveCategory] = useState<CatalogueCategory>('Toutes');
   const [sortField, setSortField] = useState<'publicationDate' | 'creationDate' | 'views'>(
     'creationDate'
   );
@@ -79,25 +81,37 @@ export function Kiosque() {
 
   const sortedKiosques = useMemo(
     () =>
-      (kiosques ?? []).map(k => ({
-        ...k,
-        books: [...k.books].sort((a, b) => {
-          const valueA =
-            sortField === 'views'
-              ? a.views ?? 0
-              : sortField === 'creationDate'
-              ? parseDate(a.creationDate ?? '01/01/1970').getTime()
-              : parseDate(a.publicationDate).getTime();
-          const valueB =
-            sortField === 'views'
-              ? b.views ?? 0
-              : sortField === 'creationDate'
-              ? parseDate(b.creationDate ?? '01/01/1970').getTime()
-              : parseDate(b.publicationDate).getTime();
-          return sortDirection === 'asc' ? valueA - valueB : valueB - valueA;
-        }),
-      })),
-    [kiosques, sortDirection, sortField]
+      (kiosques ?? [])
+        .map(k => ({
+          ...k,
+          books: [...k.books]
+            .filter(book => {
+              if (selectedPublishers.length > 0 && !selectedPublishers.includes(book.publisher)) {
+                return false;
+              }
+              if (!publisherMatchesCategory(book.publisher, activeCategory)) {
+                return false;
+              }
+              return true;
+            })
+            .sort((a, b) => {
+              const valueA =
+                sortField === 'views'
+                  ? a.views ?? 0
+                  : sortField === 'creationDate'
+                  ? parseDate(a.creationDate ?? '01/01/1970').getTime()
+                  : parseDate(a.publicationDate).getTime();
+              const valueB =
+                sortField === 'views'
+                  ? b.views ?? 0
+                  : sortField === 'creationDate'
+                  ? parseDate(b.creationDate ?? '01/01/1970').getTime()
+                  : parseDate(b.publicationDate).getTime();
+              return sortDirection === 'asc' ? valueA - valueB : valueB - valueA;
+            }),
+        }))
+        .filter(k => k.books.length > 0),
+    [kiosques, sortDirection, sortField, selectedPublishers, activeCategory]
   );
 
   const currentSort = sortOptions[sortField];
@@ -140,9 +154,7 @@ export function Kiosque() {
         </CardHeader>
         <div className="px-6 space-y-4">
           <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
-            <Button variant="default" size="sm" className="whitespace-nowrap">
-              Toutes
-            </Button>
+            <CatalogueCategoryBar activeCategory={activeCategory} onCategoryClick={setActiveCategory} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button

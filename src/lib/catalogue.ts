@@ -141,10 +141,17 @@ export interface CatalogueBooksPage {
   pageSize: number;
 }
 
+export interface CatalogueFilters {
+  publisher?: string[];
+  category?: string;
+  authors?: string[];
+}
+
 export interface FetchCatalogueBooksOptions {
   seed?: string;
   signal?: AbortSignal;
   onProgress?: (page: CatalogueBooksPage) => void;
+  filters?: CatalogueFilters;
 }
 
 export interface CatalogueSearchSuggestion {
@@ -164,12 +171,110 @@ export async function fetchCatalogueBooks(): Promise<CatalogueBook[]> {
   return Promise.resolve(data);
 }
 
-export async function fetchCatalogueReleases(): Promise<CatalogueReleaseGroup[]> {
+let cachedPublishers: string[] | null = null;
+
+export async function fetchCataloguePublishers(): Promise<string[]> {
+  if (cachedPublishers) return cachedPublishers;
+
+  const endpoint = 'fetchCataloguePublishers';
+  logRequest(endpoint);
+
+  try {
+    const url = `${CATALOGUE_API_BASE}/publishers`;
+    const response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+
+    const payload = (await response.json()) as CatalogueApiResponse;
+    const result = payload.result;
+
+    let publishers: string[] = [];
+    if (Array.isArray(result)) {
+      publishers = result.filter((v): v is string => typeof v === 'string' && v.length > 0);
+    }
+
+    cachedPublishers = publishers;
+    logResponse(endpoint, publishers);
+    return publishers;
+  } catch {
+    return [];
+  }
+}
+
+export interface FetchCatalogueReleasesOptions {
+  hydrateCovers?: boolean;
+  onCoverProgress?: (groups: CatalogueReleaseGroup[]) => void;
+}
+
+export async function fetchCatalogueReleases(
+  options: FetchCatalogueReleasesOptions = {},
+): Promise<CatalogueReleaseGroup[]> {
+  const { hydrateCovers = true, onCoverProgress } = options;
   const endpoint = 'fetchCatalogueReleases';
   logRequest(endpoint);
-  const data: CatalogueReleaseGroup[] = [];
-  logResponse(endpoint, data);
-  return Promise.resolve(data);
+
+  try {
+    const url = `${CATALOGUE_API_BASE}/offices/past`;
+    const response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+
+    const payload = (await response.json()) as CatalogueApiResponse;
+    const records = extractApiResult(payload);
+
+    if (!records.length) {
+      logResponse(endpoint, []);
+      return [];
+    }
+
+    const allGroups = await buildCatalogueOfficeGroups(records);
+
+    // Convert CatalogueOfficeGroup[] to CatalogueReleaseGroup[]
+    let releaseGroups: CatalogueReleaseGroup[] = allGroups.map(g => ({
+      date: g.date,
+      books: g.books,
+    }));
+
+    if (!hydrateCovers) {
+      logResponse(endpoint, releaseGroups);
+
+      if (onCoverProgress) {
+        // Hydrate covers in background, emitting progress as CatalogueReleaseGroup[]
+        const officeGroups = allGroups.map(g => ({ ...g, books: g.books.map(b => ({ ...b })) }));
+        void hydrateCatalogueOfficeGroupsWithCovers(officeGroups, {
+          onCoverProgress: (updated) => {
+            onCoverProgress(updated.map(g => ({ date: g.date, books: g.books })));
+          },
+        }).catch(() => {});
+      }
+
+      return releaseGroups;
+    }
+
+    // Hydrate covers before returning
+    const officeGroups = allGroups.map(g => ({ ...g, books: g.books.map(b => ({ ...b })) }));
+    const hydrated = await hydrateCatalogueOfficeGroupsWithCovers(officeGroups, {
+      onCoverProgress: onCoverProgress
+        ? (updated) => onCoverProgress(updated.map(g => ({ date: g.date, books: g.books })))
+        : undefined,
+    });
+
+    releaseGroups = hydrated.map(g => ({ date: g.date, books: g.books }));
+    logResponse(endpoint, releaseGroups);
+    return releaseGroups;
+  } catch (error) {
+    throw error;
+  }
 }
 
 export async function fetchCatalogueBooksWithPagination(
@@ -177,17 +282,23 @@ export async function fetchCatalogueBooksWithPagination(
   pageSize: number = 50,
   options: FetchCatalogueBooksOptions = {},
 ): Promise<CatalogueBooksPage> {
-  const { seed, signal, onProgress } = options;
+  const { seed, signal, onProgress, filters } = options;
   const endpoint = `fetchCatalogueBooksWithPagination:page=${page}`;
   logRequest(endpoint);
 
   try {
     const params = new URLSearchParams({
-      page: String(page),
-      per_page: String(pageSize),
+      p: String(page),
+      size: String(pageSize),
     });
     if (seed) {
       params.set('seed', seed);
+    }
+    if (filters?.publisher && filters.publisher.length > 0) {
+      params.set('publisher', filters.publisher.join(','));
+    }
+    if (filters?.category && filters.category !== 'Toutes') {
+      params.set('category', filters.category);
     }
 
     const url = `${CATALOGUE_API_BASE}/books?${params.toString()}`;
@@ -408,14 +519,117 @@ const wait = (ms: number) =>
 
 const COVER_FETCH_RETRY_ATTEMPTS = 3;
 const COVER_FETCH_RETRY_DELAY_MS = 150;
+const COVER_BATCH_CONCURRENCY = 5;
+const COVER_IDB_NAME = 'glenat-covers';
+const COVER_IDB_STORE = 'covers';
+const COVER_IDB_VERSION = 1;
+// Covers older than 7 days are re-fetched
+const COVER_IDB_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const coverCache = new Map<string, string>();
 const pendingCoverRequests = new Map<string, Promise<string | null>>();
 const authorPhotoCache = new Map<string, string>();
 const pendingAuthorPhotoRequests = new Map<string, Promise<string | null>>();
 
-let lastCoverFetch: Promise<unknown> = Promise.resolve();
 let lastAuthorPhotoFetch: Promise<unknown> = Promise.resolve();
+
+// ─── IndexedDB cover cache ──────────────────────────────────────────
+let idbPromise: Promise<IDBDatabase | null> | null = null;
+
+const openCoverIdb = (): Promise<IDBDatabase | null> => {
+  if (idbPromise) return idbPromise;
+  idbPromise = new Promise<IDBDatabase | null>(resolve => {
+    try {
+      const req = indexedDB.open(COVER_IDB_NAME, COVER_IDB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(COVER_IDB_STORE)) {
+          db.createObjectStore(COVER_IDB_STORE);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+  return idbPromise;
+};
+
+const idbGet = async (ean: string): Promise<string | null> => {
+  const db = await openCoverIdb();
+  if (!db) return null;
+  return new Promise(resolve => {
+    try {
+      const tx = db.transaction(COVER_IDB_STORE, 'readonly');
+      const store = tx.objectStore(COVER_IDB_STORE);
+      const req = store.get(ean);
+      req.onsuccess = () => {
+        const entry = req.result as { data: string; ts: number } | undefined;
+        if (entry && Date.now() - entry.ts < COVER_IDB_TTL_MS) {
+          resolve(entry.data);
+        } else {
+          resolve(null);
+        }
+      };
+      req.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+};
+
+const idbSet = async (ean: string, data: string): Promise<void> => {
+  const db = await openCoverIdb();
+  if (!db) return;
+  try {
+    const tx = db.transaction(COVER_IDB_STORE, 'readwrite');
+    tx.objectStore(COVER_IDB_STORE).put({ data, ts: Date.now() }, ean);
+  } catch {
+    // Silently ignore write errors (quota, etc.)
+  }
+};
+
+// ─── Concurrency limiter for cover fetches ──────────────────────────
+let activeCoverFetches = 0;
+const coverQueue: Array<{ resolve: () => void; signal?: AbortSignal }> = [];
+
+const acquireCoverSlot = (signal?: AbortSignal): Promise<void> => {
+  if (signal?.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'));
+
+  if (activeCoverFetches < COVER_BATCH_CONCURRENCY) {
+    activeCoverFetches++;
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve, reject) => {
+    const entry = { resolve, signal };
+    coverQueue.push(entry);
+
+    if (signal) {
+      const onAbort = () => {
+        const idx = coverQueue.indexOf(entry);
+        if (idx !== -1) {
+          coverQueue.splice(idx, 1);
+          reject(new DOMException('Aborted', 'AbortError'));
+        }
+      };
+      signal.addEventListener('abort', onAbort, { once: true });
+    }
+  });
+};
+
+const releaseCoverSlot = () => {
+  // Drain any already-aborted entries from the front of the queue
+  while (coverQueue.length > 0 && coverQueue[0].signal?.aborted) {
+    coverQueue.shift();
+  }
+  const next = coverQueue.shift();
+  if (next) {
+    next.resolve();
+  } else {
+    activeCoverFetches--;
+  }
+};
 
 const shouldIncludeCredentials = (endpoint: string): boolean => {
   if (typeof window === 'undefined') {
@@ -486,101 +700,139 @@ const fetchCover = async (ean: string, signal?: AbortSignal): Promise<string | n
 
   const trimmedEan = ean.trim();
 
+  // 1. Memory cache (instant)
   const cachedCover = coverCache.get(trimmedEan);
   if (cachedCover) {
     return cachedCover;
   }
 
-  // Vérifier si la requête a été annulée
   if (signal?.aborted) {
     return null;
   }
 
-  const pendingRequest = pendingCoverRequests.get(trimmedEan);
-  if (pendingRequest) {
-    return pendingRequest;
+  // Deduplicate concurrent requests for the same EAN.
+  // The pending request is signal-independent: it always completes and caches.
+  // Callers can abort their *wait* via signal, but the underlying fetch continues
+  // so other callers (and future visits) benefit from the result.
+  let request = pendingCoverRequests.get(trimmedEan);
+
+  if (!request) {
+    request = (async () => {
+      // 2. IndexedDB cache (fast, persists across sessions)
+      const idbCover = await idbGet(trimmedEan);
+      if (idbCover) {
+        coverCache.set(trimmedEan, idbCover);
+        return idbCover;
+      }
+
+      // 3. Network fetch with concurrency limit (no signal — let it complete)
+      try {
+        await acquireCoverSlot();
+      } catch {
+        return null;
+      }
+      try {
+        return await fetchCoverFromNetwork(trimmedEan);
+      } finally {
+        releaseCoverSlot();
+      }
+    })();
+
+    pendingCoverRequests.set(trimmedEan, request);
+    request.finally(() => {
+      pendingCoverRequests.delete(trimmedEan);
+    });
   }
 
-  const previousFetch = lastCoverFetch;
-  const request = (async () => {
-    await previousFetch.catch(() => {});
-    await wait(3);
+  // Allow caller to abort their wait via signal
+  if (!signal) {
+    return request;
+  }
 
-    // Vérifier si annulé avant de commencer
-    if (signal?.aborted) {
-      return null;
+  return new Promise<string | null>((resolve) => {
+    let settled = false;
+
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      resolve(null);
+    };
+
+    if (signal.aborted) {
+      onAbort();
+      return;
     }
 
-    for (let attempt = 0; attempt < COVER_FETCH_RETRY_ATTEMPTS; attempt += 1) {
-      for (const endpoint of CATALOGUE_COVERAGE_ENDPOINTS) {
-        // Vérifier si annulé avant chaque tentative
-        if (signal?.aborted) {
+    signal.addEventListener('abort', onAbort, { once: true });
+
+    request.then((result) => {
+      if (settled) return;
+      settled = true;
+      signal.removeEventListener('abort', onAbort);
+      resolve(result);
+    }).catch(() => {
+      if (settled) return;
+      settled = true;
+      signal.removeEventListener('abort', onAbort);
+      resolve(null);
+    });
+  });
+};
+
+const fetchCoverFromNetwork = async (ean: string, signal?: AbortSignal): Promise<string | null> => {
+  for (let attempt = 0; attempt < COVER_FETCH_RETRY_ATTEMPTS; attempt += 1) {
+    for (const endpoint of CATALOGUE_COVERAGE_ENDPOINTS) {
+      if (signal?.aborted) return null;
+
+      const url = `${endpoint}${endpoint.includes('?') ? '&' : '?'}ean=${encodeURIComponent(ean)}`;
+
+      try {
+        const response = await fetch(url, {
+          ...buildCoverRequestInit(endpoint),
+          signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status} ${response.statusText}`);
+        }
+
+        const data = (await response.json()) as CoverApiResponse;
+        const imageBase64 = normaliseCoverDataUrl(data?.result?.imageBase64);
+
+        if (data?.success && imageBase64) {
+          coverCache.set(ean, imageBase64);
+          void idbSet(ean, imageBase64);
+          return imageBase64;
+        }
+
+        const errorMessage = data?.message ?? "Réponse inattendue de l'API couverture";
+        if (errorMessage.includes('Image non trouvée') || errorMessage.includes('image non trouvée')) {
+          coverCache.set(ean, FALLBACK_COVER_DATA_URL);
+          void idbSet(ean, FALLBACK_COVER_DATA_URL);
+          return FALLBACK_COVER_DATA_URL;
+        }
+
+        throw new Error(errorMessage);
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
           return null;
         }
 
-        const url = `${endpoint}${endpoint.includes('?') ? '&' : '?'}ean=${encodeURIComponent(trimmedEan)}`;
-
-        try {
-          const response = await fetch(url, {
-            ...buildCoverRequestInit(endpoint),
-            signal
-          });
-
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status} ${response.statusText}`);
-          }
-
-          const data = (await response.json()) as CoverApiResponse;
-          const imageBase64 = normaliseCoverDataUrl(data?.result?.imageBase64);
-
-          if (data?.success && imageBase64) {
-            coverCache.set(trimmedEan, imageBase64);
-            return imageBase64;
-          }
-
-          // Si l'image n'est pas trouvée, ne pas retry
-          const errorMessage = data?.message ?? "Réponse inattendue de l'API couverture";
-          if (errorMessage.includes('Image non trouvée') || errorMessage.includes('image non trouvée')) {
-            coverCache.set(trimmedEan, FALLBACK_COVER_DATA_URL);
-            return FALLBACK_COVER_DATA_URL;
-          }
-
-          throw new Error(errorMessage);
-        } catch (error) {
-          // Ignorer silencieusement les erreurs d'annulation
-          if (error instanceof Error && error.name === 'AbortError') {
-            return null;
-          }
-
-          const errorMsg = error instanceof Error ? error.message : String(error);
-          // Si l'image n'est pas trouvée, ne pas retry
-          if (errorMsg.includes('Image non trouvée') || errorMsg.includes('image non trouvée')) {
-            coverCache.set(trimmedEan, FALLBACK_COVER_DATA_URL);
-            return FALLBACK_COVER_DATA_URL;
-          }
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        if (errorMsg.includes('Image non trouvée') || errorMsg.includes('image non trouvée')) {
+          coverCache.set(ean, FALLBACK_COVER_DATA_URL);
+          void idbSet(ean, FALLBACK_COVER_DATA_URL);
+          return FALLBACK_COVER_DATA_URL;
         }
-      }
-
-      if (attempt < COVER_FETCH_RETRY_ATTEMPTS - 1) {
-        await wait(COVER_FETCH_RETRY_DELAY_MS);
       }
     }
 
-    return null;
-  })();
+    if (attempt < COVER_FETCH_RETRY_ATTEMPTS - 1) {
+      await wait(COVER_FETCH_RETRY_DELAY_MS);
+    }
+  }
 
-  pendingCoverRequests.set(trimmedEan, request);
-
-  lastCoverFetch = request.then(
-    () => undefined,
-    () => undefined,
-  );
-
-  request.finally(() => {
-    pendingCoverRequests.delete(trimmedEan);
-  });
-
-  return request;
+  return null;
 };
 
 const fetchAuthorPhoto = async (photoFilename: string): Promise<string | null> => {
@@ -1385,34 +1637,13 @@ export async function fetchCatalogueOffices(
     }
 
     const payload = (await response.json()) as CatalogueApiResponse;
-
-    // DEBUG offices - à supprimer
-    const payloadObj = payload as Record<string, unknown>;
-    const resultField = payloadObj.result;
-    console.warn('[offices:debug] payload keys:', Object.keys(payloadObj));
-    console.warn('[offices:debug] result type:', typeof resultField, 'isArray:', Array.isArray(resultField));
-    if (resultField && typeof resultField === 'object' && !Array.isArray(resultField)) {
-      const keys = Object.keys(resultField as Record<string, unknown>);
-      console.warn('[offices:debug] result object keys count:', keys.length, 'first 5:', keys.slice(0, 5));
-    }
-
     const records = extractApiResult(payload);
-    console.warn('[offices:debug] extractApiResult returned:', records.length, 'records');
-    if (records.length > 0) {
-      const dates = records.map(r => {
-        const d = (r as Record<string, unknown>).dateMev;
-        return typeof d === 'object' && d ? (d as Record<string, unknown>).date : d;
-      });
-      const uniqueDates = [...new Set(dates.map(String))];
-      console.warn('[offices:debug] unique dateMev values:', uniqueDates.length, uniqueDates);
-    }
 
     if (!records.length) {
       throw new Error("La base de donnees n'a retourne aucun resultat");
     }
 
     const groups = await buildCatalogueOfficeGroups(records);
-    console.warn('[offices:debug] groups count:', groups.length, groups.map(g => `${g.date} (${g.books.length} books)`));
 
     if (!groups.length) {
       throw new Error('Impossible de construire les offices a partir des donnees recues');
@@ -1453,6 +1684,369 @@ export async function fetchCatalogueKiosques(): Promise<CatalogueKiosqueGroup[]>
   const data: CatalogueKiosqueGroup[] = [];
   logResponse(endpoint, data);
   return Promise.resolve(data);
+}
+
+export interface CatalogueAuthorListItem {
+  idAuthor: string;
+  firstName: string;
+  lastName: string;
+  fullName?: string;
+  photo?: string;
+  fonctions: string[];
+  bookCount: number;
+}
+
+export async function fetchCatalogueAuthorsList(
+  signal?: AbortSignal,
+): Promise<CatalogueAuthorListItem[]> {
+  const endpoint = 'fetchCatalogueAuthorsList';
+  logRequest(endpoint);
+
+  const url = `${CATALOGUE_API_BASE}/authors`;
+  const response = await fetchWithOAuth(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} ${response.statusText}`);
+  }
+
+  const payload = (await response.json()) as CatalogueApiResponse;
+  const records = extractApiResult(payload);
+
+  const authors: CatalogueAuthorListItem[] = records
+    .map((record) => {
+      const firstName = ensureString(getField(record, 'firstname', 'firstName', 'prenom')) ?? '';
+      const lastName = ensureString(getField(record, 'lastname', 'lastName', 'nom')) ?? '';
+      const fullName = ensureString(getField(record, 'fullname', 'fullName', 'nomcomplet'));
+      const photo = ensureString(getField(record, 'photo'));
+      const fonctionsRaw = ensureString(getField(record, 'fonctions', 'fonction')) ?? '';
+      const bookCount = ensureNumber(getField(record, 'bookcount', 'bookCount', 'count')) ?? 0;
+      const idAuthor = ensureString(getField(record, 'idauthor', 'idAuthor')) ?? '';
+
+      const fonctions = fonctionsRaw
+        .split(',')
+        .map((f) => f.trim())
+        .filter(Boolean);
+
+      return {
+        idAuthor,
+        firstName,
+        lastName,
+        fullName,
+        photo,
+        fonctions,
+        bookCount,
+      };
+    })
+    .filter((a) => a.idAuthor && a.firstName && a.lastName);
+
+  logResponse(endpoint, authors);
+  return authors;
+}
+
+export async function fetchCatalogueAuthorBookCounts(
+  signal?: AbortSignal,
+): Promise<Record<string, number>> {
+  const endpoint = 'fetchCatalogueAuthorBookCounts';
+  logRequest(endpoint);
+
+  const url = `${CATALOGUE_API_BASE}/authors/counts`;
+  const response = await fetchWithOAuth(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} ${response.statusText}`);
+  }
+
+  const payload = (await response.json()) as CatalogueApiResponse;
+  const records = extractApiResult(payload);
+
+  const counts: Record<string, number> = {};
+  for (const record of records) {
+    const name = ensureString(getField(record, 'authornamelower', 'authorNameLower', 'name'));
+    const count = ensureNumber(getField(record, 'bookcount', 'bookCount', 'count'));
+    if (name && count !== undefined) {
+      counts[name] = count;
+    }
+  }
+
+  logResponse(endpoint, counts);
+  return counts;
+}
+
+export interface CatalogueAuthorDetailInfo {
+  idAuthor: string;
+  firstName: string;
+  lastName: string;
+  fullName?: string;
+  photo?: string;
+  fonction?: string;
+}
+
+export async function fetchCatalogueAuthorById(
+  idAuthor: string,
+  signal?: AbortSignal,
+): Promise<CatalogueAuthorDetailInfo | null> {
+  const endpoint = `fetchCatalogueAuthorById:${idAuthor}`;
+  logRequest(endpoint);
+
+  const url = `${CATALOGUE_API_BASE}/authors/${encodeURIComponent(idAuthor)}`;
+  const response = await fetchWithOAuth(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} ${response.statusText}`);
+  }
+
+  const payload = (await response.json()) as CatalogueApiResponse;
+  const records = extractApiResult(payload);
+  const record = records[0];
+  if (!record) return null;
+
+  return {
+    idAuthor: ensureString(getField(record, 'idauthor', 'idAuthor')) ?? idAuthor,
+    firstName: ensureString(getField(record, 'firstname', 'firstName', 'prenom')) ?? '',
+    lastName: ensureString(getField(record, 'lastname', 'lastName', 'nom')) ?? '',
+    fullName: ensureString(getField(record, 'fullname', 'fullName', 'nomcomplet')),
+    photo: ensureString(getField(record, 'photo')),
+    fonction: ensureString(getField(record, 'fonction')),
+  };
+}
+
+export interface CatalogueAuthorText {
+  idTypeTexte?: string;
+  texte: string;
+}
+
+export async function fetchCatalogueAuthorTexts(
+  idAuthor: string,
+  signal?: AbortSignal,
+): Promise<CatalogueAuthorText[]> {
+  const endpoint = `fetchCatalogueAuthorTexts:${idAuthor}`;
+  logRequest(endpoint);
+
+  const url = `${CATALOGUE_API_BASE}/authors/${encodeURIComponent(idAuthor)}/texts`;
+  const response = await fetchWithOAuth(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} ${response.statusText}`);
+  }
+
+  const payload = (await response.json()) as CatalogueApiResponse;
+  const records = extractApiResult(payload);
+
+  return records
+    .map((record) => ({
+      idTypeTexte: ensureString(getField(record, 'idtypetexte', 'idTypeTexte')),
+      texte: ensureString(getField(record, 'texte')) ?? '',
+    }))
+    .filter((t) => t.texte);
+}
+
+export async function fetchCatalogueBooksByAuthorId(
+  idAuthor: string,
+  signal?: AbortSignal,
+): Promise<CatalogueBook[]> {
+  const endpoint = `fetchCatalogueBooksByAuthorId:${idAuthor}`;
+  logRequest(endpoint);
+
+  const url = `${CATALOGUE_API_BASE}/authors/${encodeURIComponent(idAuthor)}/books`;
+  const response = await fetchWithOAuth(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} ${response.statusText}`);
+  }
+
+  const payload = (await response.json()) as CatalogueApiResponse;
+  const records = extractApiResult(payload);
+
+  const books = (
+    await Promise.all(records.map((record) => normalizeBookFromDatabaseRecord(record, false)))
+  ).filter((book): book is CatalogueBook => book !== null);
+
+  logResponse(endpoint, books);
+  return books;
+}
+
+export interface FetchCatalogueNoStockBooksOptions {
+  hydrateCovers?: boolean;
+  signal?: AbortSignal;
+  onProgress?: (books: CatalogueBook[]) => void;
+}
+
+export async function fetchCatalogueNoStockBooks(
+  options: FetchCatalogueNoStockBooksOptions = {},
+): Promise<CatalogueBook[]> {
+  const { hydrateCovers = false, signal, onProgress } = options;
+  const endpoint = 'fetchCatalogueNoStockBooks';
+  logRequest(endpoint);
+
+  const url = `${CATALOGUE_API_BASE}/nostock`;
+  const response = await fetchWithOAuth(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} ${response.statusText}`);
+  }
+
+  const payload = (await response.json()) as CatalogueApiResponse;
+  const records = extractApiResult(payload);
+
+  if (!records.length) {
+    logResponse(endpoint, []);
+    return [];
+  }
+
+  const booksWithoutCovers = (
+    await Promise.all(records.map(record => normalizeBookFromDatabaseRecord(record, false)))
+  ).filter((book): book is CatalogueBook => book !== null);
+
+  if (!hydrateCovers && !onProgress) {
+    logResponse(endpoint, booksWithoutCovers);
+    return booksWithoutCovers;
+  }
+
+  if (!onProgress) {
+    const booksWithCovers = (
+      await Promise.all(records.map(record => normalizeBookFromDatabaseRecord(record, true)))
+    ).filter((book): book is CatalogueBook => book !== null);
+
+    logResponse(endpoint, booksWithCovers);
+    return booksWithCovers;
+  }
+
+  // Progressive cover loading
+  const resultBooks = [...booksWithoutCovers];
+  void (async () => {
+    await Promise.all(
+      resultBooks.map(async (book, index) => {
+        if (!book.ean || signal?.aborted) return;
+
+        try {
+          const coverUrl = await fetchCover(book.ean, signal);
+          if (coverUrl && coverUrl !== book.cover) {
+            resultBooks[index] = { ...book, cover: coverUrl };
+          }
+        } catch (error) {
+          if (error instanceof Error && error.name === 'AbortError') return;
+        }
+
+        if (!signal?.aborted) {
+          onProgress([...resultBooks]);
+        }
+      }),
+    );
+  })().catch(() => {
+    // Silently ignore cover loading errors
+  });
+
+  logResponse(endpoint, booksWithoutCovers);
+  return booksWithoutCovers;
+}
+
+export interface FetchCatalogueTopOrdersOptions {
+  signal?: AbortSignal;
+  onProgress?: (books: CatalogueBook[]) => void;
+}
+
+export async function fetchCatalogueTopOrders(
+  options: FetchCatalogueTopOrdersOptions = {},
+): Promise<CatalogueBook[]> {
+  const { signal, onProgress } = options;
+  const endpoint = 'fetchCatalogueTopOrders';
+  logRequest(endpoint);
+
+  const url = `${CATALOGUE_API_BASE}/top-orders`;
+  const response = await fetchWithOAuth(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} ${response.statusText}`);
+  }
+
+  const payload = (await response.json()) as CatalogueApiResponse;
+  const records = extractApiResult(payload);
+
+  if (!records.length) {
+    logResponse(endpoint, []);
+    return [];
+  }
+
+  const enriched = await Promise.all(
+    records.map(async (record) => {
+      const book = await normalizeBookFromDatabaseRecord(record, false);
+      if (!book) return null;
+      const nbCommandes =
+        ensureNumber(getField(record, 'nb_commandes', 'nbcommandes', 'count', 'total')) ?? 0;
+      return { book, nbCommandes };
+    }),
+  );
+
+  const valid = enriched.filter(
+    (item): item is { book: CatalogueBook; nbCommandes: number } => item !== null,
+  );
+
+  const booksWithoutCovers: CatalogueBook[] = valid.map((item, index) => ({
+    ...item.book,
+    ribbonText: `#${index + 1}`,
+    infoLabel: 'Commandes',
+    infoValue: item.nbCommandes,
+  }));
+
+  if (!onProgress) {
+    logResponse(endpoint, booksWithoutCovers);
+    return booksWithoutCovers;
+  }
+
+  const resultBooks = [...booksWithoutCovers];
+  void (async () => {
+    await Promise.all(
+      resultBooks.map(async (book, index) => {
+        if (!book.ean || signal?.aborted) return;
+
+        try {
+          const coverUrl = await fetchCover(book.ean, signal);
+          if (coverUrl && coverUrl !== book.cover) {
+            resultBooks[index] = { ...book, cover: coverUrl };
+          }
+        } catch (error) {
+          if (error instanceof Error && error.name === 'AbortError') return;
+        }
+
+        if (!signal?.aborted) {
+          onProgress([...resultBooks]);
+        }
+      }),
+    );
+  })().catch(() => {
+    // Silently ignore cover loading errors
+  });
+
+  logResponse(endpoint, booksWithoutCovers);
+  return booksWithoutCovers;
 }
 
 export async function fetchCatalogueEditions(): Promise<CatalogueEdition[]> {

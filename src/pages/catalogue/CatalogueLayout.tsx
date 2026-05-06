@@ -7,15 +7,15 @@ const quickLinks: QuickAccessItem[] = [
   { label: 'Prochaines offices', icon: CalendarDays, href: '/catalogue/offices' },
   { label: 'Dernières nouveautés', icon: Sparkles, href: '/catalogue/nouveautes' },
   { label: 'Éditions', icon: Building, href: '/catalogue', permissionPath: '/catalogue/accueil' },
-  { label: 'Les auteurs', icon: UserPen, permissionPath: '/catalogue/auteurs' },
+  { label: 'Les auteurs', icon: UserPen, href: '/catalogue/auteurs' },
   { label: 'Tout le catalogue', icon: BookOpen, href: '/catalogue/all' },
 
-  { label: 'Télécharger le catalogue', icon: Download, permissionPath: '/catalogue/telecharger' },
+  { label: 'Télécharger le catalogue', icon: Download, href: '/catalogue/telecharger' },
   // { label: 'Kiosque', icon: Store, href: '/catalogue/kiosque' },
-  { label: 'Top des commandes', icon: TrendingUp, permissionPath: '/catalogue/top-commandes' },
+  { label: 'Top des commandes', icon: TrendingUp, href: '/catalogue/top-commandes' },
   { label: 'Couverture à paraître', icon: Image, href: '/catalogue/couverture-a-paraitre' },
   { label: 'Information à renseigner', icon: Info, permissionPath: '/catalogue/informations' },
-  { label: 'Plus de stock', icon: PackageX, permissionPath: '/catalogue/plus-de-stock' },
+  { label: 'Plus de stock', icon: PackageX, href: '/catalogue/plus-de-stock' },
 ];
 
 interface CatalogueLayoutProps {

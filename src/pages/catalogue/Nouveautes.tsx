@@ -7,47 +7,106 @@ import BookCard from '@/components/BookCard';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { ListFilter as ListFilterIcon, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
-import { Fragment, useEffect, useState } from 'react';
+import { ListFilter as ListFilterIcon } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
-import { fetchCatalogueReleases, type CatalogueReleaseGroup } from '@/lib/catalogue';
+import { fetchCatalogueReleases, fetchCatalogueCover, fetchCataloguePublishers, type CatalogueBook } from '@/lib/catalogue';
+import { CatalogueCategoryBar, publisherMatchesCategory, type CatalogueCategory } from '@/components/CatalogueCategoryBar';
 import { useScrollRestoration } from '@/hooks/useScrollRestoration';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const SESSION_KEY = 'nouveautes-shuffle-order';
+
+function shuffle<T extends { ean: string }>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+function applySessionOrder(books: CatalogueBook[]): CatalogueBook[] {
+  const raw = sessionStorage.getItem(SESSION_KEY);
+  if (!raw) return shuffleAndPersist(books);
+
+  try {
+    const order: string[] = JSON.parse(raw);
+    const byEan = new Map(books.map(b => [b.ean, b]));
+
+    // Reorder books according to saved order, append any new ones at the end
+    const ordered: CatalogueBook[] = [];
+    for (const ean of order) {
+      const book = byEan.get(ean);
+      if (book) {
+        ordered.push(book);
+        byEan.delete(ean);
+      }
+    }
+    // Append books not in the saved order (new books since last visit)
+    for (const book of byEan.values()) {
+      ordered.push(book);
+    }
+
+    return ordered;
+  } catch {
+    return shuffleAndPersist(books);
+  }
+}
+
+function shuffleAndPersist(books: CatalogueBook[]): CatalogueBook[] {
+  const shuffled = shuffle(books);
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(shuffled.map(b => b.ean)));
+  return shuffled;
+}
 
 export function Nouveautes() {
   useScrollRestoration();
-  const publishers = [
-    'Hugo',
-    'Comix Buro',
-    'Disney',
-    'Éditions Licences',
-    'Glénat bd',
-    'Glénat Jeunesse',
-    'Glénat Livres',
-    'Glénat Manga',
-    'Rando Editions',
-    "Vents d'Ouest",
-    'Livres diffusés',
-  ];
 
+  const [publishers, setPublishers] = useState<string[]>([]);
   const [selectedPublishers, setSelectedPublishers] = useState<string[]>([]);
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
-  const [releases, setReleases] = useState<CatalogueReleaseGroup[] | null>(null);
+  const [activeCategory, setActiveCategory] = useState<CatalogueCategory>('Toutes');
+  const [allBooks, setAllBooks] = useState<CatalogueBook[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const coverAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    void fetchCataloguePublishers().then(setPublishers);
+  }, []);
 
   useEffect(() => {
     let isActive = true;
 
-    fetchCatalogueReleases()
-      .then(data => {
-        if (isActive) {
-          setReleases(data);
-        }
+    fetchCatalogueReleases({ hydrateCovers: false })
+      .then(groups => {
+        if (!isActive) return;
+
+        const books = groups.flatMap(g => g.books);
+        const ordered = applySessionOrder(books);
+        setAllBooks(ordered);
+        setLoading(false);
+
+        // Load covers in display order
+        const abort = new AbortController();
+        coverAbortRef.current = abort;
+        void hydrateCoversInOrder(ordered, abort.signal, (ean, cover) => {
+          if (!isActive) return;
+          setAllBooks(prev =>
+            prev.map(b => (b.ean === ean ? { ...b, cover } : b)),
+          );
+        });
       })
-      .catch(() => {
-        // Silently ignore releases fetch errors
+      .catch((err) => {
+        if (isActive) {
+          setError(err instanceof Error ? err.message : 'Erreur lors du chargement');
+          setLoading(false);
+        }
       });
 
     return () => {
       isActive = false;
+      coverAbortRef.current?.abort();
     };
   }, []);
 
@@ -59,22 +118,29 @@ export function Nouveautes() {
     );
   };
 
-  const toggleSortOrder = () => {
-    setSortOrder(prev => (prev === 'desc' ? 'asc' : 'desc'));
-  };
+  const filteredBooks = useMemo(() => {
+    return allBooks.filter(book => {
+      if (selectedPublishers.length > 0 && !selectedPublishers.includes(book.publisher)) {
+        return false;
+      }
+      if (!publisherMatchesCategory(book.publisher, activeCategory)) {
+        return false;
+      }
+      return true;
+    });
+  }, [allBooks, selectedPublishers, activeCategory]);
 
-  const parseDate = (dateStr: string) => {
-    const [day, month, year] = dateStr.split('/').map(Number);
-    return new Date(year, month - 1, day);
-  };
-
-  const sortedReleases = releases
-    ? [...releases].sort((a, b) => {
-        const dateA = parseDate(a.date).getTime();
-        const dateB = parseDate(b.date).getTime();
-        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-      })
-    : [];
+  const renderSkeleton = () => (
+    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+      {Array.from({ length: 15 }, (_, i) => (
+        <div key={i} className="space-y-3">
+          <Skeleton className="h-64 w-full rounded-lg" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-3 w-1/2" />
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="p-6 space-y-6">
@@ -105,22 +171,7 @@ export function Nouveautes() {
         </CardHeader>
         <div className="px-6 space-y-4">
           <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
-            <Button variant="default" size="sm" className="whitespace-nowrap">
-              Toutes
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="whitespace-nowrap"
-              onClick={toggleSortOrder}
-            >
-              Trier par date
-              {sortOrder === 'desc' ? (
-                <ArrowDownWideNarrow className="ml-2 h-4 w-4" />
-              ) : (
-                <ArrowUpWideNarrow className="ml-2 h-4 w-4" />
-              )}
-            </Button>
+            <CatalogueCategoryBar activeCategory={activeCategory} onCategoryClick={setActiveCategory} />
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="whitespace-nowrap">
@@ -147,19 +198,25 @@ export function Nouveautes() {
         <CardContent className="p-6">
           <CatalogueLayout active="Dernières nouveautés">
             <h3 className="mb-4 font-semibold text-xl">Dernières nouveautés</h3>
-            {sortedReleases.length > 0 && (
+
+            {loading && renderSkeleton()}
+
+            {error && (
+              <div className="flex items-center justify-center py-12 text-muted-foreground">
+                <p>{error}</p>
+              </div>
+            )}
+
+            {!loading && !error && filteredBooks.length === 0 && (
+              <div className="flex items-center justify-center py-12 text-muted-foreground">
+                <p>Aucune nouveauté disponible pour le moment.</p>
+              </div>
+            )}
+
+            {filteredBooks.length > 0 && (
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
-                {sortedReleases.map(group => (
-                  <Fragment key={group.date}>
-                    <Card className="col-span-full w-fit min-w-[280px] bg-background">
-                      <CardHeader className="py-2">
-                        <CardTitle className="text-lg">Date de sortie : {group.date}</CardTitle>
-                      </CardHeader>
-                    </Card>
-                    {group.books.map(book => (
-                      <BookCard key={book.ean} {...book} />
-                    ))}
-                  </Fragment>
+                {filteredBooks.map(book => (
+                  <BookCard key={book.ean} {...book} />
                 ))}
               </div>
             )}
@@ -168,6 +225,24 @@ export function Nouveautes() {
       </Card>
     </div>
   );
+}
+
+async function hydrateCoversInOrder(
+  books: CatalogueBook[],
+  signal: AbortSignal,
+  onCover: (ean: string, cover: string) => void,
+) {
+  for (const book of books) {
+    if (signal.aborted) return;
+    try {
+      const cover = await fetchCatalogueCover(book.ean);
+      if (cover && cover !== book.cover) {
+        onCover(book.ean, cover);
+      }
+    } catch {
+      // Skip failed covers
+    }
+  }
 }
 
 export default Nouveautes;

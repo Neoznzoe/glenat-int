@@ -10,28 +10,22 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { ListFilter as ListFilterIcon, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { SecureLink } from '@/components/routing/SecureLink';
-import { fetchCatalogueOffices, type CatalogueOfficeGroup } from '@/lib/catalogue';
+import { fetchCatalogueOffices, fetchCataloguePublishers, type CatalogueOfficeGroup } from '@/lib/catalogue';
+import { CatalogueCategoryBar, publisherMatchesCategory, type CatalogueCategory } from '@/components/CatalogueCategoryBar';
 import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 
 export function Offices() {
   useScrollRestoration();
-  const publishers = [
-    'Hugo',
-    'Comix Buro',
-    'Disney',
-    'Éditions Licences',
-    'Glénat bd',
-    'Glénat Jeunesse',
-    'Glénat Livres',
-    'Glénat Manga',
-    'Rando Editions',
-    "Vents d'Ouest",
-    'Livres diffusés',
-  ];
 
+  const [publishers, setPublishers] = useState<string[]>([]);
   const [selectedPublishers, setSelectedPublishers] = useState<string[]>([]);
+  const [activeCategory, setActiveCategory] = useState<CatalogueCategory>('Toutes');
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('asc');
   const [offices, setOffices] = useState<CatalogueOfficeGroup[] | null>(null);
+
+  useEffect(() => {
+    void fetchCataloguePublishers().then(setPublishers);
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -136,24 +130,27 @@ export function Offices() {
 
     const direction = sortDirection === 'asc' ? 1 : -1;
 
-    // Filtrer les offices par publisher si des filtres sont sélectionnés
-    let filteredOffices = offices;
-    if (selectedPublishers.length > 0) {
-      filteredOffices = offices
-        .map(group => ({
-          ...group,
-          books: group.books.filter(book =>
-            selectedPublishers.includes(book.publisher)
-          ),
-        }))
-        .filter(group => group.books.length > 0); // Garder uniquement les offices avec des livres
-    }
+    // Filter by publisher and category
+    const filteredOffices = offices
+      .map(group => ({
+        ...group,
+        books: group.books.filter(book => {
+          if (selectedPublishers.length > 0 && !selectedPublishers.includes(book.publisher)) {
+            return false;
+          }
+          if (!publisherMatchesCategory(book.publisher, activeCategory)) {
+            return false;
+          }
+          return true;
+        }),
+      }))
+      .filter(group => group.books.length > 0);
 
     return filteredOffices
       .map((group, index) => ({ group, index }))
       .sort((a, b) => compare(a, b) * direction)
       .map(({ group }) => group);
-  }, [offices, sortDirection, selectedPublishers]);
+  }, [offices, sortDirection, selectedPublishers, activeCategory]);
 
   return (
     <div className="p-6 space-y-6">
@@ -184,9 +181,7 @@ export function Offices() {
         </CardHeader>
         <div className="px-6 space-y-4">
           <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
-            <Button variant="default" size="sm" className="whitespace-nowrap">
-              Toutes
-            </Button>
+            <CatalogueCategoryBar activeCategory={activeCategory} onCategoryClick={setActiveCategory} />
             <Button
               variant="outline"
               size="sm"

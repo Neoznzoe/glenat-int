@@ -1,28 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ListFilter as ListFilterIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import ListFilter from '@/components/ui/list-filter';
 import TagInput from '@/components/ui/tag-input';
+import { fetchCataloguePublishers } from '@/lib/catalogue';
 
 const formats = ['Album', 'Poche', 'Intégrale'];
-const editions = [
-  'Adonis',
-  'Blanche',
-  'Comix Buro',
-  'Disney',
-  'Éditions licences',
-  'Cheval Magazine',
-  'Glénat BD',
-  'Glénat Jeunesse',
-  'Glénat Manga',
-  'Hugo',
-  'Livres diffusés',
-  'Rando éditions',
-  'Glénat Livres',
-  "Vent d'Ouest",
-];
 const collections = ['Coffrets', 'Éditions limitées', 'Collector'];
 const availability = ['En stock', 'À réimprimer', 'Épuisé'];
 const ageTargets = ['Jeunesse 3+', 'Jeunesse 6+', 'Ado', 'Adulte'];
@@ -44,7 +29,12 @@ const themes = [
 ];
 
 export function BookFilters() {
+  const [editions, setEditions] = useState<string[]>([]);
   const [authors, setAuthors] = useState<string[]>([]);
+
+  useEffect(() => {
+    void fetchCataloguePublishers().then(setEditions);
+  }, []);
   const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
   const [selectedEditions, setSelectedEditions] = useState<string[]>([]);
   const [selectedCollections, setSelectedCollections] = useState<string[]>([]);

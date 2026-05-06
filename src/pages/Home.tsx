@@ -8,7 +8,7 @@ import { LinksCard } from '@/components/LinksCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/context/AuthContext';
 import { useModulePermissionsContext } from '@/context/ModulePermissionsContext';
-import { fetchNextCatalogueOffice, type CatalogueOfficeGroup } from '@/lib/catalogue';
+import { fetchCatalogueOffices, type CatalogueOfficeGroup } from '@/lib/catalogue';
 import { fetchTodayAbsences, type AbsentPerson, fetchTodayRemoteWorking, type RemoteWorkingPerson } from '@/lib/absencesApi';
 import { HomeSkeleton } from '@/components/HomeSkeleton';
 import { sharePointLinks, usefulLinks, companyLifeLinks } from '@/data/homeData';
@@ -23,7 +23,7 @@ function HomeContent() {
   const { canAccessBloc, canAccessElement } = useModulePermissionsContext();
   const userName = user?.givenName || user?.displayName || 'utilisateur';
 
-  const [nextOffice, setNextOffice] = useState<CatalogueOfficeGroup | null>(null);
+  const [nextOffices, setNextOffices] = useState<CatalogueOfficeGroup[]>([]);
   const [isLoadingOffice, setIsLoadingOffice] = useState(true);
   const [absentsToday, setAbsentsToday] = useState<AbsentPerson[]>([]);
   const [teleworkToday, setTeleworkToday] = useState<RemoteWorkingPerson[]>([]);
@@ -69,14 +69,14 @@ function HomeContent() {
 
     const handleProgress = (groups: CatalogueOfficeGroup[]) => {
       if (isActive && groups.length > 0) {
-        setNextOffice(groups[0] ?? null);
+        setNextOffices(groups.slice(0, 3));
       }
     };
 
     // Démarrer tous les fetches en parallèle avec Promise.all
-    const officePromise = fetchNextCatalogueOffice({ hydrateCovers: false, onCoverProgress: handleProgress })
-      .then(office => {
-        if (isActive) setNextOffice(office);
+    const officePromise = fetchCatalogueOffices({ hydrateCovers: false, onCoverProgress: handleProgress })
+      .then(offices => {
+        if (isActive) setNextOffices(offices.slice(0, 3));
       })
       .catch(() => {
         // Silently ignore office fetch errors
@@ -107,10 +107,12 @@ function HomeContent() {
     return () => { isActive = false; };
   }, []);
 
-  const covers = nextOffice?.books.map(book => ({
-    src: book.cover,
-    href: `/catalogue/book?ean=${book.ean}`,
-  })) ?? [];
+  const covers = nextOffices.flatMap(office =>
+    office.books.map(book => ({
+      src: book.cover,
+      href: `/catalogue/book?ean=${book.ean}`,
+    })),
+  );
 
   // [PERF] rerender-functional-setstate: Utiliser un hook pour gérer les états expand avec des callbacks stables
   const expandKeys = ['visiting', 'traveling', 'planned', 'absents', 'telework'] as const;
@@ -243,10 +245,10 @@ function HomeContent() {
                     <div className="flex items-baseline justify-between mb-3">
                       {isLoadingOffice ? (
                         <Skeleton className="h-4 w-60" />
-                      ) : nextOffice ? (
-                        <span className="text-sm lg:text-base text-muted-foreground">
-                          Prochaine office {nextOffice.office} : {nextOffice.date}
-                        </span>
+                      ) : nextOffices.length > 0 ? (
+                        <h2 className="text-2xl font-semibold leading-none tracking-wide">
+                          Prochaines offices
+                        </h2>
                       ) : (
                         <span className="text-sm lg:text-base text-muted-foreground">Aucune office prévue</span>
                       )}

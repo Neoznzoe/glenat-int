@@ -1,14 +1,22 @@
 import { decryptFromStorage, encryptForStorage } from './storageEncryption';
 
-const DEFAULT_AUTHORIZE_ENDPOINT = 'https://api-dev.groupe-glenat.com/Api/v2.0/OAuth/authorize?response_type=code&client_id=sys-api-core&client_secret=sys_api_master_secret';
-const DEFAULT_TOKEN_ENDPOINT = 'https://api-dev.groupe-glenat.com/Api/v2.0/OAuth/token';
+const DEFAULT_OAUTH_BASE_URL = 'https://api-dev.groupe-glenat.com/Api/v2.0/OAuth';
 
-
-
-const AUTHORIZE_ENDPOINT = import.meta.env.VITE_OAUTH_AUTHORIZE_ENDPOINT ?? DEFAULT_AUTHORIZE_ENDPOINT;
-const TOKEN_ENDPOINT = import.meta.env.VITE_OAUTH_TOKEN_ENDPOINT ?? DEFAULT_TOKEN_ENDPOINT;
+const OAUTH_BASE_URL = (
+  import.meta.env.VITE_OAUTH_BASE_URL ?? DEFAULT_OAUTH_BASE_URL
+).replace(/\/+$/, '');
 const CLIENT_ID = import.meta.env.VITE_OAUTH_CLIENT_ID;
 const CLIENT_SECRET = import.meta.env.VITE_OAUTH_CLIENT_SECRET;
+
+function buildAuthorizeEndpoint(): string {
+  const params = new URLSearchParams({ response_type: 'code' });
+  if (CLIENT_ID) params.set('client_id', CLIENT_ID);
+  if (CLIENT_SECRET) params.set('client_secret', CLIENT_SECRET);
+  return `${OAUTH_BASE_URL}/authorize?${params.toString()}`;
+}
+
+const AUTHORIZE_ENDPOINT = buildAuthorizeEndpoint();
+const TOKEN_ENDPOINT = `${OAUTH_BASE_URL}/token`;
 const REQUEST_SCOPE = import.meta.env.VITE_OAUTH_SCOPE;
 const TOKEN_GRANT_TYPE =
   import.meta.env.VITE_OAUTH_TOKEN_GRANT_TYPE ?? 'authorization_code';

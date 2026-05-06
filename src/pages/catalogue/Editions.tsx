@@ -1,72 +1,32 @@
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Input } from '@/components/ui/input';
 import CatalogueLayout from './CatalogueLayout';
-import EditionCard from '@/components/EditionCard';
-import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { CatalogueSearchInput } from '@/components/CatalogueSearchInput';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SecureLink } from '@/components/routing/SecureLink';
-import { fetchCatalogueEditions, type CatalogueEdition } from '@/lib/catalogue';
+import { fetchCataloguePublishers } from '@/lib/catalogue';
+import { CatalogueCategoryBar, publisherMatchesCategory, type CatalogueCategory } from '@/components/CatalogueCategoryBar';
 import { useScrollRestoration } from '@/hooks/useScrollRestoration';
-import { useModulePermissionsContext } from '@/context/ModulePermissionsContext';
-
-/**
- * Priority order for catalogue pages redirection
- * The first accessible page will be used
- */
-const CATALOGUE_PAGES_PRIORITY = [
-  '/catalogue/offices',
-  '/catalogue/nouveautes',
-  '/catalogue/all',
-  '/catalogue/couverture-a-paraitre',
-];
+import { Skeleton } from '@/components/ui/skeleton';
+import { BookOpen } from 'lucide-react';
 
 export function Catalogue() {
   useScrollRestoration();
-  const [editions, setEditions] = useState<CatalogueEdition[] | null>(null);
-  const { canAccessRoute, isLoading } = useModulePermissionsContext();
+  const navigate = useNavigate();
+  const [publishers, setPublishers] = useState<string[] | null>(null);
+  const [activeCategory, setActiveCategory] = useState<CatalogueCategory>('Toutes');
 
   useEffect(() => {
-    let isActive = true;
-
-    fetchCatalogueEditions()
-      .then(data => {
-        if (isActive) {
-          setEditions(data);
-        }
-      })
-      .catch(() => {
-        // Silently ignore editions fetch errors
-      });
-
-    return () => {
-      isActive = false;
-    };
+    void fetchCataloguePublishers().then(setPublishers);
   }, []);
 
-  // Wait for permissions to load before deciding where to redirect
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center">
-        <span
-          aria-hidden="true"
-          className="inline-flex h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent"
-        />
-        <span className="sr-only">Chargement...</span>
-      </div>
-    );
-  }
+  const filteredPublishers = useMemo(() => {
+    if (!publishers) return null;
+    return publishers.filter(pub => publisherMatchesCategory(pub, activeCategory));
+  }, [publishers, activeCategory]);
 
-  // Find the first accessible page from the priority list
-  const firstAccessiblePage = CATALOGUE_PAGES_PRIORITY.find(page => canAccessRoute(page));
-
-  // Redirect to the first accessible page if found
-  if (firstAccessiblePage) {
-    return <Navigate to={firstAccessiblePage} replace />;
-  }
-
-  // If no pages are accessible, show the default catalogue page (editions)
   return (
     <div className="p-6 space-y-6">
       <Breadcrumb>
@@ -78,13 +38,7 @@ export function Catalogue() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <SecureLink to="/catalogue">Catalogue</SecureLink>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Accueil</BreadcrumbPage>
+            <BreadcrumbPage>Catalogue</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -92,23 +46,41 @@ export function Catalogue() {
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <CardTitle className="text-[2.5rem]">Catalogue</CardTitle>
-          <Input type="search" placeholder="Rechercher..." className="sm:w-64" />
+          <CatalogueSearchInput />
         </CardHeader>
-        <div className="px-6">
+        <div className="px-6 space-y-4">
+          <CatalogueCategoryBar activeCategory={activeCategory} onCategoryClick={setActiveCategory} />
           <Separator />
         </div>
         <CardContent className="p-6">
-          <CatalogueLayout active="Éditions">
-            <h3 className="mb-4 font-semibold text-xl">Accueil</h3>
-            {editions && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                {editions.map(edition => (
-                  <EditionCard
-                    key={edition.title}
-                    title={edition.title}
-                    color={edition.color}
-                    logo={edition.logo}
-                  />
+          <CatalogueLayout active="Accueil">
+            <h3 className="mb-6 font-semibold text-xl">Maisons d'édition</h3>
+
+            {filteredPublishers === null ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 8 }, (_, i) => (
+                  <Skeleton key={i} className="h-16 rounded-lg" />
+                ))}
+              </div>
+            ) : filteredPublishers.length === 0 ? (
+              <p className="text-muted-foreground py-8 text-center">Aucun éditeur trouvé.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {filteredPublishers.map(publisher => (
+                  <Card
+                    key={publisher}
+                    className="group hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => navigate('/catalogue/all', { state: { publisher } })}
+                  >
+                    <CardContent className="flex items-center gap-3 p-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                        <BookOpen className="h-5 w-5" />
+                      </div>
+                      <span className="font-medium group-hover:text-primary transition-colors">
+                        {publisher}
+                      </span>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}

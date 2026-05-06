@@ -14,6 +14,11 @@ const Kiosque = lazy(() => import('./pages/catalogue/Kiosque'));
 const Offices = lazy(() => import('./pages/catalogue/Offices'));
 const Nouveautes = lazy(() => import('./pages/catalogue/Nouveautes'));
 const CouvertureAParaitre = lazy(() => import('./pages/catalogue/CouvertureAParaitre'));
+const Telecharger = lazy(() => import('./pages/catalogue/Telecharger'));
+const TopCommandes = lazy(() => import('./pages/catalogue/TopCommandes'));
+const PlusDeStock = lazy(() => import('./pages/catalogue/PlusDeStock'));
+const Auteurs = lazy(() => import('./pages/catalogue/Auteurs'));
+const AuteurDetail = lazy(() => import('./pages/catalogue/AuteurDetail'));
 const BookDetails = lazy(() => import('./pages/catalogue/BookDetails'));
 const QuiFaitQuoiHome = lazy(() => import('./pages/qui-fait-quoi/QuiFaitQuoiHome'));
 const Groupes = lazy(() => import('./pages/qui-fait-quoi/Groupes'));
@@ -41,6 +46,11 @@ export const ROUTES_CONFIG: RouteDefinition[] = [
   { path: '/catalogue/offices', element: <Offices /> },
   { path: '/catalogue/nouveautes', element: <Nouveautes /> },
   { path: '/catalogue/couverture-a-paraitre', element: <CouvertureAParaitre /> },
+  { path: '/catalogue/telecharger', element: <Telecharger /> },
+  { path: '/catalogue/top-commandes', element: <TopCommandes /> },
+  { path: '/catalogue/plus-de-stock', element: <PlusDeStock /> },
+  { path: '/catalogue/auteurs', element: <Auteurs /> },
+  { path: '/catalogue/auteurs/:idAuthor', element: <AuteurDetail /> },
   { path: '/catalogue/book', element: <BookDetails /> },
   { path: '/qui-fait-quoi', element: <QuiFaitQuoiHome /> },
   { path: '/qui-fait-quoi/groupes', element: <Groupes /> },
@@ -65,6 +75,11 @@ export const LAZY_ROUTE_PRELOADERS: Array<() => Promise<unknown>> = [
   () => import('./pages/catalogue/Offices'),
   () => import('./pages/catalogue/Nouveautes'),
   () => import('./pages/catalogue/CouvertureAParaitre'),
+  () => import('./pages/catalogue/Telecharger'),
+  () => import('./pages/catalogue/TopCommandes'),
+  () => import('./pages/catalogue/PlusDeStock'),
+  () => import('./pages/catalogue/Auteurs'),
+  () => import('./pages/catalogue/AuteurDetail'),
   () => import('./pages/catalogue/BookDetails'),
   () => import('./pages/qui-fait-quoi/QuiFaitQuoiHome'),
   () => import('./pages/qui-fait-quoi/Groupes'),

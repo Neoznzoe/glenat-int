@@ -13,7 +13,10 @@
       "Bash(V20=\"/c/Users/victor.besson/OneDrive - GLENAT EDITIONS/Bureau/glenat-int/docs/api-migration/v2.0\")",
       "Read(//c/Users/victor.besson/OneDrive - GLENAT EDITIONS/Bureau/glenat-int/$V20/**)",
       "Bash(echo EXIT_CODE=$?:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(grep -rn '$sql->execute\\\\|$sql->query\\\\|$sql->raw' docs/api-migration/v2.2/handlers/)",
+      "Bash(xargs grep:*)",
+      "Bash(echo \"exit=$?\")"
     ],
     "deny": [],
     "ask": [],
