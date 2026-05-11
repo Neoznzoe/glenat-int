@@ -3,7 +3,6 @@ import { addDays, format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 import { Calendar } from '@/components/ui/calendar';
-import { Button } from '@/components/ui/button';
 import { useTheme } from 'next-themes';
 import { useCalendarEvents, useCalendarEventColors } from '@/hooks/useCalendarEvents';
 import { Loader2 } from 'lucide-react';

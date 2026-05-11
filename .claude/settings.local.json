@@ -16,7 +16,9 @@
       "Bash(find:*)",
       "Bash(grep -rn '$sql->execute\\\\|$sql->query\\\\|$sql->raw' docs/api-migration/v2.2/handlers/)",
       "Bash(xargs grep:*)",
-      "Bash(echo \"exit=$?\")"
+      "Bash(echo \"exit=$?\")",
+      "PowerShell(Get-ChildItem src/pages | Select-Object Name, @{N='Type';E={if\\($_.PSIsContainer\\){'DIR'}else{'FILE'}}})",
+      "PowerShell(Get-ChildItem src/pages -Force | ForEach-Object { $_.Name })"
     ],
     "deny": [],
     "ask": [],

@@ -1,0 +1,20 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_INSTANCE: ${APP_INSTANCE:-developpement}
+        APP_VERSION: ${APP_VERSION:-2.0.0}
+        GIT_COMMIT: ${GIT_COMMIT:-local}
+        BUILD_DATE: ${BUILD_DATE:-unknown}
+    image: glenat-intranet:${APP_VERSION:-2.0.0}-${APP_INSTANCE:-developpement}
+    ports:
+      - "${APP_HTTP_PORT:-8080}:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

@@ -1,11 +1,33 @@
-# Définition minimaliste pour exécuter l'image construite depuis la pipeline.
 services:
   app:
-    # Tag injecté par Azure Pipelines via la variable BUILD_BUILDID.
-    image: myregistry.azurecr.io/mon-app:${BUILD_BUILDID:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_INSTANCE: ${APP_INSTANCE:-production}
+        APP_VERSION: ${APP_VERSION:-2.0.0}
+        GIT_COMMIT: ${GIT_COMMIT:-local}
+        BUILD_DATE: ${BUILD_DATE:-unknown}
+    image: glenat-intranet:${APP_VERSION:-2.0.0}-${APP_INSTANCE:-production}
     restart: unless-stopped
-    ports:
-      - "80:83"
-    # Par défaut le conteneur tourne en production ; override via une variable d'environnement .env.
-    environment:
-      NODE_ENV: ${NODE_ENV:-production}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.glenat-intranet.rule=Host(`${APP_HOSTNAME:-intranet.groupe-glenat.com}`)"
+      - "traefik.http.routers.glenat-intranet.entrypoints=web"
+      - "traefik.http.services.glenat-intranet.loadbalancer.server.port=80"
+      - "traefik.http.services.glenat-intranet.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.glenat-intranet.loadbalancer.healthcheck.interval=60s"
+      - "traefik.http.services.glenat-intranet.loadbalancer.healthcheck.timeout=10s"
+    networks:
+      - traefik
+      - default
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  traefik:
+    external: true

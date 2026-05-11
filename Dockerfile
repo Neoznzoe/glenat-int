@@ -1,15 +1,46 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1.7
+ARG NODE_VERSION=18.20.8
 
-# Étape de compilation: installe l'environnement Node 18.20.8 requis et construit les assets.
-FROM node:18.20.8-alpine AS build
+FROM node:${NODE_VERSION}-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
-COPY . .
-RUN npm run build
 
-# Étape de runtime: sert les artefacts statiques produits par Vite via Nginx.
-FROM nginx:1.27-alpine
+FROM node:${NODE_VERSION}-alpine AS build
+WORKDIR /app
+ARG APP_VERSION=2.0.0
+ARG APP_INSTANCE=developpement
+ARG GIT_COMMIT=local
+ARG BUILD_DATE=unknown
+ENV VITE_APP_VERSION=${APP_VERSION} \
+    VITE_APP_INSTANCE=${APP_INSTANCE} \
+    VITE_GIT_COMMIT=${GIT_COMMIT}
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+# Vite (cf. vite.config.ts) écrit index.html à la racine et les assets dans ./public/assets/.
+# On rassemble dans /app/dist pour faire un COPY propre vers Nginx.
+RUN npm run build \
+ && mkdir -p /app/dist \
+ && cp /app/index.html /app/dist/index.html \
+ && cp -r /app/public /app/dist/public \
+ && printf '{\n  "version":"%s",\n  "instance":"%s",\n  "commit":"%s",\n  "buildDate":"%s"\n}\n' \
+        "${APP_VERSION}" "${APP_INSTANCE}" "${GIT_COMMIT}" "${BUILD_DATE}" \
+        > /app/dist/version.json
+
+FROM nginx:1.27-alpine AS runtime
+ARG APP_VERSION=2.0.0
+ARG APP_INSTANCE=developpement
+ARG GIT_COMMIT=local
+LABEL org.opencontainers.image.title="Glenat Intranet" \
+      org.opencontainers.image.version="${APP_VERSION}" \
+      org.opencontainers.image.revision="${GIT_COMMIT}" \
+      com.glenat.app.instance="${APP_INSTANCE}"
+
+COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY docker/healthcheck.sh /usr/local/bin/healthcheck.sh
+RUN chmod +x /usr/local/bin/healthcheck.sh
 COPY --from=build /app/dist /usr/share/nginx/html
+
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=10s \
+    CMD /usr/local/bin/healthcheck.sh
