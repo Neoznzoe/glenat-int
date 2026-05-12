@@ -185,7 +185,7 @@ async function getEmployeeEmailMap(): Promise<Map<string, string>> {
     // Charger tous les employés actifs (sans filtre)
     const PLANNING_URL = import.meta.env.DEV
       ? '/Api/v2.0/planning'
-      : 'https://api-dev.groupe-glenat.com/Api/v2.0/planning';
+      : `${import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com'}/Api/v2.0/planning`;
     const response = await fetchWithOAuth(`${PLANNING_URL}/employees`);
     if (response.ok) {
       const data = (await response.json()) as { result?: Array<{ firstName: string; lastName: string; email?: string }> };

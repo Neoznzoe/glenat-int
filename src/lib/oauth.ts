@@ -1,6 +1,7 @@
 import { decryptFromStorage, encryptForStorage } from './storageEncryption';
 
-const DEFAULT_OAUTH_BASE_URL = 'https://api-dev.groupe-glenat.com/Api/v2.0/OAuth';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com';
+const DEFAULT_OAUTH_BASE_URL = `${API_BASE_URL}/Api/v2.0/OAuth`;
 
 const OAUTH_BASE_URL = (
   import.meta.env.VITE_OAUTH_BASE_URL ?? DEFAULT_OAUTH_BASE_URL

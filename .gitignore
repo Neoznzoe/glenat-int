@@ -17,6 +17,10 @@ tsconfig*.tsbuildinfo
 # Environment files
 .env
 .env.local
+.env.developpement
+.env.recette
+.env.production
+.env.*.local
 
 # Editor directories and files
 .vscode/*

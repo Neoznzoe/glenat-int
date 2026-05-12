@@ -17,9 +17,11 @@ ENV VITE_APP_VERSION=${APP_VERSION} \
     VITE_GIT_COMMIT=${GIT_COMMIT}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Vite charge .env.${APP_INSTANCE} via --mode (cf. .env.developpement, .env.recette, .env.production).
 # Vite (cf. vite.config.ts) écrit index.html à la racine et les assets dans ./public/assets/.
 # On rassemble dans /app/dist pour faire un COPY propre vers Nginx.
-RUN npm run build \
+RUN npx tsc -b \
+ && npx vite build --mode ${APP_INSTANCE} \
  && mkdir -p /app/dist \
  && cp /app/index.html /app/dist/index.html \
  && cp -r /app/public /app/dist/public \

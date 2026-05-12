@@ -2,7 +2,7 @@ import { fetchWithOAuth } from './oauth';
 
 const PRESENCE_BASE_URL = import.meta.env.DEV
   ? '/Api/v2.0/presence'
-  : 'https://api-dev.groupe-glenat.com/Api/v2.0/presence';
+  : `${import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com'}/Api/v2.0/presence`;
 
 // ─── Types ─────────────────────────────────────────────────
 

@@ -2,7 +2,7 @@ import { fetchWithOAuth } from './oauth';
 
 const JOB_OFFERS_BASE_URL = import.meta.env.DEV
   ? '/Api/v2.0/jobOffers'
-  : 'https://api-dev.groupe-glenat.com/Api/v2.0/jobOffers';
+  : `${import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com'}/Api/v2.0/jobOffers`;
 
 export interface DatabaseJobOffersResponse {
   success?: boolean;

@@ -427,7 +427,7 @@ export async function fetchCatalogueBooksWithPagination(
 
 const CATALOGUE_API_BASE = import.meta.env.DEV
   ? '/Api/v2.0/catalogue'
-  : 'https://api-dev.groupe-glenat.com/Api/v2.0/catalogue';
+  : `${import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com'}/Api/v2.0/catalogue`;
 
 const parseEndpointList = (value: unknown): string[] => {
   if (typeof value !== 'string') {
@@ -450,22 +450,8 @@ const resolveCoverageEndpoints = (): string[] => {
     return ['/extranet/couverture'];
   }
 
-  const endpoints = new Set<string>();
-
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname.toLowerCase();
-
-    if (hostname.includes('intranet')) {
-      // Essayer d'abord api-dev, puis en fallback api-recette
-      endpoints.add('https://api-dev.groupe-glenat.com/Api/v1.0/Extranet/couverture');
-      endpoints.add('https://api-recette.groupe-glenat.com/Api/v1.0/Extranet/couverture');
-    }
-  }
-
-  // Utiliser uniquement api-dev au lieu de api-recette
-  endpoints.add('https://api-dev.groupe-glenat.com/Api/v1.0/Extranet/couverture');
-
-  return Array.from(endpoints);
+  const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com';
+  return [`${apiBase}/Api/v1.0/Extranet/couverture`];
 };
 
 const CATALOGUE_COVERAGE_ENDPOINTS = resolveCoverageEndpoints();
@@ -480,19 +466,8 @@ const resolveAuthorPhotoEndpoints = (): string[] => {
     return ['/extranet/photoAuteur'];
   }
 
-  const endpoints = new Set<string>();
-
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname.toLowerCase();
-
-    if (hostname.includes('intranet')) {
-      endpoints.add('https://api-dev.groupe-glenat.com/Api/v1.0/Extranet/photoAuteur');
-    }
-  }
-
-  endpoints.add('https://api-recette.groupe-glenat.com/Api/v1.0/Extranet/photoAuteur');
-
-  return Array.from(endpoints);
+  const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com';
+  return [`${apiBase}/Api/v1.0/Extranet/photoAuteur`];
 };
 
 const CATALOGUE_AUTHOR_PHOTO_ENDPOINTS = resolveAuthorPhotoEndpoints();
@@ -651,8 +626,14 @@ const shouldIncludeCredentials = (endpoint: string): boolean => {
       return true;
     }
 
-    if (hostname.includes('api-dev.groupe-glenat.com')) {
-      return true;
+    const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com';
+    try {
+      const trustedHost = new URL(apiBase).hostname.toLowerCase();
+      if (hostname === trustedHost) {
+        return true;
+      }
+    } catch {
+      // ignore
     }
 
     return false;

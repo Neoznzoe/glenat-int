@@ -4,17 +4,19 @@ import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
 import { fetchWithOAuth } from './oauth';
 import { applySecurePayloadHeaders, logSecurePayloadRequest, prepareSecureJsonPayload, SECURE_PAYLOAD_ENCRYPTION_HEADER } from './securePayload';
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ??
+  'https://api-dev.groupe-glenat.com';
+
 const USER_API_ENDPOINT =
   import.meta.env.VITE_USER_API_ENDPOINT ??
-  'https://api-dev.groupe-glenat.com/Api/v2.0/users';
+  `${API_BASE_URL}/Api/v2.0/users`;
 
 const GROUP_API_ENDPOINT =
   import.meta.env.VITE_GROUP_API_ENDPOINT ??
-  'https://api-dev.groupe-glenat.com/Api/v2.0/groups';
+  `${API_BASE_URL}/Api/v2.0/groups`;
 
-const CMS_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ??
-  'https://api-dev.groupe-glenat.com';
+const CMS_BASE_URL = API_BASE_URL;
 
 const CMS_MODULE_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/Cms/module`;
 const CMS_PAGE_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/Cms/page`;

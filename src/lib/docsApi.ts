@@ -2,7 +2,7 @@ import { fetchWithOAuth } from './oauth';
 
 const DOCS_BASE_URL = import.meta.env.DEV
   ? '/Api/v2.0/docs'
-  : 'https://api-dev.groupe-glenat.com/Api/v2.0/docs';
+  : `${import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com'}/Api/v2.0/docs`;
 
 // ─── Types ─────────────────────────────────────────────────
 
