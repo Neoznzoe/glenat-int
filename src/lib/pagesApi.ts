@@ -1,6 +1,6 @@
 import { fetchWithOAuth } from './oauth';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com';
+import { API_BASE_URL } from './apiConfig';
 
 export interface Page {
   PageId: string;
@@ -99,7 +99,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export async function fetchPages(): Promise<Page[]> {
-  const url = `${API_BASE_URL}/Api/v2.0/Cms/page`;
+  const url = `${API_BASE_URL}/Api/v2.0/cms/pages`;
 
   const response = await fetchWithOAuth(url, {
     method: 'GET',
@@ -126,7 +126,7 @@ export async function fetchPages(): Promise<Page[]> {
 }
 
 export async function fetchPage(pageId: string): Promise<Page> {
-  const url = `${API_BASE_URL}/Api/v2.0/Cms/page/${pageId}`;
+  const url = `${API_BASE_URL}/Api/v2.0/cms/pages/${pageId}`;
 
   const response = await fetchWithOAuth(url, {
     method: 'GET',
@@ -135,12 +135,12 @@ export async function fetchPage(pageId: string): Promise<Page> {
     },
   });
 
-  const data = await handleResponse<{ success: boolean; page: Page }>(response);
-  return data.page;
+  const data = await handleResponse<{ success: boolean; page?: Page; result?: Page }>(response);
+  return (data.result ?? data.page) as Page;
 }
 
 export async function createPage(payload: CreatePagePayload): Promise<Page> {
-  const url = `${API_BASE_URL}/Api/v2.0/Cms/page`;
+  const url = `${API_BASE_URL}/Api/v2.0/cms/pages`;
 
   // Transform payload to snake_case for API
   const apiPayload: CreatePageApiPayload = {
@@ -169,12 +169,12 @@ export async function createPage(payload: CreatePagePayload): Promise<Page> {
     body: JSON.stringify(apiPayload),
   });
 
-  const data = await handleResponse<{ success: boolean; page: Page }>(response);
-  return data.page;
+  const data = await handleResponse<{ success: boolean; page?: Page; result?: Page }>(response);
+  return (data.result ?? data.page) as Page;
 }
 
 export async function updatePage(pageId: string, payload: Partial<CreatePagePayload>): Promise<Page> {
-  const url = `${API_BASE_URL}/Api/v2.0/Cms/page/${pageId}`;
+  const url = `${API_BASE_URL}/Api/v2.0/cms/pages/${pageId}`;
 
   // Transform payload to snake_case for API - only include non-empty fields
   const apiPayload: Partial<CreatePageApiPayload> = {};
@@ -203,12 +203,12 @@ export async function updatePage(pageId: string, payload: Partial<CreatePagePayl
     body: JSON.stringify(apiPayload),
   });
 
-  const data = await handleResponse<{ success: boolean; page: Page }>(response);
-  return data.page;
+  const data = await handleResponse<{ success: boolean; page?: Page; result?: Page }>(response);
+  return (data.result ?? data.page) as Page;
 }
 
 export async function deletePage(pageId: string): Promise<void> {
-  const url = `${API_BASE_URL}/Api/v2.0/Cms/page/${pageId}`;
+  const url = `${API_BASE_URL}/Api/v2.0/cms/pages/${pageId}`;
 
   const response = await fetchWithOAuth(url, {
     method: 'DELETE',

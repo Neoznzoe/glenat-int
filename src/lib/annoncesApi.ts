@@ -1,8 +1,9 @@
 import { fetchWithOAuth } from './oauth';
+import { API_BASE_URL } from './apiConfig';
 
 const ANNONCES_BASE_URL = import.meta.env.DEV
   ? '/Api/v2.0/annonces'
-  : `${import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com'}/Api/v2.0/annonces`;
+  : `${API_BASE_URL}/Api/v2.0/annonces`;
 
 // ─── Types ─────────────────────────────────────────────────
 

@@ -20,9 +20,10 @@ export interface BookCardProps {
   ribbonText?: string;
   infoLabel?: string;
   infoValue?: string | number;
+  hideActions?: boolean;
 }
 
-export function BookCard({ cover, title, ean, authors, publisher, publicationDate, priceHT, stock, views, color, ribbonText, infoLabel, infoValue}: BookCardProps) {
+export function BookCard({ cover, title, ean, authors, publisher, publicationDate, priceHT, stock, views, color, ribbonText, infoLabel, infoValue, hideActions}: BookCardProps) {
   const dispatch = useAppDispatch();
 
   const handleAddToCart = () => {
@@ -77,19 +78,23 @@ export function BookCard({ cover, title, ean, authors, publisher, publicationDat
             Tarif HT : {priceHT} € | Stock : {stock} ex
           </p>
         </div>
-        <Separator className="my-2" />
-        <div className="flex flex-col mt-auto">
-          <Button variant="link" className="justify-start px-0 h-auto">
-            Lire dans le kiosque{views !== undefined ? ` (${views} vues)` : ''}
-          </Button>
-          <Button
-            size="sm"
-            className="w-fit leading-none"
-            onClick={handleAddToCart}
-          >
-            Ajouter à mon panier
-          </Button>
-        </div>
+        {!hideActions && (
+          <>
+            <Separator className="my-2" />
+            <div className="flex flex-col mt-auto">
+              <Button variant="link" className="justify-start px-0 h-auto">
+                Lire dans le kiosque{views !== undefined ? ` (${views} vues)` : ''}
+              </Button>
+              <Button
+                size="sm"
+                className="w-fit leading-none"
+                onClick={handleAddToCart}
+              >
+                Ajouter à mon panier
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </Card>
   );

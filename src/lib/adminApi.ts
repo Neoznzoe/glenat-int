@@ -4,9 +4,7 @@ import { encryptUrlPayload, isUrlEncryptionConfigured } from './urlEncryption';
 import { fetchWithOAuth } from './oauth';
 import { applySecurePayloadHeaders, logSecurePayloadRequest, prepareSecureJsonPayload, SECURE_PAYLOAD_ENCRYPTION_HEADER } from './securePayload';
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ??
-  'https://api-dev.groupe-glenat.com';
+import { API_BASE_URL } from './apiConfig';
 
 const USER_API_ENDPOINT =
   import.meta.env.VITE_USER_API_ENDPOINT ??
@@ -18,8 +16,8 @@ const GROUP_API_ENDPOINT =
 
 const CMS_BASE_URL = API_BASE_URL;
 
-const CMS_MODULE_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/Cms/module`;
-const CMS_PAGE_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/Cms/page`;
+const CMS_MODULE_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/cms/modules`;
+const CMS_PAGE_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/cms/pages`;
 const CMS_BLOC_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/cms/blocks`;
 const CMS_ELEMENT_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/cms/elements`;
 const USER_VIEW_MATRIX_ENDPOINT = `${CMS_BASE_URL}/Api/v2.0/users`;
@@ -118,8 +116,8 @@ interface ApiCmsModuleRecord {
   ZoneId?: number | string;
   ModuleCode: string;
   ModuleName: string;
-  SupportMultilingual?: boolean;
-  IsActive: boolean;
+  SupportMultilingual?: boolean | number;
+  IsActive: boolean | number;
   CreatedAt?: string;
   CreatedBy?: string;
 }
@@ -140,13 +138,14 @@ interface CmsModuleListResponse {
   success?: boolean;
   code?: number;
   message?: string;
-  modules: ApiCmsModuleRecord[];
-  pagination: {
+  modules?: ApiCmsModuleRecord[];
+  result?: ApiCmsModuleRecord[];
+  pagination?: {
     page: number;
     perPage: number;
     total: number;
     pages: number;
-  };
+  } | null;
 }
 
 // API response format (PascalCase from API)
@@ -179,13 +178,14 @@ interface CmsPageListResponse {
   success?: boolean;
   code?: number;
   message?: string;
-  pages: ApiCmsPageRecord[];
-  pagination: {
+  pages?: ApiCmsPageRecord[];
+  result?: ApiCmsPageRecord[];
+  pagination?: {
     page: number;
     perPage: number;
     total: number;
     pages: number;
-  };
+  } | null;
 }
 
 // API response format for blocs (PascalCase from API)
@@ -1436,8 +1436,8 @@ function normalizeModuleRecord(apiRecord: ApiCmsModuleRecord): CmsModuleRecord {
       : undefined,
     moduleCode: apiRecord.ModuleCode,
     moduleName: apiRecord.ModuleName,
-    supportMultilingual: apiRecord.SupportMultilingual,
-    isActive: apiRecord.IsActive,
+    supportMultilingual: apiRecord.SupportMultilingual === 1 || apiRecord.SupportMultilingual === true,
+    isActive: apiRecord.IsActive === 1 || apiRecord.IsActive === true,
     createdAt: apiRecord.CreatedAt,
     createdBy: apiRecord.CreatedBy,
   };
@@ -1476,7 +1476,9 @@ export async function fetchAllModulesFromCms(): Promise<CmsModuleRecord[]> {
     }
 
     // Normalize API records to camelCase format
-    const normalizedModules = (payload.modules || []).map(normalizeModuleRecord);
+    // Le nouveau format API enveloppe les données dans `result` ; on garde
+    // `modules` en repli pour compatibilité avec l'ancien format.
+    const normalizedModules = (payload.modules || payload.result || []).map(normalizeModuleRecord);
     allModules.push(...normalizedModules);
     totalPages = payload.pagination?.pages || 1;
     currentPage += 1;
@@ -1536,7 +1538,8 @@ export async function fetchAllPagesFromCms(): Promise<CmsPageRecord[]> {
     }
 
     // Normalize API records to camelCase format
-    const normalizedPages = (payload.pages || []).map(normalizePageRecord);
+    // Idem modules : nouveau format `result`, repli sur `pages`.
+    const normalizedPages = (payload.pages || payload.result || []).map(normalizePageRecord);
     allPages.push(...normalizedPages);
     totalPages = payload.pagination?.pages || 1;
     currentPage += 1;

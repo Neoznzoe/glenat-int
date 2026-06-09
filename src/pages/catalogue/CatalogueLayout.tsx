@@ -1,5 +1,5 @@
 import QuickAccess, { QuickAccessItem } from '@/components/QuickAccess';
-import { BookOpen, Building, CalendarDays, Download, Image, Info, PackageX, Sparkles, TrendingUp, UserPen } from 'lucide-react';
+import { BookMarked, BookOpen, Building, CalendarDays, Download, Image, Info, PackageX, Sparkles, TrendingUp, UserPen } from 'lucide-react';
 import { ReactNode } from 'react';
 import { useModulePermissionsContext } from '@/context/ModulePermissionsContext';
 
@@ -9,6 +9,7 @@ const quickLinks: QuickAccessItem[] = [
   { label: 'Éditions', icon: Building, href: '/catalogue', permissionPath: '/catalogue/accueil' },
   { label: 'Les auteurs', icon: UserPen, href: '/catalogue/auteurs' },
   { label: 'Tout le catalogue', icon: BookOpen, href: '/catalogue/all' },
+  { label: 'Espace titre', icon: BookMarked, href: '/catalogue/espace-titre' },
 
   { label: 'Télécharger le catalogue', icon: Download, href: '/catalogue/telecharger' },
   // { label: 'Kiosque', icon: Store, href: '/catalogue/kiosque' },

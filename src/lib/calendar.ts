@@ -1,8 +1,9 @@
 import { fetchWithOAuth } from './oauth';
+import { API_BASE_URL } from './apiConfig';
 
 const CALENDAR_API_BASE = import.meta.env.DEV
   ? '/Api/v2.0/calendar'
-  : `${import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com'}/Api/v2.0/calendar`;
+  : `${API_BASE_URL}/Api/v2.0/calendar`;
 
 export interface CalendarEventColorRecord {
   reason: string;

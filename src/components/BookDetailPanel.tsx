@@ -27,6 +27,23 @@ export function BookDetailPanel({ book, authors, ean }: BookDetailPanelProps) {
   const summaryText = details?.summary;
   const authorBio = details?.authorBio;
 
+  const findEntry = (label: string) =>
+    infoEntries.find((entry) => entry.label === label);
+
+  const infoLines: string[][] = [
+    ['Marque éditoriale', 'Collection', 'Type'],
+    ['Nombre de pages', 'Façonnage', 'Dimensions', 'Papier intérieur', 'Papier couverture'],
+    ['Date de parution', 'ISBN', 'Hachette'],
+  ];
+
+  const renderedInfoLines = infoLines
+    .map((labels) =>
+      labels
+        .map((label) => findEntry(label))
+        .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)),
+    )
+    .filter((items) => items.length > 0);
+
   const handlePrintSheet = () => {
     if (typeof window !== 'undefined') {
       window.print();
@@ -119,25 +136,30 @@ export function BookDetailPanel({ book, authors, ean }: BookDetailPanelProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <p className="text-sm font-medium text-foreground">
-            Parution : {book.publicationDate}
-            {officeCode ? ` / Office ${officeCode}` : ''}
-          </p>
-          {categories.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {categories.map((category) => (
-                <span key={category} className="inline-flex items-center rounded-md bg-[#EBEBEB] px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-foreground">{category}</span>
-              ))}
-            </div>
-          )}
-        </div>
-        {infoEntries.length > 0 && (
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-            {infoEntries.map((item) => (
-              <div key={`${item.label}-${item.value}`} className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{item.label}</p>
-                <p className="text-base font-medium text-foreground">{item.value}</p>
+        {(officeCode || categories.length > 0) && (
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            {officeCode && (
+              <p className="text-sm font-medium text-foreground">Office {officeCode}</p>
+            )}
+            {categories.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {categories.map((category) => (
+                  <span key={category} className="inline-flex items-center rounded-md bg-[#EBEBEB] px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-foreground">{category}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {renderedInfoLines.length > 0 && (
+          <div className="space-y-5">
+            {renderedInfoLines.map((items, lineIndex) => (
+              <div key={`info-line-${lineIndex}`} className="flex flex-wrap gap-x-10 gap-y-4">
+                {items.map((item) => (
+                  <div key={`${item.label}-${item.value}`} className="space-y-1 min-w-[140px]">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{item.label}</p>
+                    <p className="text-base font-medium text-foreground">{item.value}</p>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
@@ -163,11 +185,21 @@ export function BookDetailPanel({ book, authors, ean }: BookDetailPanelProps) {
         <CardContent className="p-6">
           <Tabs defaultValue="resume" className="w-full">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <TabsList>
+              <TabsList className="gap-1 overflow-visible">
                 <TabsTrigger value="resume">Résumé</TabsTrigger>
                 <TabsTrigger value="auteur">Auteur</TabsTrigger>
                 <TabsTrigger value="lire">Lire</TabsTrigger>
                 <TabsTrigger value="internet">Internet</TabsTrigger>
+                <span aria-hidden="true" className="mx-3 h-6 w-px bg-border" />
+                <div className="relative flex items-center gap-1">
+                  <span className="pointer-events-none absolute -top-5 left-0 whitespace-nowrap rounded bg-background px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-foreground shadow-sm ring-1 ring-border">
+                    Espace titre
+                  </span>
+                  <TabsTrigger value="general">Général</TabsTrigger>
+                  <TabsTrigger value="presse">Presse</TabsTrigger>
+                  <TabsTrigger value="reseaux">Réseaux</TabsTrigger>
+                  <TabsTrigger value="vente">Vente</TabsTrigger>
+                </div>
               </TabsList>
             </div>
             <TabsContent value="resume" className="rounded-xl bg-muted/40 p-6 text-base leading-relaxed text-foreground">
@@ -302,6 +334,18 @@ export function BookDetailPanel({ book, authors, ean }: BookDetailPanelProps) {
               )}
             </TabsContent>
             <TabsContent value="internet" className="rounded-xl bg-muted/40 p-6 text-base leading-relaxed text-foreground">
+              <p>Aucune donn&eacute;e disponible</p>
+            </TabsContent>
+            <TabsContent value="general" className="rounded-xl bg-muted/40 p-6 text-base leading-relaxed text-foreground">
+              <p>Aucune donn&eacute;e disponible</p>
+            </TabsContent>
+            <TabsContent value="presse" className="rounded-xl bg-muted/40 p-6 text-base leading-relaxed text-foreground">
+              <p>Aucune donn&eacute;e disponible</p>
+            </TabsContent>
+            <TabsContent value="reseaux" className="rounded-xl bg-muted/40 p-6 text-base leading-relaxed text-foreground">
+              <p>Aucune donn&eacute;e disponible</p>
+            </TabsContent>
+            <TabsContent value="vente" className="rounded-xl bg-muted/40 p-6 text-base leading-relaxed text-foreground">
               <p>Aucune donn&eacute;e disponible</p>
             </TabsContent>
           </Tabs>

@@ -1,6 +1,6 @@
 import { fetchWithOAuth } from './oauth';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com';
+import { API_BASE_URL } from './apiConfig';
 
 export interface KelioAbsence {
   absenceFileKey: string;
@@ -135,9 +135,9 @@ export async function fetchAbsences(): Promise<KelioAbsence[]> {
     },
   });
 
-  const data = await handleResponse<AbsencesResponse>(response);
+  const data = await handleResponse<AbsencesResponse & { result?: KelioAbsence[] }>(response);
 
-  return data.absences || [];
+  return data.absences || data.result || [];
 }
 
 /**
@@ -185,7 +185,7 @@ async function getEmployeeEmailMap(): Promise<Map<string, string>> {
     // Charger tous les employés actifs (sans filtre)
     const PLANNING_URL = import.meta.env.DEV
       ? '/Api/v2.0/planning'
-      : `${import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com'}/Api/v2.0/planning`;
+      : `${API_BASE_URL}/Api/v2.0/planning`;
     const response = await fetchWithOAuth(`${PLANNING_URL}/employees`);
     if (response.ok) {
       const data = (await response.json()) as { result?: Array<{ firstName: string; lastName: string; email?: string }> };
@@ -255,9 +255,9 @@ export async function fetchRemoteWorking(): Promise<KelioRemoteWorking[]> {
     },
   });
 
-  const data = await handleResponse<RemoteWorkingResponse>(response);
+  const data = await handleResponse<RemoteWorkingResponse & { result?: KelioRemoteWorking[] }>(response);
 
-  return data.remote_workings || [];
+  return data.remote_workings || data.result || [];
 }
 
 /**

@@ -1,6 +1,6 @@
 import { fetchWithOAuth } from './oauth';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com';
+import { API_BASE_URL } from './apiConfig';
 
 export interface Zone {
   ZoneId: string;
@@ -102,7 +102,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export async function fetchZones(): Promise<Zone[]> {
-  const url = `${API_BASE_URL}/Api/v2.0/Cms/zone`;
+  const url = `${API_BASE_URL}/Api/v2.0/cms/zones`;
 
   const response = await fetchWithOAuth(url, {
     method: 'GET',
@@ -117,7 +117,7 @@ export async function fetchZones(): Promise<Zone[]> {
 }
 
 export async function fetchZone(zoneId: string): Promise<Zone> {
-  const url = `${API_BASE_URL}/Api/v2.0/Cms/zone/${zoneId}`;
+  const url = `${API_BASE_URL}/Api/v2.0/cms/zones/${zoneId}`;
 
   const response = await fetchWithOAuth(url, {
     method: 'GET',
@@ -131,7 +131,7 @@ export async function fetchZone(zoneId: string): Promise<Zone> {
 }
 
 export async function createZone(payload: CreateZonePayload): Promise<Zone> {
-  const url = `${API_BASE_URL}/Api/v2.0/Cms/zone`;
+  const url = `${API_BASE_URL}/Api/v2.0/cms/zones`;
 
   // Transform payload to snake_case for API
   const apiPayload: CreateZoneApiPayload = {
@@ -162,7 +162,7 @@ export async function createZone(payload: CreateZonePayload): Promise<Zone> {
 }
 
 export async function updateZone(zoneId: string, payload: Partial<CreateZonePayload>): Promise<Zone> {
-  const url = `${API_BASE_URL}/Api/v2.0/Cms/zone/${zoneId}`;
+  const url = `${API_BASE_URL}/Api/v2.0/cms/zones/${zoneId}`;
 
   // Transform payload to snake_case for API - only include non-empty fields
   const apiPayload: Partial<CreateZoneApiPayload> = {};
@@ -193,7 +193,7 @@ export async function updateZone(zoneId: string, payload: Partial<CreateZonePayl
 }
 
 export async function deleteZone(zoneId: string): Promise<void> {
-  const url = `${API_BASE_URL}/Api/v2.0/Cms/zone/${zoneId}`;
+  const url = `${API_BASE_URL}/Api/v2.0/cms/zones/${zoneId}`;
 
   const response = await fetchWithOAuth(url, {
     method: 'DELETE',

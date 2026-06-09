@@ -1,6 +1,6 @@
 import { fetchWithOAuth } from './oauth';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com';
+import { API_BASE_URL } from './apiConfig';
 
 export interface Element {
   ElementId: string;
@@ -110,8 +110,8 @@ export async function fetchElement(elementId: string): Promise<Element> {
     },
   });
 
-  const data = await handleResponse<{ success: boolean; element: Element }>(response);
-  return data.element;
+  const data = await handleResponse<{ success: boolean; element?: Element; result?: Element }>(response);
+  return (data.result ?? data.element) as Element;
 }
 
 export async function createElement(payload: CreateElementPayload): Promise<Element> {
@@ -135,8 +135,8 @@ export async function createElement(payload: CreateElementPayload): Promise<Elem
     body: JSON.stringify(apiPayload),
   });
 
-  const data = await handleResponse<{ success: boolean; element: Element }>(response);
-  return data.element;
+  const data = await handleResponse<{ success: boolean; element?: Element; result?: Element }>(response);
+  return (data.result ?? data.element) as Element;
 }
 
 export async function updateElement(
@@ -163,8 +163,8 @@ export async function updateElement(
     body: JSON.stringify(apiPayload),
   });
 
-  const data = await handleResponse<{ success: boolean; element: Element }>(response);
-  return data.element;
+  const data = await handleResponse<{ success: boolean; element?: Element; result?: Element }>(response);
+  return (data.result ?? data.element) as Element;
 }
 
 export async function deleteElement(elementId: string): Promise<void> {

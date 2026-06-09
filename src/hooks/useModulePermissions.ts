@@ -19,6 +19,7 @@ const URL_TO_PAGE_CODE_MAP: Record<string, string> = {
   'all': 'catalogue_all',
   'offices': 'prochaines_offices',
   'nouveautes': 'dernieres_nouveautes',
+  'espace-titre': 'catalogue_espace_titre',
   'couverture-a-paraitre': 'catalogue_next_cover',
   'accueil': 'catalogue_accueil',
   'kiosque': 'kiosque',

@@ -1,6 +1,6 @@
 import { fetchWithOAuth } from './oauth';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com';
+import { API_BASE_URL } from './apiConfig';
 
 // ============================================================================
 // TYPES

@@ -18,13 +18,49 @@ ENV VITE_APP_VERSION=${APP_VERSION} \
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Vite charge .env.${APP_INSTANCE} via --mode (cf. .env.developpement, .env.recette, .env.production).
-# Vite (cf. vite.config.ts) écrit index.html à la racine et les assets dans ./public/assets/.
+# Vite écrit à la racine (outDir='.') et les assets dans ./public/assets/ (compatibilité legacy).
 # On rassemble dans /app/dist pour faire un COPY propre vers Nginx.
-RUN npx tsc -b \
+# IMPORTANT: si index.html dans le repo est pollué (références /public/assets/index-XXX.js),
+# on le restaure depuis une version propre avant le build pour éviter l'erreur Rollup.
+RUN cat > /tmp/index.html.clean <<'INDEXEOF'
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon-glenat-red.webp" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Glénat | Intranet</title>
+    <script type="module" src="/src/main.tsx"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
+INDEXEOF
+RUN cp /tmp/index.html.clean /app/index.html \
+ && echo "=== /app contents ===" \
+ && (ls -la /app/ | grep -iE '\.?env' || echo "(no env-related files in /app/)") \
+ && ENV_FILE="/app/.env.${APP_INSTANCE}" \
+ && if [ ! -f "$ENV_FILE" ]; then ENV_FILE="/app/env.${APP_INSTANCE}"; fi \
+ && if [ ! -f "$ENV_FILE" ]; then \
+        echo "ERROR: no env file (.env.${APP_INSTANCE} or env.${APP_INSTANCE}) found in build context"; \
+        exit 1; \
+    fi \
+ && echo "Using env file: $ENV_FILE" \
+ && echo "=== Sourcing $ENV_FILE into process env ===" \
+ && set -a \
+ && . "$ENV_FILE" \
+ && set +a \
+ && echo "Build env check:" \
+ && { [ -n "$VITE_OAUTH_BASE_URL" ] && echo "  VITE_OAUTH_BASE_URL: set" || { echo "  VITE_OAUTH_BASE_URL: MISSING"; exit 1; }; } \
+ && { [ -n "$VITE_OAUTH_CLIENT_ID" ] && echo "  VITE_OAUTH_CLIENT_ID: set" || { echo "  VITE_OAUTH_CLIENT_ID: MISSING"; exit 1; }; } \
+ && { [ -n "$VITE_API_BASE_URL" ] && echo "  VITE_API_BASE_URL: set" || { echo "  VITE_API_BASE_URL: MISSING"; exit 1; }; } \
+ && npx tsc -b \
  && npx vite build --mode ${APP_INSTANCE} \
  && mkdir -p /app/dist \
  && cp /app/index.html /app/dist/index.html \
  && cp -r /app/public /app/dist/public \
+ && test -f /app/dist/index.html || { echo "ERROR: index.html missing after build"; exit 1; } \
  && printf '{\n  "version":"%s",\n  "instance":"%s",\n  "commit":"%s",\n  "buildDate":"%s"\n}\n' \
         "${APP_VERSION}" "${APP_INSTANCE}" "${GIT_COMMIT}" "${BUILD_DATE}" \
         > /app/dist/version.json

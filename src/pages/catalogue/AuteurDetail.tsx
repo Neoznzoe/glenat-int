@@ -6,6 +6,7 @@ import CatalogueLayout from './CatalogueLayout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronRight } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import DOMPurify from 'dompurify';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { SecureLink } from '@/components/routing/SecureLink';
 import {
@@ -253,7 +254,7 @@ export function AuteurDetail() {
                       {biography ? (
                         <div
                           className="text-sm leading-relaxed prose prose-sm max-w-none prose-p:my-2 prose-b:font-semibold"
-                          dangerouslySetInnerHTML={{ __html: biography }}
+                          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(biography) }}
                         />
                       ) : (
                         <p className="text-sm text-muted-foreground italic">

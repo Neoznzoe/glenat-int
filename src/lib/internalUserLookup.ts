@@ -1,6 +1,6 @@
 import { fetchWithOAuth } from './oauth';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com';
+import { API_BASE_URL } from './apiConfig';
 
 export interface DatabaseUserLookupResponse {
   success?: boolean;
@@ -59,14 +59,14 @@ export async function lookupInternalUserByEmail(
       );
     }
 
-    let body: UserListResponse;
+    let body: UserListResponse & { result?: UserRecord[] };
     try {
-      body = (await response.json()) as UserListResponse;
+      body = (await response.json()) as UserListResponse & { result?: UserRecord[] };
     } catch {
       return null;
     }
 
-    const users: UserRecord[] = body.data ?? body.users ?? [];
+    const users: UserRecord[] = body.data ?? body.users ?? body.result ?? [];
 
     const match = users.find(
       (u) => typeof u.email === 'string' && u.email.toLowerCase() === trimmedEmail,

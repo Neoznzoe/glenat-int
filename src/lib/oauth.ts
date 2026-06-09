@@ -1,7 +1,6 @@
-import { decryptFromStorage, encryptForStorage } from './storageEncryption';
+import { API_BASE_URL } from './apiConfig';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com';
-const DEFAULT_OAUTH_BASE_URL = `${API_BASE_URL}/Api/v2.0/OAuth`;
+const DEFAULT_OAUTH_BASE_URL = `${API_BASE_URL}/Api/v2.0/oAuth`;
 
 const OAUTH_BASE_URL = (
   import.meta.env.VITE_OAUTH_BASE_URL ?? DEFAULT_OAUTH_BASE_URL
@@ -128,15 +127,15 @@ async function hydrateTokenFromStorage(): Promise<void> {
       return;
     }
 
-    let decrypted: unknown;
+    let decoded: unknown;
     try {
-      decrypted = await decryptFromStorage(raw);
+      decoded = JSON.parse(raw);
     } catch {
       storage.removeItem(STORAGE_KEY);
       return;
     }
 
-    const parsed = decrypted as PersistedOAuthToken | null;
+    const parsed = decoded as PersistedOAuthToken | null;
     if (!parsed || typeof parsed !== 'object') {
       storage.removeItem(STORAGE_KEY);
       return;
@@ -192,8 +191,7 @@ async function persistTokenInStorage(
   };
 
   try {
-    const encrypted = await encryptForStorage(payload);
-    storage.setItem(STORAGE_KEY, encrypted);
+    storage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch {
     // Silently ignore token persistence errors
   }

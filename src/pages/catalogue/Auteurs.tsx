@@ -92,8 +92,13 @@ export function Auteurs() {
   useEffect(() => {
     const abortController = new AbortController();
 
-    // Fetch authors and counts in parallel — show authors ASAP, counts fill in when ready
-    fetchCatalogueAuthorsList(abortController.signal)
+    // Fetch authors and counts in parallel — show authors ASAP, counts fill in when ready.
+    // Les auteurs sont chargés page par page (50 par 50) : on affiche dès la 1re page
+    // puis la liste se complète automatiquement à la suite.
+    fetchCatalogueAuthorsList(abortController.signal, (partial) => {
+      setAuthors(partial);
+      setLoading(false);
+    })
       .then((list) => {
         setAuthors(list);
         setLoading(false);
@@ -153,10 +158,13 @@ export function Auteurs() {
 
   const availableLetters = useMemo(() => new Set(grouped.map(([letter]) => letter)), [grouped]);
 
-  // Reset the reveal counter when the dataset changes (search / role filter)
+  // Reset the reveal counter uniquement quand l'utilisateur change le jeu de
+  // données (recherche / filtre de rôle). On NE réinitialise PAS sur `authors` :
+  // sinon chaque batch reçu pendant le chargement progressif remettrait le
+  // compteur à zéro et renverrait l'utilisateur en haut de la liste.
   useEffect(() => {
     setVisibleCount(INITIAL_AUTHOR_COUNT);
-  }, [search, selectedRoles, authors]);
+  }, [search, selectedRoles]);
 
   // Progressively reveal more authors, 20 at a time, on each animation frame
   useEffect(() => {

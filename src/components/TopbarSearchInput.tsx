@@ -5,6 +5,7 @@ import { Search, Loader2, FileText } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { fetchWithOAuth } from '@/lib/oauth';
 import { searchDocuments, getDocFileUrl, getExtensionColor, type DocSearchResult } from '@/lib/docsApi';
+import { API_BASE_URL } from '@/lib/apiConfig';
 
 interface TopbarSearchInputProps {
   scope: 'qui-fait-quoi' | 'glenatdoc';
@@ -47,7 +48,7 @@ function getExtIcon(ext: string): { label: string; color: string } {
 
 const PLANNING_URL = import.meta.env.DEV
   ? '/Api/v2.0/planning'
-  : `${import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com'}/Api/v2.0/planning`;
+  : `${API_BASE_URL}/Api/v2.0/planning`;
 
 let employeeCache: EmployeeResult[] | null = null;
 

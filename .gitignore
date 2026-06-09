@@ -15,12 +15,17 @@ dist-ssr
 tsconfig*.tsbuildinfo
 
 # Environment files
+# Versions avec et sans le point initial (convention interne: env.<instance>)
 .env
 .env.local
 .env.developpement
 .env.recette
 .env.production
 .env.*.local
+env.developpement
+env.recette
+env.production
+env.*.local
 
 # Editor directories and files
 .vscode/*

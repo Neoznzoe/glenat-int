@@ -13,6 +13,7 @@ const CatalogueAll = lazy(() => import('./pages/catalogue/CatalogueAll'));
 const Kiosque = lazy(() => import('./pages/catalogue/Kiosque'));
 const Offices = lazy(() => import('./pages/catalogue/Offices'));
 const Nouveautes = lazy(() => import('./pages/catalogue/Nouveautes'));
+const EspaceTitre = lazy(() => import('./pages/catalogue/EspaceTitre'));
 const CouvertureAParaitre = lazy(() => import('./pages/catalogue/CouvertureAParaitre'));
 const Telecharger = lazy(() => import('./pages/catalogue/Telecharger'));
 const TopCommandes = lazy(() => import('./pages/catalogue/TopCommandes'));
@@ -45,6 +46,7 @@ export const ROUTES_CONFIG: RouteDefinition[] = [
   { path: '/catalogue/kiosque', element: <Kiosque /> },
   { path: '/catalogue/offices', element: <Offices /> },
   { path: '/catalogue/nouveautes', element: <Nouveautes /> },
+  { path: '/catalogue/espace-titre', element: <EspaceTitre /> },
   { path: '/catalogue/couverture-a-paraitre', element: <CouvertureAParaitre /> },
   { path: '/catalogue/telecharger', element: <Telecharger /> },
   { path: '/catalogue/top-commandes', element: <TopCommandes /> },
@@ -74,6 +76,7 @@ export const LAZY_ROUTE_PRELOADERS: Array<() => Promise<unknown>> = [
   () => import('./pages/catalogue/Kiosque'),
   () => import('./pages/catalogue/Offices'),
   () => import('./pages/catalogue/Nouveautes'),
+  () => import('./pages/catalogue/EspaceTitre'),
   () => import('./pages/catalogue/CouvertureAParaitre'),
   () => import('./pages/catalogue/Telecharger'),
   () => import('./pages/catalogue/TopCommandes'),

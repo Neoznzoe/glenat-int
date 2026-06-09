@@ -1,6 +1,6 @@
 import { fetchWithOAuth } from './oauth';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com';
+import { API_BASE_URL } from './apiConfig';
 
 export interface Project {
   ProjectId: string;
@@ -96,9 +96,9 @@ export async function fetchProjects(): Promise<Project[]> {
     },
   });
 
-  const data = await handleResponse<ProjectsListResponse>(response);
+  const data = await handleResponse<ProjectsListResponse & { result?: Project[] }>(response);
 
-  return data.projects || [];
+  return data.projects || data.result || [];
 }
 
 export async function fetchProject(projectId: string): Promise<Project> {
@@ -111,8 +111,8 @@ export async function fetchProject(projectId: string): Promise<Project> {
     },
   });
 
-  const data = await handleResponse<{ success: boolean; project: Project }>(response);
-  return data.project;
+  const data = await handleResponse<{ success: boolean; project?: Project; result?: Project }>(response);
+  return (data.result ?? data.project) as Project;
 }
 
 export async function createProject(payload: CreateProjectPayload): Promise<Project> {
@@ -141,8 +141,8 @@ export async function createProject(payload: CreateProjectPayload): Promise<Proj
     body: JSON.stringify(apiPayload),
   });
 
-  const data = await handleResponse<{ success: boolean; project: Project }>(response);
-  return data.project;
+  const data = await handleResponse<{ success: boolean; project?: Project; result?: Project }>(response);
+  return (data.result ?? data.project) as Project;
 }
 
 export async function updateProject(
@@ -174,8 +174,8 @@ export async function updateProject(
     body: JSON.stringify(apiPayload),
   });
 
-  const data = await handleResponse<{ success: boolean; project: Project }>(response);
-  return data.project;
+  const data = await handleResponse<{ success: boolean; project?: Project; result?: Project }>(response);
+  return (data.result ?? data.project) as Project;
 }
 
 export async function deleteProject(projectId: string): Promise<void> {

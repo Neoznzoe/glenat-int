@@ -1,6 +1,6 @@
 import { fetchWithOAuth } from './oauth';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com';
+import { API_BASE_URL } from './apiConfig';
 
 export interface Block {
   BlockId: string;
@@ -113,8 +113,8 @@ export async function fetchBlock(blockId: string): Promise<Block> {
     },
   });
 
-  const data = await handleResponse<{ success: boolean; block: Block }>(response);
-  return data.block;
+  const data = await handleResponse<{ success: boolean; block?: Block; result?: Block }>(response);
+  return (data.result ?? data.block) as Block;
 }
 
 export async function createBlock(payload: CreateBlockPayload): Promise<Block> {
@@ -139,8 +139,8 @@ export async function createBlock(payload: CreateBlockPayload): Promise<Block> {
     body: JSON.stringify(apiPayload),
   });
 
-  const data = await handleResponse<{ success: boolean; block: Block }>(response);
-  return data.block;
+  const data = await handleResponse<{ success: boolean; block?: Block; result?: Block }>(response);
+  return (data.result ?? data.block) as Block;
 }
 
 export async function updateBlock(
@@ -168,8 +168,8 @@ export async function updateBlock(
     body: JSON.stringify(apiPayload),
   });
 
-  const data = await handleResponse<{ success: boolean; block: Block }>(response);
-  return data.block;
+  const data = await handleResponse<{ success: boolean; block?: Block; result?: Block }>(response);
+  return (data.result ?? data.block) as Block;
 }
 
 export async function deleteBlock(blockId: string): Promise<void> {

@@ -326,7 +326,7 @@ Ce que le stagiaire **doit** apprendre :
 
 `src/lib/oauth.ts` gère un token OAuth2 (client credentials) pour `api-dev.groupe-glenat.com` :
 
-- Cache mémoire + persistance **chiffrée** dans `localStorage` (`encryptForStorage`/`decryptFromStorage`).
+- Cache mémoire + persistance JSON dans `localStorage` (la protection des jetons repose sur la CSP + sanitisation HTML, cf. audit sécurité §6).
 - `pendingTokenRequest` pour dédupliquer les requêtes concurrentes.
 - Refresh automatique (avec `REFRESH_LEEWAY_SECONDS`).
 - Fonction d'or : `fetchWithOAuth(url, init)` → surcharge le `Authorization` et renvoie une `Response` fetch standard.

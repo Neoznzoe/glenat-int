@@ -1,6 +1,6 @@
 import { fetchWithOAuth } from './oauth';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com';
+import { API_BASE_URL } from './apiConfig';
 
 export interface Module {
   ModuleId: string;
@@ -61,13 +61,15 @@ export interface ModulesListResponse {
   success: boolean;
   code: number;
   message: string;
-  modules: Module[];
-  pagination: {
+  // Nouveau format API : données dans `result`. `modules` conservé en repli.
+  modules?: Module[];
+  result?: Module[];
+  pagination?: {
     page: number;
     perPage: number;
     total: number;
     pages: number;
-  };
+  } | null;
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -87,7 +89,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export async function fetchModules(): Promise<Module[]> {
-  const url = `${API_BASE_URL}/Api/v2.0/Cms/module`;
+  const url = `${API_BASE_URL}/Api/v2.0/cms/modules`;
 
   const response = await fetchWithOAuth(url, {
     method: 'GET',
@@ -98,11 +100,11 @@ export async function fetchModules(): Promise<Module[]> {
 
   const data = await handleResponse<ModulesListResponse>(response);
 
-  return data.modules || [];
+  return data.result || data.modules || [];
 }
 
 export async function fetchModule(moduleId: string): Promise<Module> {
-  const url = `${API_BASE_URL}/Api/v2.0/Cms/module/${moduleId}`;
+  const url = `${API_BASE_URL}/Api/v2.0/cms/modules/${moduleId}`;
 
   const response = await fetchWithOAuth(url, {
     method: 'GET',
@@ -111,12 +113,12 @@ export async function fetchModule(moduleId: string): Promise<Module> {
     },
   });
 
-  const data = await handleResponse<{ success: boolean; module: Module }>(response);
-  return data.module;
+  const data = await handleResponse<{ success: boolean; module?: Module; result?: Module }>(response);
+  return (data.result ?? data.module) as Module;
 }
 
 export async function createModule(payload: CreateModulePayload): Promise<Module> {
-  const url = `${API_BASE_URL}/Api/v2.0/Cms/module`;
+  const url = `${API_BASE_URL}/Api/v2.0/cms/modules`;
 
   // Transform payload to snake_case for API
   const apiPayload: CreateModuleApiPayload = {
@@ -141,15 +143,15 @@ export async function createModule(payload: CreateModulePayload): Promise<Module
     body: JSON.stringify(apiPayload),
   });
 
-  const data = await handleResponse<{ success: boolean; module: Module }>(response);
-  return data.module;
+  const data = await handleResponse<{ success: boolean; module?: Module; result?: Module }>(response);
+  return (data.result ?? data.module) as Module;
 }
 
 export async function updateModule(
   moduleId: string,
   payload: Partial<CreateModulePayload>,
 ): Promise<Module> {
-  const url = `${API_BASE_URL}/Api/v2.0/Cms/module/${moduleId}`;
+  const url = `${API_BASE_URL}/Api/v2.0/cms/modules/${moduleId}`;
 
   // Transform payload to snake_case for API - only include non-empty fields
   const apiPayload: Partial<CreateModuleApiPayload> = {};
@@ -174,12 +176,12 @@ export async function updateModule(
     body: JSON.stringify(apiPayload),
   });
 
-  const data = await handleResponse<{ success: boolean; module: Module }>(response);
-  return data.module;
+  const data = await handleResponse<{ success: boolean; module?: Module; result?: Module }>(response);
+  return (data.result ?? data.module) as Module;
 }
 
 export async function deleteModule(moduleId: string): Promise<void> {
-  const url = `${API_BASE_URL}/Api/v2.0/Cms/module/${moduleId}`;
+  const url = `${API_BASE_URL}/Api/v2.0/cms/modules/${moduleId}`;
 
   const response = await fetchWithOAuth(url, {
     method: 'DELETE',

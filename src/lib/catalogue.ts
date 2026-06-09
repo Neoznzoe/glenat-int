@@ -1,5 +1,6 @@
 import type { BookCardProps } from '@/components/BookCard';
 import { fetchWithOAuth } from './oauth';
+import { API_BASE_URL } from './apiConfig';
 import UniversBD from '@/assets/logos/univers/univers-bd.svg';
 import UniversJeune from '@/assets/logos/univers/univers-jeunesse.svg';
 import UniversLivre from '@/assets/logos/univers/univers-livres.svg';
@@ -427,7 +428,7 @@ export async function fetchCatalogueBooksWithPagination(
 
 const CATALOGUE_API_BASE = import.meta.env.DEV
   ? '/Api/v2.0/catalogue'
-  : `${import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com'}/Api/v2.0/catalogue`;
+  : `${API_BASE_URL}/Api/v2.0/catalogue`;
 
 const parseEndpointList = (value: unknown): string[] => {
   if (typeof value !== 'string') {
@@ -446,12 +447,12 @@ const resolveCoverageEndpoints = (): string[] => {
     return overrides;
   }
 
+  // Nouvel endpoint v2.0 : GET /Api/v2.0/items/{ean}?include=cover (OAuth Bearer).
   if (import.meta.env.DEV) {
-    return ['/extranet/couverture'];
+    return ['/Api/v2.0/items'];
   }
 
-  const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com';
-  return [`${apiBase}/Api/v1.0/Extranet/couverture`];
+  return [`${API_BASE_URL}/Api/v2.0/items`];
 };
 
 const CATALOGUE_COVERAGE_ENDPOINTS = resolveCoverageEndpoints();
@@ -466,7 +467,7 @@ const resolveAuthorPhotoEndpoints = (): string[] => {
     return ['/extranet/photoAuteur'];
   }
 
-  const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com';
+  const apiBase = API_BASE_URL;
   return [`${apiBase}/Api/v1.0/Extranet/photoAuteur`];
 };
 
@@ -483,6 +484,11 @@ type CoverApiResponse = {
   message?: string;
   result?: {
     ean?: string;
+    // Nouvel endpoint /items?include=cover : data URL dans result.cover.image
+    cover?: {
+      image?: string;
+    } | null;
+    // Ancien endpoint v1.0 (photo auteur, repli couverture) : base64 brut
     imageBase64?: string;
   };
 };
@@ -495,7 +501,9 @@ const wait = (ms: number) =>
 const COVER_FETCH_RETRY_ATTEMPTS = 3;
 const COVER_FETCH_RETRY_DELAY_MS = 150;
 const COVER_BATCH_CONCURRENCY = 5;
-const COVER_IDB_NAME = 'glenat-covers';
+// v2 : invalide les entrées persistées à l'ère de l'ancien endpoint v1.0
+// (couvertures + placeholders d'échec empoisonnés) lors d'un redéploiement.
+const COVER_IDB_NAME = 'glenat-covers-v2';
 const COVER_IDB_STORE = 'covers';
 const COVER_IDB_VERSION = 1;
 // Covers older than 7 days are re-fetched
@@ -626,7 +634,7 @@ const shouldIncludeCredentials = (endpoint: string): boolean => {
       return true;
     }
 
-    const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'https://api-dev.groupe-glenat.com';
+    const apiBase = API_BASE_URL;
     try {
       const trustedHost = new URL(apiBase).hostname.toLowerCase();
       if (hostname === trustedHost) {
@@ -765,11 +773,12 @@ const fetchCoverFromNetwork = async (ean: string, signal?: AbortSignal): Promise
     for (const endpoint of CATALOGUE_COVERAGE_ENDPOINTS) {
       if (signal?.aborted) return null;
 
-      const url = `${endpoint}${endpoint.includes('?') ? '&' : '?'}ean=${encodeURIComponent(ean)}`;
+      const url = `${endpoint}/${encodeURIComponent(ean)}?include=cover`;
 
       try {
-        const response = await fetch(url, {
-          ...buildCoverRequestInit(endpoint),
+        const response = await fetchWithOAuth(url, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
           signal,
         });
 
@@ -778,7 +787,9 @@ const fetchCoverFromNetwork = async (ean: string, signal?: AbortSignal): Promise
         }
 
         const data = (await response.json()) as CoverApiResponse;
-        const imageBase64 = normaliseCoverDataUrl(data?.result?.imageBase64);
+        const imageBase64 = normaliseCoverDataUrl(
+          data?.result?.cover?.image ?? data?.result?.imageBase64,
+        );
 
         if (data?.success && imageBase64) {
           coverCache.set(ean, imageBase64);
@@ -786,10 +797,16 @@ const fetchCoverFromNetwork = async (ean: string, signal?: AbortSignal): Promise
           return imageBase64;
         }
 
+        // Réponse OK mais item sans couverture → placeholder en cache MÉMOIRE
+        // uniquement (pas dans IndexedDB) : on retentera au prochain rechargement.
+        if (data?.success) {
+          coverCache.set(ean, FALLBACK_COVER_DATA_URL);
+          return FALLBACK_COVER_DATA_URL;
+        }
+
         const errorMessage = data?.message ?? "Réponse inattendue de l'API couverture";
         if (errorMessage.includes('Image non trouvée') || errorMessage.includes('image non trouvée')) {
           coverCache.set(ean, FALLBACK_COVER_DATA_URL);
-          void idbSet(ean, FALLBACK_COVER_DATA_URL);
           return FALLBACK_COVER_DATA_URL;
         }
 
@@ -802,7 +819,6 @@ const fetchCoverFromNetwork = async (ean: string, signal?: AbortSignal): Promise
         const errorMsg = error instanceof Error ? error.message : String(error);
         if (errorMsg.includes('Image non trouvée') || errorMsg.includes('image non trouvée')) {
           coverCache.set(ean, FALLBACK_COVER_DATA_URL);
-          void idbSet(ean, FALLBACK_COVER_DATA_URL);
           return FALLBACK_COVER_DATA_URL;
         }
       }
@@ -1128,6 +1144,21 @@ const extractApiResult = (payload: unknown): RawCatalogueOfficeRecord[] => {
         const [first] = objectPayload.recordsets as unknown[];
         if (Array.isArray(first)) {
           return first;
+        }
+      }
+
+      // Repli générique pour la nouvelle enveloppe API : { result: { <entité>: [...], pagination } }
+      // L'entité varie (authors, books, offices…) donc on prend la première propriété
+      // tableau (ou array-like) en ignorant les clés de métadonnées.
+      const metaKeys = new Set(['pagination', 'headers', 'context', 'meta', 'links', 'count']);
+      for (const [key, candidate] of Object.entries(objectPayload)) {
+        if (metaKeys.has(key)) continue;
+        if (Array.isArray(candidate)) {
+          return candidate;
+        }
+        const candidateAsArray = toArrayIfArrayLike(candidate);
+        if (candidateAsArray) {
+          return candidateAsArray;
         }
       }
     }
@@ -1677,34 +1708,57 @@ export interface CatalogueAuthorListItem {
   bookCount: number;
 }
 
-export async function fetchCatalogueAuthorsList(
-  signal?: AbortSignal,
-): Promise<CatalogueAuthorListItem[]> {
-  const endpoint = 'fetchCatalogueAuthorsList';
-  logRequest(endpoint);
+interface ApiPagination {
+  page: number;
+  perPage: number;
+  total: number;
+  pages: number;
+}
 
-  const url = `${CATALOGUE_API_BASE}/authors`;
-  const response = await fetchWithOAuth(url, {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
-    signal,
-  });
+/**
+ * Extrait l'objet de pagination de l'enveloppe API, qu'il soit à la racine
+ * (`payload.pagination`) ou imbriqué dans `result` (`payload.result.pagination`).
+ */
+const extractPagination = (payload: unknown): ApiPagination | null => {
+  if (!payload || typeof payload !== 'object') return null;
+  const root = payload as Record<string, unknown>;
+  const result = root.result;
+  const candidates: unknown[] = [
+    result && typeof result === 'object' && !Array.isArray(result)
+      ? (result as Record<string, unknown>).pagination
+      : undefined,
+    root.pagination,
+  ];
 
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} ${response.statusText}`);
+  for (const candidate of candidates) {
+    if (candidate && typeof candidate === 'object') {
+      const p = candidate as Record<string, unknown>;
+      const page = ensureNumber(p.page ?? p.currentPage);
+      const pages = ensureNumber(p.pages ?? p.totalPages ?? p.lastPage);
+      if (page !== undefined && pages !== undefined) {
+        return {
+          page,
+          perPage: ensureNumber(p.perPage ?? p.per_page) ?? 50,
+          total: ensureNumber(p.total) ?? 0,
+          pages,
+        };
+      }
+    }
   }
+  return null;
+};
 
-  const payload = (await response.json()) as CatalogueApiResponse;
-  const records = extractApiResult(payload);
-
-  const authors: CatalogueAuthorListItem[] = records
+const mapAuthorRecords = (
+  records: RawCatalogueOfficeRecord[],
+): CatalogueAuthorListItem[] =>
+  records
     .map((record) => {
       const firstName = ensureString(getField(record, 'firstname', 'firstName', 'prenom')) ?? '';
       const lastName = ensureString(getField(record, 'lastname', 'lastName', 'nom')) ?? '';
-      const fullName = ensureString(getField(record, 'fullname', 'fullName', 'nomcomplet'));
+      const fullName = ensureString(getField(record, 'fullname', 'fullName', 'displayname', 'displayName', 'nomcomplet'));
       const photo = ensureString(getField(record, 'photo'));
       const fonctionsRaw = ensureString(getField(record, 'fonctions', 'fonction')) ?? '';
-      const bookCount = ensureNumber(getField(record, 'bookcount', 'bookCount', 'count')) ?? 0;
+      const bookCount = ensureNumber(getField(record, 'bookscount', 'booksCount', 'bookcount', 'bookCount', 'count')) ?? 0;
       const idAuthor = ensureString(getField(record, 'idauthor', 'idAuthor')) ?? '';
 
       const fonctions = fonctionsRaw
@@ -1722,7 +1776,73 @@ export async function fetchCatalogueAuthorsList(
         bookCount,
       };
     })
-    .filter((a) => a.idAuthor && a.firstName && a.lastName);
+    // On garde tout auteur identifiable ayant au moins un nom (les mononymes
+    // n'ont pas de firstName mais possèdent lastName et/ou displayName).
+    .filter((a) => a.idAuthor && (a.lastName || a.firstName || a.fullName));
+
+/**
+ * Récupère TOUS les auteurs en enchaînant automatiquement les pages (50 par 50).
+ * `onProgress` est appelé après chaque page avec la liste cumulée, ce qui permet
+ * à l'UI d'afficher les premiers auteurs sans attendre la fin du chargement.
+ */
+export async function fetchCatalogueAuthorsList(
+  signal?: AbortSignal,
+  onProgress?: (authorsSoFar: CatalogueAuthorListItem[]) => void,
+): Promise<CatalogueAuthorListItem[]> {
+  const endpoint = 'fetchCatalogueAuthorsList';
+  logRequest(endpoint);
+
+  const fetchPage = async (page: number) => {
+    // Le param de page de l'API catalogue est `p` (cf. /books qui utilise p/size).
+    // size=200 = ratio max accepté par l'API → moins de requêtes pour tout charger.
+    const url = `${CATALOGUE_API_BASE}/authors?p=${page}&size=200`;
+    const response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+
+    const payload = (await response.json()) as CatalogueApiResponse;
+    return {
+      authors: mapAuthorRecords(extractApiResult(payload)),
+      pagination: extractPagination(payload),
+    };
+  };
+
+  const authors: CatalogueAuthorListItem[] = [];
+  const seen = new Set<string>();
+
+  // Ajoute uniquement les auteurs non encore vus. Renvoie le nombre de nouveaux.
+  const appendNew = (batch: CatalogueAuthorListItem[]): number => {
+    let added = 0;
+    for (const author of batch) {
+      if (seen.has(author.idAuthor)) continue;
+      seen.add(author.idAuthor);
+      authors.push(author);
+      added += 1;
+    }
+    return added;
+  };
+
+  // Première page : on connaît tout de suite le nombre total de pages.
+  const first = await fetchPage(1);
+  appendNew(first.authors);
+  const totalPages = first.pagination?.pages ?? 1;
+  onProgress?.([...authors]);
+
+  // Pages suivantes enchaînées séquentiellement (« à la suite »).
+  for (let page = 2; page <= totalPages; page += 1) {
+    if (signal?.aborted) break;
+    const next = await fetchPage(page);
+    // Garde-fou : si la page n'apporte aucun auteur nouveau (pagination ignorée
+    // par l'API → on retombe sur la page 1), inutile de continuer.
+    if (appendNew(next.authors) === 0) break;
+    onProgress?.([...authors]);
+  }
 
   logResponse(endpoint, authors);
   return authors;
