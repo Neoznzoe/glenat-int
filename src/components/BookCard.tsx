@@ -5,6 +5,7 @@ import { useAppDispatch } from '@/hooks/redux';
 import { addItem } from '@/store/cartSlice';
 import { toast } from 'sonner';
 import { SecureLink } from '@/components/routing/SecureLink';
+import { prefetchCatalogueItemDetail } from '@/lib/catalogue';
 
 export interface BookCardProps {
   cover: string;
@@ -38,6 +39,8 @@ export function BookCard({ cover, title, ean, authors, publisher, publicationDat
       <div
         className="relative flex items-center justify-center p-2 ring-offset-background focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-white/70"
         style={{ backgroundColor: `var(${color})` }}
+        onMouseEnter={() => prefetchCatalogueItemDetail(ean)}
+        onFocusCapture={() => prefetchCatalogueItemDetail(ean)}
       >
         {ribbonText && (
           <div className="pointer-events-none absolute top-4 -right-8 rotate-45 z-20">

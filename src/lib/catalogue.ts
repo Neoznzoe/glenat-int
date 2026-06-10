@@ -430,6 +430,11 @@ const CATALOGUE_API_BASE = import.meta.env.DEV
   ? '/Api/v2.0/catalogue'
   : `${API_BASE_URL}/Api/v2.0/catalogue`;
 
+// Base des endpoints Business Central « items » (fiche par EAN, sections, couverture).
+const ITEMS_API_BASE = import.meta.env.DEV
+  ? '/Api/v2.0/items'
+  : `${API_BASE_URL}/Api/v2.0/items`;
+
 const parseEndpointList = (value: unknown): string[] => {
   if (typeof value !== 'string') {
     return [];
@@ -484,11 +489,17 @@ type CoverApiResponse = {
   message?: string;
   result?: {
     ean?: string;
-    // Nouvel endpoint /items?include=cover : data URL dans result.cover.image
+    // Profil BC : data URL dans result.clusters.cover.image
+    clusters?: {
+      cover?: {
+        image?: string;
+      } | null;
+    } | null;
+    // Repli : result.cover.image (ancien items?include=cover)
     cover?: {
       image?: string;
     } | null;
-    // Ancien endpoint v1.0 (photo auteur, repli couverture) : base64 brut
+    // Repli v1.0 (photo auteur) : base64 brut
     imageBase64?: string;
   };
 };
@@ -500,7 +511,9 @@ const wait = (ms: number) =>
 
 const COVER_FETCH_RETRY_ATTEMPTS = 3;
 const COVER_FETCH_RETRY_DELAY_MS = 150;
-const COVER_BATCH_CONCURRENCY = 5;
+// Couvertures (data URL base64) chargées hors du flux d'infos : on pousse la
+// concurrence pour un affichage rapide de la grille (HTTP/2 multiplexe derrière Traefik).
+const COVER_BATCH_CONCURRENCY = 12;
 // v2 : invalide les entrées persistées à l'ère de l'ancien endpoint v1.0
 // (couvertures + placeholders d'échec empoisonnés) lors d'un redéploiement.
 const COVER_IDB_NAME = 'glenat-covers-v2';
@@ -773,7 +786,7 @@ const fetchCoverFromNetwork = async (ean: string, signal?: AbortSignal): Promise
     for (const endpoint of CATALOGUE_COVERAGE_ENDPOINTS) {
       if (signal?.aborted) return null;
 
-      const url = `${endpoint}/${encodeURIComponent(ean)}?include=cover`;
+      const url = `${endpoint}/${encodeURIComponent(ean)}/byProfile/IntranetCatalogCard?include=cover`;
 
       try {
         const response = await fetchWithOAuth(url, {
@@ -788,7 +801,9 @@ const fetchCoverFromNetwork = async (ean: string, signal?: AbortSignal): Promise
 
         const data = (await response.json()) as CoverApiResponse;
         const imageBase64 = normaliseCoverDataUrl(
-          data?.result?.cover?.image ?? data?.result?.imageBase64,
+          data?.result?.clusters?.cover?.image
+            ?? data?.result?.cover?.image
+            ?? data?.result?.imageBase64,
         );
 
         if (data?.success && imageBase64) {
@@ -1285,8 +1300,8 @@ const normalizeBookFromDatabaseRecord = async (
   const subtitle = ensureString(getField(record, 'soustitre', 'subtitle'));
   const isbn = ensureString(getField(record, 'isbn'));
   const idHachette = ensureString(getField(record, 'idhachette'));
-  const typeBook = ensureString(getField(record, 'typebook'));
-  const countPage = ensureNumber(getField(record, 'countpage', 'pagination'));
+  const typeBook = ensureString(getField(record, 'typebook', 'typelivre'));
+  const countPage = ensureNumber(getField(record, 'countpage', 'pagination', 'nbpage'));
   const faconnage = ensureString(getField(record, 'faconnage'));
   const isNumerique = ensureNumber(getField(record, 'isnumerique')) === 1;
   const age = ensureString(getField(record, 'age'));
@@ -1879,6 +1894,237 @@ export async function fetchCatalogueAuthorBookCounts(
 
   logResponse(endpoint, counts);
   return counts;
+}
+
+export interface CataloguePaperTechInfo {
+  papierCouverture?: string;
+  papierInterieur?: string;
+  typeElement?: string;
+  codeDossier?: string;
+}
+
+/**
+ * Récupère les infos papier/technique d'un item via le nouvel endpoint BC
+ * GET /Api/v2.0/items/{ean}/paper-tech-info. Données dans `result.data`.
+ */
+export async function fetchCatalogueItemPaperTechInfo(
+  ean: string,
+  signal?: AbortSignal,
+): Promise<CataloguePaperTechInfo | null> {
+  const endpoint = `fetchCatalogueItemPaperTechInfo:${ean}`;
+  logRequest(endpoint);
+
+  try {
+    const url = `${ITEMS_API_BASE}/${encodeURIComponent(ean)}/paper-tech-info`;
+    const response = await fetchWithOAuth(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+
+    const payload = (await response.json()) as CatalogueApiResponse;
+    const result = payload.result as Record<string, unknown> | undefined;
+    // La charge utile BC est dans result.data (repli sur result si à plat).
+    const data = ((result?.data as Record<string, unknown>) ?? result) as
+      | RawCatalogueOfficeRecord
+      | undefined;
+    if (!data) {
+      logResponse(endpoint, null);
+      return null;
+    }
+
+    const info: CataloguePaperTechInfo = {
+      papierCouverture: ensureString(getField(data, 'papierCouverture', 'papiercouverture')),
+      papierInterieur: ensureString(getField(data, 'papierInterieur', 'papierinterieur')),
+      typeElement: ensureString(getField(data, 'typeElement', 'typeelement')),
+      codeDossier: ensureString(getField(data, 'codeDossier', 'codedossier')),
+    };
+
+    logResponse(endpoint, info);
+    return info;
+  } catch {
+    logResponse(endpoint, null);
+    return null;
+  }
+}
+
+/**
+ * Récupère la charge utile `result.data` d'une section BC d'un item
+ * (catalog, production, editorial, sales…). Renvoie null si indisponible.
+ */
+type ItemDetailResult = { book: CatalogueBook; authors: CatalogueAuthor[] };
+
+// Cache + déduplication des requêtes en vol pour la fiche détail.
+const itemDetailCache = new Map<string, ItemDetailResult>();
+const itemDetailTimestamps = new Map<string, number>();
+const pendingItemDetailRequests = new Map<string, Promise<ItemDetailResult | null>>();
+const ITEM_DETAIL_TTL_MS = 5 * 60 * 1000;
+
+/**
+ * Fiche livre via le profil BC « IntranetCatalogCard » : UN seul appel assemble
+ * les clusters card+details+argumentaire+inventory. Le cluster `inventory` a une
+ * forme quasi identique à l'ancien enregistrement catalogue → on le passe à
+ * `normalizeBookFromDatabaseRecord` (code éprouvé), puis on greffe la couverture
+ * (cluster card), le résumé (argumentaire), le papier (/paper-tech-info, hors
+ * profil) et les auteurs (card.contributors, joliment casés).
+ *
+ * Mise en cache mémoire (5 min) + déduplication : une visite répétée ou un
+ * préchargement au survol ne relance pas le réseau.
+ */
+export async function fetchCatalogueItemDetail(
+  ean: string,
+  signal?: AbortSignal,
+): Promise<ItemDetailResult | null> {
+  const key = ean.trim();
+
+  // 1. Cache mémoire frais.
+  const cached = itemDetailCache.get(key);
+  const cachedAt = itemDetailTimestamps.get(key);
+  if (cached && cachedAt && Date.now() - cachedAt < ITEM_DETAIL_TTL_MS) {
+    return cached;
+  }
+
+  // 2. Requête déjà en vol pour cet EAN → on la partage.
+  const inFlight = pendingItemDetailRequests.get(key);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const request = buildCatalogueItemDetail(key, signal).then((result) => {
+    if (result) {
+      itemDetailCache.set(key, result);
+      itemDetailTimestamps.set(key, Date.now());
+    }
+    return result;
+  });
+
+  pendingItemDetailRequests.set(key, request);
+  request.finally(() => {
+    pendingItemDetailRequests.delete(key);
+  });
+
+  return request;
+}
+
+/**
+ * Précharge (et met en cache) la fiche d'un EAN sans bloquer — à appeler au survol
+ * d'une carte livre pour une navigation quasi instantanée. Les erreurs sont ignorées.
+ */
+export function prefetchCatalogueItemDetail(ean: string): void {
+  if (!ean) return;
+  void fetchCatalogueItemDetail(ean).catch(() => {
+    // préchargement best-effort
+  });
+}
+
+async function buildCatalogueItemDetail(
+  ean: string,
+  signal?: AbortSignal,
+): Promise<ItemDetailResult | null> {
+  const endpoint = `fetchCatalogueItemDetail:${ean}`;
+  logRequest(endpoint);
+
+  const loadProfile = async (): Promise<Record<string, unknown> | null> => {
+    try {
+      const url = `${ITEMS_API_BASE}/${encodeURIComponent(ean)}/byProfile/IntranetCatalogCard?include=card,details,argumentaire,inventory,sales`;
+      const response = await fetchWithOAuth(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        signal,
+      });
+      if (!response.ok) return null;
+      const payload = (await response.json()) as CatalogueApiResponse;
+      const result = payload.result as Record<string, unknown> | undefined;
+      return (result?.clusters as Record<string, unknown>) ?? null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Profil + papier (hors profil) en parallèle.
+  const [clusters, paper] = await Promise.all([
+    loadProfile(),
+    fetchCatalogueItemPaperTechInfo(ean, signal),
+  ]);
+
+  if (!clusters) {
+    logResponse(endpoint, null);
+    return null;
+  }
+
+  const card = clusters.card as Record<string, unknown> | undefined;
+  const inventory = clusters.inventory as RawCatalogueOfficeRecord | undefined;
+  const argumentaire = ensureString(clusters.argumentaire);
+
+  // Couverture (data URL) depuis le cluster card. On amorce le cache AVANT la
+  // normalisation : ainsi le fetchCover() en arrière-plan déclenché par
+  // normalizeBookFromDatabaseRecord trouve l'image en cache → aucun appel réseau.
+  const coverImage = normaliseCoverDataUrl(
+    ensureString((card?.cover as { image?: string } | undefined)?.image),
+  );
+  if (coverImage) {
+    coverCache.set(ean, coverImage);
+  }
+
+  // `inventory` = source riche (proche de l'ancien enregistrement) ; repli `card`.
+  const record = inventory ?? (card as RawCatalogueOfficeRecord | undefined);
+  if (!record) {
+    logResponse(endpoint, null);
+    return null;
+  }
+
+  const book = await normalizeBookFromDatabaseRecord(record, false);
+  if (!book) {
+    logResponse(endpoint, null);
+    return null;
+  }
+
+  if (coverImage) {
+    book.cover = coverImage;
+  }
+
+  // Stock : désormais le stock Hachette du cluster sales (prioritaire sur inventory.stocks).
+  const sales = clusters.sales as Record<string, unknown> | undefined;
+  const stockHachette = ensureNumber(getField(sales ?? {}, 'stockHachette'));
+  if (stockHachette !== undefined) {
+    book.stock = stockHachette;
+  }
+
+  if (book.details) {
+    // Résumé depuis l'argumentaire (HTML nettoyé).
+    if (argumentaire) {
+      book.details.summary = cleanHtmlText(argumentaire);
+    }
+
+    // Papier (hors profil) ajouté aux specifications.
+    if (paper) {
+      const specs = [...(book.details.specifications ?? [])];
+      if (paper.papierInterieur) specs.push({ label: 'Papier intérieur', value: paper.papierInterieur });
+      if (paper.papierCouverture) specs.push({ label: 'Papier couverture', value: paper.papierCouverture });
+      book.details.specifications = specs;
+    }
+  }
+
+  // Auteurs depuis card.contributors (noms joliment casés).
+  const contributorsRaw = Array.isArray(card?.contributors)
+    ? (card!.contributors as Record<string, unknown>[])
+    : [];
+  const authors: CatalogueAuthor[] = contributorsRaw.map((c, index) => ({
+    idAuthor: ensureString(getField(c, 'authorNo', 'idAuthor')) ?? `contributor-${index}`,
+    fullName: ensureString(getField(c, 'displayName', 'fullName')),
+    fonction: ensureString(getField(c, 'role')),
+    sortOrder: index,
+  }));
+  if (book.details && authors.length > 0) {
+    book.details.authors = authors;
+  }
+
+  logResponse(endpoint, book);
+  return { book, authors };
 }
 
 export interface CatalogueAuthorDetailInfo {

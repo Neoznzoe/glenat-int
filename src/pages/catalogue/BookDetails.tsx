@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { SecureLink } from '@/components/routing/SecureLink';
 import { useAppDispatch } from '@/hooks/redux';
 import { addItem } from '@/store/cartSlice';
-import { fetchCatalogueBook, fetchCatalogueUpcomingBooksFromSeries, fetchCataloguePastBooksFromSeries, fetchCatalogueSameCollectionBooks, fetchCatalogueAuthors, fetchCatalogueBooksByAuthors, type CatalogueBook, type CatalogueAuthor } from '@/lib/catalogue';
+import { fetchCatalogueItemDetail, fetchCatalogueCover, fetchCatalogueUpcomingBooksFromSeries, fetchCataloguePastBooksFromSeries, fetchCatalogueSameCollectionBooks, fetchCatalogueBooksByAuthors, type CatalogueBook, type CatalogueAuthor } from '@/lib/catalogue';
 import { useDecryptedLocation } from '@/lib/secureRouting';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
@@ -49,23 +49,37 @@ export function BookDetails() {
       setIsLoading(true);
 
       try {
-        const [bookResult, pastResult, authorsResult] = await Promise.allSettled([
-          fetchCatalogueBook(currentEan),
+        const [detailResult, pastResult] = await Promise.allSettled([
+          fetchCatalogueItemDetail(currentEan),
           fetchCataloguePastBooksFromSeries(currentEan),
-          fetchCatalogueAuthors(currentEan),
         ]);
 
         if (cancelled) {
           return;
         }
 
-        const bookData = bookResult.status === 'fulfilled' ? bookResult.value : null;
+        const detail = detailResult.status === 'fulfilled' ? detailResult.value : null;
+        const bookData = detail?.book ?? null;
+        const authorsData = detail?.authors ?? [];
         const pastData = pastResult.status === 'fulfilled' ? pastResult.value : [];
-        const authorsData = authorsResult.status === 'fulfilled' ? authorsResult.value : [];
 
         setBook(bookData);
         setPastBooks(bookData ? pastData : []);
         setAuthors(bookData ? authorsData : []);
+
+        // Couverture (lourde) chargée séparément, en parallèle : on patche la
+        // fiche dès qu'elle arrive sans bloquer l'affichage des infos.
+        if (bookData) {
+          void fetchCatalogueCover(currentEan)
+            .then((cover) => {
+              if (!cancelled && cover && cover !== bookData.cover) {
+                setBook((prev) => (prev && prev.ean === bookData.ean ? { ...prev, cover } : prev));
+              }
+            })
+            .catch(() => {
+              // couverture best-effort
+            });
+        }
       } finally {
         if (!cancelled) {
           setIsLoading(false);
