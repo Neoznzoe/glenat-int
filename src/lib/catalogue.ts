@@ -1966,11 +1966,12 @@ const ITEM_DETAIL_TTL_MS = 5 * 60 * 1000;
 
 /**
  * Fiche livre via le profil BC « IntranetCatalogCard » : UN seul appel assemble
- * les clusters card+details+argumentaire+inventory. Le cluster `inventory` a une
- * forme quasi identique à l'ancien enregistrement catalogue → on le passe à
- * `normalizeBookFromDatabaseRecord` (code éprouvé), puis on greffe la couverture
- * (cluster card), le résumé (argumentaire), le papier (/paper-tech-info, hors
- * profil) et les auteurs (card.contributors, joliment casés).
+ * les clusters details+argumentaire+inventory+sales (PAS `cover` : trop lourd,
+ * chargé à part). Le cluster `inventory` a une forme quasi identique à l'ancien
+ * enregistrement catalogue → on le passe à `normalizeBookFromDatabaseRecord`
+ * (code éprouvé), puis on greffe le résumé (argumentaire), le papier
+ * (/paper-tech-info, hors profil) et les auteurs (contributors, joliment casés).
+ * La couverture est chargée séparément via `fetchCatalogueCover` (?include=cover).
  *
  * Mise en cache mémoire (5 min) + déduplication : une visite répétée ou un
  * préchargement au survol ne relance pas le réseau.
@@ -2021,6 +2022,23 @@ export function prefetchCatalogueItemDetail(ean: string): void {
   });
 }
 
+// Les contributeurs (auteurs structurés) peuvent être exposés par différents
+// clusters selon le profil et la liste `include`. On les récupère dans le premier
+// cluster inclus qui en fournit, sans dépendre de `card` (lourd : il embarque la
+// couverture base64, désormais chargée à part via ?include=cover).
+const findClusterContributors = (
+  clusters: Record<string, unknown>,
+): Record<string, unknown>[] => {
+  for (const key of ['details', 'card', 'editorial', 'catalog']) {
+    const cluster = clusters[key] as Record<string, unknown> | undefined;
+    const list = cluster?.contributors;
+    if (Array.isArray(list) && list.length > 0) {
+      return list as Record<string, unknown>[];
+    }
+  }
+  return [];
+};
+
 async function buildCatalogueItemDetail(
   ean: string,
   signal?: AbortSignal,
@@ -2030,7 +2048,7 @@ async function buildCatalogueItemDetail(
 
   const loadProfile = async (): Promise<Record<string, unknown> | null> => {
     try {
-      const url = `${ITEMS_API_BASE}/${encodeURIComponent(ean)}/byProfile/IntranetCatalogCard?include=card,details,argumentaire,inventory,sales`;
+      const url = `${ITEMS_API_BASE}/${encodeURIComponent(ean)}/byProfile/IntranetCatalogCard?include=details,argumentaire,inventory,sales`;
       const response = await fetchWithOAuth(url, {
         method: 'GET',
         headers: { Accept: 'application/json' },
@@ -2056,22 +2074,18 @@ async function buildCatalogueItemDetail(
     return null;
   }
 
-  const card = clusters.card as Record<string, unknown> | undefined;
+  const details = clusters.details as Record<string, unknown> | undefined;
   const inventory = clusters.inventory as RawCatalogueOfficeRecord | undefined;
   const argumentaire = ensureString(clusters.argumentaire);
 
-  // Couverture (data URL) depuis le cluster card. On amorce le cache AVANT la
-  // normalisation : ainsi le fetchCover() en arrière-plan déclenché par
-  // normalizeBookFromDatabaseRecord trouve l'image en cache → aucun appel réseau.
-  const coverImage = normaliseCoverDataUrl(
-    ensureString((card?.cover as { image?: string } | undefined)?.image),
-  );
-  if (coverImage) {
-    coverCache.set(ean, coverImage);
-  }
+  // La couverture (lourde, base64) n'est PLUS demandée dans cet appel d'infos :
+  // le cluster `card` l'embarquait (`card.cover.image`), ce qui alourdissait le
+  // chargement et la faisait transiter deux fois (ici + l'appel séparé). Elle est
+  // désormais chargée uniquement via `?include=cover` (fetchCatalogueCover) :
+  // la fiche rend les infos d'abord, puis patche la couverture quand elle arrive.
 
-  // `inventory` = source riche (proche de l'ancien enregistrement) ; repli `card`.
-  const record = inventory ?? (card as RawCatalogueOfficeRecord | undefined);
+  // `inventory` = source riche (proche de l'ancien enregistrement) ; repli `details`.
+  const record = inventory ?? (details as RawCatalogueOfficeRecord | undefined);
   if (!record) {
     logResponse(endpoint, null);
     return null;
@@ -2081,10 +2095,6 @@ async function buildCatalogueItemDetail(
   if (!book) {
     logResponse(endpoint, null);
     return null;
-  }
-
-  if (coverImage) {
-    book.cover = coverImage;
   }
 
   // Stock : désormais le stock Hachette du cluster sales (prioritaire sur inventory.stocks).
@@ -2109,10 +2119,9 @@ async function buildCatalogueItemDetail(
     }
   }
 
-  // Auteurs depuis card.contributors (noms joliment casés).
-  const contributorsRaw = Array.isArray(card?.contributors)
-    ? (card!.contributors as Record<string, unknown>[])
-    : [];
+  // Auteurs : les contributeurs ne viennent plus du cluster `card` (retiré car il
+  // embarquait la couverture). On les cherche dans les clusters inclus restants.
+  const contributorsRaw = findClusterContributors(clusters);
   const authors: CatalogueAuthor[] = contributorsRaw.map((c, index) => ({
     idAuthor: ensureString(getField(c, 'authorNo', 'idAuthor')) ?? `contributor-${index}`,
     fullName: ensureString(getField(c, 'displayName', 'fullName')),

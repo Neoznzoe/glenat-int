@@ -1,13 +1,20 @@
 import type { ReactNode } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 
 export interface PresenceListColumn<T> {
   key: keyof T;
   label: string;
+}
+
+export type SortDirection = 'asc' | 'desc';
+
+export interface SortState<T> {
+  key: keyof T;
+  direction: SortDirection;
 }
 
 export interface PresenceListProps<T extends Record<string, ReactNode>> {
@@ -19,6 +26,8 @@ export interface PresenceListProps<T extends Record<string, ReactNode>> {
   sortable?: boolean;
   /** Optional list of keys allowed for sorting; defaults to all columns. */
   sortKeys?: (keyof T)[];
+  /** Current sort applied to the rows, used to render the header indicators. */
+  sortState?: SortState<T> | null;
   /** Optional function to style each row. */
   rowClassName?: (row: T, index: number) => string | undefined;
   showMore?: boolean;
@@ -30,6 +39,7 @@ export interface PresenceListProps<T extends Record<string, ReactNode>> {
    */
   variant?: 'card' | 'embedded';
   onSearch?: (value: string) => void;
+  /** Called with the column key when the user clicks a sortable header. */
   onSort?: (value: keyof T) => void;
   onShowMore?: () => void;
   onShowLess?: () => void;
@@ -43,6 +53,7 @@ export function PresenceList<T extends Record<string, ReactNode>>({
   searchable,
   sortable,
   sortKeys,
+  sortState,
   rowClassName,
   showMore,
   showLess,
@@ -56,33 +67,19 @@ export function PresenceList<T extends Record<string, ReactNode>>({
   const displayCount = count ?? rows.length;
   const isTwoColumn = columns.length === 2;
   const hasRows = rows.length > 0;
+
+  // Colonnes triables : restreintes par `sortKeys` si fourni, sinon toutes.
+  const isSortable = (key: keyof T) =>
+    Boolean(sortable) && (sortKeys ? sortKeys.includes(key) : true);
+
   const controls =
-    (searchable || sortable) && (
+    searchable && (
       <div className="flex items-center gap-2 mb-4">
-        {searchable && (
-          <Input
-            className="flex-1"
-            placeholder="Rechercher..."
-            onChange={(e) => onSearch?.(e.target.value)}
-          />
-        )}
-        {sortable && (
-          <Select onValueChange={(value) => onSort?.(value as keyof T)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Trier par" />
-            </SelectTrigger>
-            <SelectContent>
-              {(sortKeys
-                ? columns.filter((col) => sortKeys.includes(col.key))
-                : columns
-              ).map((col) => (
-                <SelectItem key={String(col.key)} value={String(col.key)}>
-                  {col.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+        <Input
+          className="flex-1"
+          placeholder="Rechercher..."
+          onChange={(e) => onSearch?.(e.target.value)}
+        />
       </div>
     );
 
@@ -92,14 +89,44 @@ export function PresenceList<T extends Record<string, ReactNode>>({
         <Table className={isTwoColumn ? 'table-fixed' : undefined}>
           <TableHeader>
             <TableRow>
-              {columns.map((col) => (
-                <TableHead
-                  key={String(col.key)}
-                  className={isTwoColumn ? 'w-1/2' : undefined}
-                >
-                  {col.label}
-                </TableHead>
-              ))}
+              {columns.map((col) => {
+                const sortableColumn = isSortable(col.key);
+                const isActive = sortState?.key === col.key;
+                return (
+                  <TableHead
+                    key={String(col.key)}
+                    className={isTwoColumn ? 'w-1/2' : undefined}
+                    aria-sort={
+                      isActive
+                        ? sortState?.direction === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : undefined
+                    }
+                  >
+                    {sortableColumn ? (
+                      <button
+                        type="button"
+                        onClick={() => onSort?.(col.key)}
+                        className="-ml-1 inline-flex items-center gap-1 rounded px-1 py-0.5 font-medium hover:text-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      >
+                        {col.label}
+                        {isActive ? (
+                          sortState?.direction === 'asc' ? (
+                            <ArrowUp className="h-3.5 w-3.5" />
+                          ) : (
+                            <ArrowDown className="h-3.5 w-3.5" />
+                          )
+                        ) : (
+                          <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />
+                        )}
+                      </button>
+                    ) : (
+                      col.label
+                    )}
+                  </TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>

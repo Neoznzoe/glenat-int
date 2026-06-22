@@ -14,9 +14,12 @@ import { HomeSkeleton } from '@/components/HomeSkeleton';
 import { sharePointLinks, usefulLinks, companyLifeLinks } from '@/data/homeData';
 import { useExpandableList } from '@/hooks/useExpandableList';
 import { useTravelingToday, usePlannedTravel, useVisitingToday } from '@/hooks/usePresence';
+import { useTableSort } from '@/hooks/useTableSort';
 import type { PresencePerson } from '@/lib/presenceApi';
 
-const noop = () => undefined;
+// Clés des colonnes contenant des dates `jj/mm/aaaa` (triées chronologiquement).
+const ABSENT_DATE_KEYS = ['retour'];
+const PLANNED_DATE_KEYS = ['date'];
 
 function HomeContent() {
   const { user } = useAuth();
@@ -127,9 +130,15 @@ function HomeContent() {
   const [absentLimit, setAbsentLimit] = useState(100);
   const [teleworkLimit, setTeleworkLimit] = useState(100);
 
+  // Tri (clic sur en-tête) appliqué sur la liste complète avant le découpage.
+  const { sortState: travelingSort, toggleSort: toggleTravelingSort, sortedRows: travelingSorted } =
+    useTableSort(travelingToday);
+  const { sortState: plannedSort, toggleSort: togglePlannedSort, sortedRows: plannedSorted } =
+    useTableSort(plannedTravel, { dateKeys: PLANNED_DATE_KEYS });
+
   const visitingDisplayed = isExpanded('visiting') ? visitingToday : visitingToday.slice(0, 2);
-  const travelingDisplayed = isExpanded('traveling') ? travelingToday : travelingToday.slice(0, 2);
-  const plannedTravelDisplayed = isExpanded('planned') ? plannedTravel : plannedTravel.slice(0, 2);
+  const travelingDisplayed = isExpanded('traveling') ? travelingSorted : travelingSorted.slice(0, 2);
+  const plannedTravelDisplayed = isExpanded('planned') ? plannedSorted : plannedSorted.slice(0, 2);
 
   const visitingRows = visitingDisplayed;
 
@@ -204,8 +213,13 @@ function HomeContent() {
     return teleworkToday.filter((t) => String(t.name).toLowerCase().includes(s) || String(t.email).toLowerCase().includes(s));
   }, [teleworkToday, teleworkSearch]);
 
-  const absentsDisplayed = isExpanded('absents') ? absentsFiltered : absentsFiltered.slice(0, absentLimit);
-  const teleworkDisplayed = isExpanded('telework') ? teleworkFiltered : teleworkFiltered.slice(0, teleworkLimit);
+  const { sortState: absentSort, toggleSort: toggleAbsentSort, sortedRows: absentsSorted } =
+    useTableSort(absentsFiltered, { dateKeys: ABSENT_DATE_KEYS });
+  const { sortState: teleworkSort, toggleSort: toggleTeleworkSort, sortedRows: teleworkSorted } =
+    useTableSort(teleworkFiltered);
+
+  const absentsDisplayed = isExpanded('absents') ? absentsSorted : absentsSorted.slice(0, absentLimit);
+  const teleworkDisplayed = isExpanded('telework') ? teleworkSorted : teleworkSorted.slice(0, teleworkLimit);
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -294,26 +308,26 @@ function HomeContent() {
         <div ref={absentRef}>
           <PresenceList title="Absent aujourd'hui"
             columns={[{ key: 'name', label: 'Nom' }, { key: 'email', label: 'Email' }, { key: 'retour', label: 'Retour prévu' }]}
-            rows={absentsDisplayed} count={absentsFiltered.length} searchable sortable showMore={!isExpanded('absents') && absentsFiltered.length > absentLimit} showLess={isExpanded('absents') && absentsFiltered.length > absentLimit} onSearch={setAbsentSearch} onSort={noop} onShowMore={() => expand('absents')} onShowLess={() => collapse('absents')} emptyMessage={absentSearch ? 'aucun résultat' : 'aucun absent aujourd\'hui'} />
+            rows={absentsDisplayed} count={absentsFiltered.length} searchable sortable sortKeys={['name', 'retour']} sortState={absentSort} showMore={!isExpanded('absents') && absentsFiltered.length > absentLimit} showLess={isExpanded('absents') && absentsFiltered.length > absentLimit} onSearch={setAbsentSearch} onSort={toggleAbsentSort} onShowMore={() => expand('absents')} onShowLess={() => collapse('absents')} emptyMessage={absentSearch ? 'Aucun résultat' : 'Aucun absent aujourd\'hui'} />
         </div>
         <div ref={teleworkRef}>
           <PresenceList title="Télétravail aujourd'hui"
             columns={[{ key: 'name', label: 'Nom' }, { key: 'email', label: 'Email' }]}
-            rows={teleworkDisplayed} count={teleworkFiltered.length} searchable sortable showMore={!isExpanded('telework') && teleworkFiltered.length > teleworkLimit} showLess={isExpanded('telework') && teleworkFiltered.length > teleworkLimit} onSearch={setTeleworkSearch} onSort={noop} onShowMore={() => expand('telework')} onShowLess={() => collapse('telework')} emptyMessage={teleworkSearch ? 'aucun résultat' : 'aucun télétravail aujourd\'hui'}/>
+            rows={teleworkDisplayed} count={teleworkFiltered.length} searchable sortable sortKeys={['name']} sortState={teleworkSort} showMore={!isExpanded('telework') && teleworkFiltered.length > teleworkLimit} showLess={isExpanded('telework') && teleworkFiltered.length > teleworkLimit} onSearch={setTeleworkSearch} onSort={toggleTeleworkSort} onShowMore={() => expand('telework')} onShowLess={() => collapse('telework')} emptyMessage={teleworkSearch ? 'Aucun résultat' : 'Aucun télétravail aujourd\'hui'}/>
         </div>
         <Card ref={rightCardRef} className="self-start">
           <CardContent className="pt-6 space-y-6">
             <PresenceList variant="embedded" title="En visite chez nous"
               columns={[{ key: 'name', label: 'Nom' }, { key: 'email', label: 'Email' }, { key: 'date', label: 'Date' }]}
               rows={visitingRows} count={visitingToday.length}
-              showMore={!isExpanded('visiting') && visitingToday.length > 2} showLess={isExpanded('visiting') && visitingToday.length > 2} onShowMore={() => expand('visiting')} onShowLess={() => collapse('visiting')} emptyMessage="aucune visite chez nous" />
+              showMore={!isExpanded('visiting') && visitingToday.length > 2} showLess={isExpanded('visiting') && visitingToday.length > 2} onShowMore={() => expand('visiting')} onShowLess={() => collapse('visiting')} emptyMessage="Aucune visite chez nous" />
             <PresenceList variant="embedded" title="En déplacement aujourd'hui"
               columns={[{ key: 'name', label: 'Nom' }, { key: 'email', label: 'Email' }]}
-              rows={travelingDisplayed} count={travelingToday.length} searchable sortable sortKeys={['name']} showMore={!isExpanded('traveling') && travelingToday.length > 2} showLess={isExpanded('traveling') && travelingToday.length > 2} onSort={noop} onShowMore={() => expand('traveling')} onShowLess={() => collapse('traveling')} emptyMessage="aucun déplacement aujourd'hui"
+              rows={travelingDisplayed} count={travelingToday.length} searchable sortable sortKeys={['name']} sortState={travelingSort} showMore={!isExpanded('traveling') && travelingToday.length > 2} showLess={isExpanded('traveling') && travelingToday.length > 2} onSort={toggleTravelingSort} onShowMore={() => expand('traveling')} onShowLess={() => collapse('traveling')} emptyMessage="Aucun déplacement aujourd'hui"
             />
             <PresenceList variant="embedded" title="Déplacement prévu"
               columns={[{ key: 'name', label: 'Nom' }, { key: 'email', label: 'Email' }, { key: 'date', label: 'Date' }]}
-              rows={plannedTravelDisplayed} count={plannedTravel.length} searchable sortable sortKeys={['date', 'name']} showMore={!isExpanded('planned') && plannedTravel.length > 2} showLess={isExpanded('planned') && plannedTravel.length > 2} onSort={noop} onShowMore={() => expand('planned')} onShowLess={() => collapse('planned')} emptyMessage="aucun déplacement prévu"/>
+              rows={plannedTravelDisplayed} count={plannedTravel.length} searchable sortable sortKeys={['date', 'name']} sortState={plannedSort} showMore={!isExpanded('planned') && plannedTravel.length > 2} showLess={isExpanded('planned') && plannedTravel.length > 2} onSort={togglePlannedSort} onShowMore={() => expand('planned')} onShowLess={() => collapse('planned')} emptyMessage="Aucun déplacement prévu"/>
           </CardContent>
         </Card>
       </div>
