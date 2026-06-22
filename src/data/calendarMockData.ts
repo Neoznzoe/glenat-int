@@ -1,76 +1,94 @@
 import type { CalendarEventColorRecord, CalendarEventRecord } from '@/lib/calendar';
 
 /**
- * Données mock pour l'agenda de la page d'accueil.
+ * Données mock pour l'agenda (page d'accueil + page Agenda).
  *
- * Utilisées en repli (fallback) lorsque l'API calendrier ne renvoie aucun
- * évènement, afin de visualiser tous les cas d'affichage : évènements sur un
- * seul jour, plages multi-jours, évènements qui se superposent (jusqu'à un
- * triple chevauchement le 25), jour férié et instance représentative (CSE).
+ * Reprend le contenu de l'agenda Glénat 2026 (préparation T1/T2 2027) :
+ * remises BC, briefs éditoriaux, pitchs, réunions commerciales, RDV enseignes,
+ * réunions CSE, etc. Utilisées en repli lorsque l'API calendrier ne renvoie
+ * aucun évènement.
  *
- * Les dates sont générées relativement au mois courant pour rester visibles.
+ * Les catégories suivent la légende d'origine :
+ *  - AUTRE  → « Autre évènements » (orange)
+ *  - INST   → « Institutions représentatives du personnel » / Réunion CSE (kaki)
+ *  - BRIEF  → « Brief éditorial » (jaune)
+ *  - PITCH  → « Réunion PITCH » (magenta)
+ *  - CO     → « Réunion commerciale » (vert)
  */
 
-// Palette de couleurs associée à chaque "reason". La clé `lastName` sert de
-// libellé dans la légende et les tooltips (cf. EventsCalendar).
+// Palette de couleurs associée à chaque "reason". Les clés `name`/`lastName`
+// servent de libellé dans la légende et les tooltips.
 export const mockCalendarEventColors: CalendarEventColorRecord[] = [
-  { reason: 'CONGES', name: 'Congés', lastName: 'Congés', color: '#ef4444' },
-  { reason: 'FORMATION', name: 'Formation', lastName: 'Formation', color: '#3b82f6' },
-  { reason: 'REUNION', name: 'Réunion', lastName: 'Réunion', color: '#f59e0b' },
-  { reason: 'DEPLACEMENT', name: 'Déplacement', lastName: 'Déplacement', color: '#8b5cf6' },
-  { reason: 'TELETRAVAIL', name: 'Télétravail', lastName: 'Télétravail', color: '#06b6d4' },
-  { reason: 'EVENT', name: 'Évènement', lastName: 'Évènement', color: '#ec4899' },
-  { reason: 'INST', name: 'Instance (CSE)', lastName: 'Instance (CSE)', color: '#10b981' },
-  { reason: 'FERME', name: 'Jour férié', lastName: 'Jour férié', color: '#6b7280' },
+  { reason: 'AUTRE', name: 'Autre évènements', lastName: 'Autre évènements', color: '#ED7D31' },
+  { reason: 'INST', name: 'Institutions représentatives du personnel', lastName: 'Institutions représentatives du personnel', color: '#C9BD6E' },
+  { reason: 'BRIEF', name: 'Brief éditorial', lastName: 'Brief éditorial', color: '#FFE600' },
+  { reason: 'PITCH', name: 'Réunion PITCH', lastName: 'Réunion PITCH', color: '#FF00FF' },
+  { reason: 'CO', name: 'Réunion commerciale', lastName: 'Réunion commerciale', color: '#92D050' },
 ];
 
-/** Renvoie la chaîne `yyyy-MM-dd` pour un jour donné du mois de `reference`. */
-function dayOfCurrentMonth(reference: Date, day: number): string {
-  const year = reference.getFullYear();
-  const month = reference.getMonth();
-  // Borne le jour au nombre de jours réels du mois (évite de déborder).
-  const lastDay = new Date(year, month + 1, 0).getDate();
-  const safeDay = Math.min(day, lastDay);
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${year}-${pad(month + 1)}-${pad(safeDay)}`;
+interface MockEvent {
+  id: string;
+  reason: string;
+  title: string;
+  startDate: string;
+  endDate?: string;
 }
 
-/**
- * Génère un jeu d'évènements mock pour le mois courant, riche en cas variés
- * (chevauchements, plages, jour unique, jour férié, instance).
- */
-export function buildMockCalendarEvents(reference: Date = new Date()): CalendarEventRecord[] {
-  const d = (day: number) => dayOfCurrentMonth(reference, day);
+// Évènements de l'agenda Glénat 2026 (dates ISO `yyyy-MM-dd`).
+const AGENDA_2026_EVENTS: MockEvent[] = [
+  // ─── Juillet 2026 (préparation T1 2027) ───────────────────
+  { id: 'agenda-2026-07-01', reason: 'AUTRE', title: 'MAJ BC T1 2027 Remise Eléments Edito T1 2027', startDate: '2026-07-01' },
+  { id: 'agenda-2026-07-02', reason: 'AUTRE', title: 'Création matrice', startDate: '2026-07-02' },
+  { id: 'agenda-2026-07-06', reason: 'PITCH', title: 'PITCH T1 2027 MANGA', startDate: '2026-07-06' },
+  { id: 'agenda-2026-07-07', reason: 'BRIEF', title: 'BRIEF EDITO T1 2027 BD', startDate: '2026-07-07' },
+  { id: 'agenda-2026-07-08', reason: 'BRIEF', title: 'BRIEF EDITO T1 2027 LIVRE, JEUNESSE, HUGO', startDate: '2026-07-08' },
+  { id: 'agenda-2026-07-16', reason: 'AUTRE', title: 'MARKET CO T1 2027', startDate: '2026-07-16' },
+  { id: 'agenda-2026-07-24', reason: 'AUTRE', title: 'MAJ BC T1 2027 Eléments Définitifs Edito T1 2027', startDate: '2026-07-24' },
+  { id: 'agenda-2026-07-26', reason: 'PITCH', title: 'PITCH T1 2027 HUGO, LIVRE, EDITIONS DU MONT BLANC', startDate: '2026-07-26' },
+  { id: 'agenda-2026-07-27', reason: 'PITCH', title: 'PITCH T1 2027 BD & CAURETTE', startDate: '2026-07-27' },
+  { id: 'agenda-2026-07-28', reason: 'AUTRE', title: 'RUN T1 2027', startDate: '2026-07-28' },
 
-  const events: Array<Omit<CalendarEventRecord, 'category'>> = [
-    // Évènement isolé en début de mois
-    { id: 'mock-1', reason: 'EVENT', title: 'Anniversaire de la société', startDate: d(1) },
+  // ─── Septembre 2026 (commercialisation T1 2027) ───────────
+  { id: 'agenda-2026-09-01', reason: 'AUTRE', title: 'Remise Brief, Blades et VISUELS DEF', startDate: '2026-09-01' },
+  { id: 'agenda-2026-09-04', reason: 'AUTRE', title: 'Dernière MAJ BC avant Commercialisation T1 2027', startDate: '2026-09-04' },
+  { id: 'agenda-2026-09-07', reason: 'AUTRE', title: 'Argumentaires et Previews', startDate: '2026-09-07' },
+  { id: 'agenda-2026-09-08', reason: 'AUTRE', title: 'GO MATRICES ET PPT COMMERCIALISATION T1 2027', startDate: '2026-09-08' },
+  { id: 'agenda-2026-09-08-cse', reason: 'INST', title: 'Réunion CSE', startDate: '2026-09-08' },
+  { id: 'agenda-2026-09-14', reason: 'AUTRE', title: 'RDV ENSEIGNES', startDate: '2026-09-14', endDate: '2026-09-18' },
+  { id: 'agenda-2026-09-22', reason: 'CO', title: 'REUNION CO T1 2027', startDate: '2026-09-22', endDate: '2026-09-23' },
+  { id: 'agenda-2026-09-24', reason: 'AUTRE', title: 'REUNION REPRES', startDate: '2026-09-24' },
+  { id: 'agenda-2026-09-29', reason: 'AUTRE', title: 'ATTERRISSAGES T4 2026', startDate: '2026-09-29' },
 
-    // Plage de congés qui chevauche une formation (5 → 7)
-    { id: 'mock-2', reason: 'CONGES', title: 'Marie Dupont — Congés', startDate: d(3), endDate: d(7) },
-    { id: 'mock-3', reason: 'FORMATION', title: 'Jean Martin — Formation sécurité', startDate: d(5), endDate: d(6) },
+  // ─── Octobre 2026 (préparation T2 2027) ───────────────────
+  { id: 'agenda-2026-10-08', reason: 'AUTRE', title: 'MAJ BC T2 2027 Remise Eléments Edito T2 2027', startDate: '2026-10-08' },
+  { id: 'agenda-2026-10-12', reason: 'AUTRE', title: 'Création matrice', startDate: '2026-10-12' },
+  { id: 'agenda-2026-10-13', reason: 'INST', title: 'Réunion CSE', startDate: '2026-10-13' },
+  { id: 'agenda-2026-10-14', reason: 'BRIEF', title: 'BRIEF EDITO T2 2027 LIVRE, JEUNESSE, HUGO', startDate: '2026-10-14' },
+  { id: 'agenda-2026-10-15', reason: 'BRIEF', title: 'BRIEF EDITO T2 2027 BD PITCH T2 2027 MANGA', startDate: '2026-10-15' },
+  { id: 'agenda-2026-10-20', reason: 'AUTRE', title: 'MARKET CO T2 2027', startDate: '2026-10-20' },
+  { id: 'agenda-2026-10-30', reason: 'AUTRE', title: 'MAJ BC T2 2027 Eléments Définitifs Edito T2 2027', startDate: '2026-10-30' },
 
-    // Réunion sur un jour qui chevauche le début d'un déplacement (10)
-    { id: 'mock-4', reason: 'REUNION', title: 'Comité de direction', startDate: d(10) },
-    { id: 'mock-5', reason: 'DEPLACEMENT', title: 'Paul Bernard — Déplacement Paris', startDate: d(10), endDate: d(12) },
+  // ─── Novembre 2026 (commercialisation T2 2027) ────────────
+  { id: 'agenda-2026-11-04', reason: 'PITCH', title: 'PITCH T2 2027 HUGO, LIVRE, EDITIONS DU MONT BLANC', startDate: '2026-11-04' },
+  { id: 'agenda-2026-11-05', reason: 'PITCH', title: 'PITCH T2 2027 BD & CAURETTE', startDate: '2026-11-05' },
+  { id: 'agenda-2026-11-06', reason: 'AUTRE', title: 'RUN T2 2027', startDate: '2026-11-06' },
+  { id: 'agenda-2026-11-10', reason: 'INST', title: 'Réunion CSE', startDate: '2026-11-10' },
+  { id: 'agenda-2026-11-17', reason: 'AUTRE', title: 'Remise Brief, Blades et VISUELS DEF', startDate: '2026-11-17' },
+  { id: 'agenda-2026-11-26', reason: 'AUTRE', title: 'Dernière MAJ BC avant Commercialisation T2 2027', startDate: '2026-11-26' },
+  { id: 'agenda-2026-11-27', reason: 'AUTRE', title: 'Argumentaires et Previews', startDate: '2026-11-27' },
+  { id: 'agenda-2026-11-30', reason: 'AUTRE', title: 'GO MATRICES ET PPT COMMERCIALISATION T2 2027', startDate: '2026-11-30' },
 
-    // Jour férié isolé
-    { id: 'mock-6', reason: 'FERME', title: 'Jour férié', startDate: d(15) },
+  // ─── Décembre 2026 ────────────────────────────────────────
+  { id: 'agenda-2026-12-03', reason: 'AUTRE', title: 'ATTERRISSAGES T1 2027', startDate: '2026-12-03' },
+  { id: 'agenda-2026-12-07', reason: 'AUTRE', title: 'RDV ENSEIGNES', startDate: '2026-12-07', endDate: '2026-12-11' },
+  { id: 'agenda-2026-12-08-cse', reason: 'INST', title: 'Réunion CSE', startDate: '2026-12-08' },
+  { id: 'agenda-2026-12-15', reason: 'CO', title: 'REUNION CO T2 2027', startDate: '2026-12-15', endDate: '2026-12-16' },
+  { id: 'agenda-2026-12-17', reason: 'AUTRE', title: 'REPRES', startDate: '2026-12-17' },
+];
 
-    // Instance CSE qui chevauche un salon (18 → 19)
-    { id: 'mock-7', reason: 'INST', title: 'Réunion CSE', startDate: d(18), endDate: d(19) },
-    { id: 'mock-8', reason: 'EVENT', title: 'Salon du livre', startDate: d(18), endDate: d(20) },
-
-    // Triple chevauchement le 25 : congés + télétravail + réunion
-    { id: 'mock-9', reason: 'CONGES', title: 'Sophie Leroy — Congés', startDate: d(22), endDate: d(26) },
-    { id: 'mock-10', reason: 'TELETRAVAIL', title: 'Équipe Dev — Télétravail', startDate: d(25) },
-    { id: 'mock-11', reason: 'REUNION', title: 'Point hebdomadaire', startDate: d(25) },
-
-    // Plage de déplacement en fin de mois
-    { id: 'mock-12', reason: 'DEPLACEMENT', title: 'Lucie Petit — Déplacement Lyon', startDate: d(28), endDate: d(30) },
-  ];
-
-  return events.map((event) => ({ ...event, category: 'Actuel ou futur' }));
+/** Renvoie les évènements mock de l'agenda Glénat 2026. */
+export function buildMockCalendarEvents(): CalendarEventRecord[] {
+  return AGENDA_2026_EVENTS.map((event) => ({ ...event, category: 'Actuel ou futur' }));
 }
 
 export const mockCalendarEvents: CalendarEventRecord[] = buildMockCalendarEvents();

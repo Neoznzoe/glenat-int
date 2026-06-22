@@ -121,26 +121,24 @@ function getCellState(
 
 function PlanningCell({ state }: { state: CellState }) {
   if (state.type === 'weekend') {
-    return <td className="bg-gray-100 border border-gray-200 min-w-[24px] h-6" />;
+    return <td className="bg-muted-foreground/15 border border-border min-w-[24px] h-6" />;
   }
 
   if (state.type === 'empty') {
-    return <td className="border border-gray-200 min-w-[24px] h-6" />;
+    return <td className="border border-border min-w-[24px] h-6" />;
   }
 
   const bgColor =
     state.type === 'teletravail'
-      ? 'bg-green-200'
-      : state.type === 'absence'
-        ? 'bg-red-200'
-        : 'bg-red-200';
+      ? 'bg-green-300 dark:bg-emerald-500/50'
+      : 'bg-red-300 dark:bg-rose-500/50';
 
-  const dashedClass = state.aValider ? 'border-dashed border-2 border-gray-500' : '';
+  const dashedClass = state.aValider ? 'border-dashed border-2 border-muted-foreground' : '';
 
   // Half-day support
   if (state.halfStart || state.halfEnd) {
     return (
-      <td className="border border-gray-200 min-w-[24px] h-6 p-0 relative">
+      <td className="border border-border min-w-[24px] h-6 p-0 relative">
         <div className="flex h-full w-full">
           <div className={`w-1/2 h-full ${state.halfStart ? '' : `${bgColor} ${dashedClass}`}`} />
           <div className={`w-1/2 h-full ${state.halfEnd ? '' : `${bgColor} ${dashedClass}`}`} />
@@ -149,7 +147,7 @@ function PlanningCell({ state }: { state: CellState }) {
     );
   }
 
-  return <td className={`${bgColor} ${dashedClass} border border-gray-200 min-w-[24px] h-6`} />;
+  return <td className={`${bgColor} ${dashedClass} border border-border min-w-[24px] h-6`} />;
 }
 
 // ─── Grouped Data ──────────────────────────────────────────
@@ -441,7 +439,7 @@ export function Planning() {
           <table className="text-xs border-collapse w-full">
             <thead>
               <tr className="bg-muted">
-                <th className="sticky left-0 bg-muted z-10 text-left px-2 py-1 border border-gray-200 min-w-[180px] whitespace-nowrap">
+                <th className="sticky left-0 bg-muted z-10 text-left px-2 py-1 border border-border min-w-[180px] whitespace-nowrap">
                   Collaborateur
                 </th>
                 {dayNumbers.map((day) => {
@@ -449,8 +447,8 @@ export function Planning() {
                   return (
                     <th
                       key={day}
-                      className={`text-center px-0 py-1 border border-gray-200 min-w-[24px] font-medium ${
-                        weekend ? 'bg-gray-200 text-gray-500' : ''
+                      className={`text-center px-0 py-1 border border-border min-w-[24px] font-medium ${
+                        weekend ? 'bg-muted-foreground/20 text-muted-foreground' : ''
                       }`}
                     >
                       {day}
@@ -463,10 +461,10 @@ export function Planning() {
               {companyGroups.map((group) => (
                 <>
                   {/* Company header */}
-                  <tr key={`company-${group.company}`} className="bg-gray-50">
+                  <tr key={`company-${group.company}`} className="bg-muted-foreground/15">
                     <td
                       colSpan={daysInMonth + 1}
-                      className="px-2 py-1 font-bold text-sm border border-gray-200"
+                      className="px-2 py-1 font-bold text-sm border border-border"
                     >
                       {group.company}
                     </td>
@@ -475,10 +473,10 @@ export function Planning() {
                   {group.departments.map((dept) => (
                     <>
                       {/* Department header */}
-                      <tr key={`dept-${group.company}-${dept.department}`} className="bg-gray-50/50">
+                      <tr key={`dept-${group.company}-${dept.department}`} className="bg-muted-foreground/[0.08]">
                         <td
                           colSpan={daysInMonth + 1}
-                          className="px-4 py-0.5 italic text-xs text-muted-foreground border border-gray-200"
+                          className="px-4 py-0.5 italic text-xs text-muted-foreground border border-border"
                         >
                           {dept.department}
                         </td>
@@ -487,7 +485,7 @@ export function Planning() {
                       {/* Employee rows */}
                       {dept.employees.map((emp) => (
                         <tr key={emp.id} className="hover:bg-muted/30">
-                          <td className="sticky left-0 bg-white z-10 px-2 py-0.5 border border-gray-200 whitespace-nowrap font-medium">
+                          <td className="sticky left-0 bg-card z-10 px-2 py-0.5 border border-border whitespace-nowrap font-medium">
                             {emp.lastName} {emp.firstName}
                           </td>
                           {dayNumbers.map((day) => {
@@ -508,26 +506,27 @@ export function Planning() {
       {/* Légende */}
       <div className="flex flex-wrap items-center gap-6 text-xs text-muted-foreground pt-2">
         <div className="flex items-center gap-1.5">
-          <span className="inline-block w-4 h-4 bg-gray-200 border border-gray-300 rounded-sm" />
+          <span className="inline-block w-4 h-4 bg-muted-foreground/15 border border-border rounded-sm" />
           <span>Férié / Weekend</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="inline-block w-4 h-4 bg-gray-400 border border-gray-500 rounded-sm" />
+          <span className="inline-block w-4 h-4 bg-muted-foreground/40 border border-border rounded-sm" />
           <span>Fermeture</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="inline-block w-4 h-4 bg-red-200 border border-gray-300 rounded-sm" />
+          <span className="inline-block w-4 h-4 bg-red-300 dark:bg-rose-500/50 border border-border rounded-sm" />
           <span>Absence / Congé</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="inline-block w-4 h-4 bg-green-200 border border-gray-300 rounded-sm" />
+          <span className="inline-block w-4 h-4 bg-green-300 dark:bg-emerald-500/50 border border-border rounded-sm" />
           <span>Télétravail</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="inline-block w-4 h-4 bg-white border-2 border-dashed border-gray-500 rounded-sm" />
+          <span className="inline-block w-4 h-4 bg-transparent border-2 border-dashed border-muted-foreground rounded-sm" />
           <span>A valider</span>
         </div>
       </div>
+
 
       </div>{/* fin conteneur principal */}
     </div>
