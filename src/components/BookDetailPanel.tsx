@@ -2,8 +2,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { FileText, Printer, Share2 } from 'lucide-react';
+import { FileText, Printer, Share2, ArrowUpRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 import type { CatalogueBook, CatalogueAuthor } from '@/lib/catalogue';
 
 interface BookDetailPanelProps {
@@ -13,7 +14,24 @@ interface BookDetailPanelProps {
 }
 
 export function BookDetailPanel({ book, authors, ean }: BookDetailPanelProps) {
+  const navigate = useNavigate();
   const details = book.details;
+
+  const goToAuthor = (author: CatalogueAuthor) => {
+    if (!author.idAuthor) return;
+    navigate(`/catalogue/auteurs/${encodeURIComponent(author.idAuthor)}`, {
+      state: {
+        author: {
+          idAuthor: author.idAuthor,
+          firstName: author.firstName,
+          lastName: author.lastName,
+          fullName: author.fullName,
+          photo: author.photo,
+          fonctions: author.fonction ? [author.fonction] : [],
+        },
+      },
+    });
+  };
   const subtitle = details?.subtitle;
   const badges = details?.badges ?? [];
   const metadataEntries = details?.metadata ?? [];
@@ -246,26 +264,40 @@ export function BookDetailPanel({ book, authors, ean }: BookDetailPanelProps) {
                     const initials = authorName.split(' ').map(word => word.charAt(0)).filter(Boolean).slice(0, 2).join('').toUpperCase();
                     return (
                       <div key={author.idAuthor || index} className="space-y-4">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                          <div className="flex-shrink-0">
-                            {author.photo && author.photo !== '0' ? (
-                              <img src={author.photo} alt={authorName} className="h-16 w-16 rounded-full object-cover" />
-                            ) : (
-                              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-300 dark:bg-[#171716] text-white">
-                                <span className="text-xl font-bold">{initials || 'A'}</span>
-                              </div>
-                            )}
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-start">
+                            <div className="flex-shrink-0">
+                              {author.photo && author.photo !== '0' ? (
+                                <img src={author.photo} alt={authorName} className="h-16 w-16 rounded-full object-cover" />
+                              ) : (
+                                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-300 dark:bg-[#171716] text-white">
+                                  <span className="text-xl font-bold">{initials || 'A'}</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 space-y-2">
+                              <h3 className="text-xl font-semibold">{authorName}</h3>
+                              {author.bio && (
+                                <div className="space-y-4">
+                                  {author.bio.split('\n\n').map((paragraph, pIndex) => (
+                                    <p key={pIndex} className="whitespace-pre-line">{paragraph}</p>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex-1 space-y-2">
-                            <h3 className="text-xl font-semibold">{authorName}</h3>
-                            {author.bio && (
-                              <div className="space-y-4">
-                                {author.bio.split('\n\n').map((paragraph, pIndex) => (
-                                  <p key={pIndex} className="whitespace-pre-line">{paragraph}</p>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                          {author.idAuthor && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="shrink-0 self-start gap-1.5"
+                              onClick={() => goToAuthor(author)}
+                            >
+                              Consulter la fiche auteur
+                              <ArrowUpRight className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                         {index < (details.authors?.length ?? 0) - 1 && <div className="my-6 border-t border-border" />}
                       </div>

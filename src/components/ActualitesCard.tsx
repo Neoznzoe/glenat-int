@@ -3,6 +3,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Home as HomeIcon, Search } from 'lucide-react';
+import { SecureLink } from '@/components/routing/SecureLink';
+import { useAllQFQEmployees } from '@/hooks/usePlaces';
+import { getSaintOfDay } from '@/data/saints';
 
 // A small helper component to render a labeled search input
 function SearchModule({ title, placeholder }: { title: string; placeholder?: string }) {
@@ -21,26 +24,24 @@ function SearchModule({ title, placeholder }: { title: string; placeholder?: str
   );
 }
 
-// Predefined names per weekday to avoid external calls
-const namesByWeekday: Record<string, string[]> = {
-  lundi: ['Gabin', 'Agathe'],
-  mardi: ['Bernard', 'Brigitte'],
-  mercredi: ['Camille', 'Céline'],
-  jeudi: ['Denis', 'Diane'],
-  vendredi: ['Eric', 'Emma'],
-  samedi: ['Fanny', 'Florian'],
-  dimanche: ['Gabriel', 'Gaëlle'],
-};
-
 export function ActualitesCard() {
-  const saintNames = useMemo(() => {
-    const weekday = new Date()
-      .toLocaleDateString('fr-FR', { weekday: 'long' })
-      .toLowerCase();
-    return namesByWeekday[weekday] || [];
-  }, []);
+  // Fête du jour, calculée dynamiquement à partir de la date courante.
+  const saintOfDay = useMemo(() => getSaintOfDay(), []);
 
-  const newArrivals = ['Alice Martin', 'Bob Dupont', 'Charles Durand'];
+  // TODO [TEMPORAIRE — proof of work] : « Nouveaux arrivants » affiche 3 employés
+  // tirés au hasard (pas de vraie source d'arrivants pour l'instant). À retirer /
+  // remplacer par les vrais nouveaux arrivants quand la donnée sera disponible.
+  const { data: employees } = useAllQFQEmployees();
+  const randomEmployees = useMemo(() => {
+    const list = employees ?? [];
+    if (list.length <= 3) return list;
+    const shuffled = [...list];
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled.slice(0, 3);
+  }, [employees]);
 
   return (
     <Card className="overflow-hidden">
@@ -63,16 +64,27 @@ export function ActualitesCard() {
           <div className="space-y-6 lg:pl-6">
             <div>
               <h3 className="font-semibold text-foreground mb-2 text-lg">Nouveaux arrivants</h3>
-              <ul className="space-y-1 text-sm text-muted-foreground">
-                {newArrivals.map((person) => (
-                  <li key={person}>{person}</li>
-                ))}
+              <ul className="space-y-1 text-sm">
+                {randomEmployees.length > 0 ? (
+                  randomEmployees.map((employee) => (
+                    <li key={employee.id}>
+                      <SecureLink
+                        to={`/qui-fait-quoi/employe?id=${employee.id}`}
+                        className="text-muted-foreground transition-colors hover:text-primary hover:underline"
+                      >
+                        {employee.firstName} {employee.lastName}
+                      </SecureLink>
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-muted-foreground">Aucun employé</li>
+                )}
               </ul>
             </div>
             <div>
               <h3 className="font-semibold text-foreground mb-2 text-lg">Bonnes fêtes aux :</h3>
               <p className="text-sm text-muted-foreground">
-                {saintNames.length > 0 ? saintNames.join(', ') : 'Aucun nom'}
+                {saintOfDay || 'Aucun nom'}
               </p>
             </div>
           </div>

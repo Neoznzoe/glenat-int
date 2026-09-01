@@ -126,7 +126,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
  * Récupère les absences depuis l'API Kelio
  */
 export async function fetchAbsences(): Promise<KelioAbsence[]> {
-  const url = `${API_BASE_URL}/Api/v2.0/Kelio/absences`;
+  const url = `${API_BASE_URL}/Api/v2.0/kelio/absences`;
 
   const response = await fetchWithOAuth(url, {
     method: 'GET',
@@ -135,9 +135,20 @@ export async function fetchAbsences(): Promise<KelioAbsence[]> {
     },
   });
 
-  const data = await handleResponse<AbsencesResponse & { result?: KelioAbsence[] }>(response);
+  const data = await handleResponse<{
+    absences?: KelioAbsence[];
+    result?: { absences?: KelioAbsence[] } | KelioAbsence[];
+  }>(response);
 
-  return data.absences || data.result || [];
+  // La réponse v2.0 encapsule les données sous `result.absences`.
+  // On gère aussi les formes plus anciennes (racine ou result tableau).
+  if (data.result && !Array.isArray(data.result) && data.result.absences) {
+    return data.result.absences;
+  }
+  if (Array.isArray(data.result)) {
+    return data.result;
+  }
+  return data.absences ?? [];
 }
 
 /**
@@ -246,7 +257,7 @@ export async function fetchTodayAbsences(): Promise<AbsentPerson[]> {
  * Récupère les télétravaux depuis l'API Kelio
  */
 export async function fetchRemoteWorking(): Promise<KelioRemoteWorking[]> {
-  const url = `${API_BASE_URL}/Api/v2.0/Kelio/remoteWorking`;
+  const url = `${API_BASE_URL}/Api/v2.0/kelio/remoteWorking`;
 
   const response = await fetchWithOAuth(url, {
     method: 'GET',
@@ -255,9 +266,19 @@ export async function fetchRemoteWorking(): Promise<KelioRemoteWorking[]> {
     },
   });
 
-  const data = await handleResponse<RemoteWorkingResponse & { result?: KelioRemoteWorking[] }>(response);
+  const data = await handleResponse<{
+    remote_workings?: KelioRemoteWorking[];
+    result?: { remote_workings?: KelioRemoteWorking[] } | KelioRemoteWorking[];
+  }>(response);
 
-  return data.remote_workings || data.result || [];
+  // La réponse v2.0 encapsule les données sous `result.remote_workings`.
+  if (data.result && !Array.isArray(data.result) && data.result.remote_workings) {
+    return data.result.remote_workings;
+  }
+  if (Array.isArray(data.result)) {
+    return data.result;
+  }
+  return data.remote_workings ?? [];
 }
 
 /**

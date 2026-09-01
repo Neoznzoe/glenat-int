@@ -19,8 +19,8 @@ Les endpoints du type `/Api/v2.0/planning`, `/Api/v2.0/users`, `/Api/v2.0/groups
 
 | Méthode | Endpoint | Fonction | Fichier |
 |---|---|---|---|
-| `GET` | `/Api/v2.0/Kelio/absences` | `fetchAbsences()` | `src/lib/absencesApi.ts:129` |
-| `GET` | `/Api/v2.0/Kelio/remoteWorking` | `fetchRemoteWorking()` | `src/lib/absencesApi.ts:249` |
+| `GET` | `/Api/v2.0/kelio/absences` | `fetchAbsences()` | `src/lib/absencesApi.ts:129` |
+| `GET` | `/Api/v2.0/kelio/remoteWorking` | `fetchRemoteWorking()` | `src/lib/absencesApi.ts:249` |
 
 ---
 

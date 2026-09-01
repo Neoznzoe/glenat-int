@@ -1292,7 +1292,7 @@ const normalizeBookFromDatabaseRecord = async (
   const title = ensureString(getField(record, 'titre', 'title')) ?? `Article ${ean}`;
   const authors = ensureString(getField(record, 'auteurs', 'auteurssimple', 'createur')) ?? '';
   const publisher = ensureString(getField(record, 'publisher', 'codepublisher', 'editeur')) ?? '';
-  const publicationDate = formatDisplayDate(getField(record, 'datemev', 'dateparution')) ?? '';
+  const publicationDate = formatDisplayDate(getField(record, 'datemev', 'dateparution', 'publicationdate')) ?? '';
   const priceHT = formatPrice(getField(record, 'priceht', 'priceh', 'prixht', 'prix'));
   const stock = ensureNumber(getField(record, 'stocks', 'stock')) ?? 0;
 
@@ -1300,8 +1300,8 @@ const normalizeBookFromDatabaseRecord = async (
   const subtitle = ensureString(getField(record, 'soustitre', 'subtitle'));
   const isbn = ensureString(getField(record, 'isbn'));
   const idHachette = ensureString(getField(record, 'idhachette'));
-  const typeBook = ensureString(getField(record, 'typebook', 'typelivre'));
-  const countPage = ensureNumber(getField(record, 'countpage', 'pagination', 'nbpage'));
+  const typeBook = ensureString(getField(record, 'typebook', 'typelivre', 'typedelivre'));
+  const countPage = ensureNumber(getField(record, 'countpage', 'pagination', 'nbpage', 'nombredepages'));
   const faconnage = ensureString(getField(record, 'faconnage'));
   const isNumerique = ensureNumber(getField(record, 'isnumerique')) === 1;
   const age = ensureString(getField(record, 'age'));
@@ -1311,7 +1311,7 @@ const normalizeBookFromDatabaseRecord = async (
   const priceTTC = formatPrice(getField(record, 'price', 'pricettc'));
   const hauteur = ensureNumber(getField(record, 'hauteur'));
   const largeur = ensureNumber(getField(record, 'largeur'));
-  const serie = ensureString(getField(record, 'serie'));
+  const serie = ensureString(getField(record, 'serie', 'series'));
   const collection = ensureString(getField(record, 'collection'));
   const sousTitre = ensureString(getField(record, 'soustitre'));
 
@@ -2048,7 +2048,7 @@ async function buildCatalogueItemDetail(
 
   const loadProfile = async (): Promise<Record<string, unknown> | null> => {
     try {
-      const url = `${ITEMS_API_BASE}/${encodeURIComponent(ean)}/byProfile/IntranetCatalogCard?include=details,argumentaire,inventory,sales`;
+      const url = `${ITEMS_API_BASE}/${encodeURIComponent(ean)}/byProfile/IntranetCatalogCard?include=card,details,production,editorial,catalog,inventory,sales,argumentaire`;
       const response = await fetchWithOAuth(url, {
         method: 'GET',
         headers: { Accept: 'application/json' },
@@ -2074,24 +2074,50 @@ async function buildCatalogueItemDetail(
     return null;
   }
 
+  const card = clusters.card as Record<string, unknown> | undefined;
   const details = clusters.details as Record<string, unknown> | undefined;
-  const inventory = clusters.inventory as RawCatalogueOfficeRecord | undefined;
+  const production = clusters.production as Record<string, unknown> | undefined;
+  const editorial = clusters.editorial as Record<string, unknown> | undefined;
+  const catalog = clusters.catalog as Record<string, unknown> | undefined;
+  const inventory = clusters.inventory as Record<string, unknown> | undefined;
   const argumentaire = ensureString(clusters.argumentaire);
 
   // La couverture (lourde, base64) n'est PLUS demandée dans cet appel d'infos :
-  // le cluster `card` l'embarquait (`card.cover.image`), ce qui alourdissait le
-  // chargement et la faisait transiter deux fois (ici + l'appel séparé). Elle est
-  // désormais chargée uniquement via `?include=cover` (fetchCatalogueCover) :
+  // elle est chargée uniquement via `?include=cover` (fetchCatalogueCover) :
   // la fiche rend les infos d'abord, puis patche la couverture quand elle arrive.
 
-  // `inventory` = source riche (proche de l'ancien enregistrement) ; repli `details`.
-  const record = inventory ?? (details as RawCatalogueOfficeRecord | undefined);
-  if (!record) {
+  // Chaque cluster porte une partie des infos (et est peuplé indépendamment selon
+  // l'item) ; on les fusionne en UN enregistrement. Ordre = priorité croissante
+  // (le dernier écrase) :
+  //   inventory (prod) < editorial (sous-titre…) < catalog (auteurs) <
+  //   production (pages, façonnage, dimensions, type) < details < card (méta clés).
+  const merged: RawCatalogueOfficeRecord = {
+    ...(inventory ?? {}),
+    ...(editorial ?? {}),
+    ...(catalog ?? {}),
+    ...(production ?? {}),
+    ...(details ?? {}),
+    ...(card ?? {}),
+  };
+
+  if (Object.keys(merged).length === 0) {
     logResponse(endpoint, null);
     return null;
   }
 
-  const book = await normalizeBookFromDatabaseRecord(record, false);
+  // Prix réels depuis `details` (card/inventory les exposent souvent à 0).
+  const detailPriceHT = ensureNumber(getField(details ?? {}, 'priceHT', 'priceht'));
+  const detailPriceTTC = ensureNumber(getField(details ?? {}, 'priceTTC', 'pricettc'));
+  if (detailPriceHT !== undefined) merged.priceHT = detailPriceHT;
+  if (detailPriceTTC !== undefined) merged.priceTTC = detailPriceTTC;
+
+  // L'EAN reste requis par `normalizeBookFromDatabaseRecord` : on réinjecte l'EAN connu
+  // si aucun cluster ne le porte (ex. item où seul `production` revient).
+  if (!getField(merged, 'iditem', 'ean', 'idarticle')) {
+    merged.ean = ean;
+  }
+
+  const book = await normalizeBookFromDatabaseRecord(merged, false);
   if (!book) {
     logResponse(endpoint, null);
     return null;

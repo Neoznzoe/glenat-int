@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { usePlanningLeaves, useLeaveReasons, usePlanningEmployees, usePlanningFilters } from '@/hooks/usePlanning';
+import { usePlanningLeaves, useLeaveReasons, usePlanningEmployees, usePlanningFilters, USE_MOCK } from '@/hooks/usePlanning';
 import { useAnnonceEmetteur } from '@/hooks/useAnnonces';
 import { useAuth } from '@/context/AuthContext';
 import type { PlanningEmployee, PlanningLeave, LeaveReason, PlanningFilterType } from '@/hooks/usePlanning';
@@ -191,8 +191,8 @@ function groupEmployees(employees: PlanningEmployee[]): CompanyGroup[] {
 // ─── Page Component ────────────────────────────────────────
 
 // N-1 offset: on affiche les données de l'année précédente pour le dev
-// Passer à 0 en production
-const YEAR_OFFSET = -1;
+// Passer à 0 en production (et avec les mock data 2026)
+const YEAR_OFFSET = 0;
 
 export function Planning() {
   const { user } = useAuth();
@@ -218,13 +218,20 @@ export function Planning() {
   // Charger les options de filtres
   const { data: filters, isLoading: filtersLoading } = usePlanningFilters();
 
-  // Définir la valeur par défaut dès que emetteur est disponible
+  // Définir la valeur par défaut dès que emetteur est disponible.
+  // En mode mock (ou si l'émetteur n'a pas de service), on retombe sur le
+  // premier service disponible pour que le planning s'affiche peuplé.
   useEffect(() => {
-    if (!defaultSet && emetteur?.department) {
+    if (defaultSet) return;
+    if (emetteur?.department) {
       setFilterValue(emetteur.department);
       setDefaultSet(true);
+    } else if (USE_MOCK && filters?.departments?.length) {
+      setFilterType('service');
+      setFilterValue(filters.departments[0]);
+      setDefaultSet(true);
     }
-  }, [emetteur, defaultSet]);
+  }, [emetteur, defaultSet, filters]);
 
   const daysInMonth = getDaysInMonth(year, month);
   const startDate = formatDateStr(year, month, 1);
