@@ -65,6 +65,32 @@ export interface CatalogueBook extends BookCardProps {
   details?: CatalogueBookDetail;
 }
 
+/**
+ * Un livre épuisé (stock 0) dont la date de parution est déjà passée ne peut
+ * plus être commandé (pas de réassort à venir, contrairement à une précommande).
+ */
+export const isBookAddableToCart = (book: Pick<CatalogueBook, 'stock' | 'publicationDate'>): boolean => {
+  if ((book.stock ?? 0) > 0) {
+    return true;
+  }
+
+  const match = book.publicationDate?.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) {
+    return true;
+  }
+
+  const [, day, month, year] = match;
+  const publicationDate = new Date(Number(year), Number(month) - 1, Number(day));
+  if (Number.isNaN(publicationDate.getTime())) {
+    return true;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return publicationDate >= today;
+};
+
 export interface CatalogueReleaseDefinition {
   date: string;
   bookEans: string[];

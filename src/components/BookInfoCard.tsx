@@ -2,7 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
-import type { CatalogueBook } from '@/lib/catalogue';
+import { isBookAddableToCart, type CatalogueBook } from '@/lib/catalogue';
 
 interface BookInfoCardProps {
   book: CatalogueBook;
@@ -15,6 +15,7 @@ export function BookInfoCard({ book, priceTTC, priceHT, onAddToCart }: BookInfoC
   const details = book.details;
   const availabilityNote = details?.availabilityNote;
   const availabilityDate = details?.availabilityDate;
+  const addable = isBookAddableToCart(book);
 
   return (
     <Card className="rounded-2xl border shadow-sm">
@@ -51,9 +52,15 @@ export function BookInfoCard({ book, priceTTC, priceHT, onAddToCart }: BookInfoC
               </p>
             </div>
           </div>
-          <Button size="lg" className="w-full" onClick={onAddToCart}>
+          <Button
+            size="lg"
+            className="w-full"
+            onClick={onAddToCart}
+            disabled={!addable}
+            title={addable ? undefined : 'Livre épuisé, indisponible à la commande'}
+          >
             <ShoppingCart className="mr-2 h-4 w-4" />
-            Ajouter au panier
+            {addable ? 'Ajouter au panier' : 'Épuisé'}
           </Button>
         </div>
         <Separator />

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { SecureLink } from '@/components/routing/SecureLink';
 import { useAppDispatch } from '@/hooks/redux';
 import { addItem } from '@/store/cartSlice';
-import { fetchCatalogueItemDetail, fetchCatalogueCover, fetchCatalogueUpcomingBooksFromSeries, fetchCataloguePastBooksFromSeries, fetchCatalogueSameCollectionBooks, fetchCatalogueBooksByAuthors, type CatalogueBook, type CatalogueAuthor } from '@/lib/catalogue';
+import { fetchCatalogueItemDetail, fetchCatalogueCover, fetchCatalogueUpcomingBooksFromSeries, fetchCataloguePastBooksFromSeries, fetchCatalogueSameCollectionBooks, fetchCatalogueBooksByAuthors, isBookAddableToCart, type CatalogueBook, type CatalogueAuthor } from '@/lib/catalogue';
 import { useDecryptedLocation } from '@/lib/secureRouting';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
@@ -185,7 +185,7 @@ export function BookDetails() {
   }, [ean, activeTab, authors]);
 
   const handleAddToCart = () => {
-    if (!book) {
+    if (!book || !isBookAddableToCart(book)) {
       return;
     }
 

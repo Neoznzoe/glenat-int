@@ -5,7 +5,7 @@ import { useAppDispatch } from '@/hooks/redux';
 import { addItem } from '@/store/cartSlice';
 import { toast } from 'sonner';
 import { SecureLink } from '@/components/routing/SecureLink';
-import { prefetchCatalogueItemDetail } from '@/lib/catalogue';
+import { isBookAddableToCart, prefetchCatalogueItemDetail } from '@/lib/catalogue';
 
 export interface BookCardProps {
   cover: string;
@@ -26,8 +26,13 @@ export interface BookCardProps {
 
 export function BookCard({ cover, title, ean, authors, publisher, publicationDate, priceHT, stock, views, color, ribbonText, infoLabel, infoValue, hideActions}: BookCardProps) {
   const dispatch = useAppDispatch();
+  const addable = isBookAddableToCart({ stock, publicationDate });
 
   const handleAddToCart = () => {
+    if (!addable) {
+      return;
+    }
+
     dispatch(
       addItem({ ean, title, cover, authors, priceHT: parseFloat(priceHT),
       }),
@@ -92,8 +97,10 @@ export function BookCard({ cover, title, ean, authors, publisher, publicationDat
                 size="sm"
                 className="w-fit leading-none"
                 onClick={handleAddToCart}
+                disabled={!addable}
+                title={addable ? undefined : 'Livre épuisé, indisponible à la commande'}
               >
-                Ajouter à mon panier
+                {addable ? 'Ajouter à mon panier' : 'Épuisé'}
               </Button>
             </div>
           </>
